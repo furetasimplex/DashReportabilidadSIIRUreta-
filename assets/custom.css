@@ -1,0 +1,10 @@
+/* Ajustes finos para AgGrid y Upload */
+.ag-theme-balham { --ag-font-size: 12px; }
+#btn-recon-msg, #btn-pub-msg_caso { white-space: pre-line; }
+
+/* dcc.Upload ocupa el ancho del botón hijo */
+.dccUpload { width: 100%; }
+
+/* Tabs: más “almohada” */
+.react-tabs__tab { padding: 0.6rem 1rem !important; }
+.react-tabs__tab--selected { font-weight: 600; }
