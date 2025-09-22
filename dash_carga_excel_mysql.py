@@ -7,27 +7,15 @@ import base64
 import io
 import os
 from dotenv import load_dotenv
-
+from db_connection import get_connection
 load_dotenv()
-
-Entorno = int(os.getenv("ENTORNO", 2))  # por defecto 1 si no está definido
-
-if Entorno == 1:
-    hosts1 = os.getenv("MYSQL_HOST_loc")
-    users1 = os.getenv("MYSQL_USER_loc")
-    passwords = os.getenv("MYSQL_PASSWORD_loc")
-    bdds = os.getenv("MYSQL_DATA_hidro")
-else:
-    host = os.getenv("MYSQL_HOST")
-    usuario = os.getenv("MYSQL_USER")
-    contraseña  = os.getenv("MYSQL_PASSWORD")
-    base_datos = os.getenv("MYSQL_DATA_hidro_r")
+engine = get_connection()
 
 # Conexión a base de datos MySQL
 
-puerto = '3306'
+#puerto = '3306'
 
-engine = create_engine(f"mysql+pymysql://{usuario}:{contraseña}@{host}:{puerto}/{base_datos}")
+#engine = create_engine(f"mysql+pymysql://{usuario}:{contraseña}@{host}:{puerto}/{base_datos}")
 
 # Función para limpiar y preparar los datos de la hoja "Datos filtrados"
 def limpiar_datos_filtrados(df_raw):

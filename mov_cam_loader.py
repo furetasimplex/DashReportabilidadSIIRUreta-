@@ -5,14 +5,12 @@ import pandas as pd
 from sqlalchemy import create_engine
 import base64
 import io
+from db_connection import get_connection, get_mysql_engine,get_sqlserver_engine
+from dotenv import load_dotenv
+import os
 
-# Configuración de conexión MySQL
-usuario = 'tu_usuario'
-contraseña = 'tu_contraseña'
-host = 'localhost'
-puerto = '3306'
-base_datos = 'nombre_base'
-engine = create_engine(f"mysql+pymysql://{usuario}:{contraseña}@{host}:{puerto}/{base_datos}")
+load_dotenv()
+engine = get_connection()
 
 # App Dash
 app = dash.Dash(__name__)
