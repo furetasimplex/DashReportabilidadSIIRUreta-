@@ -5,12 +5,12 @@ import pandas as pd
 from sqlalchemy import create_engine
 import base64
 import io
-from db_connection import get_connection, get_mysql_engine,get_sqlserver_engine
+from db_connection import get_engine
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
-engine = get_connection()
+engine =get_engine()
 
 # App Dash
 app = dash.Dash(__name__)

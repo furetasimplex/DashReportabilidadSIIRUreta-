@@ -7,9 +7,9 @@ import base64
 import io
 import os
 from dotenv import load_dotenv
-from db_connection import get_connection
+from db_connection import get_engine
 load_dotenv()
-engine = get_connection()
+engine = get_engine()
 
 # Conexión a base de datos MySQL
 
