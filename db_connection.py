@@ -100,17 +100,19 @@ def get_engine():
             return None
 
     if ENTORNO == 3:  # SQL Server
-        SQLSERVER_HOST = os.getenv("SQLSERVER_HOST")
+        SQLSERVER_HOST = os.getenv("SQLSERVER_HOST_CLEAN")
         SQLSERVER_DB = os.getenv("SQLSERVER_DB")
         SQLSERVER_USER = os.getenv("SQLSERVER_USER")
         SQLSERVER_PASSWORD = os.getenv("SQLSERVER_PASSWORD")
+        SQLSERVER_PASSWORD =  SQLSERVER_PASSWORD.replace("@","%40")
         SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "SQL Server")
         try:
             conn_str = (
-                f"mssql+pyodbc://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}"
-                f"@{SQLSERVER_HOST}/{SQLSERVER_DB}"
-                f"?driver={SQLSERVER_DRIVER.replace(' ', '+')}"
+                f"mssql+pytds://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}"
+                f"@SCL0TSP01S01.ent.bhpbilliton.net\\SQL2017/{SQLSERVER_DB}"
+                #f"?driver={SQLSERVER_DRIVER.replace(' ', '+')}"
             )
+            print(conn_str)
             return create_engine(conn_str)
         except Exception as e:
             print(f"❌ Error engine SQL Server: {e}")
