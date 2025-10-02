@@ -12,29 +12,29 @@ from db_connection import get_connection
 from datetime import datetime
 
 VARIABLES_VALIDAS = [
-    "Ton", "CuTG00_pond", "CusG01_pond", "RS_pond", "C03G02_pond",
-    "RecLixG03_pond", "100G07_pond", "ClayBG10_pond", "CUFE_pond", "FE_pond"
+    "Ton", "PONDCuTG00", "PONDCusG01", "PONDRS", "PONDC03G02",
+    "PONDRecLixG03", "POND100G07", "PONDClayBG10", "PONDCUFE", "PONDFE"
 ]
 
 # ---------- DATA ----------
 def load_data(fecha_ini, fecha_fin):
     query = f"""
         SELECT
-            resumen_mina.Fecha, 
-            resumen_mina.Turno, 
-            resumen_mina.Origen, 
-            resumen_mina.Fase, 
-            resumen_mina.Ton, 
-            resumen_mina.CuTG00_pond, 
-            resumen_mina.CusG01_pond, 
-            resumen_mina.RS_pond, 
-            resumen_mina.C03G02_pond, 
-            resumen_mina.RecLixG03_pond, 
-            resumen_mina.100G07_pond, 
-            resumen_mina.ClayBG10_pond, 
-            resumen_mina.CUFE_pond, 
-            resumen_mina.FE_pond
-        FROM resumen_mina
+            Fecha, 
+            Turno, 
+            Origen, 
+            Fase, 
+            Ton, 
+            PONDCuTG00, 
+            PONDCusG01, 
+            PONDRS, 
+            PONDC03G02, 
+            PONDRecLixG03, 
+            POND100G07, 
+            PONDClayBG10, 
+            PONDCUFE, 
+            PONDFE
+        FROM inventar_SpcHidr.resumen_mina
         WHERE Fecha BETWEEN '{fecha_ini}' AND '{fecha_fin}'
     """
     conn = get_connection()
@@ -169,7 +169,7 @@ def register_tab1_callbacks(app):
                             dcc.Dropdown(
                                 id="variable-secundaria",
                                 options=[{"label": v, "value": v} for v in VARIABLES_VALIDAS],
-                                value="CuTG00_pond"
+                                value="CuTG00"
                             ),
 
                             # Store con los datos base ya filtrados por fecha

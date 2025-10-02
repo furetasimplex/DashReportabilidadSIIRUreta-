@@ -28,7 +28,7 @@ def _to_csv_href(df):
 # ---------------- Layout ----------------
 def render_tab4():
     conn = get_connection()
-    fechas_df = pd.read_sql("SELECT MIN(Fecha) as min_fecha, MAX(Fecha) as max_fecha FROM vista_control_torres", conn)
+    fechas_df = pd.read_sql("SELECT MIN(CAST(Fecha AS DATE)) as min_fecha, MAX(CAST(Fecha AS DATE)) as max_fecha FROM inventar_SpcHidr.vista_control_torres", conn)
     conn.close()
 
     torres = ['TM1', 'TM2']
@@ -175,10 +175,14 @@ def register_tab4_callbacks(app):
         # Leer datos
         conn = get_connection()
         query = f"""
-            SELECT * FROM vista_control_torres
-            WHERE Fecha BETWEEN '{start_date}' AND '{end_date}'
+            SELECT Torre,Turno,Fecha,Representatividad FROM inventar_SpcHidr.vista_control_torres
+            WHERE Fecha
+            BETWEEN '{start_date}' AND '{end_date}'
         """
+        print(query)
+        print(conn)
         df = pd.read_sql(query, conn)
+        print(df)
         conn.close()
 
         # Filtrar torres + preparar tipos

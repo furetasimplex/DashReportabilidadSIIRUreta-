@@ -33,8 +33,8 @@ def load_data(fecha_ini, fecha_fin, pad):
             modulos_turnos.FeS, 
             modulos_turnos.CO3, 
             modulos_turnos.Consumo_H, 
-            modulos_turnos.`Adición_H`, 
-            modulos_turnos.`Altura Módulo`, 
+            modulos_turnos.[Adición_H], 
+            modulos_turnos.[Altura Módulo], 
             modulos_turnos.Caolinita, 
             modulos_turnos.Cuarzo, 
             modulos_turnos.M34, 
@@ -47,7 +47,7 @@ def load_data(fecha_ini, fecha_fin, pad):
             modulos_turnos.CSR_Cu, 
             modulos_turnos.Betaclay, 
             modulos_turnos.CuFe
-        FROM modulos_turnos
+        FROM inventar_SpcHidr.modulos_turnos
         WHERE Fecha BETWEEN '{fecha_ini}' AND '{fecha_fin}' AND PAD='{pad}'
     """
     conn = get_connection()

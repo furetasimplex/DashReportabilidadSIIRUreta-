@@ -164,8 +164,8 @@ def register_callbacks(app):
             # --- Persistencia en BD ---
             engine = get_engine()
             with engine.begin() as conn:
-                df.to_sql("Recuperaciones_pad", con=conn, if_exists="append", index=False,
-                          method="multi", chunksize=1000)
+                df.to_sql("Recuperaciones_pad", con=conn,schema="inventar_SpcHidr", if_exists="append", index=False,
+                          method="multi", chunksize=20)
 
             return dbc.Alert(
                 f"Archivo '{nombre_archivo}' cargado correctamente. Registros cargados: {len(df)}",

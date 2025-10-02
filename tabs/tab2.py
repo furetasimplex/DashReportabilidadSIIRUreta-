@@ -13,7 +13,7 @@ def render_tab2():
     # Rango de fechas desde BD
     conn = get_connection()
     fechas_df = pd.read_sql(
-        "SELECT MIN(Fecha) as min_fecha, MAX(Fecha) as max_fecha FROM Datos_conciliados_of",
+        "SELECT MIN(Fecha) as min_fecha, MAX(Fecha) as max_fecha FROM inventar_SpcHidr.Datos_conciliados_of",
         conn
     )
     conn.close()
@@ -166,7 +166,7 @@ def register_tab2_callbacks(app):
         # Leer datos
         conn = get_connection()
         query = f"""
-            SELECT * FROM Datos_conciliados_of
+            SELECT * FROM inventar_SpcHidr.Datos_conciliados_of
             WHERE Fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         """
         df = pd.read_sql(query, conn)
@@ -271,7 +271,7 @@ def register_tab2_callbacks(app):
     def actualizar_dropdowns(n_clicks, fecha_inicio, fecha_fin):
         conn = get_connection()
         query = f"""
-            SELECT * FROM Datos_conciliados_of
+            SELECT * FROM inventar_SpcHidr.Datos_conciliados_of
             WHERE Fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         """
         df = pd.read_sql(query, conn)

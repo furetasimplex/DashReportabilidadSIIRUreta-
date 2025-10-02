@@ -51,12 +51,12 @@ def procesar_excel_leyes(file_like, nombre_archivo):
                 fechas_existentes = df['Fecha'].dropna().unique()
                 for f in fechas_existentes:
                     stmt = text("""
-                        DELETE FROM import_leyes_torres
+                        DELETE FROM inventar_SpcHidr.import_leyes_torres
                         WHERE fecha = :fecha AND id_torre = :torre
                     """)
                     conn.execute(stmt, {"fecha": f, "torre": id_torre})
             
-            df.to_sql("import_leyes_torres", engine, if_exists="append", index=False)
+            df.to_sql("import_leyes_torres", engine,schema="inventar_SpcHidr", if_exists="append", index=False)
         # Lista exacta de columnas esperadas
         columnas_granulo = [
             "Torre", "Fecha", "Turno", "CuT", "CuS", "FeT", "FeS", "CO3", "Cl_Ac_kgton", "Cons_Ac_Kgton",
@@ -96,7 +96,7 @@ def procesar_excel_leyes(file_like, nombre_archivo):
             with engine.connect() as conn:
                 for _, row in df.iterrows():
                     stmt = text("""
-                        DELETE FROM import_granulometria_torres
+                        DELETE FROM inventar_SpcHidr.import_granulometria_torres
                         WHERE Fecha = :fecha AND Turno = :turno AND id_Torre = :torre
                     """)
                     conn.execute(stmt, {
@@ -106,7 +106,7 @@ def procesar_excel_leyes(file_like, nombre_archivo):
                     })
 
             # Insertar
-            df.to_sql("import_granulometria_torres", engine, if_exists="append", index=False)
+            df.to_sql("import_granulometria_torres", engine,schema="inventar_SpcHidr", if_exists="append", index=False)
 
         
 

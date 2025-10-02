@@ -148,12 +148,26 @@ layout = html.Div([
 # =========================
 def _query_df(sql, params):
     """ Ejecuta SQL usando get_connection() y retorna DataFrame. """
+    #print(sql)
+    #print(params)
     conn = get_connection()
+
     try:
-        cur = conn.cursor(dictionary=True)
+        #cur = conn.cursor(dictionary=True)
+        cur = conn.cursor()
+        if conn.__class__.__module__.startswith("pyodbc"):
+            sql = sql.replace('%s',"?")
+        print(f'{sql} and parameters {params}')
         cur.execute(sql, params)
+        print(cur.description)
+        columns = [desc[0] for desc in cur.description]
         rows = cur.fetchall()
-        return pd.DataFrame(rows)
+  
+        #print(f"rows: {rows}")
+        #df = pd.DataFrame(rows,columns=cols)
+        df = pd.DataFrame([dict(zip(columns,r)) for r in rows])
+        print(df)
+        return df
     finally:
         try:
             cur.close()
@@ -181,14 +195,14 @@ def _parse_selected_parcelas(selected_cells):
 #  Lógica de campañas / cinética
 # =========================
 def _detect_campanias(pad, parcelas, start_date, end_date):
-    """Detecta campañas por fecha en control_ley_ripio_diario; si no hay, busca en res_parcelas_apilado."""
+    """Detecta campañas por fecha en inventar_SpcHidr.control_ley_ripio_diario; si no hay, busca en inventar_SpcHidr.res_parcelas_apilado."""
     if not parcelas:
         return []
 
     # 1) control_ley_ripio_diario (por drenaje)
     sql1 = f"""
         SELECT DISTINCT Campana
-        FROM control_ley_ripio_diario
+        FROM inventar_SpcHidr.control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Fecha_drenaje BETWEEN %s AND %s
@@ -199,10 +213,10 @@ def _detect_campanias(pad, parcelas, start_date, end_date):
     if not df.empty:
         return df['Campana'].astype(int).tolist()
 
-    # 2) fallback: res_parcelas_apilado (por apilado)
+    # 2) fallback: inventar_SpcHidr.res_parcelas_apilado (por apilado)
     sql2 = f"""
         SELECT DISTINCT Campana
-        FROM res_parcelas_apilado
+        FROM inventar_SpcHidr.res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Fecha_apilado BETWEEN %s AND %s
@@ -226,7 +240,7 @@ def _load_kinetics_total(pad, parcelas, campanias, start_date, end_date):
     # Denominador
     sql_den = f"""
         SELECT SUM(fino_apilado_cu) AS fino_apilado_total
-        FROM res_parcelas_apilado
+        FROM inventar_SpcHidr.res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -240,7 +254,7 @@ def _load_kinetics_total(pad, parcelas, campanias, start_date, end_date):
     # Aporte diario total
     sql_day = f"""
         SELECT Fecha_drenaje AS fecha, SUM(fino_dia) AS fino_dia_sel
-        FROM control_ley_ripio_diario
+        FROM inventar_SpcHidr.control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -272,7 +286,7 @@ def _load_kinetics_by_parcela(pad, parcelas, campanias, start_date, end_date):
     # Denominador por parcela
     sql_den = f"""
         SELECT Parcela, SUM(fino_apilado_cu) AS fino_apilado_total
-        FROM res_parcelas_apilado
+        FROM inventar_SpcHidr.res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -288,7 +302,7 @@ def _load_kinetics_by_parcela(pad, parcelas, campanias, start_date, end_date):
     # Aporte diario por parcela
     sql_day = f"""
         SELECT Fecha_drenaje AS fecha, Parcela, SUM(fino_dia) AS fino_dia
-        FROM control_ley_ripio_diario
+        FROM inventar_SpcHidr.control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
