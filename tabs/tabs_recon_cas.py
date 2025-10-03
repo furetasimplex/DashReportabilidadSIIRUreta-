@@ -205,54 +205,89 @@ def register_recon_callbacks(app):
         Output('data_casos2', 'rowData'),
         Output('data_hcas2', 'rowData'),
         Output('id_caso_activo', 'value'),
+        Output('active-case', 'data'),
         Input('btn-get-casos', 'n_clicks'),
         State('fecha_inicio_caso', 'value'),
         State('fecha_final_caso', 'value'),
         State('crea-caso', 'value'),
+        State('recon-data', 'data'), # <--- Añadimos el State para no perder datos
         prevent_initial_call=True,
     )
-    def cargar_casos(n_clicks, inicio, final, crea_caso):
-        if not n_clicks or ctx.triggered_id != 'btn-get-casos':
-            return dash.no_update, dash.no_update, dash.no_update
+    def manejar_casos_y_store(n_clicks, caso_id_manual, inicio, final, crea_caso, shared_data):
+        # --- Disparador del callback ---
+        triggered_id = ctx.triggered_id
 
-        crea_flag = 'Si' if (crea_caso == ['Si']) else 'No'
-        # Puedes ajustar el formateo si tus funciones requieren hh:mm
-        # inicio_tag = f"{inicio} 08:00"
-        # final_tag  = f"{final} 07:00"
+        # --- Normalización estricta del Store del caso activo ---
+        # 1) shared_data debe ser SIEMPRE un dict
+        if not isinstance(shared_data, dict):
+            # Si por error llega una lista de dicts, toma el primero; en otro caso, dict vacío
+            if isinstance(shared_data, list) and shared_data and isinstance(shared_data[0], dict):
+                shared_data = dict(shared_data[0])  # copia defensiva
+            else:
+                shared_data = {}
 
-        df_caso = get_data_agua_casos(inicio, final, crea_flag)
-        df_hist = get_agua_his_casos(final)
+        # 2) Normalizar el flag del checkbox/Select para "crear caso"
+        #    Tu UI a veces entrega ['Si'] o ['No']; volvemos a 'Si'/'No'
+        if isinstance(crea_caso, (list, tuple)) and crea_caso:
+            crea_flag = 'Si' if (crea_caso[0] == 'Si') else 'No'
+        elif isinstance(crea_caso, str):
+            crea_flag = 'Si' if (crea_caso == 'Si') else 'No'
+        else:
+            crea_flag = 'No'
 
-        caso_id = None
-        if df_caso is not None and len(df_caso) > 0 and 'caso_id' in df_caso.columns:
-            caso_id = int(df_caso['caso_id'].max())
+        # --- 1) Botón "Obtener Datos" ---
+        if triggered_id == 'btn-get-casos':
+            # Consultas a BD
+            df_caso = get_data_agua_casos(inicio, final, crea_flag)
+            df_hist = get_agua_his_casos(final)
 
-         # Lo que guardamos en el Store (mínimo el caso_id)
-        shared_payload = {
-            "caso_id": caso_id,
-            "data_casos2": (df_caso.round(4).to_dict('records') if df_caso is not None else [])
-        }
+            caso_id_calculado = None
+            if df_caso is not None and not df_caso.empty:
+                # Asegurar entero
+                try:
+                    caso_id_calculado = int(df_caso['caso_id'].max())
+                except Exception:
+                    caso_id_calculado = None
 
-        return (
-            (df_caso.round(4).to_dict('records') if df_caso is not None else []),
-            (df_hist.round(4).to_dict('records') if df_hist is not None else []),
-            caso_id
-        )
-    # Si el usuario tipea manualmente un id, sincroniza el Store
-    @app.callback(
-        Output('recon-shared', 'data'),
-        Input('id_caso_activo', 'value'),
-        State('recon-shared', 'data'),
-        State('fecha_final_caso', 'value'),
-        prevent_initial_call=True
-    )
-    def sync_store_from_input(caso_id, shared, fecha_fin):
-        shared = shared or {}
-        shared["caso_id"] = caso_id
-        shared["fecha"] = fecha_fin
-        return shared
+            # Preparar store de caso activo (dict)
+            new_shared_data = {
+                "caso_id": caso_id_calculado,
+                "fecha_inicio": inicio,
+                "fecha_fin": final
+            }
 
-    # Guardar edición del caso activo
+            return (
+                (df_caso.round(4).to_dict('records') if df_caso is not None else []),
+                (df_hist.round(4).to_dict('records') if df_hist is not None else []),
+                caso_id_calculado,
+                new_shared_data
+            )
+
+        # --- 2) Cambio manual del ID de caso ---
+        if triggered_id == 'id_caso_activo':
+            # Ignorar vacíos/None
+            if caso_id_manual in (None, '', ' '):
+                return no_update, no_update, no_update, no_update
+
+            # Tipar a entero de forma segura
+            try:
+                caso_id_manual_int = int(caso_id_manual)
+            except Exception:
+                # Si no es convertible a int, no tocar nada
+                return no_update, no_update, no_update, no_update
+
+            # Actualizar SOLO el store, sin tocar las tablas
+            shared_data["caso_id"] = caso_id_manual_int
+            # (Si quieres conservar también fechas previas en shared_data, no las borres)
+            return no_update, no_update, no_update, shared_data
+
+        # --- 3) Ningún disparador relevante: no hacer nada ---
+        return no_update, no_update, no_update, no_update
+
+
+    # ==============================================================================
+    # CALLBACK #2: GUARDAR EDICIÓN DEL CASO ACTIVO (SIN CAMBIOS)
+    # ==============================================================================
     @app.callback(
         Output('btn-sim-msg_caso', 'children'),
         Input('btn-save-casos', 'n_clicks'),

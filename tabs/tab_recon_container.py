@@ -12,8 +12,6 @@ layout = dbc.Card(
         dbc.CardHeader(html.H4("Módulo de Importación de Datos", className="mb-0")),
         dbc.CardBody(
             [
-                # <-- Store compartido entre subtabs (sesión del navegador)
-                dcc.Store(id="recon-shared", storage_type="session"),
                 
                 dcc.Tabs(
                     id="recon-subtabs",

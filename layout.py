@@ -65,6 +65,11 @@ def create_layout(app):
     return dbc.Container(
         [
             render_header(),
+
+            dcc.Store(id="active-case", data={}, storage_type="memory"),
+            dcc.Store(id="recon-data", data=[], storage_type="memory"),
+            dcc.Store(id="recon-results", data=[], storage_type="memory"),
+
             dbc.Card(
                 dbc.CardBody(
                     [
