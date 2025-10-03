@@ -1,61 +1,10 @@
 # tabs/tab_reporte.py
 
 import dash
-from dash import html, dcc, Input, Output, State
+from dash import html, dcc, Input, Output, State, callback, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
 from pathlib import Path
-from .Exportarexcel import exportar_excel_desbalance
-from .utils_recon import balance_core
-from .utils_dash import get_data_publica_casos
-import dash_ag_grid as dag
-import numpy as np
-import io
-
-dict_style_boton_2 = {
-    'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',
-    'border-radius': '10px',
-    'width': '100%',
-    'fontSize': 10,
-    'height': '40px',
-    'textAlign': 'center'
-}
-
-# === ColumnDefs requeridos para AgGrid (import desde Tab6 con fallback local) ===
-try:
-    # Ajusta la ruta si tu paquete/tabs tiene otro nombre
-    from tabs.tab6 import columnsDefs_resultados, columnsDefs_desbalances
-except Exception:
-    # Fallback mínimo por si no se puede importar desde tab6
-    columnsDefs_resultados = [
-        {"headerName": "Flujo", "field": "Flujo"},
-        {"headerName": "Masa Reconciliada (t)", "field": "Masa Reconciliada", "type": "rightAligned"},
-        {"headerName": "Ley Cu Reconciliada (frac)", "field": "Ley_Cu_Reconciliada", "type": "rightAligned"},
-        {"headerName": "Masa Medida (t)", "field": "Masa Medida", "type": "rightAligned"},
-        {"headerName": "Ley Cu Medida (frac)", "field": "Cu", "type": "rightAligned"},
-        {"headerName": "Código", "field": "Codigo"},
-        {"headerName": "id_flujo", "field": "id_flujo"},
-    ]
-    columnsDefs_desbalances = [
-        {"headerName": "Área", "field": "Area"},
-        {"headerName": "Desbalance masa_Ini", "field": "Desbalance masa_Ini", "type": "rightAligned"},
-        {"headerName": "Desbalance masa (Recon)", "field": "Desbalance masa", "type": "rightAligned"},
-        {"headerName": "Desbalance fino Cu (Recon)", "field": "Desbalance fino Cu", "type": "rightAligned"},
-    ]
-
-from tabs.Exportarexcel import exportar_excel_desbalance
-
-# ----- Rutas base -----
-# Este archivo vive en app/tabs/, por eso parents[1] apunta a la carpeta app/
-BASE_DIR = Path(__file__).resolve().parents[1]
-
-# TEMPLATE CORREGIDO: el archivo base está en 'app/Desbalance Formato Base.xlsx'
-TEMPLATE_XLSX = str(BASE_DIR / "Desbalance Formato Base.xlsx")
-
-# Carpeta de salida (se crea automáticamente si no existe)
-OUTPUT_DIR = BASE_DIR / "Desbalances"
-
-
 from .Exportarexcel import exportar_excel_desbalance
 from .utils_recon import balance_core
 from .utils_dash import get_data_publica_casos
@@ -238,6 +187,7 @@ def render_layout_reporte():
             className="shadow-sm border-0"
         )
     ], className="pt-3")
+
 # 2) CALLBACKS (lógica)
 def register_callbacks_reporte(app):
 

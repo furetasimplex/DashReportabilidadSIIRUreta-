@@ -100,7 +100,7 @@ def get_engine():
             return None
 
     if ENTORNO == 3:  # SQL Server
-        SQLSERVER_HOST = os.getenv("SQLSERVER_HOST_CLEAN")
+        SQLSERVER_HOST = os.getenv("SQLSERVER_HOST")
         SQLSERVER_DB = os.getenv("SQLSERVER_DB")
         SQLSERVER_USER = os.getenv("SQLSERVER_USER")
         SQLSERVER_PASSWORD = os.getenv("SQLSERVER_PASSWORD")
@@ -109,7 +109,7 @@ def get_engine():
         try:
             conn_str = (
                 f"mssql+pytds://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}"
-                f"@SCL0TSP01S01.ent.bhpbilliton.net\\SQL2017/{SQLSERVER_DB}"
+                f"@{SQLSERVER_HOST}\\SQL2017/{SQLSERVER_DB}"
                 #f"?driver={SQLSERVER_DRIVER.replace(' ', '+')}"
             )
             print(conn_str)

@@ -197,16 +197,18 @@ def render_recon_cas():
     ])
 
 
-# ====== Callbacks ======
 def register_recon_callbacks(app):
 
-    # Cargar datos de caso activo e histórico
+    # ==============================================================================
+    # CALLBACK #1: CARGAR CASOS Y SINCRONIZAR EL STORE (FUNCIÓN UNIFICADA)
+    # ==============================================================================
     @app.callback(
         Output('data_casos2', 'rowData'),
         Output('data_hcas2', 'rowData'),
         Output('id_caso_activo', 'value'),
         Output('active-case', 'data'),
         Input('btn-get-casos', 'n_clicks'),
+        Input('id_caso_activo', 'value'), # <--- AÑADIMOS EL INPUT DEL OTRO CALLBACK
         State('fecha_inicio_caso', 'value'),
         State('fecha_final_caso', 'value'),
         State('crea-caso', 'value'),
@@ -298,7 +300,7 @@ def register_recon_callbacks(app):
     )
     def guardar_caso(n_clicks, data_rows, fecha_final, caso_id):
         if not n_clicks or ctx.triggered_id != 'btn-save-casos':
-            return dash.no_update
+            return no_update
 
         try:
             get_data_save_casos(data_rows or [], fecha_final, caso_id)

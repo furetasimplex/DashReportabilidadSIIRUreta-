@@ -30,7 +30,7 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 def get_data_agua_casos(inicio, final,crea_caso):
         db=get_connection()
         if crea_caso=="Si":
-            sql_in="INSERT INTO `casos_balance` ( `fecha`,  `modelo`, `fecha_ini`) VALUES" \
+            sql_in="INSERT INTO `inventar_SpcHidr.casos_balance` ( `fecha`,  `modelo`, `fecha_ini`) VALUES" \
             " ( '"+(final)+"',  1, '"+(inicio)+"');" 
             #print(sql_in)
             
@@ -43,12 +43,13 @@ def get_data_agua_casos(inicio, final,crea_caso):
             
 
         sql="select caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso " \
-        "FROM casos_balance where casos_balance.fecha='"+(final)+"' and modelo=1"
-        #print(sql)
+        "FROM inventar_SpcHidr.casos_balance where inventar_SpcHidr.casos_balance.fecha='"+(final)+"' and modelo=1"
+        print(sql)
         cursor = db.cursor()
         try:
             cursor.execute(sql)
             registros = cursor.fetchall()
+            print(registros)
             column_names = [desc[0] for desc in cursor.description]
             ddf_casos = pd.DataFrame(registros, columns=column_names)
             #ddf_casos = pd.DataFrame(registros)
@@ -65,7 +66,7 @@ def get_data_agua_casos(inicio, final,crea_caso):
 def get_agua_his_casos (final):
      db=get_connection()
      sql2="select caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso " \
-        "FROM casos_balance where  modelo=1 order by fecha desc"
+        "FROM inventar_SpcHidr.casos_balance where  modelo=1 order by fecha desc"
      print(sql2)
      cursor = db.cursor()
      try:
@@ -124,20 +125,22 @@ def get_fig_bal_casos(maxid,agg_tab2):
                     flujo_caso_coord.Tolerancia_cu, 
                     flujo_caso_coord.caso
                 FROM
-                    flujo_caso_coord
+                    inventar_SpcHidr.flujo_caso_coord
                 WHERE
-                    flujo_caso_coord.caso = '''+ str(maxid) 
+                    inventar_SpcHidr.flujo_caso_coord.caso = '''+ str(maxid) 
     print(data_sql)
     cursor = db.cursor()
     try:
             cursor.execute(data_sql)
             registros = cursor.fetchall()
+            print("registros")
+            print(registros)
             column_names = [desc[0] for desc in cursor.description]
             df = pd.DataFrame(registros, columns=column_names)
             print(df)
-    except:
-            print("Error en la consulta coord")
-            return ""
+    except Exception as e:
+        print("Error en la consulta coord:")
+        print(e) 
     finally:
                 cursor.close()
 
@@ -195,7 +198,7 @@ def get_data_save_casos(dat_casos,final,maxcas):
         df = pd.DataFrame(dat_casos)
         print(df)
         # Generar sentencias UPDATE
-        tabla = "casos_balance"  # Nombre de la tabla en MySQL
+        tabla = "inventar_SpcHidr.casos_balance"  # Nombre de la tabla en MySQL
         update_statements = []
 
         for _, row in df.iterrows():
@@ -367,9 +370,9 @@ def get_data_publica_casos(med_cas, rec_caso, shared):
     cnx = get_connection()
     cur = cnx.cursor()
     try:
-        cur.execute("DELETE FROM Data_balance_rec WHERE caso_id = %s", (caso_id,))
+        cur.execute("DELETE FROM inventar_SpcHidr.Data_balance_rec WHERE caso_id = %s", (caso_id,))
         insert_sql = """
-            INSERT INTO Data_balance_rec
+            INSERT INTO inventar_SpcHidr.Data_balance_rec
             (Flujo, Masa_medida, Masa_recon, Error_masa,
              Ley_medida_Cu, Ley_recon_Cu, Error_ley_Cu,
              id_flujo, Codigo, Masa_Medida2,
