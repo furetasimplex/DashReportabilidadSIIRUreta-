@@ -17,10 +17,9 @@ from dash import Dash
 import dash_ag_grid as dag
 from tabs.utils_recon import balance_core
 from tabs.utils_dash import  get_data_publica_casos, parse_contents
-from sqlalchemy import  text
+from sqlalchemy import  create_engine, text
 
-#ENGINE = create_engine("mysql+pymysql://inventar_simplex:PLexyz31416@149.50.133.195:3306/inventar_SpcHidr?charset=utf8mb4")
-ENGINE = get_engine()
+ENGINE = create_engine("mssql+pytds://sa:24gegepeNA@149.50.136.234:1433/inventar_SpcHidr")
 
 dict_style_boton_2 = {
         'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',
@@ -295,20 +294,18 @@ def register_tab6_callbacks(app):
             # shared es State('active-case','data')
             if not (shared and 'caso_id' in shared):
                 return [], "❌ No hay un caso activo. Carga un caso primero."
-
             caso_id = shared.get('caso_id')
             with ENGINE.begin() as eng_conn:
                 df_caso = pd.read_sql(
                     text("""
-                        SELECT fecha_ini AS fi, fecha AS ff
+                        SELECT TOP 1 fecha_ini AS fi, fecha AS ff
                         FROM inventar_SpcHidr.casos_balance
                         WHERE caso_id = :c AND modelo = 1
-                        LIMIT 1
                     """),
                     eng_conn,
                     params={"c": caso_id}
                 )
-
+            print("Consulta SQL ejecutada correctamente.")
             fi = pd.to_datetime(df_caso['fi'].iat[0]).date()
             ff = pd.to_datetime(df_caso['ff'].iat[0]).date()
             if fi > ff:
