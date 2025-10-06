@@ -1,54 +1,59 @@
-
-from flask import redirect, request
-from flask_login import (
-    LoginManager, UserMixin, login_user, logout_user, current_user
-)
-from flask_bcrypt import Bcrypt
+from flask import Blueprint, request, jsonify, session, render_template_string,redirect,render_template
 from sqlalchemy import text
-import pandas as pd
+from werkzeug.security import generate_password_hash, check_password_hash
+from db_connection import get_engine
 
-bcrypt = Bcrypt()
-login_manager = LoginManager()
-login_manager.login_view = "/login"
+auth_bp = Blueprint("auth", __name__, template_folder="templatesFrontend")
 
-# ======================================================
-# CLASE USUARIO
-# ======================================================
-class User(UserMixin):
-    def __init__(self, id, username, password_hash, rol):
-        self.id = id
-        self.username = username
-        self.password_hash = password_hash
-        self.rol = rol
 
-# ======================================================
-# INICIALIZAR AUTH
-# ======================================================
-def init_auth(server, engine):
-    bcrypt.init_app(server)
-    login_manager.init_app(server)
+@auth_bp.route("/login_page")
+def login_page():
+    return render_template("login.html")
 
-    @login_manager.user_loader
-    def load_user(user_id):
-        df = pd.read_sql(text("SELECT * FROM inventar_SpcHidr.usuarios WHERE id = :id"), engine, params={"id": user_id})
-        if not df.empty:
-            u = df.iloc[0]
-            return User(u.id, u.username, u.password_hash, u.rol)
-        return None
 
-# ======================================================
-# LOGIN HANDLER
-# ======================================================
-def try_login(username, password, engine):
-    df = pd.read_sql(text("SELECT * FROM inventar_SpcHidr.usuarios WHERE username = :u AND activo = 1"), engine, params={"u": username})
-    if df.empty:
-        return None
-    u = df.iloc[0]
-    if bcrypt.check_password_hash(u.password_hash, password):
-        user = User(u.id, u.username, u.password_hash, u.rol)
-        login_user(user)
-        return user
-    return None
+@auth_bp.route("/register", methods=["POST"])
+def register():
+    data = request.get_json()
+    username = data["username"]
+    password = data["password"]
 
-def do_logout():
-    logout_user()
+    engine = get_engine()
+    hashed = generate_password_hash(password)
+
+    with engine.begin() as conn:
+        # Verificar si existe
+        existing = conn.execute(text("SELECT 1 FROM inventar_SpcHidr.usuarios WHERE username=:u"), {"u": username}).fetchone()
+        if existing:
+            return jsonify({"error": "Usuario ya existe"}), 400
+
+        conn.execute(
+            text("INSERT INTO inventar_SpcHidr.usuarios (username, password_hash) VALUES (:u, :p)"),
+            {"u": username, "p": hashed}
+        )
+
+    return jsonify({"message": "Usuario creado"}), 201
+
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    username = request.form["username"]
+    password = request.form["password"]
+
+    engine = get_engine()
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT password_hash FROM inventar_SpcHidr.usuarios WHERE username=:u"),
+            {"u": username}
+        ).fetchone()
+
+    if row and check_password_hash(row.password_hash, password):
+        session["user"] = username
+        return redirect("/")
+
+    return jsonify({"error": "Credenciales inválidas"}), 401
+
+
+@auth_bp.route("/logout")
+def logout():
+    session.pop("user", None)
+    return jsonify({"message": "Sesión cerrada"}), 200
