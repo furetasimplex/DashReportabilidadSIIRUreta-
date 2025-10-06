@@ -20,6 +20,7 @@ from dash import Dash
 from db_connection import get_connection
 from datetime import date
 import math
+import traceback
 
 load_dotenv()
 
@@ -27,63 +28,67 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 
 
 
-def get_data_agua_casos(inicio, final,crea_caso):
-        db=get_connection()
-        if crea_caso=="Si":
-            sql_in="INSERT INTO `inventar_SpcHidr.casos_balance` ( `fecha`,  `modelo`, `fecha_ini`) VALUES" \
-            " ( '"+(final)+"',  1, '"+(inicio)+"');" 
-            #print(sql_in)
-            
-            cursor = db.cursor()
-            try:
-                cursor.execute(sql_in)  
-                db.commit()
-            except:
-                print("Error en insertar")
-            
+def get_data_agua_casos(inicio, final, crea_caso):
+    db = get_connection()
+    cursor = db.cursor()
+    try:
+        # Si se pidió crear un nuevo caso
+        if crea_caso == "Si":
+            sql_in = f"""
+                INSERT INTO inventar_SpcHidr.casos_balance (fecha, modelo, fecha_ini)
+                VALUES ('{final}', 1, '{inicio}');
+            """
+            print("🟢 Ejecutando:", sql_in)
+            cursor.execute(sql_in)
+            db.commit()
 
-        sql="select caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso " \
-        "FROM inventar_SpcHidr.casos_balance where inventar_SpcHidr.casos_balance.fecha='"+(final)+"' and modelo=1"
-        print(sql)
-        cursor = db.cursor()
-        try:
-            cursor.execute(sql)
-            registros = cursor.fetchall()
-            print(registros)
-            column_names = [desc[0] for desc in cursor.description]
-            ddf_casos = pd.DataFrame(registros, columns=column_names)
-            #ddf_casos = pd.DataFrame(registros)
-            print(ddf_casos)
-            #ddf_casos.rename(columns={0:'Id_caso', 1:'fecha', 2:'observaciones', 3:'modelo', 4:'fecha_ini', 5:'nombre_caso' }, inplace=True)
-            #ddf_casos.rename(columns={'Id_caso', 'fecha', 'comentarios', 'modelo', 'fecha_ini', 'nombre_caso' }, inplace=True)
-            #print(ddf_casos)
-        except:
-            print("Error en la consulta")
-        finally:
-                cursor.close()
-        return ddf_casos
+        # ⚡ Nuevo SQL: obtiene el último caso creado (el más reciente)
+        sql = """
+            SELECT TOP 1 caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso
+            FROM inventar_SpcHidr.casos_balance
+            WHERE modelo = 1
+            ORDER BY caso_id DESC
+        """
+        print("📘 Ejecutando:", sql)
+        cursor.execute(sql)
+        registros = [list(r) for r in cursor.fetchall()]
+        column_names = [desc[0] for desc in cursor.description]
+
+        ddf_casos = pd.DataFrame(registros, columns=column_names)
+        print("✅ Caso activo encontrado:")
+        print(ddf_casos)
+    except Exception as e:
+        print("❌ Error en get_data_agua_casos:", e)
+        ddf_casos = pd.DataFrame()
+    finally:
+        cursor.close()
+        db.close()
+
+    return ddf_casos
 
 def get_agua_his_casos (final):
-     db=get_connection()
-     sql2="select caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso " \
-        "FROM inventar_SpcHidr.casos_balance where  modelo=1 order by fecha desc"
-     print(sql2)
-     cursor = db.cursor()
-     try:
-            cursor.execute(sql2)
-            registros = cursor.fetchall()
-            column_names = [desc[0] for desc in cursor.description]
-            ddf_casosh = pd.DataFrame(registros, columns=column_names)
-            #ddf_casos = pd.DataFrame(registros)
-            print(ddf_casosh)
-            #ddf_casos.rename(columns={0:'Id_caso', 1:'fecha', 2:'observaciones', 3:'modelo', 4:'fecha_ini', 5:'nombre_caso' }, inplace=True)
-            #ddf_casos.rename(columns={'Id_caso', 'fecha', 'comentarios', 'modelo', 'fecha_ini', 'nombre_caso' }, inplace=True)
-            #print(ddf_casos)
-     except:
-            print("Error en la consulta")
-     finally:
-                cursor.close()
-     return ddf_casosh
+    ddf_casos = pd.DataFrame()  # 👈 evita devolver None
+    db=get_connection()
+    sql2 = ("SELECT caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso FROM inventar_SpcHidr.casos_balance WHERE modelo = 1 ORDER BY fecha DESC")
+    print(sql2)
+    cursor = db.cursor()
+    print("🟢 Cursor creado correctamente")
+    try:
+        cursor.execute(sql2)
+        registros = [list(r) for r in cursor.fetchall()]  # convierte cada tupla en lista plana
+        column_names = [desc[0] for desc in cursor.description]
+                
+        ddf_casosh = pd.DataFrame(registros, columns=column_names)
+        #ddf_casos = pd.DataFrame(registros)
+        print(ddf_casosh)
+        #ddf_casos.rename(columns={0:'Id_caso', 1:'fecha', 2:'observaciones', 3:'modelo', 4:'fecha_ini', 5:'nombre_caso' }, inplace=True)
+        #ddf_casos.rename(columns={'Id_caso', 'fecha', 'comentarios', 'modelo', 'fecha_ini', 'nombre_caso' }, inplace=True)
+        #print(ddf_casos)
+    except Exception as e:
+        print("Error en la consulta",e)
+    finally:
+            cursor.close()
+    return ddf_casosh
 
 def get_fig_bal_casos(maxid,agg_tab2):
     print("📁 Ruta actual:", os.getcwd())
@@ -132,9 +137,8 @@ def get_fig_bal_casos(maxid,agg_tab2):
     cursor = db.cursor()
     try:
             cursor.execute(data_sql)
-            registros = cursor.fetchall()
-            print("registros")
-            print(registros)
+            #registros = cursor.fetchall()
+            registros = [list(r) for r in cursor.fetchall()]  # convierte cada tupla en lista plana
             column_names = [desc[0] for desc in cursor.description]
             df = pd.DataFrame(registros, columns=column_names)
             print(df)
@@ -193,36 +197,44 @@ def get_fig_bal_casos(maxid,agg_tab2):
 
     return f"data:image/png;base64,{img_base64}"
 
-def get_data_save_casos(dat_casos,final,maxcas):
-        #column_names = [desc[0] for desc in dat_casos.description]
-        df = pd.DataFrame(dat_casos)
-        print(df)
-        # Generar sentencias UPDATE
-        tabla = "inventar_SpcHidr.casos_balance"  # Nombre de la tabla en MySQL
-        update_statements = []
+def get_data_save_casos(dat_casos, final, maxcas):
+    df = pd.DataFrame(dat_casos)
+    print(df)
 
-        for _, row in df.iterrows():
-            set_values = ", ".join([f"{col} = '{row[col]}'" if isinstance(row[col], str) else f"{col} = {row[col]}" for col in df.columns if col != 'caso_id'])
-            update_statements.append(f"UPDATE {tabla} SET {set_values} WHERE caso_id = {maxcas};")
+    tabla = "inventar_SpcHidr.casos_balance"
+    update_statements = []
 
-        # Unir todas las sentencias en una sola cadena
-        query = "\n".join(update_statements)
+    for _, row in df.iterrows():
+        set_values = []
+        for col in df.columns:
+            if col == "caso_id":
+                continue
+            val = row[col]
+            if pd.isna(val) or val is None:
+                set_values.append(f"{col} = NULL")
+            elif isinstance(val, str):
+                safe_val = val.replace("'", "''")
+                set_values.append(f"{col} = '{safe_val}'")
+            else:
+                set_values.append(f"{col} = {val}")
+        set_clause = ", ".join(set_values)
+        update_statements.append(f"UPDATE {tabla} SET {set_clause} WHERE caso_id = {maxcas};")
 
-        # Mostrar resultado
-        print(query)   
-        db=get_connection()
-        cursor = db.cursor()
-        for q in query.strip().split(";"):
-            if q.strip():
-                try:
-                    cursor.execute(q.strip() + ";")
-                    db.commit()
-                except Exception as e:
-                    print("❌ Error en la sentencia:", q.strip())
-                    print("🔎 Detalle:", e)     
-                finally:
-                    cursor.close()
-        return 
+    query = "\n".join(update_statements)
+    print(query)
+
+    db = get_connection()
+    cursor = db.cursor()
+    for q in query.strip().split(";"):
+        if q.strip():
+            try:
+                cursor.execute(q.strip())
+                db.commit()
+            except Exception as e:
+                print("❌ Error en la sentencia:", q.strip())
+                print("🔎 Detalle:", e)
+    cursor.close()
+    db.close()
 
 
 # ---------- util de saneo ----------
