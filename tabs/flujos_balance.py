@@ -1,6 +1,7 @@
 import pandas as pd
-from sqlalchemy import text#create_engine, text
+from sqlalchemy import create_engine, text#create_engine, text
 from db_connection import get_connection,get_engine
+from datetime import datetime
 
 import os
 
@@ -14,13 +15,15 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
     print(f"Iniciando balance para el rango: {fecha_inicio} a {fecha_fin}")
 
     # --- Conexión a MySQL ---
+    """ 
     user = "inventar_simplex"
     password = "PLexyz31416"
     host = "149.50.133.195"
     port = 3306
     database = "inventar_SpcHidr"
+     """
     try:
-        engine = get_engine()#create_engine(f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}")
+        engine = create_engine(f"mssql+pytds://sa:24gegepeNA@149.50.136.234/inventar_SpcHidr")
     except Exception as e:
         print(f"Error de conexión a la base de datos: {e}")
         return pd.DataFrame()
@@ -53,117 +56,95 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         AND Destino = 'CH01'
     ) AS Ley_Cu;
         """,
-        "F5": f"""SELECT
-    tms_i.total_tms                                       AS TMS_Inicial,
-    tms_f.total_tms                                       AS TMS_Final,
-    tms_f.total_tms - tms_i.total_tms                     AS Tonelaje,
-    ley_i.ley_cu                                          AS Ley_Cu_1,
-    ley_f.ley_cu                                          AS Ley_Cu_2,
-    -- CORRECCIÓN APLICADA AQUÍ
+        "F5": f"""WITH
+tms_i AS (
+    SELECT
+        AVG(
+            31.1017672705390 *
+            ((v.niv_silo_a + v.niv_silo_b) / 2) *
+            (1 - ISNULL(h.HumedadProm, 0) / 100)
+        ) AS total_tms
+    FROM inventar_SpcHidr.vista_resumen_datos_filtrados v
+    LEFT JOIN (
+        SELECT CAST(fecha AS DATE) AS fecha, AVG(Humedades_Dia) AS HumedadProm
+        FROM inventar_SpcHidr.import_leyes_torres
+        GROUP BY CAST(fecha AS DATE)
+    ) h ON CAST(v.Fecha_turno AS DATE) = h.fecha
+    WHERE CAST(v.Fecha_turno AS DATE) = '2025-08-01'
+),
+tms_f AS (
+    SELECT
+        AVG(
+            31.1017672705390 *
+            ((v.niv_silo_a + v.niv_silo_b) / 2) *
+            (1 - ISNULL(h.HumedadProm, 0) / 100)
+        ) AS total_tms
+    FROM inventar_SpcHidr.vista_resumen_datos_filtrados v
+    LEFT JOIN (
+        SELECT CAST(fecha AS DATE) AS fecha, AVG(Humedades_Dia) AS HumedadProm
+        FROM inventar_SpcHidr.import_leyes_torres
+        GROUP BY CAST(fecha AS DATE)
+    ) h ON CAST(v.Fecha_turno AS DATE) = h.fecha
+    WHERE CAST(v.Fecha_turno AS DATE) = '2025-08-31'
+),
+ley_i AS (
+    SELECT
+        (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 AS ley_cu
+    FROM inventar_SpcHidr.mov_cam
+    WHERE fecha = '2025-08-01' AND Fase <> 'SRR' AND Destino = 'CH01'
+),
+ley_f AS (
+    SELECT
+        (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 AS ley_cu
+    FROM inventar_SpcHidr.mov_cam
+    WHERE fecha = '2025-08-31' AND Fase <> 'SRR' AND Destino = 'CH01'
+)
+SELECT
+    tms_i.total_tms AS TMS_Inicial,
+    tms_f.total_tms AS TMS_Final,
+    tms_f.total_tms - tms_i.total_tms AS Tonelaje,
+    ley_i.ley_cu AS Ley_Cu_1,
+    ley_f.ley_cu AS Ley_Cu_2,
     COALESCE(
         (
-        (tms_f.total_tms * ley_f.ley_cu / 100) -
-        (tms_i.total_tms * ley_i.ley_cu / 100)
+            (tms_f.total_tms * ley_f.ley_cu / 100) -
+            (tms_i.total_tms * ley_i.ley_cu / 100)
         ) / NULLIF(tms_f.total_tms - tms_i.total_tms, 0) * 100,
-    0) AS Ley_Cu
-    FROM
-    /* TMS promedio del día, corregido por humedad promedio diaria */
-    (
-        SELECT
-        AVG(
-            31.1017672705390 * ((v.niv_silo_a + v.niv_silo_b) / 2) * (
-            1 - COALESCE(
-                (
-                SELECT
-                    AVG(h.Humedades_Dia)
-                FROM
-                    import_leyes_torres h
-                WHERE
-                    h.fecha = DATE(v.Fecha_turno)
-                ),
-                0
-            ) / 100
-            )
-        ) AS total_tms
-        FROM
-        vista_resumen_datos_filtrados v
-        WHERE
-        DATE(v.Fecha_turno) = '{fecha_inicio}'
-    ) AS tms_i
-    CROSS JOIN (
-        SELECT
-        AVG(
-            31.1017672705390 * ((v.niv_silo_a + v.niv_silo_b) / 2) * (
-            1 - COALESCE(
-                (
-                SELECT
-                    AVG(h.Humedades_Dia)
-                FROM
-                    import_leyes_torres h
-                WHERE
-                    h.fecha = DATE(v.Fecha_turno)
-                ),
-                0
-            ) / 100
-            )
-        ) AS total_tms
-        FROM
-        vista_resumen_datos_filtrados v
-        WHERE
-        DATE(v.Fecha_turno) = '{fecha_fin}'
-    ) AS tms_f
-    /* Ley ponderada por CIO seco, por día */
-    CROSS JOIN (
-        SELECT
-        (
-            SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)
-        ) * 100 AS ley_cu
-        FROM
-        inventar_SpcHidr.mov_cam
-        WHERE
-        fecha = '{fecha_inicio}'
-        AND Fase <> 'SRR'
-        AND Destino = 'CH01'
-    ) AS ley_i
-    CROSS JOIN (
-        SELECT
-        (
-            SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)
-        ) * 100 AS ley_cu
-        FROM
-        inventar_SpcHidr.mov_cam
-        WHERE
-        fecha = '{fecha_fin}'
-        AND Fase <> 'SRR'
-        AND Destino = 'CH01'
-    ) AS ley_f;
+        0
+    ) AS Ley_Cu
+FROM tms_i
+CROSS JOIN tms_f
+CROSS JOIN ley_i
+CROSS JOIN ley_f;
         """,
         "F6": f"""SELECT
         /* ================================================================= */
         /* PRIMERA COLUMNA: Cálculo del Tonelaje Neto (F6)                    */
         /* ================================================================= */
         (
-            IFNULL(
+            ISNULL(
                 (
                     -- Tonelaje de entrada (seco) desde la torre 1
                     SELECT ROUND(SUM(D.tsd), 2)
                     FROM (
                         SELECT sum(vrdf.cv008_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd
                         FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-                        JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
+                        JOIN inventar_SpcHidr.import_leyes_torres i ON CAST(vrdf.fecha_turno AS DATE)
+ = i.fecha
                         WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                         AND i.id_torre = 1
-                        GROUP BY DATE(vrdf.fecha_turno)
+                        GROUP BY CAST(vrdf.fecha_turno AS DATE)
+
                     ) AS D
                 ), 0
-            ) - IFNULL(
+            ) - ISNULL(
                 (
                     -- Tonelaje de salida 1 (cv002)
                     SELECT sum(cv002_tot) * 0.93
                     FROM inventar_SpcHidr.vista_resumen_datos_filtrados
                     WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                 ), 0
-            ) - IFNULL(
+            ) - ISNULL(
                 (
                     -- Tonelaje de salida 2 (cv201)
                     SELECT SUM(cv201_tot)
@@ -179,20 +160,22 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         (
             -- INICIO DEL NUMERADOR: (Finos F12 - Finos F8)
             (
-                IFNULL(
+                ISNULL(
                     (
                         -- Finos de entrada (F12)
                         SELECT SUM(D.Finos)
                         FROM (
                             SELECT (sum(vrdf.cv008_tot) * (1 - AVG(i.Humedades_Dia) / 100)) * AVG(i.CuT_Dia) / 100 AS Finos
-                            FROM vista_resumen_datos_filtrados vrdf
-                            JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
+                            FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
+                            JOIN inventar_SpcHidr.import_leyes_torres i ON CAST(vrdf.fecha_turno AS DATE)
+ = i.fecha
                             WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                             AND i.id_torre = 1
-                            GROUP BY DATE(vrdf.fecha_turno)
+                            GROUP BY CAST(vrdf.fecha_turno AS DATE)
+
                         ) AS D
                     ), 0
-                ) - IFNULL(
+                ) - ISNULL(
                     (
                         -- Finos de salida (F8) con la nueva lógica corregida
                         SELECT
@@ -215,25 +198,27 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
             -- INICIO DEL DENOMINADOR: Tonelaje Neto (F6)
             NULLIF(
                 (
-                    IFNULL(
+                    ISNULL(
                         (
                             SELECT ROUND(SUM(D.tsd), 2)
                             FROM (
                                 SELECT sum(vrdf.cv008_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd
                                 FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-                                JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
+                                JOIN inventar_SpcHidr.import_leyes_torres i ON CAST(vrdf.fecha_turno AS DATE)
+ = i.fecha
                                 WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                                 AND i.id_torre = 1
-                                GROUP BY DATE(vrdf.fecha_turno)
+                                GROUP BY CAST(vrdf.fecha_turno AS DATE)
+
                             ) AS D
                         ), 0
-                    ) - IFNULL(
+                    ) - ISNULL(
                         (
                             SELECT sum(cv002_tot) * 0.93
                             FROM inventar_SpcHidr.vista_resumen_datos_filtrados
                             WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                         ), 0
-                    ) - IFNULL(
+                    ) - ISNULL(
                         (
                             SELECT SUM(cv201_tot)
                             FROM inventar_SpcHidr.vista_resumen_datos_filtrados
@@ -250,27 +235,29 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         /* PRIMERA COLUMNA: Cálculo del Tonelaje Neto (F7)                    */
         /* ================================================================= */
         (
-            IFNULL(
+            ISNULL(
                 (
                     -- Tonelaje de entrada (seco) desde la torre 2
                     SELECT ROUND(SUM(D.tsd), 2)
                     FROM (
                         SELECT sum(vrdf.cv108_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd
                         FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-                        JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
+                        JOIN inventar_SpcHidr.import_leyes_torres i ON CAST(vrdf.fecha_turno AS DATE)
+ = i.fecha
                         WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                         AND i.id_torre = 2
-                        GROUP BY DATE(vrdf.fecha_turno)
+                        GROUP BY CAST(vrdf.fecha_turno AS DATE)
+
                     ) AS D
                 ), 0
-            ) - IFNULL(
+            ) - ISNULL(
                 (
                     -- Tonelaje de salida 1 (cv003)
                     SELECT sum(cv003_tot) * 0.93
                     FROM inventar_SpcHidr.vista_resumen_datos_filtrados
                     WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                 ), 0
-            ) - IFNULL(
+            ) - ISNULL(
                 (
                     -- Tonelaje de salida 2 (cv202)
                     SELECT SUM(cv202_tot)
@@ -286,20 +273,22 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         (
             -- INICIO DEL NUMERADOR: (Finos de Entrada - Finos de Salida)
             (
-                IFNULL(
+                ISNULL(
                     (
                         -- Finos de entrada (basado en cv108)
                         SELECT SUM(D.Finos)
                         FROM (
                             SELECT (sum(vrdf.cv108_tot) * (1 - AVG(i.Humedades_Dia) / 100)) * AVG(i.CuT_Dia) / 100 AS Finos
                             FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-                            JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
+                            JOIN inventar_SpcHidr.import_leyes_torres i ON CAST(vrdf.fecha_turno AS DATE)
+ = i.fecha
                             WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                             AND i.id_torre = 2
-                            GROUP BY DATE(vrdf.fecha_turno)
+                            GROUP BY CAST(vrdf.fecha_turno AS DATE)
+
                         ) AS D
                     ), 0
-                ) - IFNULL(
+                ) - ISNULL(
                     (
                         -- Finos de salida con la lógica corregida (basado en cv003)
                         SELECT
@@ -322,25 +311,27 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
             -- INICIO DEL DENOMINADOR: Tonelaje Neto (F7)
             NULLIF(
                 (
-                    IFNULL(
+                    ISNULL(
                         (
                             SELECT ROUND(SUM(D.tsd), 2)
                             FROM (
                                 SELECT sum(vrdf.cv108_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd
                                 FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-                                JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
+                                JOIN inventar_SpcHidr.import_leyes_torres i ON CAST(vrdf.fecha_turno AS DATE)
+ = i.fecha
                                 WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                                 AND i.id_torre = 2
-                                GROUP BY DATE(vrdf.fecha_turno)
+                                GROUP BY CAST(vrdf.fecha_turno AS DATE)
+
                             ) AS D
                         ), 0
-                    ) - IFNULL(
+                    ) - ISNULL(
                         (
                             SELECT sum(cv003_tot) * 0.93
                             FROM inventar_SpcHidr.vista_resumen_datos_filtrados
                             WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                         ), 0
-                    ) - IFNULL(
+                    ) - ISNULL(
                         (
                             SELECT SUM(cv202_tot)
                             FROM inventar_SpcHidr.vista_resumen_datos_filtrados
@@ -399,14 +390,16 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         sum(vrdf.cv008_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
         AVG(i.CuT_Dia) AS ld
     FROM
-        vista_resumen_datos_filtrados vrdf -- Alias 'vrdf'
+        inventar_SpcHidr.vista_resumen_datos_filtrados vrdf -- Alias 'vrdf'
     JOIN
-        import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
+        inventar_SpcHidr.import_leyes_torres i ON CAST(vrdf.fecha_turno AS DATE)
+ = i.fecha
     WHERE
         vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         AND i.id_torre = 1
     GROUP BY
-        DATE(vrdf.fecha_turno)
+        CAST(vrdf.fecha_turno AS DATE)
+
     )
     SELECT
     ROUND(SUM(tsd), 2) AS "Tonelaje",
@@ -417,14 +410,16 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         sum(vrdf.cv108_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
         AVG(i.CuT_Dia) AS ld
     FROM
-        vista_resumen_datos_filtrados vrdf -- Alias 'vrdf'
+        inventar_SpcHidr.vista_resumen_datos_filtrados vrdf -- Alias 'vrdf'
     JOIN
-        import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
+        inventar_SpcHidr.import_leyes_torres i ON CAST(vrdf.fecha_turno AS DATE)
+ = i.fecha
     WHERE
         vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         AND i.id_torre = 2
     GROUP BY
-        DATE(vrdf.fecha_turno)
+        CAST(vrdf.fecha_turno AS DATE)
+
     )
     SELECT
     ROUND(SUM(tsd), 2) AS "Tonelaje",
@@ -434,165 +429,125 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
   dias_de_conflicto AS (
     SELECT
       fecha
-    FROM
-      inventar_SpcHidr.control_apilado_diario
+    FROM inventar_SpcHidr.control_apilado_diario
     WHERE
-      fecha BETWEEN '{fecha_inicio}' AND DATE_ADD('{fecha_fin}', INTERVAL 1 DAY)
-      AND volumen_diario_m3 > 0 AND pad_id IN (1, 2)
+      fecha BETWEEN '2025-08-01' AND DATEADD(DAY, 1, '2025-08-31')
+      AND volumen_diario_m3 > 0
+      AND pad_id IN (1, 2)
     GROUP BY fecha
     HAVING COUNT(DISTINCT pad_id) > 1
   ),
   datos_diarios_por_torre AS (
     SELECT
-      DATE(vrdf.fecha_turno) AS fecha_operacion,
-      sum(vrdf.cv008_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
+      CAST(vrdf.fecha_turno AS DATE) AS fecha_operacion,
+      SUM(vrdf.cv008_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
       AVG(i.CuT_Dia) AS ld
     FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-    JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
-    WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND i.id_torre = 1
-    GROUP BY DATE(vrdf.fecha_turno)
+    JOIN inventar_SpcHidr.import_leyes_torres i
+      ON CAST(vrdf.fecha_turno AS DATE) = i.fecha
+    WHERE
+      vrdf.fecha_turno BETWEEN '2025-08-01' AND '2025-08-31'
+      AND i.id_torre = 1
+    GROUP BY CAST(vrdf.fecha_turno AS DATE)
+
     UNION ALL
+
     SELECT
-      DATE(vrdf.fecha_turno) AS fecha_operacion,
-      sum(vrdf.cv108_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
+      CAST(vrdf.fecha_turno AS DATE) AS fecha_operacion,
+      SUM(vrdf.cv108_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
       AVG(i.CuT_Dia) AS ld
     FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-    JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
-    WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND i.id_torre = 2
-    GROUP BY DATE(vrdf.fecha_turno)
+    JOIN inventar_SpcHidr.import_leyes_torres i
+      ON CAST(vrdf.fecha_turno AS DATE) = i.fecha
+    WHERE
+      vrdf.fecha_turno BETWEEN '2025-08-01' AND '2025-08-31'
+      AND i.id_torre = 2
+    GROUP BY CAST(vrdf.fecha_turno AS DATE)
   ),
   datos_finales AS (
     SELECT
       dd.tsd,
       dd.ld,
       CASE WHEN conf.fecha IS NOT NULL THEN 0.5 ELSE 1.0 END AS factor
-    FROM
-      datos_diarios_por_torre dd
-      LEFT JOIN dias_de_conflicto conf ON DATE_ADD(dd.fecha_operacion, INTERVAL 1 DAY) = conf.fecha
+    FROM datos_diarios_por_torre dd
+    LEFT JOIN dias_de_conflicto conf
+      ON DATEADD(DAY, 1, dd.fecha_operacion) = conf.fecha
     WHERE
       dd.fecha_operacion IN (
-        SELECT DISTINCT (cad.fecha - INTERVAL 1 DAY)
+        SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
         FROM inventar_SpcHidr.control_apilado_diario cad
-        WHERE cad.fecha BETWEEN '{fecha_inicio}' AND DATE_ADD('{fecha_fin}', INTERVAL 1 DAY)
-          AND cad.pad_id = 2 AND cad.volumen_diario_m3 > 0
+        WHERE
+          cad.fecha BETWEEN '2025-08-01' AND DATEADD(DAY, 1, '2025-08-31')
+          AND cad.pad_id = 2
+          AND cad.volumen_diario_m3 > 0
       )
   )
 SELECT
-  IFNULL(ROUND(SUM(tsd * factor), 2), 0) AS "Tonelaje",
-  IFNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS "Ley_Cu"
-FROM inventar_SpcHidr.datos_finales;""",
+  ISNULL(ROUND(SUM(tsd * factor), 2), 0) AS Tonelaje,
+  ISNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS Ley_Cu
+FROM datos_finales;
+""",
         "F15": f"""WITH
   dias_de_conflicto AS (
     SELECT
       fecha
-    FROM
-      inventar_SpcHidr.control_apilado_diario
+    FROM inventar_SpcHidr.control_apilado_diario
     WHERE
-      fecha BETWEEN '{fecha_inicio}' AND DATE_ADD('{fecha_fin}', INTERVAL 1 DAY)
-      AND volumen_diario_m3 > 0 AND pad_id IN (1, 2)
+      fecha BETWEEN '2025-08-01' AND DATEADD(DAY, 1, '2025-08-31')
+      AND volumen_diario_m3 > 0
+      AND pad_id IN (1, 2)
     GROUP BY fecha
     HAVING COUNT(DISTINCT pad_id) > 1
   ),
   datos_diarios_por_torre AS (
     SELECT
-      DATE(vrdf.fecha_turno) AS fecha_operacion,
-      sum(vrdf.cv008_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
+      CAST(vrdf.fecha_turno AS DATE) AS fecha_operacion,
+      SUM(vrdf.cv008_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
       AVG(i.CuT_Dia) AS ld
     FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-    JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
-    WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND i.id_torre = 1
-    GROUP BY DATE(vrdf.fecha_turno)
+    JOIN inventar_SpcHidr.import_leyes_torres i
+      ON CAST(vrdf.fecha_turno AS DATE) = i.fecha
+    WHERE
+      vrdf.fecha_turno BETWEEN '2025-08-01' AND '2025-08-31'
+      AND i.id_torre = 1
+    GROUP BY CAST(vrdf.fecha_turno AS DATE)
+
     UNION ALL
+
     SELECT
-      DATE(vrdf.fecha_turno) AS fecha_operacion,
-      sum(vrdf.cv108_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
+      CAST(vrdf.fecha_turno AS DATE) AS fecha_operacion,
+      SUM(vrdf.cv108_tot) * (1 - AVG(i.Humedades_Dia) / 100) AS tsd,
       AVG(i.CuT_Dia) AS ld
     FROM inventar_SpcHidr.vista_resumen_datos_filtrados vrdf
-    JOIN import_leyes_torres i ON DATE(vrdf.fecha_turno) = i.fecha
-    WHERE vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND i.id_torre = 2
-    GROUP BY DATE(vrdf.fecha_turno)
+    JOIN inventar_SpcHidr.import_leyes_torres i
+      ON CAST(vrdf.fecha_turno AS DATE) = i.fecha
+    WHERE
+      vrdf.fecha_turno BETWEEN '2025-08-01' AND '2025-08-31'
+      AND i.id_torre = 2
+    GROUP BY CAST(vrdf.fecha_turno AS DATE)
   ),
   datos_finales AS (
     SELECT
       dd.tsd,
       dd.ld,
       CASE WHEN conf.fecha IS NOT NULL THEN 0.5 ELSE 1.0 END AS factor
-    FROM
-      datos_diarios_por_torre dd
-      LEFT JOIN dias_de_conflicto conf ON DATE_ADD(dd.fecha_operacion, INTERVAL 1 DAY) = conf.fecha
+    FROM datos_diarios_por_torre dd
+    LEFT JOIN dias_de_conflicto conf
+      ON DATEADD(DAY, 1, dd.fecha_operacion) = conf.fecha
     WHERE
       dd.fecha_operacion IN (
-        SELECT DISTINCT (cad.fecha - INTERVAL 1 DAY)
+        SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
         FROM inventar_SpcHidr.control_apilado_diario cad
-        WHERE cad.fecha BETWEEN '{fecha_inicio}' AND DATE_ADD('{fecha_fin}', INTERVAL 1 DAY)
-          AND cad.pad_id = 1 AND cad.volumen_diario_m3 > 0
+        WHERE
+          cad.fecha BETWEEN '2025-08-01' AND DATEADD(DAY, 1, '2025-08-31')
+          AND cad.pad_id = 1
+          AND cad.volumen_diario_m3 > 0
       )
   )
 SELECT
-  IFNULL(ROUND(SUM(tsd * factor), 2), 0) AS "Tonelaje",
-  IFNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS "Ley_Cu"
-FROM inventar_SpcHidr.datos_finales;""",
-        "F20": f"""Select IFNULL (SUM(cv025_tot*0.89),0) as Tonelaje, '0' as Ley_Cu FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' and '{fecha_fin}'""",
-        "F21": f"""SELECT IFNULL (SUM(ton_reclamo_camiones), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.reclamos_tonelaje WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
-        "F22": f"""SELECT IFNULL (SUM(Camiones_TMS_Reclamo_Oxidos), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.Datos_conciliados_of WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
-        "F23": f"""SELECT
-    COALESCE(
-        (
-        (
-            SELECT
-            SUM(fino_producido)
-            FROM
-            control_ley_ripio
-            WHERE
-            fecha_drenaje = '{fecha_fin}' AND PAD = 'OXIDOS'
-        ) - (
-            SELECT
-            SUM(fino_producido)
-            FROM
-            control_ley_ripio
-            WHERE
-            fecha_drenaje = '{fecha_inicio}' AND PAD = 'OXIDOS'
-        )
-        ),
-        0
-    ) AS Tonelaje,
-    100 AS Ley_Cu""",
-        "F24": f"""SELECT
-    COALESCE(
-        (
-        (
-            SELECT
-            SUM(fino_producido)
-            FROM
-            control_ley_ripio
-            WHERE
-            fecha_drenaje = '{fecha_fin}' AND PAD = 'SULFUROS'
-        ) - (
-            SELECT
-            SUM(fino_producido)
-            FROM
-            control_ley_ripio
-            WHERE
-            fecha_drenaje = '{fecha_inicio}' AND PAD = 'SULFUROS'
-        )
-        ),
-        0
-    ) AS Tonelaje,
-    100 AS Ley_Cu""",
-        "F25": f"""SELECT
-    (
-        SELECT sum(cv001_tot) * 0.93
-        FROM inventar_SpcHidr.vista_resumen_datos_filtrados
-        WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-    ) AS Tonelaje,
-
-    (
-        SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100
-        FROM inventar_SpcHidr.mov_cam
-        WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-        AND Fase = 'SRR'
-        AND Destino = 'CH01'
-    ) AS Ley_Cu;
+  ISNULL(ROUND(SUM(tsd * factor), 2), 0) AS Tonelaje,
+  ISNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS Ley_Cu
+FROM datos_finales;
     """,
     }
 
@@ -907,6 +862,8 @@ def guardar_balance_en_bd(df_final, caso_id, fecha_inicio, fecha_fin, engine, tr
             )
 
         # Inserción por lotes
+        if 'generado_en' not in df.columns:
+            df['generado_en'] = datetime.now()
         df[cols_out].to_sql(
             'balances_flujos_resultados',
             con=conn,
