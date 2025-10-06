@@ -109,7 +109,7 @@ def get_engine():
         try:
             conn_str = (
                 f"mssql+pytds://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}"
-                f"@{SQLSERVER_HOST}\\SQL2017/{SQLSERVER_DB}"
+                f"@{SQLSERVER_HOST}/{SQLSERVER_DB}"
                 #f"?driver={SQLSERVER_DRIVER.replace(' ', '+')}"
             )
             print(conn_str)

@@ -103,8 +103,8 @@ def procesar_y_cargar_apilado(contents, filename):
             proc_bloque("Rotopala Final", "J:Q", 1, 1, col_rec)
         ])
         df_rd = pd.concat([
-            proc_bloque("Rotopalas diario", "A:H", 1, 2, col_rec),
-            proc_bloque("Rotopalas diario", "J:Q", 1, 1, col_rec)
+            proc_bloque("Rotopalas diario", "A:F,H:I", 1, 2, col_rec),
+            proc_bloque("Rotopalas diario", "J:O,Q:R", 1, 2, col_rec)
         ])
         df_rt = pd.concat([
             proc_bloque("Modulos Ruteados", "A:D", 1, 2, col_rut),
@@ -128,9 +128,9 @@ def procesar_y_cargar_apilado(contents, filename):
 
 
         df_af = normalizar_columnas(df_af, "volumen_acumulado_final_apilado_m3")
-        df_ad = normalizar_columnas(df_ad, "volumen_acumulado_final_apilado_m3")
+        df_ad = normalizar_columnas(df_ad, "volumen_diario_m3")
         df_rf = normalizar_columnas(df_rf, "volumen_final_reclamado")
-        df_rd = normalizar_columnas(df_rd, "volumen_final_reclamado")
+        df_rd = normalizar_columnas(df_rd, "volumen_diario_m3")
         df_rt = normalizar_columnas(df_rt, "volumen_total_estimado_m3")
 
 
