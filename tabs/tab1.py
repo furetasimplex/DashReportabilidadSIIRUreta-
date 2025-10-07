@@ -12,7 +12,7 @@ from db_connection import get_connection
 from datetime import datetime
 
 VARIABLES_VALIDAS = [
-    "Ton", "PONDCuTG00", "PONDCusG01", "PONDRS", "PONDC03G02",
+    "Tonelaje", "CuT", "CuS", "PONDRS", "PONDC03G02",
     "PONDRecLixG03", "POND100G07", "PONDClayBG10", "PONDCUFE", "PONDFE"
 ]
 
@@ -24,9 +24,9 @@ def load_data(fecha_ini, fecha_fin):
             Turno, 
             Origen, 
             Fase, 
-            Ton, 
-            PONDCuTG00, 
-            PONDCusG01, 
+            Ton as Tonelaje, 
+            PONDCuTG00 as CuT,
+            PONDCusG01 as CuS, 
             PONDRS, 
             PONDC03G02, 
             PONDRecLixG03, 
@@ -148,7 +148,7 @@ def register_tab1_callbacks(app):
                             dcc.Dropdown(
                                 id="filtro-variable",
                                 options=[{"label": v, "value": v} for v in VARIABLES_VALIDAS],
-                                value=["Ton"], multi=True
+                                value=["Tonelaje"], multi=True
                             ),
                             html.Div(className="mb-3"),
 
@@ -169,7 +169,7 @@ def register_tab1_callbacks(app):
                             dcc.Dropdown(
                                 id="variable-secundaria",
                                 options=[{"label": v, "value": v} for v in VARIABLES_VALIDAS],
-                                value="CuTG00"
+                                value="CuT"
                             ),
 
                             # Store con los datos base ya filtrados por fecha
