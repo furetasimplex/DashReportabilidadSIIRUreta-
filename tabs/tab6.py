@@ -434,24 +434,16 @@ def register_tab6_callbacks(app):
       
             
             fig = make_subplots(rows=2, cols=1)
-            df_long = des_ini.melt(id_vars='Nodo', value_vars='Desbalance masa inicial', value_name='Desbalance')
+            df_long = des_ini.melt(id_vars='Nodo', value_vars='Desbalance masa inicial', value_name='Desbalance [Ton]')
             fig.add_trace(go.Bar(
-                x=df_long['Nodo'], y=df_long['Desbalance'],name="Masa"
+                x=df_long['Nodo'], y=df_long['Desbalance [Ton]'],name="Masa"
             ), row=1, col=1)
-            fig.update_layout(
-                title = 'Desbalances iniciales Masa',
-                xaxis_title='Nodo',
-                yaxis_title='Desbalance [Ton]',
-            )
-            df_long = des_ini.melt(id_vars='Nodo', value_vars='Desbalance fino inicial Cu', value_name='Desbalance')
+      
+            df_long = des_ini.melt(id_vars='Nodo', value_vars='Desbalance fino inicial Cu', value_name='Desbalance [Ton]')
             fig.add_trace(go.Bar(
-                x=df_long['Nodo'], y=df_long['Desbalance'],name="Fino"
+                x=df_long['Nodo'], y=df_long['Desbalance [Ton]'],name="Fino"
             ), row=2, col=1)
-            fig.update_layout(
-                title = 'Desbalances iniciales Fino',
-                xaxis_title='Nodo',
-                yaxis_title='Desbalance [Ton]',
-            )
+       
             fig.update_layout(barmode='stack')
 
             return fig
