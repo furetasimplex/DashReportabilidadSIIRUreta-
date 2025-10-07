@@ -130,6 +130,7 @@ def render_tab6():
                                 dcc.Loading(
                                     dag.AgGrid(
                                         id="recon-data-base",
+                                        columnSize="autoSize",
                                         columnDefs=columnsDefs_data_base,
                                         className='ag-theme-balham',
                                         style={"height": "500px", "width": "100%"},
@@ -389,6 +390,8 @@ def register_tab6_callbacks(app):
     def graf_desbalances_iniciales(n_clicks, data_base):
         import plotly.express as px
         from plotly.graph_objs import Figure
+        from plotly.subplots import make_subplots
+
 
         if not n_clicks or not data_base:
             return Figure()
@@ -408,7 +411,6 @@ def register_tab6_callbacks(app):
                 dfb['Flujo'].to_numpy(dtype=float),
                 (dfb['Cu'] / 100.0).to_numpy(dtype=float),
             ])
-
             eps = 1e-6
             error_df = pd.DataFrame({
                 0: (dfb['Tolerancia']    / 100.0).replace(0.0, eps).to_numpy(dtype=float),
@@ -416,43 +418,42 @@ def register_tab6_callbacks(app):
             })
 
             # 2) Llamada a balance_core para obtener desbalances iniciales (sin usar los reconciliados)
-            _, _, des_ini = balance_core(mediciones, error=error_df, fn="Normal")
-
+            _, des_df, des_ini = balance_core(mediciones, error=error_df, fn="Normal")
+            des_ini = des_df
             # 3) Formateo y gráfico
-            des_ini = des_ini.rename(columns={0: 'Area'})
+            des_ini = des_ini.rename(columns={0: 'Nodo'})
+            values_to_select = ['Chancado', 'Silo','N9',"N10"]
+            des_ini = des_ini.loc[des_ini['Nodo'].isin(values_to_select)]
+
             # Aseguramos nombres consistentes: masa y fino iniciales
             # Si tus columnas son 'Desbalance masa' y 'Desbalance fino Cu', se renombra para claridad
-            if 'Desbalance masa' in des_ini.columns:
-                des_ini = des_ini.rename(columns={'Desbalance masa': 'Desbalance masa inicial'})
-            if 'Desbalance fino Cu' in des_ini.columns:
-                des_ini = des_ini.rename(columns={'Desbalance fino Cu': 'Desbalance fino inicial Cu'})
-
-            # Construcción de un DF "largo" para barras agrupadas
-            cols_y = []
             if 'Desbalance masa inicial' in des_ini.columns:
-                cols_y.append('Desbalance masa inicial')
+                des_ini = des_ini.rename(columns={'Desbalance masa': 'Desbalance masa inicial'})
             if 'Desbalance fino inicial Cu' in des_ini.columns:
-                cols_y.append('Desbalance fino inicial Cu')
-            if not cols_y:
-                # Fallback por si los nombres originales no estaban
-                posibles = [c for c in des_ini.columns if 'Desbalance' in c]
-                cols_y = posibles[:2] if posibles else []
-
-            df_long = des_ini.melt(id_vars='Area', value_vars=cols_y, var_name='Tipo', value_name='Desbalance')
-
-            fig = px.bar(
-                df_long,
-                x='Area', y='Desbalance', color='Tipo',
-                barmode='group',
-                title='Desbalances iniciales por área'
-            )
+                des_ini = des_ini.rename(columns={'Desbalance fino Cu': 'Desbalance fino inicial Cu'})
+      
+            
+            fig = make_subplots(rows=2, cols=1)
+            df_long = des_ini.melt(id_vars='Nodo', value_vars='Desbalance masa inicial', value_name='Desbalance')
+            fig.add_trace(go.Bar(
+                x=df_long['Nodo'], y=df_long['Desbalance'],name="Masa"
+            ), row=1, col=1)
             fig.update_layout(
-                legend_title_text='Magnitud',
-                xaxis_title='Área',
-                yaxis_title='Desbalance',
-                bargap=0.25
+                title = 'Desbalances iniciales Masa',
+                xaxis_title='Nodo',
+                yaxis_title='Desbalance [Ton]',
             )
-            fig.update_xaxes(type='category', categoryorder='category ascending')
+            df_long = des_ini.melt(id_vars='Nodo', value_vars='Desbalance fino inicial Cu', value_name='Desbalance')
+            fig.add_trace(go.Bar(
+                x=df_long['Nodo'], y=df_long['Desbalance'],name="Fino"
+            ), row=2, col=1)
+            fig.update_layout(
+                title = 'Desbalances iniciales Fino',
+                xaxis_title='Nodo',
+                yaxis_title='Desbalance [Ton]',
+            )
+            fig.update_layout(barmode='stack')
+
             return fig
 
         except Exception as e:
