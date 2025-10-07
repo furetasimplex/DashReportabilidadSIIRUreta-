@@ -52,7 +52,7 @@ def render_tab4():
                             id='fecha-rango-tab4',
                             min_date_allowed=min_fecha,
                             max_date_allowed=max_fecha,
-                            start_date=min_fecha,
+                            start_date='2025-01-01',
                             end_date=max_fecha,
                             display_format='YYYY-MM-DD'
                         ),
@@ -175,7 +175,7 @@ def register_tab4_callbacks(app):
         # Leer datos
         conn = get_connection()
         query = f"""
-            SELECT Torre,Turno,Fecha,Representatividad FROM inventar_SpcHidr.vista_control_torres
+            SELECT * FROM inventar_SpcHidr.vista_control_torres
             WHERE Fecha
             BETWEEN '{start_date}' AND '{end_date}'
         """
