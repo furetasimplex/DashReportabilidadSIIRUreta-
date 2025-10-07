@@ -17,7 +17,7 @@
 
 body {
   font-family: system-ui, sans-serif;
-  background: url("{{ url_for('static', filename='img/Minera-Spence-BHP.jpg') }}") center/cover no-repeat fixed;
+  background: url("{{ url_for('static', filename='minera.webp') }}")  center/cover no-repeat fixed;
   height: 100vh;
   margin: 0;
 
@@ -51,6 +51,13 @@ body::before {
     color: #111827;
     font-size: 1.6rem;
     margin-bottom: 0.5rem;
+  }
+  
+  h3 {
+    text-align: center;
+    color: #374151;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
   }
 
   p {
@@ -127,6 +134,7 @@ body::before {
       </svg>
       Iniciar Sesión
     </h2>
+    <h3>Capacitaciones Simplex</h3>
     <p>Accede al dashboard con tus credenciales</p>
     <form id="loginForm" method="POST" action="/auth/login">
       <label for="username">Usuario</label>

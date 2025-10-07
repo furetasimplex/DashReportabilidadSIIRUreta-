@@ -27,6 +27,8 @@ register_callbacks(app)
 # 🚫 Protege Dash si no hay sesión
 @server.before_request
 def protect_dash():
+    if request.path.startswith("/static"):
+        return  # Permitir acceso a archivos estáticos  sin autenticación
     if not session.get("user") and not request.path.startswith("/auth"):
         return redirect("/auth/login_page")
 
