@@ -5,8 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 # 🔧 Dependencias base y de build
 RUN apt-get update && apt-get install -y \
-    curl gnupg apt-transport-https \
-    pkg-config libmysqlclient-dev libmariadb-dev
+    curl gnupg apt-transport-https
 
 # 🔷 Instala el driver ODBC 18 (SQL Server)
 RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
