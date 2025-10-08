@@ -258,18 +258,22 @@ def register_callbacks_reporte(app):
     # CALLBACK #3: PUBLICAR DATOS
     # ==============================================================================
     @app.callback(
-        Output('btn-pub-msg_caso', 'children'),
-        Input('btn-publica-casos', 'n_clicks'),
-        State('recon-resultados', 'rowData'),
-        State('active-case', 'data'),
-        prevent_initial_call=True
+    Output('btn-pub-msg_caso', 'children'),
+    Input('btn-publica-casos', 'n_clicks'),
+    State('recon-data', 'data'),         # <-- 1. AÑADIMOS ESTE STATE
+    State('recon-resultados', 'rowData'),
+    State('active-case', 'data'),
+    prevent_initial_call=True
     )
-    def get_publica_casos(n_clicks, rec_caso, shared):
+    def get_publica_casos(n_clicks, med_cas, rec_caso, shared): # <-- 2. AÑADIMOS EL ARGUMENTO
         if not n_clicks:
             return no_update
+        if not rec_caso:
+            return "⚠️ No hay datos reconciliados para publicar."
+
         try:
-            # Asumo que get_data_publica_casos no necesita med_cas
-            nrows = get_data_publica_casos(rec_caso, shared) 
+            # 3. LLAMAMOS A LA FUNCIÓN CON LOS TRES ARGUMENTOS
+            nrows = get_data_publica_casos(med_cas, rec_caso, shared) 
             return f"✅ Publicado correctamente ({nrows} filas)."
         except Exception as e:
             return f"❌ Error al publicar: {e}"

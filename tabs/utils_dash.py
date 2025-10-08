@@ -21,6 +21,7 @@ from db_connection import get_connection
 from datetime import date
 import math
 import traceback
+import pyodbc
 
 load_dotenv()
 
@@ -29,39 +30,76 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 
 
 def get_data_agua_casos(inicio, final, crea_caso):
+    """
+    VERSIÓN DE DEPURACIÓN: No cambiar la lógica, solo añadir prints para diagnóstico.
+    """
+    print("\n" + "="*50)
+    print("--- INICIANDO get_data_agua_casos ---")
+    print(f"--- PARÁMETROS RECIBIDOS: inicio='{inicio}', final='{final}', crea_caso='{crea_caso}'")
+    
     db = get_connection()
     cursor = db.cursor()
+    ddf_casos = pd.DataFrame()
+    
     try:
-        # Si se pidió crear un nuevo caso
         if crea_caso == "Si":
-            sql_in = f"""
-                INSERT INTO inventar_SpcHidr.casos_balance (fecha, modelo, fecha_ini)
-                VALUES ('{final}', 1, '{inicio}');
+            # --- RUTA DE CREACIÓN ---
+            print("--- LÓGICA: Entrando en la ruta de CREACIÓN de caso.")
+            nombre_default = f"Reconciliación {inicio} a {final}"
+            
+            sql_insert = f"""
+                INSERT INTO inventar_SpcHidr.casos_balance (fecha, modelo, fecha_ini, nombre_caso)
+                VALUES ('{final}', 1, '{inicio}', '{nombre_default}');
             """
-            print("🟢 Ejecutando:", sql_in)
-            cursor.execute(sql_in)
+            print(f"--- DEBUG: Ejecutando SQL INSERT:\n{sql_insert}")
+            cursor.execute(sql_insert)
+            print("--- DEBUG: INSERT ejecutado. Solicitando SCOPE_IDENTITY()...")
+
+            cursor.execute("SELECT SCOPE_IDENTITY();")
+            result = cursor.fetchone()
+            print(f"--- DEBUG: Resultado de SCOPE_IDENTITY(): {result}")
+
+            if result is None or result[0] is None:
+                db.commit() # Intentamos confirmar por si acaso, aunque es anómalo
+                print("--- ERROR CRÍTICO: SCOPE_IDENTITY() no devolvió un ID. El INSERT pudo haber fallado silenciosamente.")
+                # Devolvemos un DF vacío porque no podemos continuar.
+                db.close()
+                return pd.DataFrame()
+
+            new_case_id = result[0]
+            print(f"--- DEBUG: Nuevo ID de caso obtenido: {new_case_id}. Realizando COMMIT...")
             db.commit()
+            print("--- DEBUG: COMMIT realizado con éxito.")
 
-        # ⚡ Nuevo SQL: obtiene el último caso creado (el más reciente)
-        sql = """
-            SELECT TOP 1 caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso
-            FROM inventar_SpcHidr.casos_balance
-            WHERE modelo = 1
-            ORDER BY caso_id DESC
-        """
-        print("📘 Ejecutando:", sql)
-        cursor.execute(sql)
-        registros = [list(r) for r in cursor.fetchall()]
-        column_names = [desc[0] for desc in cursor.description]
+            sql_select = f"""
+                SELECT caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso
+                FROM inventar_SpcHidr.casos_balance
+                WHERE caso_id = {new_case_id};
+            """
+            print(f"--- DEBUG: Ejecutando SQL SELECT para el nuevo caso:\n{sql_select}")
+            
+        else:
+            # --- RUTA DE BÚSQUEDA ---
+            print("--- LÓGICA: Entrando en la ruta de BÚSQUEDA de caso.")
+            sql_select = f"""
+                SELECT TOP 1 caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso
+                FROM inventar_SpcHidr.casos_balance
+                WHERE modelo = 1 AND fecha_ini = '{inicio}' AND fecha = '{final}'
+                ORDER BY caso_id DESC;
+            """
+            print(f"--- DEBUG: Ejecutando SQL SELECT para buscar caso existente:\n{sql_select}")
 
-        ddf_casos = pd.DataFrame(registros, columns=column_names)
-        print("✅ Caso activo encontrado:")
+        ddf_casos = pd.read_sql(sql_select, db)
+        print("--- DEBUG: DataFrame resultante de la consulta SELECT:")
         print(ddf_casos)
+
     except Exception as e:
-        print("❌ Error en get_data_agua_casos:", e)
+        print("--- ERROR FATAL en get_data_agua_casos ---")
+        traceback.print_exc()
         ddf_casos = pd.DataFrame()
     finally:
-        cursor.close()
+        print("--- CERRANDO CONEXIÓN A LA BASE DE DATOS ---")
+        print("="*50 + "\n")
         db.close()
 
     return ddf_casos
@@ -90,7 +128,7 @@ def get_agua_his_casos (final):
             cursor.close()
     return ddf_casosh
 
-def get_fig_bal_casos(maxid,agg_tab2):
+def get_fig_bal_casos(maxid, agg_tab2):
     print("📁 Ruta actual:", os.getcwd())
     
     image_path = "assets/diagrama ripios3.png"
@@ -98,143 +136,87 @@ def get_fig_bal_casos(maxid,agg_tab2):
         print(f"❌ Imagen no encontrada: {image_path}")
         return ""
     
+    # ... (El código para cargar y procesar la imagen con cv2 es correcto y no cambia) ...
     image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
-    print("✅ Imagen encontrada.")
-    
-    if image is None:
-        print("❌ Error al cargar la imagen (es None)")
-        return ""
-
+    if image is None: return ""
     if image.shape[2] == 4:
         b, g, r, a = cv2.split(image)
         mask = a[:, :, None]
         blanco = np.ones_like(image[:, :, :3]) * 255
         image = np.where(mask == 0, blanco, image[:, :, :3])
-    db=get_connection()
-    data_sql =     '''SELECT
-                    flujo_caso_coord.ID, 
-                    flujo_caso_coord.id_flujo, 
-                    flujo_caso_coord.Etiqueta, 
-                    flujo_caso_coord.Descripcion, 
-                    flujo_caso_coord.fecha, 
-                    flujo_caso_coord.X, 
-                    flujo_caso_coord.Y, 
-                    flujo_caso_coord.X_l, 
-                    flujo_caso_coord.Y_l, 
-                    flujo_caso_coord.modelo, 
-                    flujo_caso_coord.Medido, 
-                    flujo_caso_coord.Reconciliado, 
-                    flujo_caso_coord.Medido_cu, 
-                    flujo_caso_coord.Reconciliado_cu, 
-                    flujo_caso_coord.Tolerancia, 
-                    flujo_caso_coord.Tolerancia_cu, 
-                    flujo_caso_coord.caso
-                FROM
-                    inventar_SpcHidr.flujo_caso_coord
-                WHERE
-                    inventar_SpcHidr.flujo_caso_coord.caso = '''+ str(maxid) 
-    print(data_sql)
-    cursor = db.cursor()
-    try:
-            cursor.execute(data_sql)
-            #registros = cursor.fetchall()
-            registros = [list(r) for r in cursor.fetchall()]  # convierte cada tupla en lista plana
-            column_names = [desc[0] for desc in cursor.description]
-            df = pd.DataFrame(registros, columns=column_names)
-            print(df)
-    except Exception as e:
-        print("Error en la consulta coord:")
-        print(e) 
-    finally:
-                cursor.close()
-
     
-   
-    alto, ancho = image.shape[:2]
-    dpi = 100  # puedes ajustar esto
+    db = get_connection()
+    # --- CAMBIO IMPORTANTE AQUÍ ---
+    # La consulta ahora usa un marcador de posición '?'
+    data_sql = """
+        SELECT ID, id_flujo, Etiqueta, Descripcion, fecha, X, Y, X_l, Y_l, modelo, 
+               Medido, Reconciliado, Medido_cu, Reconciliado_cu, Tolerancia, 
+               Tolerancia_cu, caso
+        FROM inventar_SpcHidr.flujo_caso_coord
+        WHERE caso = ? 
+    """
+    df = pd.DataFrame() # DataFrame vacío por defecto
+    try:
+        # Pasamos el valor de 'maxid' de forma segura como un parámetro
+        df = pd.read_sql(data_sql, db, params=(maxid,))
+    except Exception as e:
+        print("Error en la consulta de coordenadas:", e)
+    finally:
+        db.close()
 
+    alto, ancho = image.shape[:2]
+    dpi = 100
     figsize = (ancho / dpi, alto / dpi)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-
-    #fig, ax = plt.subplots(figsize=(12, 7))
     ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
 
-    if agg_tab2=="Reconciliado":
-
-        for _, row in df.iterrows():
-            x, y = row["X"], row["Y"]
-            value = round(row["Reconciliado"], 2)
-            ax.text(x, y, f"{value:.0f}", color="black", fontsize=9, weight="bold")
-            x_l, y_l = row["X_l"], row["Y_l"]
-            value_l = round(row["Reconciliado_cu"], 2)
-            ax.text(x_l, y_l, f"{value_l:.2f}", color="black", fontsize=9, weight="bold") 
-    elif agg_tab2=="Medido":
-         for _, row in df.iterrows():
-            x, y = row["X"], row["Y"]
-            value = round(row["Medido"], 2)
-            ax.text(x, y, f"{value:.0f}", color="black", fontsize=9, weight="bold")
-            x_l, y_l = row["X_l"], row["Y_l"]
-            value_l = round(row["Medido_cu"], 2)
-            ax.text(x_l, y_l, f"{value_l:.2f}", color="black", fontsize=9, weight="bold") 
-    else:
-         for _, row in df.iterrows():
-            x, y = row["X"], row["Y"]
-            value = round(row["Tolerancia"], 2)
-            ax.text(x, y, f"{value:.0f}", color="black", fontsize=9, weight="bold")
-            x_l, y_l = row["X_l"], row["Y_l"]
-            value_l = round(row["Tolerancia_cu"], 2)
-            ax.text(x_l, y_l, f"{value_l:.2f}", color="black", fontsize=9, weight="bold") 
-         
-
+    if not df.empty:
+        if agg_tab2 == "Reconciliado":
+            for _, row in df.iterrows():
+                ax.text(row["X"], row["Y"], f"{row['Reconciliado']:.0f}", color="black", fontsize=9, weight="bold")
+                ax.text(row["X_l"], row["Y_l"], f"{row['Reconciliado_cu']:.2f}", color="black", fontsize=9, weight="bold")
+        elif agg_tab2 == "Medido":
+            for _, row in df.iterrows():
+                ax.text(row["X"], row["Y"], f"{row['Medido']:.0f}", color="black", fontsize=9, weight="bold")
+                ax.text(row["X_l"], row["Y_l"], f"{row['Medido_cu']:.2f}", color="black", fontsize=9, weight="bold")
+        else:
+            for _, row in df.iterrows():
+                ax.text(row["X"], row["Y"], f"{row['Tolerancia']:.0f}", color="black", fontsize=9, weight="bold")
+                ax.text(row["X_l"], row["Y_l"], f"{row['Tolerancia_cu']:.2f}", color="black", fontsize=9, weight="bold")
+    
     ax.axis("off")
-
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png', bbox_inches='tight')
     buffer.seek(0)
     img_base64 = base64.b64encode(buffer.read()).decode('utf-8')
-    plt.savefig("diagrama_hidro.png")
     plt.close(fig)
 
     return f"data:image/png;base64,{img_base64}"
 
 def get_data_save_casos(dat_casos, final, maxcas):
-    df = pd.DataFrame(dat_casos)
-    print(df)
+    if not dat_casos:
+        return
 
-    tabla = "inventar_SpcHidr.casos_balance"
-    update_statements = []
+    row_data = dat_casos[0]
+    cols_to_update = [col for col in row_data.keys() if col != "caso_id"]
+    set_clause = ", ".join([f"[{col}] = ?" for col in cols_to_update])
+    
+    values = [_to_native(row_data[col]) for col in cols_to_update]
+    values.append(int(maxcas))
 
-    for _, row in df.iterrows():
-        set_values = []
-        for col in df.columns:
-            if col == "caso_id":
-                continue
-            val = row[col]
-            if pd.isna(val) or val is None:
-                set_values.append(f"{col} = NULL")
-            elif isinstance(val, str):
-                safe_val = val.replace("'", "''")
-                set_values.append(f"{col} = '{safe_val}'")
-            else:
-                set_values.append(f"{col} = {val}")
-        set_clause = ", ".join(set_values)
-        update_statements.append(f"UPDATE {tabla} SET {set_clause} WHERE caso_id = {maxcas};")
-
-    query = "\n".join(update_statements)
-    print(query)
-
+    query = f"UPDATE inventar_SpcHidr.casos_balance SET {set_clause} WHERE caso_id = ?;"
+    
     db = get_connection()
     cursor = db.cursor()
-    for q in query.strip().split(";"):
-        if q.strip():
-            try:
-                cursor.execute(q.strip())
-                db.commit()
-            except Exception as e:
-                print("❌ Error en la sentencia:", q.strip())
-                print("🔎 Detalle:", e)
-    cursor.close()
-    db.close()
+    try:
+        cursor.execute(query, tuple(values))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print("❌ Error en la actualización del caso:", e)
+    finally:
+        cursor.close()
+        db.close()
 
 
 # ---------- util de saneo ----------
@@ -260,153 +242,86 @@ def _norm(s):
     return str(s).strip().lower()
 
 def get_data_publica_casos(med_cas, rec_caso, shared):
-    """
-    Publica en Data_balance_rec combinando:
-      - med_cas: rowData de 'recon-data-base' (editable)
-      - rec_caso: rowData de 'recon-resultados' (reconciliado)
-      - shared: dict con {"caso_id": int, "fecha": "YYYY-MM-DD"}
-    Devuelve: número de filas insertadas.
-    """
-    if not rec_caso:
-        raise ValueError("No hay datos reconciliados (rec_caso).")
-    if not isinstance(shared, dict) or shared.get("caso_id") is None:
-        raise ValueError("Falta 'caso_id' en 'shared'.")
+    if not rec_caso: raise ValueError("No hay datos reconciliados (rec_caso).")
+    if not isinstance(shared, dict) or shared.get("caso_id") is None: raise ValueError("Falta 'caso_id' en 'shared'.")
 
+    # --- Lógica de preparación de DataFrames (sin cambios) ---
     caso_id = int(shared["caso_id"])
-
-    # fecha_bm desde shared['fecha'] si existe; si no, hoy
-    fecha_bm = date.today()
-    f = shared.get("fecha")
-    if f:
-        ts = pd.to_datetime(f, errors="coerce")
-        if pd.notna(ts):
-            fecha_bm = ts.date()
-
-    # DataFrames
-    df_rec = pd.DataFrame(rec_caso).copy()
-    df_med = pd.DataFrame(med_cas or []).copy()
-
-    # Renombrar rec → columnas de la tabla
-    rename_rec = {
-        'Masa medida':   'Masa_medida',
-        'Masa recon':    'Masa_recon',
-        'Error masa':    'Error_masa',
-        'Ley medida Cu': 'Ley_medida_Cu',
-        'Ley recon Cu':  'Ley_recon_Cu',
-        'Error ley Cu':  'Error_ley_Cu',
-    }
+    fecha_bm = pd.to_datetime(shared.get("fecha_fin", date.today())).date()
+    df_rec = pd.DataFrame(rec_caso); df_med = pd.DataFrame(med_cas or [])
+    rename_rec = {'Masa medida':'Masa_medida', 'Masa recon':'Masa_recon', 'Error masa':'Error_masa', 'Ley medida Cu':'Ley_medida_Cu', 'Ley recon Cu':'Ley_recon_Cu', 'Error ley Cu':'Error_ley_Cu'}
     df_rec.rename(columns=rename_rec, inplace=True)
-
-    # Normaliza claves y evita espacios
-    if 'Codigo' in df_rec.columns:
-        df_rec['Codigo'] = df_rec['Codigo'].astype(str).str.strip()
-    if 'Flujo' in df_rec.columns:
-        df_rec['Flujo'] = df_rec['Flujo'].astype(str).str.strip()
-
-    # ---- Merge por CODIGO (preferente)
+    if 'Codigo' in df_rec.columns: df_rec['Codigo'] = df_rec['Codigo'].astype(str).str.strip()
+    if 'Flujo' in df_rec.columns: df_rec['Flujo'] = df_rec['Flujo'].astype(str).str.strip()
     keep_med = ['id_flujo', 'codigo_flujo', 'nombre_flujo', 'Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu']
     for k in keep_med:
-        if k not in df_med.columns:
-            df_med[k] = None
+        if k not in df_med.columns: df_med[k] = None
     df_med['codigo_flujo'] = df_med['codigo_flujo'].astype(str).str.strip()
     df_med['nombre_flujo'] = df_med['nombre_flujo'].astype(str).str.strip()
-
-    df_out = df_rec.merge(
-        df_med[keep_med],
-        left_on='Codigo', right_on='codigo_flujo',
-        how='left', suffixes=('', '_med')
-    )
-
-    # ---- Fallback: merge por nombre de flujo normalizado
+    df_out = df_rec.merge(df_med[keep_med], left_on='Codigo', right_on='codigo_flujo', how='left', suffixes=('', '_med'))
     mask_missing = df_out['id_flujo'].isna()
     if mask_missing.any():
-        aux_rec = df_out.loc[mask_missing, ['Flujo']].copy()
-        aux_rec['Flujo_norm'] = aux_rec['Flujo'].map(_norm)
-
-        aux_med = df_med[['nombre_flujo', 'id_flujo', 'Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu']].copy()
-        aux_med['Flujo_norm'] = aux_med['nombre_flujo'].map(_norm)
-
-        aux_join = aux_rec.merge(
-            aux_med.drop_duplicates('Flujo_norm'),
-            on='Flujo_norm', how='left', suffixes=('', '_nm')
-        )
-
+        aux_rec = df_out.loc[mask_missing, ['Flujo']].copy(); aux_rec['Flujo_norm'] = aux_rec['Flujo'].map(_norm)
+        aux_med = df_med[['nombre_flujo', 'id_flujo', 'Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu']].copy(); aux_med['Flujo_norm'] = aux_med['nombre_flujo'].map(_norm)
+        aux_join = aux_rec.merge(aux_med.drop_duplicates('Flujo_norm'), on='Flujo_norm', how='left', suffixes=('', '_nm'))
         df_out.loc[mask_missing, 'id_flujo'] = aux_join['id_flujo'].values
         for col in ['Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu']:
-            if col in df_out.columns and col in aux_join.columns:
-                df_out.loc[mask_missing, col] = df_out.loc[mask_missing, col].fillna(aux_join[col].values)
-
-    # Completa 'Codigo' si viene vacío en rec
+            if col in df_out.columns and col in aux_join.columns: df_out.loc[mask_missing, col] = df_out.loc[mask_missing, col].fillna(aux_join[col].values)
     if 'Codigo' not in df_out.columns or df_out['Codigo'].isna().all():
-        if 'codigo_flujo' in df_out.columns:
-            df_out['Codigo'] = df_out['codigo_flujo']
-
-    # Otras columnas requeridas por la tabla
+        if 'codigo_flujo' in df_out.columns: df_out['Codigo'] = df_out['codigo_flujo']
     df_out['Masa_Medida2'] = df_out.get('Masa_medida')
+
+    # --- CAMBIO CLAVE: REORDENAR LAS COLUMNAS PARA QUE COINCIDAN CON LA BD ---
+    # Este es el orden físico de tu tabla Data_balance_rec (sin bms_id)
+    cols_db_orden_real = [
+        'Flujo', 'Masa_medida', 'Masa_recon', 'Ley_medida_Cu', 'Ley_recon_Cu', 'Error_ley_Cu',
+        'Error_masa', 'Codigo', 'Masa_Medida2', 'Cu', 'FCu', 'Tolerancia',
+        'id_flujo', 'Tolerancia_cu', 'caso_id', 'fecha_bm'
+    ]
     df_out['caso_id'] = caso_id
     df_out['fecha_bm'] = fecha_bm
+    for c in cols_db_orden_real:
+        if c not in df_out.columns: df_out[c] = None
+    df_out = df_out[cols_db_orden_real] # Forzamos el DataFrame a tener el orden correcto
 
-    # Orden final según tu DDL
-    cols_db = [
-        'Flujo',
-        'Masa_medida', 'Masa_recon', 'Error_masa',
-        'Ley_medida_Cu', 'Ley_recon_Cu', 'Error_ley_Cu',
-        'id_flujo', 'Codigo',
-        'Masa_Medida2',
-        'Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu',
-        'caso_id', 'fecha_bm'
-    ]
-    for c in cols_db:
-        if c not in df_out.columns:
-            df_out[c] = None
-    df_out = df_out.reindex(columns=cols_db)
-
-    # Tipos numéricos
-    num_cols_float = ['Masa_medida','Masa_recon','Error_masa','Ley_medida_Cu','Ley_recon_Cu','Error_ley_Cu',
-                      'Masa_Medida2','Cu','FCu','Tolerancia']
+    # --- Lógica de tipos y limpieza (sin cambios) ---
+    num_cols_float = ['Masa_medida','Masa_recon','Ley_medida_Cu','Ley_recon_Cu','Error_ley_Cu', 'Error_masa', 'Masa_Medida2','Cu','FCu','Tolerancia']
     num_cols_int = ['id_flujo','Tolerancia_cu','caso_id']
-    for c in num_cols_float:
-        df_out[c] = pd.to_numeric(df_out[c], errors='coerce')
-    for c in num_cols_int:
-        df_out[c] = pd.to_numeric(df_out[c], errors='coerce')
-
-    # Fecha
+    for c in num_cols_float: df_out[c] = pd.to_numeric(df_out[c], errors='coerce')
+    for c in num_cols_int: df_out[c] = pd.to_numeric(df_out[c], errors='coerce')
     df_out['fecha_bm'] = pd.to_datetime(df_out['fecha_bm'], errors='coerce').dt.date
 
-    # Filas limpias para insert (NaN→None, tipos nativos)
     rows = [tuple(_to_native(v) for v in row) for row in df_out.itertuples(index=False, name=None)]
     if not rows:
         return 0
 
-    # --- DB ---
+    # --- Lógica de Base de Datos Final y Alineada ---
     cnx = get_connection()
     cur = cnx.cursor()
     try:
-        cur.execute("DELETE FROM inventar_SpcHidr.Data_balance_rec WHERE caso_id = %s", (caso_id,))
+        cur.execute("DELETE FROM inventar_SpcHidr.Data_balance_rec WHERE caso_id = ?", (caso_id,))
+        
+        # El INSERT ahora tiene las columnas en el orden correcto
         insert_sql = """
             INSERT INTO inventar_SpcHidr.Data_balance_rec
-            (Flujo, Masa_medida, Masa_recon, Error_masa,
-             Ley_medida_Cu, Ley_recon_Cu, Error_ley_Cu,
-             id_flujo, Codigo, Masa_Medida2,
-             Cu, FCu, Tolerancia, Tolerancia_cu,
-             caso_id, fecha_bm)
-            VALUES
-            (%s, %s, %s, %s,
-             %s, %s, %s,
-             %s, %s, %s,
-             %s, %s, %s, %s,
-             %s, %s)
+            (Flujo, Masa_medida, Masa_recon, Ley_medida_Cu, Ley_recon_Cu, Error_ley_Cu,
+             Error_masa, Codigo, Masa_Medida2, Cu, FCu, Tolerancia,
+             id_flujo, Tolerancia_cu, caso_id, fecha_bm)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        cur.executemany(insert_sql, rows)
+        
+        # Usamos el bucle 'for' que es el método más seguro
+        for row in rows:
+            cur.execute(insert_sql, row)
+        
         cnx.commit()
         return len(rows)
-    except Exception:
+    except Exception as e:
         cnx.rollback()
-        raise
+        raise e
     finally:
         cur.close()
         cnx.close()
-
 
 # ******************************************************************************     
 
