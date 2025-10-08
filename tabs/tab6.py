@@ -459,23 +459,6 @@ def register_tab6_callbacks(app):
         except Exception as e:
             print(f"❌ Error al graficar desbalances iniciales: {e}")
             return Figure()
-        # ==============================================================================
-    # CALLBACK: Espeja la grilla de entrada al Store compartido (recon-data)
-    # ==============================================================================
-    @app.callback(
-        Output("recon-data", "data", allow_duplicate=True),
-        Input("recon-data-base", "rowData"),
-        Input("recon-data-base", "cellValueChanged"),
-        State("recon-data-base", "rowData"),
-        prevent_initial_call=True           # <— antes estaba False y pisaba el Store con []
-    )
-    def sync_grid_to_store(rowdata_init, cell_event, rowdata_state):
-        trigger = ctx.triggered_id
-        if trigger == "recon-data-base.rowData":            # carga/recarga real
-            return rowdata_init or []
-        if trigger == "recon-data-base.cellValueChanged":   # edición de celda
-            return rowdata_state or []
-        return no_update
     # ==============================================================================
     # CALLBACK: Consultar y mostrar Desbalances Históricos
     # ==============================================================================
@@ -516,23 +499,34 @@ def register_tab6_callbacks(app):
         except Exception as e:
             print(f"❌ Error al cargar desbalances históricos: {e}")
             return Figure(), []
-    # ==============================================================================
-    # CALLBACK: Al volver a la pestaña "2 Reconciliar", reponer la grilla desde el Store
-    # ==============================================================================
+    
     @app.callback(
-        Output("recon-data-base", "rowData", allow_duplicate=True),
-        Input("recon-subtabs", "active_tab"),
-        Input("recon-data", "data"),
-        State("recon-data-base", "rowData"),
-        prevent_initial_call=True
+    Output('recon-data', 'data', allow_duplicate=True),
+    Input('recon-data-base', 'cellValueChanged'), # <- ÚNICO INPUT
+    State('recon-data-base', 'rowData'),
+    prevent_initial_call=True
     )
-    def hydrate_grid(active_tab, store_data, current_grid):
-        objetivos = {"recon-6", "tab-2-reconciliar", "reconciliar", "tab2"}  # ajusta a tu value real
-        # 1) Si estamos en otra pestaña, solo hidratamos si hay cambio en el Store
-        if ctx.triggered_id == "recon-subtabs" and active_tab not in objetivos:
-            return no_update
-        # 2) Si la grilla ya tiene filas y el Store no cambió, evita sobreescribir
-        if ctx.triggered_id == "recon-subtabs" and current_grid:
-            return no_update
-        # 3) Caso general: poblar con lo que haya en el Store
-        return store_data or []
+    def guardar_ediciones_en_memoria(celda_editada, todos_los_datos): # <- SOLO DOS ARGUMENTOS
+        """
+        Este callback se activa después de editar una celda.
+        Toma todos los datos de la tabla y los guarda en la memoria.
+        """
+        # El primer argumento 'celda_editada' no lo usamos, pero es necesario para que el Input funcione.
+        # El segundo argumento 'todos_los_datos' es el que nos interesa.
+        return todos_los_datos
+
+    # CALLBACK B: Rellena la tabla con los datos que hay en la memoria
+    @app.callback(
+        Output('recon-data-base', 'rowData'),
+        Input('recon-data', 'data')
+    )
+    def actualizar_tabla_desde_memoria(datos_en_memoria):
+        """
+        Este callback se asegura de que la tabla visible (recon-data-base)
+        siempre muestre lo que está guardado en la memoria ('recon-data').
+        Si navegas a otra pestaña y vuelves, este callback restaura tus datos editados.
+        """
+        if datos_en_memoria is None:
+            # Evita que la tabla se borre innecesariamente en la carga inicial
+            raise PreventUpdate
+        return datos_en_memoria

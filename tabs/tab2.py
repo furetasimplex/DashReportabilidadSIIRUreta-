@@ -1,6 +1,6 @@
 # tabs/tab2.py
 import pandas as pd
-from dash import html, dcc, Input, Output, State
+from dash import html, dcc, Input, Output, State, ctx, no_update
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objs as go
@@ -119,24 +119,56 @@ def render_tab2():
             dbc.Col(
                 dbc.Card([
                     dbc.CardHeader(html.H6("Correlación entre variables", className="mb-0")),
-                    dbc.CardBody(dcc.Loading(dcc.Graph(id="graf-heatmap-tab2"), type="default"))
+                    dbc.CardBody([ # <-- El CardBody envuelve a ambos
+                        dcc.Loading(dcc.Graph(id="graf-heatmap-tab2"), type="default"),
+                        
+                        # El botón va DENTRO del CardBody, después del gráfico
+                        dbc.Button(
+                            [html.I(className="bi bi-arrows-fullscreen me-2"), "Ver a pantalla completa"],
+                            id="btn-full-heatmap-tab2",
+                            color="secondary",
+                            outline=True,
+                            className="mt-2"
+                        ),
+                    ])
                 ], className="shadow-sm border-0"),
                 md=12, lg=6, className="mb-3"
             ),
             dbc.Col(
                 dbc.Card([
                     dbc.CardHeader(html.H6("Distribución comparada", className="mb-0")),
-                    dbc.CardBody(dcc.Loading(dcc.Graph(id="graf-hist-tab2"), type="default"))
+                    dbc.CardBody(
+                        dcc.Loading(dcc.Graph(id="graf-hist-tab2"), type="default")
+                    )
                 ], className="shadow-sm border-0"),
                 md=12, lg=6, className="mb-3"
             ),
         ], className="g-3"),
+            
 
         # Tabla
         dbc.Card([
             dbc.CardHeader(html.H6("Estadísticas descriptivas", className="mb-0")),
             dbc.CardBody(html.Div(id="tabla-descriptiva-tab2"))
         ], className="mb-4 shadow-sm border-0"),
+        dbc.Modal(
+            id="modal-heatmap-tab2",
+            is_open=False,
+            fullscreen=True,
+            scrollable=True,
+            children=[
+                dbc.ModalHeader(dbc.ModalTitle("Gráfico: Correlación entre variables")),
+                dbc.ModalBody(
+                    dcc.Loading(
+                        # Un dcc.Graph para mostrar la figura en el modal
+                        dcc.Graph(id="graf-heatmap-modal-tab2", style={"height": "85vh"})
+                    )
+                ),
+                dbc.ModalFooter(
+                    dbc.Button("Cerrar", id="close-modal-heatmap-tab2", className="ms-auto")
+                ),
+            ]
+        )
     ])
 
 
@@ -268,6 +300,7 @@ def register_tab2_callbacks(app):
             State("fecha-rango-tab2", "end_date")
         ]
     )
+
     def actualizar_dropdowns(n_clicks, fecha_inicio, fecha_fin):
         conn = get_connection()
         query = f"""
@@ -282,3 +315,27 @@ def register_tab2_callbacks(app):
         default_vars = [variables[0]] if variables else []
 
         return options, options, default_vars
+    
+    @app.callback(
+        Output("modal-heatmap-tab2", "is_open"),
+        Output("graf-heatmap-modal-tab2", "figure"),
+        Input("btn-full-heatmap-tab2", "n_clicks"),
+        Input("close-modal-heatmap-tab2", "n_clicks"),
+        State("modal-heatmap-tab2", "is_open"),
+        State("graf-heatmap-tab2", "figure"), # Estado para obtener la figura actual
+        prevent_initial_call=True
+    )
+    def toggle_heatmap_modal(n_open, n_close, is_open, figure):
+        triggered_id = ctx.triggered_id
+
+        if triggered_id == "btn-full-heatmap-tab2":
+            # Si se hace clic en abrir, abre el modal y pasa la figura del gráfico
+            return True, figure
+        
+        if triggered_id == "close-modal-heatmap-tab2":
+            # Si se hace clic en cerrar, cierra el modal sin actualizar la figura
+            return False, no_update
+
+        # Comportamiento por defecto
+        return is_open, no_update
+    
