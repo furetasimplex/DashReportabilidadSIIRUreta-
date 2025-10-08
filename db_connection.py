@@ -2,7 +2,7 @@
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-import mysql.connector
+#import mysql.connector
 import pyodbc
 
 load_dotenv()
@@ -20,6 +20,7 @@ def get_connection():
         MYSQL_USER = os.getenv("MYSQL_USER_loc")
         MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD_loc")
         MYSQL_DB = os.getenv("MYSQL_DATA_hidro")
+        """         
         try:
             return mysql.connector.connect(
                 host=MYSQL_HOST,
@@ -29,13 +30,16 @@ def get_connection():
             )
         except mysql.connector.Error as err:
             print(f"❌ Error conexión MySQL local: {err}")
-            return None
+            return None """
+        return None  # Temporalmente deshabilitado
+
 
     if ENTORNO == 2:  # MySQL producción
         MYSQL_HOST = os.getenv("MYSQL_HOST")
         MYSQL_USER = os.getenv("MYSQL_USER")
         MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
         MYSQL_DB = os.getenv("MYSQL_DATA_hidro_r")
+        """   
         try:
             return mysql.connector.connect(
                 host=MYSQL_HOST,
@@ -45,7 +49,8 @@ def get_connection():
             )
         except mysql.connector.Error as err:
             print(f"❌ Error conexión MySQL prod: {err}")
-            return None
+            return None """
+        return None  # Temporalmente deshabilitado
 
     if ENTORNO == 3:  # SQL Server
         SQLSERVER_HOST = os.getenv("SQLSERVER_HOST")       # Ej: "xxxxxxxxxxx.bhpbilliton.net\\SQL2017"

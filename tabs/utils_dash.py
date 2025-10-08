@@ -13,7 +13,7 @@ import cv2
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import mysql.connector
+#import mysql.connector
 import os
 from dotenv import load_dotenv
 from dash import Dash
