@@ -7,7 +7,7 @@ import numpy as np
 import string
 import sqlalchemy
 #from databricks import sql
-import mariadb
+#import mariadb
 import sys
 import cv2
 import matplotlib
