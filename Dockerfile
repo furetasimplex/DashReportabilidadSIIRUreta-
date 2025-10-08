@@ -3,9 +3,8 @@ FROM python:3.13-slim
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
-# 🔧 Dependencias base y de build
-RUN apt-get update && apt-get install -y \
-    curl gnupg apt-transport-https
+# 🔧 Dependencias base
+RUN apt-get update && apt-get install -y curl gnupg apt-transport-https
 
 # 🔷 Instala el driver ODBC 18 (SQL Server)
 RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
@@ -16,15 +15,11 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
     ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 📂 Copia el proyecto
 WORKDIR /app
 COPY . .
 
 # 📦 Instala dependencias Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 🌐 Expone el puerto
 EXPOSE 10000
-
-# 🚀 Comando de ejecución
 CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:10000"]
