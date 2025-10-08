@@ -21,7 +21,8 @@ COPY . .
 # 📦 Instala dependencias Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE $PORT
+# ✅ Render ignora EXPOSE, pero mantenlo fijo para compatibilidad local
+EXPOSE 10000
 
-# 🚀 Comando de ejecución
-CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:$PORT"]
+# 🚀 El bind dinámico usa $PORT (Render lo inyecta en runtime)
+CMD ["bash", "-c", "gunicorn main:app --bind 0.0.0.0:${PORT:-10000}"]
