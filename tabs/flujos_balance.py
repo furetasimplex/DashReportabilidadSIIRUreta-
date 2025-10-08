@@ -70,7 +70,7 @@ tms_i AS (
         FROM inventar_SpcHidr.import_leyes_torres
         GROUP BY CAST(fecha AS DATE)
     ) h ON CAST(v.Fecha_turno AS DATE) = h.fecha
-    WHERE CAST(v.Fecha_turno AS DATE) = '2025-08-01'
+    WHERE CAST(v.Fecha_turno AS DATE) = '{fecha_inicio}'
 ),
 tms_f AS (
     SELECT
@@ -85,19 +85,19 @@ tms_f AS (
         FROM inventar_SpcHidr.import_leyes_torres
         GROUP BY CAST(fecha AS DATE)
     ) h ON CAST(v.Fecha_turno AS DATE) = h.fecha
-    WHERE CAST(v.Fecha_turno AS DATE) = '2025-08-31'
+    WHERE CAST(v.Fecha_turno AS DATE) = '{fecha_fin}'
 ),
 ley_i AS (
     SELECT
         (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 AS ley_cu
     FROM inventar_SpcHidr.mov_cam
-    WHERE fecha = '2025-08-01' AND Fase <> 'SRR' AND Destino = 'CH01'
+    WHERE fecha = '{fecha_inicio}' AND Fase <> 'SRR' AND Destino = 'CH01'
 ),
 ley_f AS (
     SELECT
         (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 AS ley_cu
     FROM inventar_SpcHidr.mov_cam
-    WHERE fecha = '2025-08-31' AND Fase <> 'SRR' AND Destino = 'CH01'
+    WHERE fecha = '{fecha_fin}' AND Fase <> 'SRR' AND Destino = 'CH01'
 )
 SELECT
     tms_i.total_tms AS TMS_Inicial,
@@ -431,7 +431,7 @@ CROSS JOIN ley_f;
       fecha
     FROM inventar_SpcHidr.control_apilado_diario
     WHERE
-      fecha BETWEEN '2025-08-01' AND DATEADD(DAY, 1, '2025-08-31')
+      fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
       AND volumen_diario_m3 > 0
       AND pad_id IN (1, 2)
     GROUP BY fecha
@@ -446,7 +446,7 @@ CROSS JOIN ley_f;
     JOIN inventar_SpcHidr.import_leyes_torres i
       ON CAST(vrdf.fecha_turno AS DATE) = i.fecha
     WHERE
-      vrdf.fecha_turno BETWEEN '2025-08-01' AND '2025-08-31'
+      vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
       AND i.id_torre = 1
     GROUP BY CAST(vrdf.fecha_turno AS DATE)
 
@@ -460,7 +460,7 @@ CROSS JOIN ley_f;
     JOIN inventar_SpcHidr.import_leyes_torres i
       ON CAST(vrdf.fecha_turno AS DATE) = i.fecha
     WHERE
-      vrdf.fecha_turno BETWEEN '2025-08-01' AND '2025-08-31'
+      vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
       AND i.id_torre = 2
     GROUP BY CAST(vrdf.fecha_turno AS DATE)
   ),
@@ -477,7 +477,7 @@ CROSS JOIN ley_f;
         SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
         FROM inventar_SpcHidr.control_apilado_diario cad
         WHERE
-          cad.fecha BETWEEN '2025-08-01' AND DATEADD(DAY, 1, '2025-08-31')
+          cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
           AND cad.pad_id = 2
           AND cad.volumen_diario_m3 > 0
       )
@@ -493,7 +493,7 @@ FROM datos_finales;
       fecha
     FROM inventar_SpcHidr.control_apilado_diario
     WHERE
-      fecha BETWEEN '2025-08-01' AND DATEADD(DAY, 1, '2025-08-31')
+      fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
       AND volumen_diario_m3 > 0
       AND pad_id IN (1, 2)
     GROUP BY fecha
@@ -508,7 +508,7 @@ FROM datos_finales;
     JOIN inventar_SpcHidr.import_leyes_torres i
       ON CAST(vrdf.fecha_turno AS DATE) = i.fecha
     WHERE
-      vrdf.fecha_turno BETWEEN '2025-08-01' AND '2025-08-31'
+      vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
       AND i.id_torre = 1
     GROUP BY CAST(vrdf.fecha_turno AS DATE)
 
@@ -522,7 +522,7 @@ FROM datos_finales;
     JOIN inventar_SpcHidr.import_leyes_torres i
       ON CAST(vrdf.fecha_turno AS DATE) = i.fecha
     WHERE
-      vrdf.fecha_turno BETWEEN '2025-08-01' AND '2025-08-31'
+      vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
       AND i.id_torre = 2
     GROUP BY CAST(vrdf.fecha_turno AS DATE)
   ),
@@ -539,7 +539,7 @@ FROM datos_finales;
         SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
         FROM inventar_SpcHidr.control_apilado_diario cad
         WHERE
-          cad.fecha BETWEEN '2025-08-01' AND DATEADD(DAY, 1, '2025-08-31')
+          cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
           AND cad.pad_id = 1
           AND cad.volumen_diario_m3 > 0
       )
@@ -549,6 +549,28 @@ SELECT
   ISNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS Ley_Cu
 FROM datos_finales;
     """,
+    "F20": f"""SELECT ISNULL(SUM(cv025_tot * 0.89), 0) AS Tonelaje, '0' AS Ley_Cu FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
+        "F21": f"""SELECT ISNULL(SUM(ton_reclamo_camiones), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.reclamos_tonelaje WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
+        "F22": f"""SELECT ISNULL(SUM(Camiones_TMS_Reclamo_Oxidos), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.Datos_conciliados_of WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
+        "F23": f"""SELECT
+            COALESCE(
+                (
+                    (SELECT SUM(fino_producido) FROM inventar_SpcHidr.control_ley_ripio WHERE fecha_drenaje = '{fecha_fin}' AND PAD = 'OXIDOS') -
+                    (SELECT SUM(fino_producido) FROM inventar_SpcHidr.control_ley_ripio WHERE fecha_drenaje = '{fecha_inicio}' AND PAD = 'OXIDOS')
+                ), 0
+            ) AS Tonelaje,
+            100 AS Ley_Cu;""",
+        "F24": f"""SELECT
+            COALESCE(
+                (
+                    (SELECT SUM(fino_producido) FROM inventar_SpcHidr.control_ley_ripio WHERE fecha_drenaje = '{fecha_fin}' AND PAD = 'SULFUROS') -
+                    (SELECT SUM(fino_producido) FROM inventar_SpcHidr.control_ley_ripio WHERE fecha_drenaje = '{fecha_inicio}' AND PAD = 'SULFUROS')
+                ), 0
+            ) AS Tonelaje,
+            100 AS Ley_Cu;""",
+        "F25": f"""SELECT
+            (SELECT sum(cv001_tot) * 0.93 FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}') AS Tonelaje,
+            (SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Fase = 'SRR' AND Destino = 'CH01') AS Ley_Cu;"""
     }
 
     # --- 4. Función Auxiliar (Requerida para cálculos de inventario inicial) ---

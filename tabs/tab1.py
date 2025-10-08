@@ -12,8 +12,8 @@ from db_connection import get_connection
 from datetime import datetime
 
 VARIABLES_VALIDAS = [
-    "Tonelaje", "CuT", "CuS", "PONDRS", "PONDC03G02",
-    "PONDRecLixG03", "POND100G07", "PONDClayBG10", "PONDCUFE", "PONDFE"
+    "Tonelaje", "CuT", "CuS", "Razón solubilidad", "Carbonato",
+    "Rec Lix", "Malla 100", "Clay Beta", "CUFE", "Fe"
 ]
 
 # ---------- DATA ----------
@@ -27,13 +27,13 @@ def load_data(fecha_ini, fecha_fin):
             Ton as Tonelaje, 
             PONDCuTG00 as CuT,
             PONDCusG01 as CuS, 
-            PONDRS, 
-            PONDC03G02, 
-            PONDRecLixG03, 
-            POND100G07, 
-            PONDClayBG10, 
-            PONDCUFE, 
-            PONDFE
+            PONDRS as [Razón solubilidad], 
+            PONDC03G02 as Carbonato,
+            PONDRecLixG03 as [Rec Lix], 
+            POND100G07 as [Malla 100], 
+            PONDClayBG10 as [Clay Beta],
+            PONDCUFE as CUFE, 
+            PONDFE as Fe
         FROM inventar_SpcHidr.resumen_mina
         WHERE Fecha BETWEEN '{fecha_ini}' AND '{fecha_fin}'
     """

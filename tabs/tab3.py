@@ -188,17 +188,18 @@ def render_tab3():
                 ]),
                 dbc.Row([
                     dbc.Col(
+                        # Este botón ahora tiene el id "download_tab3" y actuará como un enlace
                         dbc.Button(
-                            [html.I(className="bi bi-download me-2"), "Descargar CSV"],
-                            id="btn-dl-tab3", color="secondary", outline=True, className="me-2"
+                            [html.I(className="bi bi-box-arrow-up me-2"), "Abrir CSV"],
+                            id="download_tab3",          # ID del antiguo enlace
+                            color="secondary",
+                            outline=True,
+                            href="",                    # Propiedad para que actúe como enlace
+                            download="filtrado.csv",    # Nombre del archivo al descargar
+                            target="_blank"             # Para abrir en una nueva pestaña
                         ),
                         md="auto"
-                    ),
-                    dbc.Col(
-                        html.A("Abrir CSV", id="download_tab3", download="filtrado_tab3.csv",
-                               href="", target="_blank", className="align-self-center"),
-                        md="auto"
-                    ),
+                    )
                 ], className="g-2 mb-3"),
             ]),
             dcc.Tab(label='Correlaciones', children=[
