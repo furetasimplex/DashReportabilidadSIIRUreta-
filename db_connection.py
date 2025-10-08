@@ -53,25 +53,43 @@ def get_connection():
         return None  # Temporalmente deshabilitado
 
     if ENTORNO == 3:  # SQL Server
-        SQLSERVER_HOST = os.getenv("SQLSERVER_HOST")       # Ej: "xxxxxxxxxxx.bhpbilliton.net\\SQL2017"
+        SQLSERVER_HOST = os.getenv("SQLSERVER_HOST")
         SQLSERVER_DB = os.getenv("SQLSERVER_DB")
         SQLSERVER_USER = os.getenv("SQLSERVER_USER")
         SQLSERVER_PASSWORD = os.getenv("SQLSERVER_PASSWORD")
-        SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "SQL Server")
+        SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 18 for SQL Server")
+
+        conn_str = (
+            f"DRIVER={{{SQLSERVER_DRIVER}}};"
+            f"SERVER={SQLSERVER_HOST};"
+            f"DATABASE={SQLSERVER_DB};"
+            f"UID={SQLSERVER_USER};"
+            f"PWD={SQLSERVER_PASSWORD};"
+            "Encrypt=no;"
+            "TrustServerCertificate=yes;"
+        )
+
+        print("\n🧩 [DEBUG] Intentando conectar a SQL Server con:\n")
+        print(f"DRIVER={SQLSERVER_DRIVER}")
+        print(f"SERVER={SQLSERVER_HOST}")
+        print(f"DATABASE={SQLSERVER_DB}")
+        print(f"USER={SQLSERVER_USER}")
+        print("----------------------------------------------------")
+
         try:
-            conn_str = (
-                f"DRIVER={{{SQLSERVER_DRIVER}}};"
-                f"SERVER={SQLSERVER_HOST};"
-                f"DATABASE={SQLSERVER_DB};"
-                f"UID={SQLSERVER_USER};"
-                f"PWD={SQLSERVER_PASSWORD};"
-                f"Encrypt=no;"
-                f"TrustServerCertificate=yes;"
-            )
-            return pyodbc.connect(conn_str)
+            conn = pyodbc.connect(conn_str, timeout=10)
+            print("✅ [DEBUG] Conectado correctamente a SQL Server")
+            return conn
+        except pyodbc.InterfaceError as e:
+            print("❌ [ERROR] No se encontró el driver ODBC o fallo al inicializarlo")
+            print(str(e))
+        except pyodbc.Error as e:
+            print("❌ [ERROR] pyodbc general:")
+            print(str(e))
         except Exception as e:
-            print(f"❌ Error conexión SQL Server: {e}")
-            return None
+            print("❌ [ERROR] Excepción inesperada al conectar SQL Server:")
+            print(str(e))
+        return None
 
     raise ValueError("❌ ENTORNO no válido. Usa 1=local MySQL, 2=producción MySQL o 3=SQL Server.")
 
