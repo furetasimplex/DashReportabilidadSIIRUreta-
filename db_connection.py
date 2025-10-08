@@ -59,7 +59,9 @@ def get_connection():
                 f"SERVER={SQLSERVER_HOST};"
                 f"DATABASE={SQLSERVER_DB};"
                 f"UID={SQLSERVER_USER};"
-                f"PWD={SQLSERVER_PASSWORD}"
+                f"PWD={SQLSERVER_PASSWORD};"
+                f"Encrypt=no;"
+                f"TrustServerCertificate=yes;"
             )
             return pyodbc.connect(conn_str)
         except Exception as e:
@@ -106,12 +108,15 @@ def get_engine():
         SQLSERVER_PASSWORD = os.getenv("SQLSERVER_PASSWORD")
         SQLSERVER_PASSWORD =  SQLSERVER_PASSWORD.replace("@","%40")
         SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "SQL Server")
+        sqldriver = f"?driver={SQLSERVER_DRIVER.replace(' ', '+')}&Encrypt=no&TrustServerCertificate=yes"
+
         try:
             conn_str = (
                 f"mssql+pytds://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}"
                 f"@{SQLSERVER_HOST}/{SQLSERVER_DB}"
-                #f"?driver={SQLSERVER_DRIVER.replace(' ', '+')}"
             )
+            if SQLSERVER_DRIVER != "SQL Server":
+                conn_str += sqldriver
             print(conn_str)
             return create_engine(conn_str)
         except Exception as e:
