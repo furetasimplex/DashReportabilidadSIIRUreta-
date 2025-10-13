@@ -12,7 +12,8 @@ from tabs.tab_ripios import render_tab
 from tabs import sulfuro as tab_sulfuro
 from tabs import oxido as tab_oxido
 from tabs import tabreportabilidad
-
+from tabs.tab_hidro import render_layout_hidro
+from tabs.callbacks_hidro import register_apphidro_callbacks
 # Contenedores compuestos
 from tabs import tab_recon_container
 from tabs import tab_import_container  # asegúrate que este usa IDs únicos (p.ej., import-subtabs / import-content)
@@ -56,6 +57,9 @@ def create_layout(app):
     tab_recon_container.register_callbacks(app)
     tab_import_container.register_callbacks(app)
 
+    # Registra callbacks de la pestaña de hidro
+    register_apphidro_callbacks(app)
+
     tab_sulfuro.register_callbacks(app)
     tab_oxido.register_callbacks(app)
     tabreportabilidad.register_callbacks_reporte(app)
@@ -84,6 +88,7 @@ def create_layout(app):
                                 dcc.Tab(label="Recuperación", value="tab5"),
                                 dcc.Tab(label="Importar data base", value="tab7"),
                                 dcc.Tab(label="Reconciliador", value="recon"),
+                                dcc.Tab(label="Reconciliador Hidro", value="recon_hidro"),
                             ],
                         ),
                         html.Div(id="tab-content", className="mt-3"),
@@ -113,4 +118,6 @@ def register_callbacks(app):
             return tab_recon_container.layout
         elif tab == "tab7":
             return tab_import_container.layout
+        elif tab == "recon_hidro":
+            return render_layout_hidro()
         return html.Div("Contenido no implementado aún.")
