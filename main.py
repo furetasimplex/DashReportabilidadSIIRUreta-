@@ -14,7 +14,7 @@ external_stylesheets = [
 
 app = Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
 server = app.server
-app.title = "Dashboard Hidro"
+app.title = "Dashboard Hidrometalurgico Spence"
 
 # 🔐 Config Flask
 server.secret_key = "s1mpl3x"

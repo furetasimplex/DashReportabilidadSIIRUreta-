@@ -177,36 +177,78 @@ def get_fig_bal_casos_hidro(maxid,agg_tab2):
 
     return f"data:image/png;base64,{img_base64}"
 
-def get_data_save_casos_hidro(dat_casos,final,maxcas):
-        #column_names = [desc[0] for desc in dat_casos.description]
-        df = pd.DataFrame(dat_casos)
-        print(df)
-        # Generar sentencias UPDATE
-        tabla = "casos_balance"  # Nombre de la tabla en MySQL
-        update_statements = []
+def get_data_save_casos_hidro(dat_casos, final, maxcas):
+    """
+    Actualiza registros en SQL Server en la tabla <SSschema>casos_balance.
+    Convierte correctamente valores None/nan/'None' en NULL y ejecuta UPDATE por cada fila.
+    """
+    df = pd.DataFrame(dat_casos)
+    if df.empty:
+        print("⚠️ [AVISO] DataFrame vacío, no hay datos para actualizar.")
+        return
 
-        for _, row in df.iterrows():
-            set_values = ", ".join([f"{col} = '{row[col]}'" if isinstance(row[col], str) else f"{col} = {row[col]}" for col in df.columns if col != 'caso_id'])
-            update_statements.append(f"UPDATE {SSschema}{tabla} SET {set_values} WHERE caso_id = {maxcas};")
+    print("✅ [DEBUG] DataFrame recibido para actualización:")
+    print(df)
 
-        # Unir todas las sentencias en una sola cadena
-        query = "\n".join(update_statements)
+    # --- Función auxiliar para formatear valores SQL seguros ---
+    def format_sql_value(value):
+        """Convierte Python/NaN/None a SQL literal correcto."""
+        if value is None:
+            return "NULL"
+        if isinstance(value, float) and pd.isna(value):
+            return "NULL"
+        if isinstance(value, str):
+            val = value.strip().lower()
+            if val in ("none", "null", "nan", ""):
+                return "NULL"
+            safe_value = value.replace("'", "''")
+            return f"'{safe_value}'"
+        return str(value)
 
-        # Mostrar resultado
-        print(query)   
-        db=get_connection()
-        cursor = db.cursor()
-        for q in query.strip().split(";"):
+    update_statements = []
+
+    # --- Construir las sentencias UPDATE ---
+    for _, row in df.iterrows():
+        # Usar caso_id de la fila si existe, si no usar el máximo recibido
+        caso_id = row["caso_id"] if "caso_id" in df.columns else maxcas
+
+        set_values = ", ".join([
+            f"{col} = {format_sql_value(row[col])}"
+            for col in df.columns if col != "caso_id"
+        ])
+
+        query = f"UPDATE {SSschema}casos_balance SET {set_values} WHERE caso_id = {caso_id};"
+        update_statements.append(query)
+
+    print("\n🧩 [DEBUG] Sentencias generadas:")
+    for q in update_statements:
+        print(q)
+
+    # --- Ejecutar las sentencias en la base de datos ---
+    db = get_connection()
+    cursor = db.cursor()
+
+    try:
+        for q in update_statements:
             if q.strip():
                 try:
-                    cursor.execute(q.strip() + ";")
+                    cursor.execute(q)
                     db.commit()
                 except Exception as e:
-                    print("❌ Error en la sentencia:", q.strip())
-                    print("🔎 Detalle:", e)     
-                #finally:
-                   # cursor.close()
-        return 
+                    print("❌ Error en la sentencia:", q)
+                    print("🔎 Detalle:", e)
+                    db.rollback()
+    except Exception as e:
+        print("❌ [ERROR GENERAL EN get_data_save_casos_hidro]:", e)
+    finally:
+        try:
+            cursor.close()
+            db.close()
+        except:
+            pass
+
+    print("✅ [OK] Actualización completada correctamente.")
+    return
 
 def get_data_publica_casos_hidro (dat_casos,rec_caso, maxcas):
     db=get_connection()

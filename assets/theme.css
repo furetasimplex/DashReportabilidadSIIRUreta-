@@ -1,0 +1,187 @@
+/* ======================================================
+   🎨 DASHBOARD HIDRO THEME — Versión Refinada
+   Paleta Pantone Naranja + Ajuste de contraste y Tabs
+   ====================================================== */
+
+:root {
+  /* === Paleta base (naranjos suavizados) === */
+  --color-orange-1: #ED6A1C; /* Primary - menos saturado */
+  --color-orange-2: #F88C46; /* Hover / Accent */
+  --color-orange-3: #FBC35A; /* Secondary - cálido */
+  --color-orange-4: #FCE2AD; /* Fondo claro */
+
+  /* === Bootstrap overrides === */
+  --bs-primary: var(--color-orange-1);
+  --bs-secondary: var(--color-orange-3);
+  --bs-success: #2ECC71;
+  --bs-danger: #E74C3C;
+  --bs-warning: var(--color-orange-4);
+  --bs-info: #3498DB;
+  --bs-light: #FAFAFA;
+  --bs-dark: #2E2E2E;
+
+  /* === Fondo general y texto === */
+  --bs-body-bg: #FFF8F2;
+  --bs-body-color: #3B3B3B; /* texto más suave que negro absoluto */
+  --color-border: #E5E5E5;
+  --color-muted: #A6A6A6;
+
+  /* === Extras === */
+  --radius-base: 8px;
+  --radius-card: 12px;
+  --transition-fast: 0.2s ease-in-out;
+}
+
+/* ==============================
+   🌐 BODY & TEXTO
+   ============================== */
+body {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+}
+
+/* ==============================
+   🔘 BOTONES
+   ============================== */
+.btn {
+  font-weight: 500;
+  border-radius: var(--radius-base);
+  transition: all var(--transition-fast);
+}
+
+.btn-primary {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background-color: var(--color-orange-2);
+  border-color: var(--color-orange-2);
+}
+
+.btn-secondary {
+  background-color: var(--bs-secondary);
+  border-color: var(--bs-secondary);
+  color: #2E2E2E;
+}
+.btn-secondary:hover {
+  background-color: var(--color-orange-2);
+  color: #fff;
+}
+
+/* ==============================
+   ⚠️ ALERTS
+   ============================== */
+.alert {
+  border-radius: var(--radius-base);
+  font-weight: 500;
+  border: none;
+  padding: 0.9em 1.2em;
+}
+.alert-primary {
+  background-color: rgba(237, 106, 28, 0.12);
+  color: #A94418;
+  border-left: 4px solid var(--bs-primary);
+}
+.alert-secondary {
+  background-color: rgba(251, 195, 90, 0.15);
+  color: #7C5E1F;
+  border-left: 4px solid var(--bs-secondary);
+}
+
+/* ==============================
+   🧱 CARDS
+   ============================== */
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+}
+.card-header {
+  background-color: var(--color-orange-4);
+  font-weight: 600;
+  color: #403020;
+  border-top-left-radius: var(--radius-card);
+  border-top-right-radius: var(--radius-card);
+}
+
+/* ==============================
+   🧭 NAVBAR
+   ============================== */
+.navbar {
+  background-color: var(--bs-primary);
+}
+.navbar a {
+  color: #fff !important;
+}
+.navbar a:hover {
+  color: var(--color-orange-4) !important;
+}
+
+/* ==============================
+   🏷️ TEXT & LINKS
+   ============================== */
+.text-primary { color: var(--bs-primary) !important; }
+.text-secondary { color: var(--bs-secondary) !important; }
+.text-muted { color: var(--color-muted) !important; }
+
+a {
+  color: var(--bs-primary);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--color-orange-2);
+  text-decoration: underline;
+}
+
+/* ==============================
+   🧩 TABS (dbc.Tabs / dbc.Tab)
+   ============================== */
+.nav-tabs {
+  border-bottom: 2px solid var(--color-border);
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  color: var(--color-muted);
+  font-weight: 700;
+  padding: 0.6em 1em;
+  border-radius: var(--radius-base) var(--radius-base) 0 0;
+  transition: all var(--transition-fast);
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--bs-primary);
+  background-color: rgba(237, 106, 28, 0.08);
+}
+
+.nav-tabs .nav-link.active {
+  color: #fff;
+  background-color: var(--bs-primary);
+  border: 2px solid var(--bs-primary);
+  border-bottom: 2px solid var(--bs-primary);
+  border-radius: var(--radius-base) var(--radius-base) 0 0;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ==============================
+   🌈 BADGES
+   ============================== */
+.badge {
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.35em 0.6em;
+}
+.badge-primary { background-color: var(--bs-primary); color: #fff; }
+.badge-secondary { background-color: var(--bs-secondary); color: #2E2E2E; }
+
+/* ==============================
+   🧠 UTILIDADES
+   ============================== */
+.shadow-sm { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); }
+.rounded-base { border-radius: var(--radius-base); }
+.rounded-card { border-radius: var(--radius-card); }
