@@ -22,7 +22,7 @@ load_dotenv()
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 SSschema = os.getenv("SQLSERVER_SCHEMA", "")
-def get_data_agua_casos_hidro(inicio, final, crea_caso):
+def get_data_agua_casos(inicio, final, crea_caso):
     ddf_casos = pd.DataFrame()  # Inicializar por seguridad
     db = get_connection()
 
@@ -77,7 +77,7 @@ def get_data_agua_casos_hidro(inicio, final, crea_caso):
 
     return ddf_casos
 
-def get_agua_his_casos_hidro (final):
+def get_agua_his_casos (final):
      db=get_connection()
      sql2=f"select caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso " \
         f"FROM {SSschema}casos_balance where modelo=2 order by fecha desc"
@@ -96,10 +96,10 @@ def get_agua_his_casos_hidro (final):
      #db.close()
      return ddf_casosh
 
-def get_fig_bal_casos_hidro(maxid,agg_tab2):
+def get_fig_bal_casos(maxid,agg_tab2):
     print("📁 Ruta actual:", os.getcwd())
-    
-    image_path = "assets/HIDR 2.png"
+    assets_folder = "tabs/hidroApp/assets"
+    image_path = f"{assets_folder}/HIDR 2.png"
     if not os.path.exists(image_path):
         print(f"❌ Imagen no encontrada: {image_path}")
         return ""
@@ -176,7 +176,7 @@ def get_fig_bal_casos_hidro(maxid,agg_tab2):
 
     return f"data:image/png;base64,{img_base64}"
 
-def get_data_save_casos_hidro(dat_casos,final,maxcas):
+def get_data_save_casos(dat_casos,final,maxcas):
         #column_names = [desc[0] for desc in dat_casos.description]
         df = pd.DataFrame(dat_casos)
         print(df)
@@ -207,7 +207,7 @@ def get_data_save_casos_hidro(dat_casos,final,maxcas):
                    # cursor.close()
         return 
 
-def get_data_publica_casos_hidro (dat_casos,rec_caso, maxcas):
+def get_data_publica_casos (dat_casos,rec_caso, maxcas):
     db=get_connection()
     df_tot = pd.DataFrame(dat_casos)
     df = df_tot[df_tot['caso_id'] == maxcas]
@@ -264,7 +264,7 @@ def get_data_publica_casos_hidro (dat_casos,rec_caso, maxcas):
      
 #   get_data_save_tags     
 
-def get_data_save_tags_hidro(inicio, fin, dat_tags):
+def get_data_save_tags(inicio, fin, dat_tags):
         #column_names = [desc[0] for desc in dat_casos.description]
         df = pd.DataFrame(dat_tags)
         #print(df)
@@ -328,11 +328,11 @@ def get_data_save_tags_hidro(inicio, fin, dat_tags):
 # *********
 
 
-def get_nombre_app_hidro():
+def get_nombre_app():
     return 'Balance Agua Hidrometalurgia Spence'
 
 
-def parse_contents_hidro(contents, filename):
+def parse_contents(contents, filename):
     """
     Función que transforma el contenido de un archivo csv, xls o xlsx cargado
     mediante dcc.Upload().
@@ -353,7 +353,7 @@ def parse_contents_hidro(contents, filename):
         return df
     return df
 
-def local_img_to_html_hidro(path,img_name):
+def local_img_to_html(path,img_name):
     """
     Función que transforma una imagen local png a string basico para ser
     desplegado layout.
@@ -368,7 +368,7 @@ def local_img_to_html_hidro(path,img_name):
 
 
 
-def carta_control_hidro(df, x_col, y_col, titulo="Carta de Control", N=3, destacar_outliers=True, metodo="STD"):
+def carta_control(df, x_col, y_col, titulo="Carta de Control", N=3, destacar_outliers=True, metodo="STD"):
     """
     Genera una carta de control estadístico de procesos.
 

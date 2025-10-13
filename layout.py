@@ -12,8 +12,8 @@ from tabs.tab_ripios import render_tab
 from tabs import sulfuro as tab_sulfuro
 from tabs import oxido as tab_oxido
 from tabs import tabreportabilidad
-from tabs.tab_hidro import render_layout_hidro
-from tabs.callbacks_hidro import register_apphidro_callbacks
+from tabs.hidroApp.tab_hidro import render_layout_hidro
+from tabs.hidroApp.callbacks_hidro import register_apphidro_callbacks
 # Contenedores compuestos
 from tabs import tab_recon_container
 from tabs import tab_import_container  # asegúrate que este usa IDs únicos (p.ej., import-subtabs / import-content)
