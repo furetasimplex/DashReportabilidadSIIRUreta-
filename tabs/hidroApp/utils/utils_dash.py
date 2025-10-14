@@ -21,7 +21,7 @@ from db_connection import get_connection,get_engine
 load_dotenv()
 
 app = Dash(__name__, suppress_callback_exceptions=True)
-SSschema = os.getenv("SQLSERVER_SCHEMA", "")
+SSschema = os.getenv("SQLSERVER_SCHEMA_AGUA", "")
 def get_data_agua_casos_hidro(inicio, final, crea_caso):
     ddf_casos = pd.DataFrame()  # Inicializar por seguridad
     db = get_connection()

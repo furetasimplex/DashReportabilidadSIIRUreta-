@@ -185,3 +185,60 @@ a:hover {
 .shadow-sm { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); }
 .rounded-base { border-radius: var(--radius-base); }
 .rounded-card { border-radius: var(--radius-card); }
+
+
+/* ==============================
+   ✨ NAVBAR CLARO (COHERENTE CON APP)
+   ============================== */
+.navbar {
+  background-color: var(--bs-light) !important;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.navbar .nav-link {
+  color: var(--bs-primary) !important;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: var(--radius-base);
+  transition: all var(--transition-fast);
+}
+
+.navbar .nav-link:hover {
+  background-color: rgba(237, 106, 28, 0.1);
+  color: var(--bs-primary) !important;
+}
+
+.navbar .nav-link.active {
+  background-color: var(--bs-primary) !important;
+  color: white !important;
+  box-shadow: 0 0 6px rgba(0,0,0,0.1);
+}
+
+
+/* ==============================
+   FOOTER
+   ============================== */
+.footer-container {
+  background-color: var(--bs-light);
+  border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.03);
+  font-size: 0.9rem;
+  color: var(--bs-body-color);
+}
+
+.footer-container a {
+  color: var(--bs-primary);
+  transition: all var(--transition-fast);
+}
+
+.footer-container a:hover {
+  color: var(--color-orange-2);
+  text-decoration: none;
+}
+
+.footer-container img {
+  filter: brightness(0.95);
+}
