@@ -56,4 +56,5 @@ def login():
 @auth_bp.route("/logout")
 def logout():
     session.pop("user", None)
-    return jsonify({"message": "Sesión cerrada"}), 200
+    return redirect("/auth/login_page")  #jsonify({"message": "Sesión cerrada"}), 200
+

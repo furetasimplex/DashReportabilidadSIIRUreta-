@@ -1,8 +1,10 @@
 from dash import html, dcc
+import dash
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 import base64, os
 from dash import callback_context
+import flask
 
 # === Importa tus tabs ===
 from tabs.tab1 import render_tab1, register_tab1_callbacks
@@ -32,7 +34,7 @@ def local_img_to_html(path, img_name):
 dbc.Col(html.Img(src=local_img_to_html(assets_folder, 'logo.png'),
             style={'height': '36px'}), width="auto"),
 """
-
+#global_username = flask.session.get("username", "Invitado")  # Variable global para almacenar el usuario
 def render_header():
     return dbc.Row(
         [
@@ -118,12 +120,46 @@ def create_layout(app):
                     justified=True,
                     className="rounded-3 p-1 bg-white",
                 ),
+                dbc.NavbarToggler(id="navbar-toggler"),
+
+                dbc.Collapse(
+                    dbc.Nav(
+                        [
+                            dbc.DropdownMenu(
+                                label=html.Span(
+                                    [
+                                        html.I(className="bi bi-person-circle me-2"),  # ícono Bootstrap
+                                        html.Span("Bienvenido"),
+                                    ],
+                                    className="d-flex align-items-center",
+                                ),
+                                children=[
+                                    #dbc.DropdownMenuItem("Perfil", href="#"),
+                                    #dbc.DropdownMenuItem(divider=True),
+                                    dbc.DropdownMenuItem(
+                                    "Cerrar sesión",
+                                    href="#",
+                                    id="logout-link",
+                                    n_clicks=1
+                                    )
+                                ],
+                                nav=True,
+                                align_end=True,
+                                className="",
+                            ),
+                        ],
+                        className="ms-auto",  # alinea a la derecha
+                        navbar=True,
+                    ),
+                    id="navbar-collapse",
+                    navbar=True,
+                ),
             ],
             fluid=True,
         ),
-        color="light",
+        color="",
         dark=False,
-        class_name="border-0 shadow-sm rounded-3 mb-3 py-1",
+        class_name="border-0 shadow-sm rounded-3 mb-3 py-1 px-3",
     )
 
     return dbc.Container(
@@ -246,3 +282,14 @@ def register_callbacks(app):
         elif tab == "recon_hidro":
             return render_layout_hidro()
         return html.Div("Seleccione una pestaña.")
+"""     
+    @app.callback(
+    Output("url-redirect", "href"),
+    Input("logout-link", "n_clicks"),
+    prevent_initial_call=True
+    )
+    def logout_user(n):
+        if n:
+            flask.session.pop("user", None)
+            return "/auth/logout"
+        return dash.no_update """
