@@ -53,6 +53,7 @@ def register_callbacks(app):
             if "Base_Datos" not in xls.sheet_names:
                 return "Error: el archivo no contiene la hoja 'Base_Datos'."
             df = pd.read_excel(xls, sheet_name="Base_Datos")
+            df.columns = df.columns.str.strip()
 
             print("Columnas iniciales:", df.columns.tolist())
 
