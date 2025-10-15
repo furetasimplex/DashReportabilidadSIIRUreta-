@@ -9,7 +9,7 @@ from tabs import tabreportabilidad
 
 layout = dbc.Card(
     [
-        dbc.CardHeader(html.H4("Módulo de Importación de Datos", className="mb-0")),
+        dbc.CardHeader(html.H4("📈 Reconciliador Area Seca", className="mb-0")),
         dbc.CardBody(
             [
                 

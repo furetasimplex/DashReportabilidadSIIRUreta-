@@ -15,7 +15,7 @@ import tabs.tab_importar_reclamo_camiones as tab_reclamos
 dash.register_page(__name__, path="/importar_datos", name="Importar Datos")
 
 layout = html.Div([
-    html.H4("Módulo de Importación de Datos"),
+    dbc.CardHeader(html.H4("Módulo de Importación de Datos", className="p-2")),
     dcc.Tabs(
         id='tabs-importacion',
         value='tab-datos-filtrados',
@@ -28,7 +28,7 @@ layout = html.Div([
             dcc.Tab(label='Reclamo Camiones', value='tab-reclamos')
         ]
     ),
-    html.Div(id='content-subtab-importacion', style={"marginTop": "20px"})
+    html.Div(id='content-subtab-importacion', className="mt-3")
 ])
 
 def register_callbacks(app):

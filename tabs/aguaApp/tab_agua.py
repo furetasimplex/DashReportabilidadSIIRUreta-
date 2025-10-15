@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import datetime
 import string
-from tabs.hidroApp.utils.utils_dash import get_nombre_app_hidro, local_img_to_html_hidro
+from tabs.aguaApp.utils.utils_dash import get_nombre_app_agua, local_img_to_html_agua
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,11 +16,11 @@ def create_alphabet_list(n):
     return list(string.ascii_uppercase[:n])
 
 
-def render_layout_hidro():
+def render_layout_agua():
     project_folder = os.path.dirname(os.path.realpath(__file__))
     assets_folder = os.path.join(project_folder, 'assets')
 
-    nombre_app = get_nombre_app_hidro()
+    nombre_app = get_nombre_app_agua()
 
     date_now = datetime.datetime.now().replace(minute=0, second=0)
     fecha = date_now.strftime('%Y-%m-%d %H:%M')
@@ -156,7 +156,7 @@ def render_layout_hidro():
     header = dbc.Container([
         dbc.Row([
             dbc.Col(html.Img(
-                src=local_img_to_html_hidro(assets_folder, 'logo.png'),
+                src=local_img_to_html_agua(assets_folder, 'logo.png'),
                 style={'width': '80%'}
             ), width=2),
             dbc.Col(html.H2(nombre_app), width={"size": 8, "offset": 1}, align="center"),
@@ -168,39 +168,39 @@ def render_layout_hidro():
         dbc.Row([dbc.Col(html.H5('Parámetros de entrada'), width=4)]),
         dbc.Row([
             dbc.Col(dbc.FormFloating([
-                dbc.Input(id='fecha_inicio_caso_hidro', type='date', value=datetime.datetime.now().strftime('%Y-%m-%d')),
+                dbc.Input(id='fecha_inicio_caso_agua', type='date', value=datetime.datetime.now().strftime('%Y-%m-%d')),
                 dbc.Label("Fecha Inicio")
             ]), width=2),
             dbc.Col(dbc.FormFloating([
-                dbc.Input(id='fecha_final_caso_hidro', type='date', value=datetime.datetime.now().strftime('%Y-%m-%d')),
+                dbc.Input(id='fecha_final_caso_agua', type='date', value=datetime.datetime.now().strftime('%Y-%m-%d')),
                 dbc.Label("Fecha Final")
             ]), width=2),
             dbc.Col(dbc.Checklist(
-                id="crea_caso_hidro",
+                id="crea_caso_agua",
                 options=[{"label": "Crear nuevo Caso", "value": 'Si'}],
                 label_checked_style={"color": "green"},
                 input_checked_style={"backgroundColor": "green", "borderColor": "black"}
             ), width=2),
             dbc.Col(dbc.FormFloating([
-                dbc.Input(id='id_caso_activo_hidro', type='int'),
+                dbc.Input(id='id_caso_activo_agua', type='int'),
                 dbc.Label("Id Caso")
             ]), width=1),
-            dbc.Col(dbc.Button('Obtener Datos', id='btn_get_casos_hidro', n_clicks=0, style=dict_style_boton_2), width=2)
+            dbc.Col(dbc.Button('Obtener Datos', id='btn_get_casos_agua', n_clicks=0, style=dict_style_boton_2), width=2)
         ]),
         dbc.Row([
             dbc.Col(dag.AgGrid(
-                id="data_casos2_hidro",
+                id="data_casos2_agua",
                 columnDefs=columnsDefs_data_casos,
                 className='ag-theme-balham',
                 style={"height": "100px", "width": "100%"}
             ), width=8),
-            dbc.Col(dbc.Button('Guardar Datos', id='btn_save_casos_hidro', n_clicks=0, style=dict_style_boton_2), width=2),
+            dbc.Col(dbc.Button('Guardar Datos', id='btn_save_casos_agua', n_clicks=0, style=dict_style_boton_2), width=2),
         ]),
         html.Br(),
         html.Div([
             html.Label("Valores a Visualizar:"),
             dcc.RadioItems(
-                id="agg_tab2_hidro",
+                id="agg_tab2_agua",
                 options=[
                     {"label": "Medidos ", "value": "Medido"},
                     {"label": "Reconciliado ", "value": "Reconciliado"},
@@ -209,10 +209,10 @@ def render_layout_hidro():
                 value="Reconciliado"
             )
         ], style={'padding': '10px 0'}),
-        dbc.Col(html.Img(id="imagen_balance_hidro", style={"width": "80%"}), width=10),
+        dbc.Col(html.Img(id="imagen_balance_agua", style={"width": "80%"}), width=10),
         html.Hr(),
         dbc.Row([dbc.Col(dag.AgGrid(
-            id="data_hcas2_hidro",
+            id="data_hcas2_agua",
             columnDefs=columnsDefs_hist_caso,
             className='ag-theme-balham'
         ), width=8)])
@@ -225,45 +225,45 @@ def render_layout_hidro():
         html.Br(),
         dbc.Row([
             dbc.Col(dbc.FormFloating([
-                dbc.Input(id='fecha_inicio_tag_hidro', type='date', value=datetime.datetime.now().strftime('%Y-%m-%d')),
+                dbc.Input(id='fecha_inicio_tag_agua', type='date', value=datetime.datetime.now().strftime('%Y-%m-%d')),
                 dbc.Label("Fecha Inicio")
             ]), width=2),
             dbc.Col(dbc.FormFloating([
-                dbc.Input(id='fecha_final_tag_hidro', type='date', value=datetime.datetime.now().strftime('%Y-%m-%d')),
+                dbc.Input(id='fecha_final_tag_agua', type='date', value=datetime.datetime.now().strftime('%Y-%m-%d')),
                 dbc.Label("Fecha Final")
             ]), width=2),
         ]),
         html.Br(),
         dbc.Row([dbc.Col(dcc.Upload(
-            id='data_tag_upload_hidro',
+            id='data_tag_upload_agua',
             children='Cargar Excel Datos tag',
             style={'lineHeight': '250%', 'borderWidth': '1px', 'borderStyle': 'dashed', 'borderRadius': '5px', 'textAlign': 'center'},
             multiple=False
         ), width=2)]),
         html.Br(),
         dbc.Row([dbc.Col(dag.AgGrid(
-            id="data_base_tag_hidro",
+            id="data_base_tag_agua",
             columnDefs=columnsDefs_data_tag,
             className='ag-theme-balham'
         ), width=10)]),
         html.Br(),
         dbc.Row([
             dbc.Col(dcc.Dropdown(
-                id='box_x_tag_hidro',
+                id='box_x_tag_agua',
                 options=['Filtro Tag', 'Origen', 'Fecha'],
                 value='filtro_tag'
             ), width=2),
-            dbc.Col(dcc.Graph(id='fig_tag_box_hidro'), width=10),
+            dbc.Col(dcc.Graph(id='fig_tag_box_agua'), width=10),
         ]),
         html.Br(),
         dbc.Row([
             dbc.Col(dag.AgGrid(
-                id="input_tag_hidro",
+                id="input_tag_agua",
                 columnDefs=columnsDefs_data_input,
                 className='ag-theme-balham',
                 csvExportParams={"fileName": "Input_tag.csv"}
             ), width=10),
-            dbc.Col(dbc.Button('Descargar a csv', id='btn_recon_csv2_hidro', n_clicks=0, style=dict_style_boton_2), width=2),
+            dbc.Col(dbc.Button('Descargar a csv', id='btn_recon_csv2_agua', n_clicks=0, style=dict_style_boton_2), width=2),
         ]),
     ])
 
@@ -273,14 +273,14 @@ def render_layout_hidro():
         dbc.Row([dbc.Col(html.H5('Parámetros de entrada reconciliador (tabla editable)'), width=4)]),
         html.Br(),
         dbc.Row([dbc.Col(dcc.Upload(
-            id='data_base_upload_hidro',
+            id='data_base_upload_agua',
             children='Cargar Excel Datos Base',
             style={'lineHeight': '250%', 'borderWidth': '1px', 'borderStyle': 'dashed', 'borderRadius': '5px', 'textAlign': 'center'},
             multiple=False
         ), width=2)]),
         html.Br(),
         dbc.Row([dbc.Col(dag.AgGrid(
-            id="recon_data_base_hidro",
+            id="recon_data_base_agua",
             columnDefs=columnsDefs_data_base,
             className='ag-theme-balham'
         ), width=10)])
@@ -292,28 +292,28 @@ def render_layout_hidro():
         dbc.Row([dbc.Col(html.H5('Ejecutar reconciliador y revisión de resultados'), width=6)]),
         html.Br(),
         dbc.Row([
-            dbc.Col(dbc.Button('Ejecutar', id='btn_recon_hidro', n_clicks=0, style=dict_style_boton_2), width=2),
-            dbc.Col(dcc.Download(id="descargar_excel_hidro"), width=2),
+            dbc.Col(dbc.Button('Ejecutar', id='btn_recon_agua', n_clicks=0, style=dict_style_boton_2), width=2),
+            dbc.Col(dcc.Download(id="descargar_excel_agua"), width=2),
         ]),
         html.Br(),
         dbc.Row([
             dbc.Col(dag.AgGrid(
-                id="recon_resultados_hidro",
+                id="recon_resultados_agua",
                 columnDefs=columnsDefs_resultados,
                 className='ag-theme-balham',
                 csvExportParams={"fileName": "resultados_reconciliados.csv"}
             ), width=10),
-            dbc.Col(dbc.Button('Descargar Excel', id='btn_recon_csv_hidro', n_clicks=0, style=dict_style_boton_2), width=2),
-            dbc.Col(dbc.Button('Publicar Datos', id='btn_publica_casos_hidro', n_clicks=0, style=dict_style_boton_2), width=2),
+            dbc.Col(dbc.Button('Descargar Excel', id='btn_recon_csv_agua', n_clicks=0, style=dict_style_boton_2), width=2),
+            dbc.Col(dbc.Button('Publicar Datos', id='btn_publica_casos_agua', n_clicks=0, style=dict_style_boton_2), width=2),
         ]),
         html.Br(),
         dbc.Row([
             dbc.Col(dag.AgGrid(
-                id="recon_desbalances_hidro",
+                id="recon_desbalances_agua",
                 columnDefs=columnsDefs_desbalances,
                 className='ag-theme-balham'
             ), width=10),
-            dbc.Col(dbc.Button('Descargar CSV', id='btn_desbal_csv_hidro', n_clicks=0, style=dict_style_boton_2), width=2),
+            dbc.Col(dbc.Button('Descargar CSV', id='btn_desbal_csv_agua', n_clicks=0, style=dict_style_boton_2), width=2),
         ]),
     ])
 
@@ -321,9 +321,9 @@ def render_layout_hidro():
         #header,
         html.Hr(),
         dbc.Tabs([
-            dbc.Tab(label="1 Crear/Cargar Caso", tab_id="Cargar_caso_hidro", children=layout_carga_caso),
-            dbc.Tab(label="Carga TAG", tab_id="Tag_hidro", children=layout_mina_input),
-            dbc.Tab(label="Reconciliador Entrada", tab_id="Recon_input_hidro", children=layout_recon_input),
-            dbc.Tab(label="Reconciliador Resultados", tab_id="Recon_output_hidro", children=layout_recon_output),
-        ], id="tabs_hidro"),
+            dbc.Tab(label="1 Crear/Cargar Caso", tab_id="Cargar_caso_agua", children=layout_carga_caso),
+            dbc.Tab(label="Carga TAG", tab_id="Tag_agua", children=layout_mina_input),
+            dbc.Tab(label="Reconciliador Entrada", tab_id="Recon_input_agua", children=layout_recon_input),
+            dbc.Tab(label="Reconciliador Resultados", tab_id="Recon_output_agua", children=layout_recon_output),
+        ], id="tabs_agua"),
     ], fluid=True)

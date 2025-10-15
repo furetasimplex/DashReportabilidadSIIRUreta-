@@ -21,7 +21,7 @@ from db_connection import get_connection,get_engine
 load_dotenv()
 
 app = Dash(__name__, suppress_callback_exceptions=True)
-SSschema = os.getenv("SQLSERVER_SCHEMA_AGUA", "")
+SSschema = os.getenv("SQLSERVER_SCHEMA", "")
 def get_data_agua_casos_hidro(inicio, final, crea_caso):
     ddf_casos = pd.DataFrame()  # Inicializar por seguridad
     db = get_connection()
@@ -38,7 +38,7 @@ def get_data_agua_casos_hidro(inicio, final, crea_caso):
             if crea_caso == "Si":
                 sql_in = f"""
                 INSERT INTO {schema_prefix}casos_balance ([fecha], [modelo], [fecha_ini])
-                VALUES ('{final}', 2, '{inicio}');
+                VALUES ('{final}', 1, '{inicio}');
                 """
                 print("📝 Ejecutando INSERT:")
                 print(sql_in)
@@ -52,7 +52,7 @@ def get_data_agua_casos_hidro(inicio, final, crea_caso):
             sql = f"""
             SELECT caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso
             FROM {schema_prefix}casos_balance
-            WHERE fecha = '{final}' AND modelo = 2;
+            WHERE fecha = '{final}' AND modelo = 1;
             """
             print("🔍 Ejecutando SELECT:")
             print(sql)
@@ -80,7 +80,7 @@ def get_data_agua_casos_hidro(inicio, final, crea_caso):
 def get_agua_his_casos_hidro (final):
      db=get_connection()
      sql2=f"select caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso " \
-        f"FROM {SSschema}casos_balance where modelo=2 order by fecha desc"
+        f"FROM {SSschema}casos_balance where modelo=1 order by fecha desc"
         #print(sql)
      cursor = db.cursor()
      try:
@@ -135,7 +135,7 @@ def get_fig_bal_casos_hidro(maxid,agg_tab2):
                     {SSschema}flujo_caso_coord
                 WHERE
                     flujo_caso_coord.caso = '''+ str(maxid) +''' AND
-                    flujo_caso_coord.modelo = 2'''
+                    flujo_caso_coord.modelo = 1'''
     print(data_sql)
     cursor = db.cursor()
     try:
@@ -351,7 +351,7 @@ def get_data_save_tags_hidro(inicio, fin, dat_tags):
 
 
         query = f"INSERT INTO {SSschema}{tabla} ({columnas}) VALUES {valores};"
-        #print(query)
+        print(f"query: {query}")
 
     
         cursor = db.cursor()
@@ -482,4 +482,4 @@ def carta_control_hidro(df, x_col, y_col, titulo="Carta de Control", N=3, destac
         template="plotly_white"
     )
 
-    return fig
+    return fig 

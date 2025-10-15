@@ -1,4 +1,4 @@
-from dash import html, dcc
+from dash import clientside_callback, html, dcc, no_update
 import dash
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
@@ -11,13 +11,15 @@ from tabs.tab1 import render_tab1, register_tab1_callbacks
 from tabs.tab2 import render_tab2, register_tab2_callbacks
 from tabs.tab3 import render_tab3, register_tab3_callbacks
 from tabs.tab4 import render_tab4, register_tab4_callbacks
+from tabs.tabReconHidro import tab_recon_container_hidro
 from tabs.tab_ripios import render_tab
 from tabs import sulfuro as tab_sulfuro
 from tabs import oxido as tab_oxido
 from tabs import tabreportabilidad
-from tabs.hidroApp.tab_hidro import render_layout_hidro
-from tabs.hidroApp.callbacks_hidro import register_apphidro_callbacks
+#from tabs.aguaApp.tab_agua import render_layout_agua
+#from tabs.aguaApp.callbacks_agua import register_appagua_callbacks
 from tabs import tab_recon_container, tab_import_container
+from tabs.tabReconHidro.tab_recon_hidro import render_recon_hidro
 
 
 # === Utilidades ===
@@ -54,7 +56,7 @@ def render_footer():
                 dbc.Col(
                     html.Img(
                         src=local_img_to_html(assets_folder, "logo.png"),
-                        style={"height": "36px", "objectFit": "contain"},
+                        style={"height": "60px", "objectFit": "contain"},
                     ),
                     width="auto",
                 ),
@@ -100,8 +102,9 @@ def create_layout(app):
     register_tab3_callbacks(app)
     register_tab4_callbacks(app)
     tab_recon_container.register_callbacks(app)
+    tab_recon_container_hidro.register_callbacks(app)
     tab_import_container.register_callbacks(app)
-    register_apphidro_callbacks(app)
+    #register_appagua_callbacks(app)
     tab_sulfuro.register_callbacks(app)
     tab_oxido.register_callbacks(app)
     tabreportabilidad.register_callbacks_reporte(app)
@@ -121,7 +124,6 @@ def create_layout(app):
                     className="rounded-3 p-1 bg-white",
                 ),
                 dbc.NavbarToggler(id="navbar-toggler"),
-
                 dbc.Collapse(
                     dbc.Nav(
                         [
@@ -131,16 +133,15 @@ def create_layout(app):
                                         html.I(className="bi bi-person-circle me-2"),  # ícono Bootstrap
                                         html.Span("Bienvenido"),
                                     ],
-                                    className="d-flex align-items-center",
+                                    className="align-items-center",
                                 ),
                                 children=[
                                     #dbc.DropdownMenuItem("Perfil", href="#"),
                                     #dbc.DropdownMenuItem(divider=True),
                                     dbc.DropdownMenuItem(
                                     "Cerrar sesión",
-                                    href="#",
                                     id="logout-link",
-                                    n_clicks=1
+                                    n_clicks=0,
                                     )
                                 ],
                                 nav=True,
@@ -154,6 +155,7 @@ def create_layout(app):
                     id="navbar-collapse",
                     navbar=True,
                 ),
+                dcc.Location(id="page-url", refresh=True),
             ],
             fluid=True,
         ),
@@ -253,8 +255,8 @@ def register_callbacks(app):
                 className="subtabs",
                 children=[
                     dcc.Tab(label="Importar data base", value="tab7"),
-                    dcc.Tab(label="Reconciliador", value="recon"),
-                    dcc.Tab(label="Reconciliador Hidro", value="recon_hidro"),
+                    dcc.Tab(label="Reconciliador Area Seca", value="recon"),
+                    dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro"),
                 ],
             )
 
@@ -280,16 +282,27 @@ def register_callbacks(app):
         elif tab == "recon":
             return tab_recon_container.layout
         elif tab == "recon_hidro":
-            return render_layout_hidro()
+            return tab_recon_container_hidro.layout
+        #elif tab == "recon_agua":
+            #return render_layout_agua()
         return html.Div("Seleccione una pestaña.")
-"""     
-    @app.callback(
-    Output("url-redirect", "href"),
-    Input("logout-link", "n_clicks"),
-    prevent_initial_call=True
-    )
-    def logout_user(n):
-        if n:
-            flask.session.pop("user", None)
-            return "/auth/logout"
-        return dash.no_update """
+     
+    # === Cerrar sesión ===
+    clientside_callback(
+        """
+        function(n) {
+            if (n) {
+                // Llamar al endpoint Flask para cerrar sesión
+                fetch('/auth/logout', {method: 'GET'})
+                .then(() => {
+                    // Luego recargar completamente la página
+                    window.location.href = '/auth/login_page';
+                });
+            }
+            return '';
+        }
+        """,
+        Output("logout-link", "children"),  # salida dummy, no importa
+        Input("logout-link", "n_clicks"),
+        prevent_initial_call=True
+)
