@@ -206,13 +206,13 @@ def register_recon_callbacks_hidro(app):
         Output('data_casos2_hidro', 'rowData'),
         Output('data_hcas2_hidro', 'rowData'),
         Output('id_caso_activo_hidro', 'value'),
-        Output('active-case_hidro', 'data'),
+        Output('active-case-hidro', 'data'),
         Input('btn-get-casos_hidro', 'n_clicks'),
         Input('id_caso_activo_hidro', 'value'), # <--- AÑADIMOS EL INPUT DEL OTRO CALLBACK
         State('fecha_inicio_caso_hidro', 'value'),
         State('fecha_final_caso_hidro', 'value'),
         State('crea-caso_hidro', 'value'),
-        State('recon-data_hidro', 'data'), # <--- Añadimos el State para no perder datos
+        State('recon-data-hidro', 'data'), # <--- Añadimos el State para no perder datos
         prevent_initial_call=True,
     )
     def manejar_casos_y_store(n_clicks, caso_id_manual, inicio, final, crea_caso, shared_data):
