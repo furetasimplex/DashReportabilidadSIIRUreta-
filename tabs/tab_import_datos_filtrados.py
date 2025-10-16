@@ -16,13 +16,23 @@ layout = html.Div([
     html.H4("Carga de datos planta (datos_filtrados)"),
     dcc.Upload(
         id='upload-datos-filtrados',
-        children=html.Div(['Arrastra o selecciona el archivo Excel con hoja Datos filtrados']),
-        style={
-            'width': '80%',
-            'padding': '20px',
-            'border': '1px dashed #aaa',
-            'textAlign': 'center',
-        },
+        children=html.Div([
+                html.I(className="bi bi-file-earmark-arrow-up fs-1 text-primary"),  # ícono Bootstrap
+                html.H5("Subir archivo Excel", className="mt-2 mb-1 fw-semibold"),
+                html.P(
+                    "Arrastra o selecciona un archivo .xlsx con hoja ",
+                ),
+                html.H5("'Datos filtrados'", className="mt-2 mb-1 fw-semibold"),
+            ]),
+            className=(
+                "border-dashed border-primary text-center "
+                "py-4 rounded-3 bg-light-subtle"
+            ),
+            style={
+                "cursor": "pointer",
+                "transition": "all 0.25s ease-in-out",
+                "border":"1px dashed #aaa"
+            },
         multiple=False
     ),
     html.Div(id='status-datos-filtrados', style={'marginTop': 20})

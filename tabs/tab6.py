@@ -65,7 +65,7 @@ columnsDefs_hist_desb = [
 ]
 def render_tab6():
     return html.Div([
-        html.H3("📈 Reconciliador Area Seca", style={"textAlign": "center"}),
+        html.H4("📈 Reconciliador Area Seca", style={"textAlign": "center"}),
 
         html.Div([], style={
             'display': 'flex',

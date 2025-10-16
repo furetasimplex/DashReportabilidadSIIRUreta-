@@ -9,7 +9,11 @@ from tabs import tabreportabilidad
 
 layout = dbc.Card(
     [
-        dbc.CardHeader(html.H4("Módulo de Importación de Datos", className="mb-0")),
+        dcc.Store(id="active-case", data={}),
+        dcc.Store(id="recon-data", data=None),
+        dbc.CardHeader(
+            html.H4(id="header-recon-title", className="mb-0 text-primary fw-bold")
+        ),
         dbc.CardBody(
             [
                 
@@ -45,3 +49,15 @@ def register_callbacks(app):
             # Aquí puedes llamar a una nueva función o archivo para el layout de reportes
             return tabreportabilidad.render_layout_reporte()
         return html.Div("Seleccione una pestaña de importación.", className="text-muted")
+    
+    @app.callback(
+        Output("header-recon-title", "children"),
+        Input("active-case", "data"),
+    )
+    def update_header(active_case):
+        if not active_case or "caso_id" not in active_case:
+            return "📈 Reconciliador Área Seca — Sin caso activo"
+        caso_id = active_case.get("caso_id", "—")
+        fi = active_case.get("fecha_inicio", "")
+        ff = active_case.get("fecha_fin", "")
+        return f"📈 Reconciliador Área Seca — Caso activo: {caso_id} ({fi} → {ff})"

@@ -15,12 +15,24 @@ layout = html.Div([
     html.H5("Importar datos desde plantilla Apilado y Rotopalas"),
     dcc.Upload(
         id='upload-excel-apilado',
-        children=html.Div(['Arrastra o selecciona archivo Excel (.xlsx)']),
-        style={
-            'width': '100%', 'height': '80px', 'lineHeight': '60px',
-            'borderWidth': '1px', 'borderStyle': 'dashed', 'borderRadius': '5px',
-            'textAlign': 'center',
-        },
+        #children=html.Div(['Arrastra o selecciona archivo Excel (.xlsx)']),
+        children=html.Div([
+                html.I(className="bi bi-file-earmark-arrow-up fs-1 text-primary"),  # ícono Bootstrap
+                html.H5("Subir archivo Excel", className="mt-2 mb-1 fw-semibold"),
+                html.P(
+                    "Arrastra o selecciona un archivo Excel (.xlsx)",
+                ),
+                #html.H5("'Reclamo Camiones SULFURO'",className="mt-2 mb-1 fw-semibold")
+            ]),
+            className=(
+                "border-dashed border-primary text-center "
+                "py-4 rounded-3 bg-light-subtle"
+            ),
+            style={
+                "cursor": "pointer",
+                "transition": "all 0.25s ease-in-out",
+                "border":"1px dashed #aaa"
+            },
         multiple=False
     ),
     html.Div(id='resultado-carga-apilado', style={"marginTop": "20px"})
