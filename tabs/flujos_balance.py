@@ -463,29 +463,21 @@ CROSS JOIN ley_f;
       vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
       AND i.id_torre = 2
     GROUP BY CAST(vrdf.fecha_turno AS DATE)
-  ),
-  datos_finales AS (
-    SELECT
-      dd.tsd,
-      dd.ld,
-      CASE WHEN conf.fecha IS NOT NULL THEN 0.5 ELSE 1.0 END AS factor
-    FROM datos_diarios_por_torre dd
-    LEFT JOIN dias_de_conflicto conf
-      ON DATEADD(DAY, 1, dd.fecha_operacion) = conf.fecha
-    WHERE
-      dd.fecha_operacion IN (
-        SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
-        FROM inventar_SpcHidr.control_apilado_diario cad
-        WHERE
-          cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
-          AND cad.pad_id = 2
-          AND cad.volumen_diario_m3 > 0
-      )
   )
-SELECT
-  ISNULL(ROUND(SUM(tsd * factor), 2), 0) AS Tonelaje,
-  ISNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS Ley_Cu
-FROM datos_finales;
+  SELECT
+  ISNULL(ROUND(SUM(dd.tsd), 2), 0) AS Tonelaje,
+  ISNULL(ROUND(SUM(dd.tsd * dd.ld) / NULLIF(SUM(dd.tsd), 0), 4), 0) AS Ley_Cu
+FROM datos_diarios_por_torre dd
+WHERE
+  -- Se mantiene la lógica de asignar la producción del día anterior al reporte de apilado
+  dd.fecha_operacion IN (
+    SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
+    FROM inventar_SpcHidr.control_apilado_diario cad
+    WHERE
+      cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
+      AND cad.pad_id = 2 -- Filtro para Pad 2
+      AND cad.volumen_diario_m3 > 0
+  );
 """,
         "F15": f"""WITH
   dias_de_conflicto AS (
@@ -525,30 +517,23 @@ FROM datos_finales;
       vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
       AND i.id_torre = 2
     GROUP BY CAST(vrdf.fecha_turno AS DATE)
-  ),
-  datos_finales AS (
-    SELECT
-      dd.tsd,
-      dd.ld,
-      CASE WHEN conf.fecha IS NOT NULL THEN 0.5 ELSE 1.0 END AS factor
-    FROM datos_diarios_por_torre dd
-    LEFT JOIN dias_de_conflicto conf
-      ON DATEADD(DAY, 1, dd.fecha_operacion) = conf.fecha
-    WHERE
-      dd.fecha_operacion IN (
-        SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
-        FROM inventar_SpcHidr.control_apilado_diario cad
-        WHERE
-          cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
-          AND cad.pad_id = 1
-          AND cad.volumen_diario_m3 > 0
-      )
   )
+  -- Paso 2: Sumar la producción de los días que corresponden a apilamiento en Pad 1 (lógica corregida)
 SELECT
-  ISNULL(ROUND(SUM(tsd * factor), 2), 0) AS Tonelaje,
-  ISNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS Ley_Cu
-FROM datos_finales;
-    """,
+  ISNULL(ROUND(SUM(dd.tsd), 2), 0) AS Tonelaje,
+  ISNULL(ROUND(SUM(dd.tsd * dd.ld) / NULLIF(SUM(dd.tsd), 0), 4), 0) AS Ley_Cu
+FROM datos_diarios_por_torre dd
+WHERE
+  -- Se mantiene la lógica de asignar la producción del día anterior al reporte de apilado
+  dd.fecha_operacion IN (
+    SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
+    FROM inventar_SpcHidr.control_apilado_diario cad
+    WHERE
+      cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
+      AND cad.pad_id = 1 -- Filtro para Pad 1
+      AND cad.volumen_diario_m3 > 0
+  );
+""",
     "F20": f"""SELECT ISNULL(SUM(cv025_tot * 0.89), 0) AS Tonelaje, '0' AS Ley_Cu FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
         "F21": f"""SELECT ISNULL(SUM(ton_reclamo_camiones), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.reclamos_tonelaje WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
         "F22": f"""SELECT ISNULL(SUM(Camiones_TMS_Reclamo_Oxidos), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.Datos_conciliados_of WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
