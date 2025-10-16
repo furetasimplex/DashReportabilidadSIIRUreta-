@@ -257,6 +257,7 @@ def register_callbacks(app):
                     dcc.Tab(label="Importar data base", value="tab7"),
                     dcc.Tab(label="Reconciliador Area Seca", value="recon"),
                     dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro"),
+                    #dcc.Tab(label="Reportabilidad", value="tab_reportabilidad"),
                 ],
             )
 
@@ -283,6 +284,8 @@ def register_callbacks(app):
             return tab_recon_container.layout
         elif tab == "recon_hidro":
             return tab_recon_container_hidro.layout
+        #elif tab == "tab_reportabilidad":
+            #return html.Div("Reportabilidad no implementado aún.", className="fw-semibold")
         #elif tab == "recon_agua":
             #return render_layout_agua()
         return html.Div("Seleccione una pestaña.")

@@ -1,0 +1,24 @@
+/* Scope por contenedor y usa !important solo donde Bootstrap te pisa */
+#oxido-grid-main-container .grid-cell {
+  border-radius: 8px !important;
+  overflow: hidden;                  /* hace visibles los bordes redondeados */
+  background-clip: padding-box;      /* ayuda en algunos navegadores */
+}
+
+#oxido-grid-main-container .inner-cell {
+  border-radius: 8px !important;     /* el hijo también redondeado */
+}
+
+/* Estado seleccionado por clase (mejor que re-crear nodos) */
+#oxido-grid-main-container .inner-cell.selected {
+  background-color: #ef8a62 !important;
+}
+
+/* Evitar flickers si hay transiciones globales */
+#oxido-grid-main-container * {
+  transition: none !important;
+}
+#sulfuro-grid-main-container .grid-cell { border-radius: 8px !important; overflow: hidden; }
+#sulfuro-grid-main-container .inner-cell { border-radius: 8px !important; }
+#sulfuro-grid-main-container .inner-cell.selected { background-color: #ef8a62 !important; }
+#sulfuro-grid-main-container * { transition: none !important; }

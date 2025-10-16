@@ -7,14 +7,23 @@ layout = html.Div([
     html.H5("Importar Leyes y Granulometría desde archivo Excel"),
     dcc.Upload(
         id='upload-leyes-granulo',
-        children=html.Div(['Arrastra o haz clic para subir el archivo Excel (.xlsx)']),
-        style={
-            'width': '100%', 'height': '80px', 'lineHeight': '80px',
-            'borderWidth': '1px', 'borderStyle': 'dashed',
-            'borderRadius': '5px', 'textAlign': 'center',
-            'margin': '10px'
-        },
-        multiple=False
+        children=html.Div([
+                html.I(className="bi bi-file-earmark-arrow-up fs-1 text-primary"),  # ícono Bootstrap
+                html.H5("Subir archivo Excel", className="mt-2 mb-1 fw-semibold"),
+                html.P(
+                    "Arrastra o selecciona un archivo Excel (.xlsx)",
+                ),
+                #html.H5("'Base_Datos'",className="mt-2 mb-1 fw-semibold")
+            ]),
+            className=(
+                "border-dashed border-primary text-center "
+                "py-4 rounded-3 bg-light-subtle"
+            ),
+            style={
+                "cursor": "pointer",
+                "transition": "all 0.25s ease-in-out",
+                "border":"1px dashed #aaa"
+            },
     ),
     html.Div(id='import-feedback-leyes-granulo')
 ])

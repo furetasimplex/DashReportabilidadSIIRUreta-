@@ -13,13 +13,23 @@ layout = html.Div([
     html.H4("Carga de datos operacionales de mina (mov_cam)"),
     dcc.Upload(
         id='upload-mov-cam',
-        children=html.Div(['Arrastra o selecciona el archivo Excel con hoja Base_Datos']),
-        style={
-            'width': '80%',
-            'padding': '20px',
-            'border': '1px dashed #aaa',
-            'textAlign': 'center',
-        },
+        children=html.Div([
+                html.I(className="bi bi-file-earmark-arrow-up fs-1 text-primary"),  # ícono Bootstrap
+                html.H5("Subir archivo Excel", className="mt-2 mb-1 fw-semibold"),
+                html.P(
+                    "Arrastra o selecciona un archivo .xlsx con hoja ",
+                ),
+                html.H5("'Base_Datos'",className="mt-2 mb-1 fw-semibold")
+            ]),
+            className=(
+                "border-dashed border-primary text-center "
+                "py-4 rounded-3 bg-light-subtle"
+            ),
+            style={
+                "cursor": "pointer",
+                "transition": "all 0.25s ease-in-out",
+                "border":"1px dashed #aaa"
+            },
         multiple=False
     ),
     html.Div(id='status-mov-cam', style={'marginTop': 20})
