@@ -1,16 +1,1 @@
-{
-    "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.defaultPackageManager": "ms-python.python:pip",
-    "python-envs.pythonProjects": [],
-    "workbench.colorTheme": "Default Dark+",
-    "workbench.colorCustomizations": {
-        "editor.background": "#002b22",       // verde oscuro
-        "editor.foreground": "#c7fdb5",       // texto verde claro
-        "activityBar.background": "#014f3b",  // barra lateral
-        "statusBar.background": "#026b50",    // barra inferior
-        "titleBar.activeBackground": "#014f3b",
-        "sideBar.background": "#013a2b"
-    },
-    "editor.fontFamily": "Cascadia Code, Fira Code, monospace",
-    "editor.fontLigatures": true
-}
+
