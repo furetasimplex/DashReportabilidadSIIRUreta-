@@ -565,18 +565,18 @@ WHERE
     WITH
     Tms_Apilado_Por_Modulo AS (
         SELECT
-            mt.campana_id,
+            mt.campaña_id,
             mt.modulo_id,
             SUM(mt.TMS) AS tms_total_apilado
         FROM inventar_SpcHidr.modulos_turnos AS mt
-        GROUP BY mt.campana_id, mt.modulo_id
+        GROUP BY mt.campaña_id, mt.modulo_id
     ),
     -- Consolidacion diaria del porcentaje de avance (acotado a 0..1) en rango extendido
     Pct_Diario AS (
         SELECT
             CAST(crd.fecha AS date) AS fecha,
             crd.pad_id,
-            crd.campana_id,
+            crd.campaña_id,
             crd.modulo_id,
             CASE
                 WHEN MAX(crd.avance_porcentaje) < 0 THEN 0
@@ -585,7 +585,7 @@ WHERE
             END AS pct_clip
         FROM inventar_SpcHidr.control_reclamo_diario AS crd
         WHERE CAST(crd.fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
-        GROUP BY CAST(crd.fecha AS date), crd.pad_id, crd.campana_id, crd.modulo_id
+        GROUP BY CAST(crd.fecha AS date), crd.pad_id, crd.campaña_id, crd.modulo_id
     ),
     -- Segmentacion por reinicios del porcentaje (cuando cae, inicia nuevo ciclo)
     Pct_Segmentado AS (
@@ -593,7 +593,7 @@ WHERE
             p.*,
             CASE
                 WHEN p.pct_clip < LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campana_id, p.modulo_id, p.pad_id
+                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id
                         ORDER BY p.fecha
                     )
                 THEN 1 ELSE 0
@@ -604,7 +604,7 @@ WHERE
         SELECT
             ps.*,
             SUM(ps.reset_flag) OVER (
-                PARTITION BY ps.campana_id, ps.modulo_id, ps.pad_id
+                PARTITION BY ps.campaña_id, ps.modulo_id, ps.pad_id
                 ORDER BY ps.fecha
                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
             ) AS seg_id
@@ -615,17 +615,17 @@ WHERE
         SELECT
             p.fecha,
             p.pad_id,
-            p.campana_id,
+            p.campaña_id,
             p.modulo_id,
             p.pct_clip AS avance_porcentaje,
             CASE
                 WHEN (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campana_id, p.modulo_id, p.pad_id, p.seg_id
+                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id
                         ORDER BY p.fecha
                     )) < 0
                 THEN 0
                 ELSE (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campana_id, p.modulo_id, p.pad_id, p.seg_id
+                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id
                         ORDER BY p.fecha
                     ))
             END AS avance_incremental
@@ -636,26 +636,26 @@ WHERE
         SELECT
             CAST(fecha AS date) AS fecha,
             pad_id,
-            campana_id,
+            campaña_id,
             modulo_id,
             MAX(volumen_diario_m3) AS vol_m3
         FROM inventar_SpcHidr.control_reclamo_diario
         WHERE CAST(fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
-        GROUP BY CAST(fecha AS date), pad_id, campana_id, modulo_id
+        GROUP BY CAST(fecha AS date), pad_id, campaña_id, modulo_id
     ),
     -- Tonelaje diario de rotopala (pad 2 = sulfuros)
     Reclamo_Diario AS (
         SELECT
             DATEADD(DAY, -1, a.fecha) AS fecha_operacion,
-            a.campana_id,
+            a.campaña_id,
             a.modulo_id,
             (tm.tms_total_apilado * a.avance_incremental) AS tonelaje_reclamado_diario
         FROM Avance_Incremental_Diario AS a
         JOIN Tms_Apilado_Por_Modulo  AS tm
-        ON tm.campana_id = a.campana_id AND tm.modulo_id = a.modulo_id
+        ON tm.campaña_id = a.campaña_id AND tm.modulo_id = a.modulo_id
         JOIN Volumen_Diario AS vd
         ON vd.fecha = a.fecha AND vd.pad_id = a.pad_id
-        AND vd.campana_id = a.campana_id AND vd.modulo_id = a.modulo_id
+        AND vd.campaña_id = a.campaña_id AND vd.modulo_id = a.modulo_id
         WHERE a.pad_id = 2
         AND vd.vol_m3 > 0
     ),
@@ -700,17 +700,17 @@ WHERE
     WITH
     Tms_Apilado_Por_Modulo AS (
         SELECT
-            mt.campana_id,
+            mt.campaña_id,
             mt.modulo_id,
             SUM(mt.TMS) AS tms_total_apilado
         FROM inventar_SpcHidr.modulos_turnos AS mt
-        GROUP BY mt.campana_id, mt.modulo_id
+        GROUP BY mt.campaña_id, mt.modulo_id
     ),
     Pct_Diario AS (
         SELECT
             CAST(crd.fecha AS date) AS fecha,
             crd.pad_id,
-            crd.campana_id,
+            crd.campaña_id,
             crd.modulo_id,
             CASE
                 WHEN MAX(crd.avance_porcentaje) < 0 THEN 0
@@ -719,14 +719,14 @@ WHERE
             END AS pct_clip
         FROM inventar_SpcHidr.control_reclamo_diario AS crd
         WHERE CAST(crd.fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
-        GROUP BY CAST(crd.fecha AS date), crd.pad_id, crd.campana_id, crd.modulo_id
+        GROUP BY CAST(crd.fecha AS date), crd.pad_id, crd.campaña_id, crd.modulo_id
     ),
     Pct_Segmentado AS (
         SELECT
             p.*,
             CASE
                 WHEN p.pct_clip < LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campana_id, p.modulo_id, p.pad_id
+                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id
                         ORDER BY p.fecha
                     )
                 THEN 1 ELSE 0
@@ -737,7 +737,7 @@ WHERE
         SELECT
             ps.*,
             SUM(ps.reset_flag) OVER (
-                PARTITION BY ps.campana_id, ps.modulo_id, ps.pad_id
+                PARTITION BY ps.campaña_id, ps.modulo_id, ps.pad_id
                 ORDER BY ps.fecha
                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
             ) AS seg_id
@@ -747,17 +747,17 @@ WHERE
         SELECT
             p.fecha,
             p.pad_id,
-            p.campana_id,
+            p.campaña_id,
             p.modulo_id,
             p.pct_clip AS avance_porcentaje,
             CASE
                 WHEN (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campana_id, p.modulo_id, p.pad_id, p.seg_id
+                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id
                         ORDER BY p.fecha
                     )) < 0
                 THEN 0
                 ELSE (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campana_id, p.modulo_id, p.pad_id, p.seg_id
+                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id
                         ORDER BY p.fecha
                     ))
             END AS avance_incremental
@@ -767,25 +767,25 @@ WHERE
         SELECT
             CAST(fecha AS date) AS fecha,
             pad_id,
-            campana_id,
+            campaña_id,
             modulo_id,
             MAX(volumen_diario_m3) AS vol_m3
         FROM inventar_SpcHidr.control_reclamo_diario
         WHERE CAST(fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
-        GROUP BY CAST(fecha AS date), pad_id, campana_id, modulo_id
+        GROUP BY CAST(fecha AS date), pad_id, campaña_id, modulo_id
     ),
     Reclamo_Diario AS (
         SELECT
             DATEADD(DAY, -1, a.fecha) AS fecha_operacion,
-            a.campana_id,
+            a.campaña_id,
             a.modulo_id,
             (tm.tms_total_apilado * a.avance_incremental) AS tonelaje_reclamado_diario
         FROM Avance_Incremental_Diario AS a
         JOIN Tms_Apilado_Por_Modulo  AS tm
-        ON tm.campana_id = a.campana_id AND tm.modulo_id = a.modulo_id
+        ON tm.campaña_id = a.campaña_id AND tm.modulo_id = a.modulo_id
         JOIN Volumen_Diario AS vd
         ON vd.fecha = a.fecha AND vd.pad_id = a.pad_id
-        AND vd.campana_id = a.campana_id AND vd.modulo_id = a.modulo_id
+        AND vd.campaña_id = a.campaña_id AND vd.modulo_id = a.modulo_id
         WHERE a.pad_id = 1
         AND vd.vol_m3 > 0
     ),
