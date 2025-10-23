@@ -19,6 +19,8 @@ from tabs import tabreportabilidad
 #from tabs.aguaApp.tab_agua import render_layout_agua
 #from tabs.aguaApp.callbacks_agua import register_appagua_callbacks
 from tabs import tab_recon_container, tab_import_container
+from tabs import tab_report
+
 from tabs.tabReconHidro.tab_recon_hidro import render_recon_hidro
 
 
@@ -118,6 +120,7 @@ def create_layout(app):
                         dbc.NavLink("⚙️ Control Área Seca", href="#", id="nav-seca", className="text-primary fw-semibold mx-2"),
                         dbc.NavLink("💧 Control Área Húmeda", href="#", id="nav-humeda", className="text-primary fw-semibold mx-2"),
                         dbc.NavLink("📦 Administración y Reconciliación", href="#", id="nav-admin", className="text-primary fw-semibold mx-2"),
+                        dbc.NavLink("📝 Reportabilidad", href="#", id="nav-reportabilidad", className="text-primary fw-semibold mx-2"),
                     ],
                     pills=True,
                     justified=True,
@@ -184,17 +187,19 @@ def register_callbacks(app):
         Output("nav-seca", "active"),
         Output("nav-humeda", "active"),
         Output("nav-admin", "active"),
+        Output("nav-reportabilidad", "active"),
         Input("nav-mina", "n_clicks"),
         Input("nav-seca", "n_clicks"),
         Input("nav-humeda", "n_clicks"),
         Input("nav-admin", "n_clicks"),
+        Input("nav-reportabilidad", "n_clicks"),
         prevent_initial_call=False,
     )
-    def toggle_active(mina, seca, humeda, admin):
+    def toggle_active(mina, seca, humeda, admin, reportabilidad):
         ctx = callback_context
         # Si no hay interacción aún, deja activo el primero
         if not ctx.triggered:
-            return True, False, False, False
+            return True, False, False, False, False
 
         clicked = ctx.triggered[0]["prop_id"].split(".")[0]
         return (
@@ -202,6 +207,7 @@ def register_callbacks(app):
             clicked == "nav-seca",
             clicked == "nav-humeda",
             clicked == "nav-admin",
+            clicked == "nav-reportabilidad",
         )
         # === 2️⃣ Renderizar subtabs según grupo activo ===
 
@@ -212,10 +218,11 @@ def register_callbacks(app):
             Input("nav-seca", "n_clicks"),
             Input("nav-humeda", "n_clicks"),
             Input("nav-admin", "n_clicks"),
+            Input("nav-reportabilidad", "n_clicks"),
         ],
         prevent_initial_call=False,
     )
-    def render_subtabs(mina, seca, humeda, admin):
+    def render_subtabs(mina, seca, humeda, admin, reportabilidad):
         ctx = callback_context
         if not ctx.triggered:
             return render_tab1()
@@ -261,6 +268,9 @@ def register_callbacks(app):
                 ],
             )
 
+        elif button_id == "nav-reportabilidad":
+            return tab_report.layout
+
         return None
 
     # === Renderizar contenido según subtab activo ===
@@ -280,6 +290,8 @@ def register_callbacks(app):
             return html.Div("Producción catódica no implementado aún.", className="fw-semibold")
         elif tab == "tab7":
             return tab_import_container.layout
+        elif tab == "tab10":
+            return tab_report.layout
         elif tab == "recon":
             return tab_recon_container.layout
         elif tab == "recon_hidro":
