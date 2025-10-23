@@ -156,15 +156,15 @@ def register_callbacks(app):
                         tonelaje   = pd.to_numeric(tonnage_raw, errors='coerce')
 
                         id_modulo  = modulo_map.get(module_num)
-                        campana_id = campana_map.get(current_campaign_num)
+                        campaña_id = campana_map.get(current_campaign_num)
 
-                        if pd.notna(tonelaje) and tonelaje > 0 and id_modulo is not None and campana_id is not None:
-                            print(f"  > OK: Campaña {current_campaign_num}→ID {campana_id}, "
+                        if pd.notna(tonelaje) and tonelaje > 0 and id_modulo is not None and campaña_id is not None:
+                            print(f"  > OK: Campaña {current_campaign_num}→ID {campaña_id}, "
                                 f"Módulo {module_num}→ID {id_modulo}, TMS {tonelaje}")  # DEBUG
                             all_results.append({
                                 'tonelaje_reclamado': float(tonelaje),
                                 'id_modulo': int(id_modulo),          # FK
-                                'campana_id': int(campana_id),         # FK
+                                'campaña_id': int(campaña_id),         # FK
                                 'campana': int(current_campaign_num),  # número requerido por la tabla
                                 'numero_modulo': int(module_num)       # número requerido por la tabla
                             })

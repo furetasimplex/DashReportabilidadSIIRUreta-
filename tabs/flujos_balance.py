@@ -331,7 +331,7 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         -- CORRECCIÓN: Se ajustó el rango de fechas para que coincida con el tonelaje
         WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         AND Fase = 'SRR'
-        AND Destino = 'CH01'
+        AND Destino = 'prueba'
     ) AS Ley_Cu;
     """,
         "F9": f"""SELECT
@@ -347,7 +347,7 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         -- CORRECCIÓN: Se ajustó el rango de fechas para que coincida con el tonelaje
         WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         AND Fase = 'SRR'
-        AND Destino = 'CH01'
+        AND Destino = 'prueba'
     ) AS Ley_Cu;
     """,
         "F10": f"""SELECT 
@@ -530,7 +530,7 @@ WHERE
             100 AS Ley_Cu;""",
         "F25": f"""SELECT
             (SELECT sum(cv001_tot) * 0.93 FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}') AS Tonelaje,
-            (SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Fase = 'SRR' AND Destino = 'CH01') AS Ley_Cu;"""
+            (SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Fase = 'SRR' AND Destino = 'prueba') AS Ley_Cu;"""
     }
 
     # --- 4. Función Auxiliar (Requerida para cálculos de inventario inicial) ---
@@ -571,7 +571,6 @@ WHERE
         FROM inventar_SpcHidr.modulos_turnos AS mt
         GROUP BY mt.campaña_id, mt.modulo_id
     ),
-    -- Consolidacion diaria del porcentaje de avance (acotado a 0..1) en rango extendido
     Pct_Diario AS (
         SELECT
             CAST(crd.fecha AS date) AS fecha,
@@ -587,63 +586,27 @@ WHERE
         WHERE CAST(crd.fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
         GROUP BY CAST(crd.fecha AS date), crd.pad_id, crd.campaña_id, crd.modulo_id
     ),
-    -- Segmentacion por reinicios del porcentaje (cuando cae, inicia nuevo ciclo)
     Pct_Segmentado AS (
-        SELECT
-            p.*,
-            CASE
-                WHEN p.pct_clip < LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id
-                        ORDER BY p.fecha
-                    )
-                THEN 1 ELSE 0
-            END AS reset_flag
+        SELECT p.*, CASE WHEN p.pct_clip < LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id ORDER BY p.fecha) THEN 1 ELSE 0 END AS reset_flag
         FROM Pct_Diario AS p
     ),
     Pct_Seg_Id AS (
-        SELECT
-            ps.*,
-            SUM(ps.reset_flag) OVER (
-                PARTITION BY ps.campaña_id, ps.modulo_id, ps.pad_id
-                ORDER BY ps.fecha
-                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-            ) AS seg_id
+        SELECT ps.*, SUM(ps.reset_flag) OVER (PARTITION BY ps.campaña_id, ps.modulo_id, ps.pad_id ORDER BY ps.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS seg_id
         FROM Pct_Segmentado AS ps
     ),
-    -- Delta de avance diario no negativo por segmento
     Avance_Incremental_Diario AS (
         SELECT
-            p.fecha,
-            p.pad_id,
-            p.campaña_id,
-            p.modulo_id,
-            p.pct_clip AS avance_porcentaje,
-            CASE
-                WHEN (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id
-                        ORDER BY p.fecha
-                    )) < 0
-                THEN 0
-                ELSE (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id
-                        ORDER BY p.fecha
-                    ))
-            END AS avance_incremental
+            p.fecha, p.pad_id, p.campaña_id, p.modulo_id, p.pct_clip AS avance_porcentaje,
+            CASE WHEN (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id ORDER BY p.fecha)) < 0 THEN 0 ELSE (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id ORDER BY p.fecha)) END AS avance_incremental
         FROM Pct_Seg_Id AS p
     ),
-    -- Volumen diario para filtrar dias sin movimiento
     Volumen_Diario AS (
         SELECT
-            CAST(fecha AS date) AS fecha,
-            pad_id,
-            campaña_id,
-            modulo_id,
-            MAX(volumen_diario_m3) AS vol_m3
+            CAST(fecha AS date) AS fecha, pad_id, campaña_id, modulo_id, MAX(volumen_diario_m3) AS vol_m3
         FROM inventar_SpcHidr.control_reclamo_diario
         WHERE CAST(fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
         GROUP BY CAST(fecha AS date), pad_id, campaña_id, modulo_id
     ),
-    -- Tonelaje diario de rotopala (pad 2 = sulfuros)
     Reclamo_Diario AS (
         SELECT
             DATEADD(DAY, -1, a.fecha) AS fecha_operacion,
@@ -656,7 +619,7 @@ WHERE
         JOIN Volumen_Diario AS vd
         ON vd.fecha = a.fecha AND vd.pad_id = a.pad_id
         AND vd.campaña_id = a.campaña_id AND vd.modulo_id = a.modulo_id
-        WHERE a.pad_id = 2
+        WHERE a.pad_id = 2 -- Filtro para F18 (Sulfuros)
         AND vd.vol_m3 > 0
     ),
     Calculo_Tonelaje AS (
@@ -664,31 +627,42 @@ WHERE
         FROM Reclamo_Diario AS r
         WHERE r.fecha_operacion BETWEEN :fi AND :ff
     ),
-    -- Ley Cu de respaldo segun historico rotopala 2
-    ParcelasActivas AS (
-        SELECT DISTINCT
-            n_campana_roto2 AS Campana,
-            nparcela_roto2  AS Parcela
-        FROM inventar_SpcHidr.ripios
-        WHERE fecha_Rotopala_2 BETWEEN :fi AND :ff
-        AND n_campana_roto2 IS NOT NULL
-        AND nparcela_roto2  IS NOT NULL
+    -- CTE para agrupar toneladas por módulo activo
+    ModulosActivos AS (
+        SELECT
+            r.campaña_id,
+            r.modulo_id,
+            SUM(r.tonelaje_reclamado_diario) AS tms_reclamado_modulo
+        FROM Reclamo_Diario AS r
+        WHERE r.fecha_operacion BETWEEN :fi AND :ff
+        GROUP BY r.campaña_id, r.modulo_id
+        HAVING SUM(r.tonelaje_reclamado_diario) > 0
     ),
+    -- 3. Calcular la ley ponderada (CORREGIDO JOIN PAD)
     Calculo_Ley AS (
         SELECT
             COALESCE(
-                (SUM(clr.tms_apilado * clr.ley_ripio / 100.0) / NULLIF(SUM(clr.tms_apilado), 0)) * 100.0,
+                (SUM(ma.tms_reclamado_modulo * clr.ley_ripio / 100.0)
+                / NULLIF(SUM(ma.tms_reclamado_modulo), 0)) * 100.0,
                 0
             ) AS Ley_Cu
-        FROM inventar_SpcHidr.control_ley_ripio AS clr
-        INNER JOIN ParcelasActivas AS pa
-            ON pa.Campana = clr.Campana AND pa.Parcela = clr.Parcela
-        WHERE clr.PAD = 'SULFUROS'
+        FROM ModulosActivos AS ma
+        INNER JOIN inventar_SpcHidr.campaña AS c ON ma.campaña_id = c.id_campaña
+        INNER JOIN inventar_SpcHidr.modulo AS m ON ma.modulo_id = m.id_modulo
+        INNER JOIN inventar_SpcHidr.parcela AS p ON m.id_parcela = p.id_parcela
+        INNER JOIN inventar_SpcHidr.pad AS pd ON p.id_pad = pd.id_pad
+        INNER JOIN inventar_SpcHidr.control_ley_ripio AS clr
+            ON clr.Campana = c.numero_campaña
+            AND clr.Parcela = p.numero
+            -- Cruce PAD CORREGIDO con LIKE (ignora 'S' y mayúsculas)
+            AND UPPER(clr.PAD) LIKE UPPER(pd.nombre) + '%'
+        -- Filtro por ID (más seguro)
+        WHERE pd.id_pad = 2 -- Filtro para F18 (Sulfuros)
     )
     SELECT t.Tonelaje, l.Ley_Cu
     FROM Calculo_Tonelaje AS t
     CROSS JOIN Calculo_Ley AS l;
-    """)
+""")
 
     df_f18 = pd.read_sql(sql_f18, engine, params={"fi": fecha_inicio, "ff": fecha_fin})
     df_f18.insert(0, "Flujo", "F18")
@@ -722,54 +696,22 @@ WHERE
         GROUP BY CAST(crd.fecha AS date), crd.pad_id, crd.campaña_id, crd.modulo_id
     ),
     Pct_Segmentado AS (
-        SELECT
-            p.*,
-            CASE
-                WHEN p.pct_clip < LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id
-                        ORDER BY p.fecha
-                    )
-                THEN 1 ELSE 0
-            END AS reset_flag
+        SELECT p.*, CASE WHEN p.pct_clip < LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id ORDER BY p.fecha) THEN 1 ELSE 0 END AS reset_flag
         FROM Pct_Diario AS p
     ),
     Pct_Seg_Id AS (
-        SELECT
-            ps.*,
-            SUM(ps.reset_flag) OVER (
-                PARTITION BY ps.campaña_id, ps.modulo_id, ps.pad_id
-                ORDER BY ps.fecha
-                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-            ) AS seg_id
+        SELECT ps.*, SUM(ps.reset_flag) OVER (PARTITION BY ps.campaña_id, ps.modulo_id, ps.pad_id ORDER BY ps.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS seg_id
         FROM Pct_Segmentado AS ps
     ),
     Avance_Incremental_Diario AS (
         SELECT
-            p.fecha,
-            p.pad_id,
-            p.campaña_id,
-            p.modulo_id,
-            p.pct_clip AS avance_porcentaje,
-            CASE
-                WHEN (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id
-                        ORDER BY p.fecha
-                    )) < 0
-                THEN 0
-                ELSE (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (
-                        PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id
-                        ORDER BY p.fecha
-                    ))
-            END AS avance_incremental
+            p.fecha, p.pad_id, p.campaña_id, p.modulo_id, p.pct_clip AS avance_porcentaje,
+            CASE WHEN (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id ORDER BY p.fecha)) < 0 THEN 0 ELSE (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id ORDER BY p.fecha)) END AS avance_incremental
         FROM Pct_Seg_Id AS p
     ),
     Volumen_Diario AS (
         SELECT
-            CAST(fecha AS date) AS fecha,
-            pad_id,
-            campaña_id,
-            modulo_id,
-            MAX(volumen_diario_m3) AS vol_m3
+            CAST(fecha AS date) AS fecha, pad_id, campaña_id, modulo_id, MAX(volumen_diario_m3) AS vol_m3
         FROM inventar_SpcHidr.control_reclamo_diario
         WHERE CAST(fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
         GROUP BY CAST(fecha AS date), pad_id, campaña_id, modulo_id
@@ -786,7 +728,7 @@ WHERE
         JOIN Volumen_Diario AS vd
         ON vd.fecha = a.fecha AND vd.pad_id = a.pad_id
         AND vd.campaña_id = a.campaña_id AND vd.modulo_id = a.modulo_id
-        WHERE a.pad_id = 1
+        WHERE a.pad_id = 1 -- Filtro para F19 (Óxidos)
         AND vd.vol_m3 > 0
     ),
     Calculo_Tonelaje AS (
@@ -794,30 +736,42 @@ WHERE
         FROM Reclamo_Diario AS r
         WHERE r.fecha_operacion BETWEEN :fi AND :ff
     ),
-    ParcelasActivas AS (
-        SELECT DISTINCT
-            n_campana_roto1 AS Campana,
-            nparcela_roto1  AS Parcela
-        FROM inventar_SpcHidr.ripios
-        WHERE fecha_Rotopala_1 BETWEEN :fi AND :ff
-        AND n_campana_roto1 IS NOT NULL
-        AND nparcela_roto1  IS NOT NULL
+    -- CTE para agrupar toneladas por módulo activo
+    ModulosActivos AS (
+        SELECT
+            r.campaña_id,
+            r.modulo_id,
+            SUM(r.tonelaje_reclamado_diario) AS tms_reclamado_modulo
+        FROM Reclamo_Diario AS r
+        WHERE r.fecha_operacion BETWEEN :fi AND :ff
+        GROUP BY r.campaña_id, r.modulo_id
+        HAVING SUM(r.tonelaje_reclamado_diario) > 0
     ),
+    -- 3. Calcular la ley ponderada (CORREGIDO JOIN PAD)
     Calculo_Ley AS (
         SELECT
             COALESCE(
-                (SUM(clr.tms_apilado * clr.ley_ripio / 100.0) / NULLIF(SUM(clr.tms_apilado), 0)) * 100.0,
+                (SUM(ma.tms_reclamado_modulo * clr.ley_ripio / 100.0)
+                / NULLIF(SUM(ma.tms_reclamado_modulo), 0)) * 100.0,
                 0
             ) AS Ley_Cu
-        FROM inventar_SpcHidr.control_ley_ripio AS clr
-        INNER JOIN ParcelasActivas AS pa
-            ON pa.Campana = clr.Campana AND pa.Parcela = clr.Parcela
-        WHERE clr.PAD = 'OXIDOS'
+        FROM ModulosActivos AS ma
+        INNER JOIN inventar_SpcHidr.campaña AS c ON ma.campaña_id = c.id_campaña
+        INNER JOIN inventar_SpcHidr.modulo AS m ON ma.modulo_id = m.id_modulo
+        INNER JOIN inventar_SpcHidr.parcela AS p ON m.id_parcela = p.id_parcela
+        INNER JOIN inventar_SpcHidr.pad AS pd ON p.id_pad = pd.id_pad
+        INNER JOIN inventar_SpcHidr.control_ley_ripio AS clr
+            ON clr.Campana = c.numero_campaña
+            AND clr.Parcela = p.numero
+            -- Cruce PAD CORREGIDO con LIKE (ignora 'S' y mayúsculas)
+            AND UPPER(clr.PAD) LIKE UPPER(pd.nombre) + '%'
+        -- Filtro por ID (más seguro)
+        WHERE pd.id_pad = 1 -- Filtro para F19 (Óxidos)
     )
     SELECT t.Tonelaje, l.Ley_Cu
     FROM Calculo_Tonelaje AS t
     CROSS JOIN Calculo_Ley AS l;
-    """)
+""")
 
     df_f19 = pd.read_sql(sql_f19, engine, params={"fi": fecha_inicio, "ff": fecha_fin})
     df_f19.insert(0, "Flujo", "F19")
