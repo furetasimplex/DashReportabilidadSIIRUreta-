@@ -110,7 +110,7 @@ def create_layout(app):
     tab_sulfuro.register_callbacks(app)
     tab_oxido.register_callbacks(app)
     tabreportabilidad.register_callbacks_reporte(app)
-
+    tab_report.register_callbacks(app)
     navbar = dbc.Navbar(
         dbc.Container(
             [
@@ -269,7 +269,7 @@ def register_callbacks(app):
             )
 
         elif button_id == "nav-reportabilidad":
-            return tab_report.layout
+            return tab_report.layout()
 
         return None
 
@@ -290,8 +290,6 @@ def register_callbacks(app):
             return html.Div("Producción catódica no implementado aún.", className="fw-semibold")
         elif tab == "tab7":
             return tab_import_container.layout
-        elif tab == "tab10":
-            return tab_report.layout
         elif tab == "recon":
             return tab_recon_container.layout
         elif tab == "recon_hidro":
