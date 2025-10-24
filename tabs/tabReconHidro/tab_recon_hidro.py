@@ -18,9 +18,10 @@ import dash_ag_grid as dag
 from tabs.tabReconHidro.utils.utils_recon import balance_core
 from tabs.tabReconHidro.utils.utils_dash import  get_data_publica_casos, parse_contents
 from sqlalchemy import  create_engine, text
+from db_connection import get_connection
 
-ENGINE = create_engine("mssql+pytds://sa:24gegepeNA@149.50.136.234:1433/inventar_SpcHidr")
-
+#ENGINE = create_engine("mssql+pytds://sa:24gegepeNA@149.50.136.234:1433/inventar_SpcHidr")
+conn = get_connection()
 dict_style_boton_2 = {
         'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',
         'border-radius': '10px',
@@ -296,7 +297,7 @@ def register_recon_hidro_callbacks(app):
             if not (shared and 'caso_id' in shared):
                 return [], "❌ No hay un caso activo. Carga un caso primero."
             caso_id = shared.get('caso_id')
-            with ENGINE.begin() as eng_conn:
+            with conn.begin() as eng_conn:
                 df_caso = pd.read_sql(
                     text("""
                         SELECT TOP 1 fecha_ini AS fi, fecha AS ff
@@ -315,10 +316,10 @@ def register_recon_hidro_callbacks(app):
             df_val = ejecutar_balance_flujos(str(fi), str(ff))
             if df_val.empty:
                 return [], "⚠️ El script de balance no devolvió filas."
-            guardar_balance_en_bd(df_val, caso_id, str(fi), str(ff), ENGINE, truncate=True)
+            guardar_balance_en_bd(df_val, caso_id, str(fi), str(ff), conn, truncate=True)
 
             try:
-                with ENGINE.begin() as eng_conn:
+                with conn.begin() as eng_conn:
                     df_pl = pd.read_sql(
                         text("""
                             SELECT id AS id_flujo, codigo_flujo, nombre_flujo, Tolerancia, Tolerancia_cu
