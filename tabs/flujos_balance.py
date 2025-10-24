@@ -163,7 +163,7 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
                                 FROM inventar_SpcHidr.mov_cam
                                 WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                                 AND Fase = 'SRR'
-                                AND Destino = 'CH01'
+                                AND Destino = 'prueba'
                             )
                     ), 0
                 )
@@ -276,7 +276,7 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
                                 FROM inventar_SpcHidr.mov_cam
                                 WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                                 AND Fase = 'SRR'
-                                AND Destino = 'CH01'
+                                AND Destino = 'prueba'
                             )
                     ), 0
                 )
