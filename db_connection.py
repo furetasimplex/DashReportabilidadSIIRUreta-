@@ -42,11 +42,11 @@ def get_connection():
         SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 18 for SQL Server")
 
         conn_str = (
-            f"DRIVER={{{{ {SQLSERVER_DRIVER} }}}};"
+            f"DRIVER={{{SQLSERVER_DRIVER}}};"
             f"SERVER={SQLSERVER_HOST};"
             f"DATABASE={SQLSERVER_DB};"
             f"UID={SQLSERVER_USER};"
-            f"PWD={{{SQLSERVER_PASSWORD}}};"
+            f"PWD={SQLSERVER_PASSWORD};"
             "Encrypt=no;"
             "TrustServerCertificate=yes;"
         )
