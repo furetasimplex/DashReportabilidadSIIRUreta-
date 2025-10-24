@@ -18,10 +18,10 @@ import dash_ag_grid as dag
 from tabs.utils_recon import balance_core
 from tabs.utils_dash import  get_data_publica_casos, parse_contents
 from sqlalchemy import  create_engine, text
-from db_connection import get_connection
+from db_connection import get_connection, get_engine
 
 #ENGINE = create_engine("pyodbc + ODBC 18://sa:24gegepeNA@149.50.136.234:1433/inventar_SpcHidr")
-conn = get_connection()
+conn = get_engine()
 dict_style_boton_2 = {
         'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',
         'border-radius': '10px',

@@ -4,7 +4,7 @@ from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 
 from tabs.tabs_recon_cas import render_recon_cas, register_recon_callbacks
-#from tabs.tab6 import render_tab6, register_tab6_callbacks
+from tabs.tab6 import render_tab6, register_tab6_callbacks
 from tabs import tabreportabilidad
 
 layout = dbc.Card(
@@ -37,14 +37,14 @@ layout = dbc.Card(
 
 def register_callbacks(app):
     register_recon_callbacks(app)
-    #register_tab6_callbacks(app)
+    register_tab6_callbacks(app)
 
     @app.callback(Output("recon-content", "children"), Input("recon-subtabs", "value"))
     def _render_content(subtab_value):
         if subtab_value == "recon-admin":
             return render_recon_cas()
         elif subtab_value == "recon-6":
-            return []#render_tab6()
+            return render_tab6()
         elif subtab_value == "tab-reporte":
             # Aquí puedes llamar a una nueva función o archivo para el layout de reportes
             return tabreportabilidad.render_layout_reporte()
