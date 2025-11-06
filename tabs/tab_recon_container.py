@@ -10,7 +10,7 @@ from tabs import tabreportabilidad
 layout = dbc.Card(
     [
         dcc.Store(id="active-case", data={}),
-        dcc.Store(id="recon-data", data=None),
+        dcc.Store(id="recon-data", data=None, storage_type="local"),
         dbc.CardHeader(
             html.H4(id="header-recon-title", className="mb-0 text-primary fw-bold")
         ),

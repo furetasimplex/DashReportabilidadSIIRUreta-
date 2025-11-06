@@ -10,6 +10,7 @@ from sqlalchemy.engine import URL
 load_dotenv()
 
 ENTORNO = int(os.getenv("ENTORNO", 4))  # 1=local MySQL, 2=producción MySQL, 3=SQL Server, 4=SQL Server (macOS ODBC18)
+_engine = None
 
 
 def get_connection():
@@ -115,6 +116,10 @@ def get_engine():
       - mssql+pyodbc (ODBC18) para SQL Server en macOS (ENTORNO 4)
       - (mantengo tu lógica original para ENTORNO 3 con pytds si así lo requieres)
     """
+    global _engine
+    if _engine is not None:
+        return _engine  # reutiliza el engine existente
+
     if ENTORNO == 1:  # MySQL local
         MYSQL_HOST = os.getenv("MYSQL_HOST_loc")
         MYSQL_USER = os.getenv("MYSQL_USER_loc")
@@ -122,7 +127,8 @@ def get_engine():
         MYSQL_DB = os.getenv("MYSQL_DATA_hidro")
         try:
             conn_str = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:3306/{MYSQL_DB}"
-            return create_engine(conn_str)
+            _engine = create_engine(conn_str)
+            return _engine
         except Exception as e:
             print(f"❌ Error engine MySQL local: {e}")
             return None
@@ -134,7 +140,8 @@ def get_engine():
         MYSQL_DB = os.getenv("MYSQL_DATA_hidro_r")
         try:
             conn_str = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:3306/{MYSQL_DB}"
-            return create_engine(conn_str)
+            _engine = create_engine(conn_str)
+            return _engine
         except Exception as e:
             print(f"❌ Error engine MySQL prod: {e}")
             return None
@@ -156,7 +163,8 @@ def get_engine():
             if SQLSERVER_DRIVER != "SQL Server":
                 conn_str += sqldriver
             print(conn_str)
-            return create_engine(conn_str)
+            _engine = create_engine(conn_str)
+            return _engine
         except Exception as e:
             print(f"❌ Error engine SQL Server (E3): {e}")
             return None
@@ -177,7 +185,8 @@ def get_engine():
         )
         url = f"mssql+pyodbc://{user}:{pwd}@{host},{port}/{db}?{params}"
         try:
-            return create_engine(url, pool_pre_ping=True, pool_recycle=1800)
+            _engine = create_engine(url, pool_pre_ping=True, pool_recycle=1800)
+            return _engine
         except Exception as e:
             print(f"❌ Error engine SQL Server (E4): {e}")
             return None
