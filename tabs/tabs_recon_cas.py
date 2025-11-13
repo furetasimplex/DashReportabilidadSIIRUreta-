@@ -218,7 +218,8 @@ def register_recon_callbacks(app):
     def manejar_casos_y_store(n_clicks, caso_id_manual, inicio, final, crea_caso, shared_data):
         # --- Disparador del callback ---
         triggered_id = ctx.triggered_id
-
+        #print(f"fecha inicio: {inicio}, fecha final: {final}")
+        print(f"caso  id  manual: {caso_id_manual}, triggered by: {triggered_id}")
         # --- Normalización estricta del Store del caso activo ---
         # 1) shared_data debe ser SIEMPRE un dict
         if not isinstance(shared_data, dict):
@@ -240,17 +241,24 @@ def register_recon_callbacks(app):
         # --- 1) Botón "Obtener Datos" ---
         if triggered_id == 'btn-get-casos':
             # Consultas a BD
-            df_caso = get_data_agua_casos(inicio, final, crea_flag)
             df_hist = get_agua_his_casos(final)
+            if caso_id_manual:
+                # Si se ha especificado un caso manualmente, no crear nuevo caso
+                crea_flag = 'No'
+                df_caso_aux = df_hist.loc[df_hist['caso_id'] == caso_id_manual]
+                print(f"df_caso_aux: {df_caso_aux}")
+                final = df_caso_aux['fecha'].values[0]
+                inicio = df_caso_aux['fecha_ini'].values[0]
+            df_caso = get_data_agua_casos(inicio, final, crea_flag)
 
-            caso_id_calculado = None
+            caso_id_calculado = caso_id_manual
             if df_caso is not None and not df_caso.empty:
                 # Asegurar entero
                 try:
                     caso_id_calculado = int(df_caso['caso_id'].max())
                 except Exception:
                     caso_id_calculado = None
-
+            
             # Preparar store de caso activo (dict)
             new_shared_data = {
                 "caso_id": caso_id_calculado,

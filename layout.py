@@ -265,7 +265,7 @@ def register_callbacks(app):
                 children=[
                     dcc.Tab(label="Importar data base", value="tab7"),
                     dcc.Tab(label="Reconciliador Area Seca", value="recon"),
-                    dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro"),
+                    #dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro"),
                     #dcc.Tab(label="Reportabilidad", value="tab_reportabilidad"),
                 ],
             )
