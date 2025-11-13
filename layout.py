@@ -16,6 +16,7 @@ from tabs.tab_ripios import render_tab
 from tabs import sulfuro as tab_sulfuro
 from tabs import oxido as tab_oxido
 from tabs import tabreportabilidad
+from tabs.tabReconHidro import tabreportabilidad_hidro
 #from tabs.aguaApp.tab_agua import render_layout_agua
 #from tabs.aguaApp.callbacks_agua import register_appagua_callbacks
 from tabs import tab_recon_container, tab_import_container
@@ -108,8 +109,9 @@ def create_layout(app):
     tab_import_container.register_callbacks(app)
     #register_appagua_callbacks(app)
     tab_sulfuro.register_callbacks(app)
-    tab_oxido.register_callbacks(app)
+    tab_oxido.register_callbacks(app)#
     tabreportabilidad.register_callbacks_reporte(app)
+    tabreportabilidad_hidro.register_callbacks_reporte(app)
     tab_report.register_callbacks(app)
     navbar = dbc.Navbar(
         dbc.Container(

@@ -796,7 +796,8 @@ WHERE
     ley_f18 = _get_single(df_final, "F18", "Ley_Cu")
     ton_f21 = _get_single(df_final, "F21", "Tonelaje")
     ley_f21 = _get_single(df_final, "F21", "Ley_Cu")
-    ton_f16 = ton_f14 - ton_f18 - ton_f21
+    ton_f24 = _get_single(df_final, "F24", "Tonelaje")
+    ton_f16 = ton_f14 - ton_f18 - ton_f21 - ton_f24
     finos_in_16 = ton_f14 * ley_f14
     finos_out_16 = (ton_f18 * ley_f18) + (ton_f21 * ley_f21)
     ley_f16 = ((finos_in_16 - finos_out_16) / ton_f16) if ton_f16 != 0 else 0.0
@@ -810,8 +811,9 @@ WHERE
     ley_f19 = _get_single(df_final, "F19", "Ley_Cu")
     ton_f22 = _get_single(df_final, "F22", "Tonelaje")
     ley_f22 = _get_single(df_final, "F22", "Ley_Cu")
+    ton_f23 = _get_single(df_final, "F23", "Tonelaje")
     
-    ton_f17 = ton_f15 - ton_f19 - ton_f22
+    ton_f17 = ton_f15 - ton_f19 - ton_f22 - ton_f23
     finos_in_17 = ton_f15 * ley_f15
     finos_out_17 = (ton_f19 * ley_f19) + (ton_f22 * ley_f22)
     ley_f17 = ((finos_in_17 - finos_out_17) / ton_f17) if ton_f17 != 0 else 0.0

@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 
 from .tabs_recon_cas_hidro import render_recon_cas_hidro, register_recon_callbacks_hidro
 from .tab_recon_hidro import render_recon_hidro, register_recon_hidro_callbacks
-from tabs import tabreportabilidad
+from tabs.tabReconHidro import tabreportabilidad_hidro
 
 layout = dbc.Card(
     [
@@ -47,7 +47,7 @@ def register_callbacks(app):
             return render_recon_hidro()
         elif subtab_value == "tab-reporte-hidro":
             # Aquí puedes llamar a una nueva función o archivo para el layout de reportes
-            return tabreportabilidad.render_layout_reporte()
+            return tabreportabilidad_hidro.render_layout_reporte()
         return html.Div("Seleccione una pestaña de importación.", className="text-muted")
 
     
