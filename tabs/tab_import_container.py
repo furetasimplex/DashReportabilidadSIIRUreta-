@@ -15,20 +15,21 @@ import tabs.tab_importar_reclamo_camiones as tab_reclamos
 dash.register_page(__name__, path="/importar_datos", name="Importar Datos")
 
 layout = html.Div([
-    html.H4("Módulo de Importación de Datos"),
-    dcc.Tabs(
+    dbc.CardHeader(html.H4("Módulo de Importación de Datos", className="p-2")),
+    dbc.Tabs(
         id='tabs-importacion',
-        value='tab-datos-filtrados',
+        active_tab='tab-datos-filtrados',  # cambia 'value' → 'active_tab'
+        className="mb-3",
         children=[
-            dcc.Tab(label='Datos Planta (datos_filtrados)', value='tab-datos-filtrados'),
-            dcc.Tab(label='Movimientos Mina (mov_cam)', value='tab-mov-cam'),
-            dcc.Tab(label='Apilado y Rotopala', value='tab-apilado'),
-            dcc.Tab(label='Importar Leyes y Granulometría', value='tab-importar-leyes-granulo'),
-            dcc.Tab(label='Importar Reporte recuperaciones', value='tab-importar-recuperacion'),
-            dcc.Tab(label='Reclamo Camiones', value='tab-reclamos')
-        ]
+            dbc.Tab(label='Datos Planta (datos_filtrados)', tab_id='tab-datos-filtrados'),
+            dbc.Tab(label='Movimientos Mina (mov_cam)', tab_id='tab-mov-cam'),
+            dbc.Tab(label='Apilado y Rotopala', tab_id='tab-apilado'),
+            dbc.Tab(label='Importar Leyes y Granulometría', tab_id='tab-importar-leyes-granulo'),
+            dbc.Tab(label='Importar Reporte Recuperaciones', tab_id='tab-importar-recuperacion'),
+            dbc.Tab(label='Reclamo Camiones', tab_id='tab-reclamos'),
+        ],
     ),
-    html.Div(id='content-subtab-importacion', style={"marginTop": "20px"})
+    html.Div(id='content-subtab-importacion', className="mt-3")
 ])
 
 def register_callbacks(app):
@@ -41,7 +42,7 @@ def register_callbacks(app):
 
     @app.callback(
         Output('content-subtab-importacion', 'children'),
-        Input('tabs-importacion', 'value')
+        Input('tabs-importacion', 'active_tab')
     )
     def render_content(subtab):
         if subtab == 'tab-datos-filtrados':

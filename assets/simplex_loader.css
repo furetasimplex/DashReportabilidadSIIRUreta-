@@ -1,0 +1,69 @@
+.simplex-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  background: #ffffff;
+  color: #0090C1;
+  text-transform: uppercase;
+  font-family: 'Segoe UI', sans-serif;
+  z-index: 1050;
+  animation: fadeIn 0.6s ease-in-out;
+}
+ 
+.simplex-text {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
+.simplex-e {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 2.8rem;
+  width: 2.8rem;
+  margin: 0 4px;
+}
+
+.simplex-e .bar {
+  background-color: #0090C1;
+  height: 6px;
+  width: 0%;
+  border-radius: 2px;
+  animation: fillBar 1.5s ease-in-out infinite;
+}
+
+.simplex-e .bar1 { animation-delay: 0s; }
+.simplex-e .bar2 { animation-delay: 0.25s; }
+.simplex-e .bar3 { animation-delay: 0.5s; }
+
+@keyframes fillBar {
+  0%, 100% { width: 0%; opacity: 0.3; }
+  50% { width: 100%; opacity: 1; }
+}
+
+.simplex-subtitle {
+  font-size: 0.9rem;
+  color: #9ea2a8;
+  letter-spacing: 2px;
+  margin-top: 10px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* Optional: Add responsiveness */
+@media (max-width: 600px) {
+  .simplex-text {
+    font-size: 2rem;
+  }
+  .simplex-e {
+    height: 2rem;
+    width: 2rem;
+  }
+}

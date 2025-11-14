@@ -7,13 +7,13 @@ import numpy as np
 import string
 import sqlalchemy
 #from databricks import sql
-import mariadb
+#import mariadb
 import sys
 import cv2
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import mysql.connector
+#import mysql.connector
 import os
 from dotenv import load_dotenv
 from dash import Dash

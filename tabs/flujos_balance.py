@@ -33,90 +33,65 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         "F1": f"""SELECT SUM(Ton) AS Tonelaje, (SUM(Ton * CuTG00 / 100) / SUM(Ton)) * 100 AS Ley_Cu FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Origen = 'Stock' and (Fase <> 'SRR') AND Destino = 'CH01';""",
         "F2": f"""SELECT SUM(Ton) AS Tonelaje, (SUM(Ton * CuTG00 / 100) / SUM(Ton)) * 100 AS Ley_Cu FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Origen = 'Mina' AND (Fase <> 'SRR') AND Destino = 'CH01';""",
         "F3": f"""SELECT SUM(Ton) AS Tonelaje, (SUM(Ton * CuTG00 / 100) / SUM(Ton)) * 100 AS Ley_Cu FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Fase <> 'SRR' AND Destino = 'CH01';""",
-        "F4": f"""SELECT
-    ROUND(
-        (
-        SELECT SUM(CV006_tot)
-        FROM inventar_SpcHidr.vista_resumen_datos_filtrados
-        WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-        ) * (
-        1 - (
-            SELECT AVG(Humedades_Dia)
-            FROM inventar_SpcHidr.import_leyes_torres
-            WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-        ) / 100
+        "F4": f"""
+        SELECT
+            ROUND(
+                COALESCE((
+                    SELECT SUM(CV006_tot)
+                    FROM inventar_SpcHidr.vista_resumen_datos_filtrados
+                    WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
+                ), 0) * (1 - 2.5/100.0),
+                2
+            ) AS Tonelaje,
+            (
+                SELECT (SUM(Ton * CuTG00 / 100.0) / NULLIF(SUM(Ton), 0)) * 100.0
+                FROM inventar_SpcHidr.mov_cam
+                WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
+                AND Fase <> 'SRR'
+                AND Destino = 'CH01'
+            ) AS Ley_Cu;
+        """,
+        "F5": f"""
+                WITH
+        tms_i AS (
+            SELECT
+                AVG(31.1017672705390 * ((v.niv_silo_a + v.niv_silo_b) / 2.0) * (1 - 2.5/100.0)) AS total_tms
+            FROM inventar_SpcHidr.vista_resumen_datos_filtrados v
+            WHERE CAST(v.Fecha_turno AS DATE) = '{fecha_inicio}'
         ),
-        2
-    ) AS Tonelaje,
-    (
-        SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100
-        FROM inventar_SpcHidr.mov_cam
-        WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-        AND Fase <> 'SRR'
-        AND Destino = 'CH01'
-    ) AS Ley_Cu;
-        """,
-        "F5": f"""WITH
-tms_i AS (
-    SELECT
-        AVG(
-            31.1017672705390 *
-            ((v.niv_silo_a + v.niv_silo_b) / 2) *
-            (1 - ISNULL(h.HumedadProm, 0) / 100)
-        ) AS total_tms
-    FROM inventar_SpcHidr.vista_resumen_datos_filtrados v
-    LEFT JOIN (
-        SELECT CAST(fecha AS DATE) AS fecha, AVG(Humedades_Dia) AS HumedadProm
-        FROM inventar_SpcHidr.import_leyes_torres
-        GROUP BY CAST(fecha AS DATE)
-    ) h ON CAST(v.Fecha_turno AS DATE) = h.fecha
-    WHERE CAST(v.Fecha_turno AS DATE) = '{fecha_inicio}'
-),
-tms_f AS (
-    SELECT
-        AVG(
-            31.1017672705390 *
-            ((v.niv_silo_a + v.niv_silo_b) / 2) *
-            (1 - ISNULL(h.HumedadProm, 0) / 100)
-        ) AS total_tms
-    FROM inventar_SpcHidr.vista_resumen_datos_filtrados v
-    LEFT JOIN (
-        SELECT CAST(fecha AS DATE) AS fecha, AVG(Humedades_Dia) AS HumedadProm
-        FROM inventar_SpcHidr.import_leyes_torres
-        GROUP BY CAST(fecha AS DATE)
-    ) h ON CAST(v.Fecha_turno AS DATE) = h.fecha
-    WHERE CAST(v.Fecha_turno AS DATE) = '{fecha_fin}'
-),
-ley_i AS (
-    SELECT
-        (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 AS ley_cu
-    FROM inventar_SpcHidr.mov_cam
-    WHERE fecha = '{fecha_inicio}' AND Fase <> 'SRR' AND Destino = 'CH01'
-),
-ley_f AS (
-    SELECT
-        (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 AS ley_cu
-    FROM inventar_SpcHidr.mov_cam
-    WHERE fecha = '{fecha_fin}' AND Fase <> 'SRR' AND Destino = 'CH01'
-)
-SELECT
-    tms_i.total_tms AS TMS_Inicial,
-    tms_f.total_tms AS TMS_Final,
-    tms_f.total_tms - tms_i.total_tms AS Tonelaje,
-    ley_i.ley_cu AS Ley_Cu_1,
-    ley_f.ley_cu AS Ley_Cu_2,
-    COALESCE(
-        (
-            (tms_f.total_tms * ley_f.ley_cu / 100) -
-            (tms_i.total_tms * ley_i.ley_cu / 100)
-        ) / NULLIF(tms_f.total_tms - tms_i.total_tms, 0) * 100,
-        0
-    ) AS Ley_Cu
-FROM tms_i
-CROSS JOIN tms_f
-CROSS JOIN ley_i
-CROSS JOIN ley_f;
-        """,
+        tms_f AS (
+            SELECT
+                AVG(31.1017672705390 * ((v.niv_silo_a + v.niv_silo_b) / 2.0) * (1 - 2.5/100.0)) AS total_tms
+            FROM inventar_SpcHidr.vista_resumen_datos_filtrados v
+            WHERE CAST(v.Fecha_turno AS DATE) = '{fecha_fin}'
+        ),
+        ley_i AS (
+            SELECT (SUM(Ton * CuTG00 / 100.0) / NULLIF(SUM(Ton), 0)) * 100.0 AS ley_cu
+            FROM inventar_SpcHidr.mov_cam
+            WHERE fecha = '{fecha_inicio}' AND Fase <> 'SRR' AND Destino = 'CH01'
+        ),
+        ley_f AS (
+            SELECT (SUM(Ton * CuTG00 / 100.0) / NULLIF(SUM(Ton), 0)) * 100.0 AS ley_cu
+            FROM inventar_SpcHidr.mov_cam
+            WHERE fecha = '{fecha_fin}' AND Fase <> 'SRR' AND Destino = 'CH01'
+        )
+        SELECT
+            COALESCE(tms_i.total_tms, 0) AS TMS_Inicial,
+            COALESCE(tms_f.total_tms, 0) AS TMS_Final,
+            COALESCE(tms_f.total_tms, 0) - COALESCE(tms_i.total_tms, 0) AS Tonelaje,
+            ley_i.ley_cu AS Ley_Cu_1,
+            ley_f.ley_cu AS Ley_Cu_2,
+            COALESCE(
+                (
+                    (COALESCE(tms_f.total_tms, 0) * ley_f.ley_cu / 100.0) -
+                    (COALESCE(tms_i.total_tms, 0) * ley_i.ley_cu / 100.0)
+                ) / NULLIF(COALESCE(tms_f.total_tms, 0) - COALESCE(tms_i.total_tms, 0), 0) * 100.0,
+                0
+            ) AS Ley_Cu
+        FROM tms_i
+        CROSS JOIN tms_f
+        CROSS JOIN ley_i
+        CROSS JOIN ley_f;""",
         "F6": f"""SELECT
         /* ================================================================= */
         /* PRIMERA COLUMNA: Cálculo del Tonelaje Neto (F6)                    */
@@ -188,7 +163,7 @@ CROSS JOIN ley_f;
                                 FROM inventar_SpcHidr.mov_cam
                                 WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                                 AND Fase = 'SRR'
-                                AND Destino = 'CH01'
+                                AND Destino = 'prueba'
                             )
                     ), 0
                 )
@@ -301,7 +276,7 @@ CROSS JOIN ley_f;
                                 FROM inventar_SpcHidr.mov_cam
                                 WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                                 AND Fase = 'SRR'
-                                AND Destino = 'CH01'
+                                AND Destino = 'prueba'
                             )
                     ), 0
                 )
@@ -356,7 +331,7 @@ CROSS JOIN ley_f;
         -- CORRECCIÓN: Se ajustó el rango de fechas para que coincida con el tonelaje
         WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         AND Fase = 'SRR'
-        AND Destino = 'CH01'
+        AND Destino = 'prueba'
     ) AS Ley_Cu;
     """,
         "F9": f"""SELECT
@@ -372,7 +347,7 @@ CROSS JOIN ley_f;
         -- CORRECCIÓN: Se ajustó el rango de fechas para que coincida con el tonelaje
         WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         AND Fase = 'SRR'
-        AND Destino = 'CH01'
+        AND Destino = 'prueba'
     ) AS Ley_Cu;
     """,
         "F10": f"""SELECT 
@@ -463,29 +438,21 @@ CROSS JOIN ley_f;
       vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
       AND i.id_torre = 2
     GROUP BY CAST(vrdf.fecha_turno AS DATE)
-  ),
-  datos_finales AS (
-    SELECT
-      dd.tsd,
-      dd.ld,
-      CASE WHEN conf.fecha IS NOT NULL THEN 0.5 ELSE 1.0 END AS factor
-    FROM datos_diarios_por_torre dd
-    LEFT JOIN dias_de_conflicto conf
-      ON DATEADD(DAY, 1, dd.fecha_operacion) = conf.fecha
-    WHERE
-      dd.fecha_operacion IN (
-        SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
-        FROM inventar_SpcHidr.control_apilado_diario cad
-        WHERE
-          cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
-          AND cad.pad_id = 2
-          AND cad.volumen_diario_m3 > 0
-      )
   )
-SELECT
-  ISNULL(ROUND(SUM(tsd * factor), 2), 0) AS Tonelaje,
-  ISNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS Ley_Cu
-FROM datos_finales;
+  SELECT
+  ISNULL(ROUND(SUM(dd.tsd), 2), 0) AS Tonelaje,
+  ISNULL(ROUND(SUM(dd.tsd * dd.ld) / NULLIF(SUM(dd.tsd), 0), 4), 0) AS Ley_Cu
+FROM datos_diarios_por_torre dd
+WHERE
+  -- Se mantiene la lógica de asignar la producción del día anterior al reporte de apilado
+  dd.fecha_operacion IN (
+    SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
+    FROM inventar_SpcHidr.control_apilado_diario cad
+    WHERE
+      cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
+      AND cad.pad_id = 2 -- Filtro para Pad 2
+      AND cad.volumen_diario_m3 > 0
+  );
 """,
         "F15": f"""WITH
   dias_de_conflicto AS (
@@ -525,30 +492,23 @@ FROM datos_finales;
       vrdf.fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
       AND i.id_torre = 2
     GROUP BY CAST(vrdf.fecha_turno AS DATE)
-  ),
-  datos_finales AS (
-    SELECT
-      dd.tsd,
-      dd.ld,
-      CASE WHEN conf.fecha IS NOT NULL THEN 0.5 ELSE 1.0 END AS factor
-    FROM datos_diarios_por_torre dd
-    LEFT JOIN dias_de_conflicto conf
-      ON DATEADD(DAY, 1, dd.fecha_operacion) = conf.fecha
-    WHERE
-      dd.fecha_operacion IN (
-        SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
-        FROM inventar_SpcHidr.control_apilado_diario cad
-        WHERE
-          cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
-          AND cad.pad_id = 1
-          AND cad.volumen_diario_m3 > 0
-      )
   )
+  -- Paso 2: Sumar la producción de los días que corresponden a apilamiento en Pad 1 (lógica corregida)
 SELECT
-  ISNULL(ROUND(SUM(tsd * factor), 2), 0) AS Tonelaje,
-  ISNULL(ROUND(SUM(tsd * ld * factor) / NULLIF(SUM(tsd * factor), 0), 4), 0) AS Ley_Cu
-FROM datos_finales;
-    """,
+  ISNULL(ROUND(SUM(dd.tsd), 2), 0) AS Tonelaje,
+  ISNULL(ROUND(SUM(dd.tsd * dd.ld) / NULLIF(SUM(dd.tsd), 0), 4), 0) AS Ley_Cu
+FROM datos_diarios_por_torre dd
+WHERE
+  -- Se mantiene la lógica de asignar la producción del día anterior al reporte de apilado
+  dd.fecha_operacion IN (
+    SELECT DISTINCT DATEADD(DAY, -1, cad.fecha)
+    FROM inventar_SpcHidr.control_apilado_diario cad
+    WHERE
+      cad.fecha BETWEEN '{fecha_inicio}' AND DATEADD(DAY, 1, '{fecha_fin}')
+      AND cad.pad_id = 1 -- Filtro para Pad 1
+      AND cad.volumen_diario_m3 > 0
+  );
+""",
     "F20": f"""SELECT ISNULL(SUM(cv025_tot * 0.89), 0) AS Tonelaje, '0' AS Ley_Cu FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
         "F21": f"""SELECT ISNULL(SUM(ton_reclamo_camiones), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.reclamos_tonelaje WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
         "F22": f"""SELECT ISNULL(SUM(Camiones_TMS_Reclamo_Oxidos), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.Datos_conciliados_of WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
@@ -570,7 +530,7 @@ FROM datos_finales;
             100 AS Ley_Cu;""",
         "F25": f"""SELECT
             (SELECT sum(cv001_tot) * 0.93 FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}') AS Tonelaje,
-            (SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Fase = 'SRR' AND Destino = 'CH01') AS Ley_Cu;"""
+            (SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Fase = 'SRR' AND Destino = 'prueba') AS Ley_Cu;"""
     }
 
     # --- 4. Función Auxiliar (Requerida para cálculos de inventario inicial) ---
@@ -601,96 +561,219 @@ FROM datos_finales;
             todos_los_resultados.append(df_error)
 
     # --- 5.2 FLUJO F18 (Rotopala 2) - VERSIÓN OPTIMIZADA ---
-    query_f18_optimizada = f"""
+    sql_f18 = text("""
     WITH
-        -- Paso 1: Identificar las parcelas únicas que tuvieron actividad de rotopala en el período.
-        -- Esta parte de la lógica es correcta y se mantiene.
-        ParcelasActivas AS (
-            SELECT DISTINCT n_campana_roto2 AS Campana, nparcela_roto2 AS Parcela
-            FROM inventar_SpcHidr.ripios
-            WHERE fecha_Rotopala_2 BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-            AND n_campana_roto2 IS NOT NULL AND nparcela_roto2 IS NOT NULL
-        ),
+    Tms_Apilado_Por_Modulo AS (
+        SELECT
+            mt.campaña_id,
+            mt.modulo_id,
+            SUM(mt.TMS) AS tms_total_apilado
+        FROM inventar_SpcHidr.modulos_turnos AS mt
+        GROUP BY mt.campaña_id, mt.modulo_id
+    ),
+    Pct_Diario AS (
+        SELECT
+            CAST(crd.fecha AS date) AS fecha,
+            crd.pad_id,
+            crd.campaña_id,
+            crd.modulo_id,
+            CASE
+                WHEN MAX(crd.avance_porcentaje) < 0 THEN 0
+                WHEN MAX(crd.avance_porcentaje) > 1 THEN 1
+                ELSE MAX(crd.avance_porcentaje)
+            END AS pct_clip
+        FROM inventar_SpcHidr.control_reclamo_diario AS crd
+        WHERE CAST(crd.fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
+        GROUP BY CAST(crd.fecha AS date), crd.pad_id, crd.campaña_id, crd.modulo_id
+    ),
+    Pct_Segmentado AS (
+        SELECT p.*, CASE WHEN p.pct_clip < LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id ORDER BY p.fecha) THEN 1 ELSE 0 END AS reset_flag
+        FROM Pct_Diario AS p
+    ),
+    Pct_Seg_Id AS (
+        SELECT ps.*, SUM(ps.reset_flag) OVER (PARTITION BY ps.campaña_id, ps.modulo_id, ps.pad_id ORDER BY ps.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS seg_id
+        FROM Pct_Segmentado AS ps
+    ),
+    Avance_Incremental_Diario AS (
+        SELECT
+            p.fecha, p.pad_id, p.campaña_id, p.modulo_id, p.pct_clip AS avance_porcentaje,
+            CASE WHEN (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id ORDER BY p.fecha)) < 0 THEN 0 ELSE (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id ORDER BY p.fecha)) END AS avance_incremental
+        FROM Pct_Seg_Id AS p
+    ),
+    Volumen_Diario AS (
+        SELECT
+            CAST(fecha AS date) AS fecha, pad_id, campaña_id, modulo_id, MAX(volumen_diario_m3) AS vol_m3
+        FROM inventar_SpcHidr.control_reclamo_diario
+        WHERE CAST(fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
+        GROUP BY CAST(fecha AS date), pad_id, campaña_id, modulo_id
+    ),
+    Reclamo_Diario AS (
+        SELECT
+            DATEADD(DAY, -1, a.fecha) AS fecha_operacion,
+            a.campaña_id,
+            a.modulo_id,
+            (tm.tms_total_apilado * a.avance_incremental) AS tonelaje_reclamado_diario
+        FROM Avance_Incremental_Diario AS a
+        JOIN Tms_Apilado_Por_Modulo  AS tm
+        ON tm.campaña_id = a.campaña_id AND tm.modulo_id = a.modulo_id
+        JOIN Volumen_Diario AS vd
+        ON vd.fecha = a.fecha AND vd.pad_id = a.pad_id
+        AND vd.campaña_id = a.campaña_id AND vd.modulo_id = a.modulo_id
+        WHERE a.pad_id = 2 -- Filtro para F18 (Sulfuros)
+        AND vd.vol_m3 > 0
+    ),
+    Calculo_Tonelaje AS (
+        SELECT COALESCE(SUM(r.tonelaje_reclamado_diario), 0) AS Tonelaje
+        FROM Reclamo_Diario AS r
+        WHERE r.fecha_operacion BETWEEN :fi AND :ff
+    ),
+    -- CTE para agrupar toneladas por módulo activo
+    ModulosActivos AS (
+        SELECT
+            r.campaña_id,
+            r.modulo_id,
+            SUM(r.tonelaje_reclamado_diario) AS tms_reclamado_modulo
+        FROM Reclamo_Diario AS r
+        WHERE r.fecha_operacion BETWEEN :fi AND :ff
+        GROUP BY r.campaña_id, r.modulo_id
+        HAVING SUM(r.tonelaje_reclamado_diario) > 0
+    ),
+    -- 3. Calcular la ley ponderada (CORREGIDO JOIN PAD)
+    Calculo_Ley AS (
+        SELECT
+            COALESCE(
+                (SUM(ma.tms_reclamado_modulo * clr.ley_ripio / 100.0)
+                / NULLIF(SUM(ma.tms_reclamado_modulo), 0)) * 100.0,
+                0
+            ) AS Ley_Cu
+        FROM ModulosActivos AS ma
+        INNER JOIN inventar_SpcHidr.campaña AS c ON ma.campaña_id = c.id_campaña
+        INNER JOIN inventar_SpcHidr.modulo AS m ON ma.modulo_id = m.id_modulo
+        INNER JOIN inventar_SpcHidr.parcela AS p ON m.id_parcela = p.id_parcela
+        INNER JOIN inventar_SpcHidr.pad AS pd ON p.id_pad = pd.id_pad
+        INNER JOIN inventar_SpcHidr.control_ley_ripio AS clr
+            ON clr.Campana = c.numero_campaña
+            AND clr.Parcela = p.numero
+            -- Cruce PAD CORREGIDO con LIKE (ignora 'S' y mayúsculas)
+            AND UPPER(clr.PAD) LIKE UPPER(pd.nombre) + '%'
+        -- Filtro por ID (más seguro)
+        WHERE pd.id_pad = 2 -- Filtro para F18 (Sulfuros)
+    )
+    SELECT t.Tonelaje, l.Ley_Cu
+    FROM Calculo_Tonelaje AS t
+    CROSS JOIN Calculo_Ley AS l;
+""")
 
-        -- Paso 2: Calcular el tonelaje total movido por la rotopala en el período.
-        -- Esta lógica también es directa y correcta.
-        CalculoTonelaje AS (
-            SELECT COALESCE(SUM(TMS_Rotopala_2), 0) AS Tonelaje
-            FROM inventar_SpcHidr.ripios
-            WHERE fecha_Rotopala_2 BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-        ),
-
-        -- Paso 3: Calcular la ley de cobre (LÓGICA SIMPLIFICADA).
-        -- Eliminamos el filtro de MAX(Recuperacion_parcela) para obtener una ley promedio
-        -- más representativa de las parcelas que estuvieron activas.
-        CalculoLey AS (
-            SELECT
-                COALESCE(
-                    (SUM(clr.tms_apilado * clr.ley_ripio / 100) / NULLIF(SUM(clr.tms_apilado), 0)) * 100,
-                0) AS Ley_Cu
-            FROM
-                inventar_SpcHidr.control_ley_ripio clr
-            -- Unimos con las parcelas activas para asegurar que solo consideramos los datos relevantes.
-            INNER JOIN
-                ParcelasActivas pa ON clr.Campana = pa.Campana AND clr.Parcela = pa.Parcela
-            WHERE
-                clr.PAD = 'SULFUROS' -- Condición específica para F18
-        )
-
-    -- Paso 4: Combinar los resultados de Tonelaje y Ley.
-    SELECT
-        T.Tonelaje,
-        L.Ley_Cu
-    FROM
-        CalculoTonelaje T,
-        CalculoLey L;
-    """
-    df_f18 = pd.read_sql(query_f18_optimizada.format(fecha_inicio=fecha_inicio, fecha_fin=fecha_fin), engine)
+    df_f18 = pd.read_sql(sql_f18, engine, params={"fi": fecha_inicio, "ff": fecha_fin})
     df_f18.insert(0, "Flujo", "F18")
     todos_los_resultados.append(df_f18)
     print(" -> Flujo F18 calculado.")
 
     print("Ejecutando flujo F19")
-    query_f19_optimizada = f"""
+    sql_f19 = text("""
     WITH
-        -- Paso 1: Identificar las parcelas únicas que tuvieron actividad de rotopala en el período.
-        ParcelasActivas AS (
-            SELECT DISTINCT n_campana_roto1 AS Campana, nparcela_roto1 AS Parcela
-            FROM inventar_SpcHidr.ripios
-            WHERE fecha_Rotopala_1 BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-            AND n_campana_roto1 IS NOT NULL AND nparcela_roto1 IS NOT NULL
-        ),
+    Tms_Apilado_Por_Modulo AS (
+        SELECT
+            mt.campaña_id,
+            mt.modulo_id,
+            SUM(mt.TMS) AS tms_total_apilado
+        FROM inventar_SpcHidr.modulos_turnos AS mt
+        GROUP BY mt.campaña_id, mt.modulo_id
+    ),
+    Pct_Diario AS (
+        SELECT
+            CAST(crd.fecha AS date) AS fecha,
+            crd.pad_id,
+            crd.campaña_id,
+            crd.modulo_id,
+            CASE
+                WHEN MAX(crd.avance_porcentaje) < 0 THEN 0
+                WHEN MAX(crd.avance_porcentaje) > 1 THEN 1
+                ELSE MAX(crd.avance_porcentaje)
+            END AS pct_clip
+        FROM inventar_SpcHidr.control_reclamo_diario AS crd
+        WHERE CAST(crd.fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
+        GROUP BY CAST(crd.fecha AS date), crd.pad_id, crd.campaña_id, crd.modulo_id
+    ),
+    Pct_Segmentado AS (
+        SELECT p.*, CASE WHEN p.pct_clip < LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id ORDER BY p.fecha) THEN 1 ELSE 0 END AS reset_flag
+        FROM Pct_Diario AS p
+    ),
+    Pct_Seg_Id AS (
+        SELECT ps.*, SUM(ps.reset_flag) OVER (PARTITION BY ps.campaña_id, ps.modulo_id, ps.pad_id ORDER BY ps.fecha ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS seg_id
+        FROM Pct_Segmentado AS ps
+    ),
+    Avance_Incremental_Diario AS (
+        SELECT
+            p.fecha, p.pad_id, p.campaña_id, p.modulo_id, p.pct_clip AS avance_porcentaje,
+            CASE WHEN (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id ORDER BY p.fecha)) < 0 THEN 0 ELSE (p.pct_clip - LAG(p.pct_clip, 1, 0) OVER (PARTITION BY p.campaña_id, p.modulo_id, p.pad_id, p.seg_id ORDER BY p.fecha)) END AS avance_incremental
+        FROM Pct_Seg_Id AS p
+    ),
+    Volumen_Diario AS (
+        SELECT
+            CAST(fecha AS date) AS fecha, pad_id, campaña_id, modulo_id, MAX(volumen_diario_m3) AS vol_m3
+        FROM inventar_SpcHidr.control_reclamo_diario
+        WHERE CAST(fecha AS date) BETWEEN :fi AND DATEADD(DAY, 1, :ff)
+        GROUP BY CAST(fecha AS date), pad_id, campaña_id, modulo_id
+    ),
+    Reclamo_Diario AS (
+        SELECT
+            DATEADD(DAY, -1, a.fecha) AS fecha_operacion,
+            a.campaña_id,
+            a.modulo_id,
+            (tm.tms_total_apilado * a.avance_incremental) AS tonelaje_reclamado_diario
+        FROM Avance_Incremental_Diario AS a
+        JOIN Tms_Apilado_Por_Modulo  AS tm
+        ON tm.campaña_id = a.campaña_id AND tm.modulo_id = a.modulo_id
+        JOIN Volumen_Diario AS vd
+        ON vd.fecha = a.fecha AND vd.pad_id = a.pad_id
+        AND vd.campaña_id = a.campaña_id AND vd.modulo_id = a.modulo_id
+        WHERE a.pad_id = 1 -- Filtro para F19 (Óxidos)
+        AND vd.vol_m3 > 0
+    ),
+    Calculo_Tonelaje AS (
+        SELECT COALESCE(SUM(r.tonelaje_reclamado_diario), 0) AS Tonelaje
+        FROM Reclamo_Diario AS r
+        WHERE r.fecha_operacion BETWEEN :fi AND :ff
+    ),
+    -- CTE para agrupar toneladas por módulo activo
+    ModulosActivos AS (
+        SELECT
+            r.campaña_id,
+            r.modulo_id,
+            SUM(r.tonelaje_reclamado_diario) AS tms_reclamado_modulo
+        FROM Reclamo_Diario AS r
+        WHERE r.fecha_operacion BETWEEN :fi AND :ff
+        GROUP BY r.campaña_id, r.modulo_id
+        HAVING SUM(r.tonelaje_reclamado_diario) > 0
+    ),
+    -- 3. Calcular la ley ponderada (CORREGIDO JOIN PAD)
+    Calculo_Ley AS (
+        SELECT
+            COALESCE(
+                (SUM(ma.tms_reclamado_modulo * clr.ley_ripio / 100.0)
+                / NULLIF(SUM(ma.tms_reclamado_modulo), 0)) * 100.0,
+                0
+            ) AS Ley_Cu
+        FROM ModulosActivos AS ma
+        INNER JOIN inventar_SpcHidr.campaña AS c ON ma.campaña_id = c.id_campaña
+        INNER JOIN inventar_SpcHidr.modulo AS m ON ma.modulo_id = m.id_modulo
+        INNER JOIN inventar_SpcHidr.parcela AS p ON m.id_parcela = p.id_parcela
+        INNER JOIN inventar_SpcHidr.pad AS pd ON p.id_pad = pd.id_pad
+        INNER JOIN inventar_SpcHidr.control_ley_ripio AS clr
+            ON clr.Campana = c.numero_campaña
+            AND clr.Parcela = p.numero
+            -- Cruce PAD CORREGIDO con LIKE (ignora 'S' y mayúsculas)
+            AND UPPER(clr.PAD) LIKE UPPER(pd.nombre) + '%'
+        -- Filtro por ID (más seguro)
+        WHERE pd.id_pad = 1 -- Filtro para F19 (Óxidos)
+    )
+    SELECT t.Tonelaje, l.Ley_Cu
+    FROM Calculo_Tonelaje AS t
+    CROSS JOIN Calculo_Ley AS l;
+""")
 
-        -- Paso 2: Calcular el tonelaje total movido por la rotopala en el período.
-        CalculoTonelaje AS (
-            SELECT COALESCE(SUM(TMS_Rotopala_1), 0) AS Tonelaje
-            FROM inventar_SpcHidr.ripios
-            WHERE fecha_Rotopala_1 BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-        ),
-
-        -- Paso 3: Calcular la ley de cobre con la lógica simplificada.
-        CalculoLey AS (
-            SELECT
-                COALESCE(
-                    (SUM(clr.tms_apilado * clr.ley_ripio / 100) / NULLIF(SUM(clr.tms_apilado), 0)) * 100,
-                0) AS Ley_Cu
-            FROM
-                inventar_SpcHidr.control_ley_ripio clr
-            INNER JOIN
-                ParcelasActivas pa ON clr.Campana = pa.Campana AND clr.Parcela = pa.Parcela
-            WHERE
-                clr.PAD = 'OXIDOS' -- Condición específica para F19
-        )
-
-    -- Paso 4: Combinar los resultados de Tonelaje y Ley.
-    SELECT
-        T.Tonelaje,
-        L.Ley_Cu
-    FROM
-        CalculoTonelaje T,
-        CalculoLey L;
-    """
-    df_f19 = pd.read_sql(query_f19_optimizada.format(fecha_inicio=fecha_inicio, fecha_fin=fecha_fin), engine)
+    df_f19 = pd.read_sql(sql_f19, engine, params={"fi": fecha_inicio, "ff": fecha_fin})
     df_f19.insert(0, "Flujo", "F19")
     todos_los_resultados.append(df_f19)
     print(" -> Flujo F19 calculado.")
@@ -713,7 +796,8 @@ FROM datos_finales;
     ley_f18 = _get_single(df_final, "F18", "Ley_Cu")
     ton_f21 = _get_single(df_final, "F21", "Tonelaje")
     ley_f21 = _get_single(df_final, "F21", "Ley_Cu")
-    ton_f16 = ton_f14 - ton_f18 - ton_f21
+    ton_f24 = _get_single(df_final, "F24", "Tonelaje")
+    ton_f16 = ton_f14 - ton_f18 - ton_f21 - ton_f24
     finos_in_16 = ton_f14 * ley_f14
     finos_out_16 = (ton_f18 * ley_f18) + (ton_f21 * ley_f21)
     ley_f16 = ((finos_in_16 - finos_out_16) / ton_f16) if ton_f16 != 0 else 0.0
@@ -727,8 +811,9 @@ FROM datos_finales;
     ley_f19 = _get_single(df_final, "F19", "Ley_Cu")
     ton_f22 = _get_single(df_final, "F22", "Tonelaje")
     ley_f22 = _get_single(df_final, "F22", "Ley_Cu")
+    ton_f23 = _get_single(df_final, "F23", "Tonelaje")
     
-    ton_f17 = ton_f15 - ton_f19 - ton_f22
+    ton_f17 = ton_f15 - ton_f19 - ton_f22 - ton_f23
     finos_in_17 = ton_f15 * ley_f15
     finos_out_17 = (ton_f19 * ley_f19) + (ton_f22 * ley_f22)
     ley_f17 = ((finos_in_17 - finos_out_17) / ton_f17) if ton_f17 != 0 else 0.0
@@ -742,17 +827,15 @@ FROM datos_finales;
     ton14_i, ley14_i = _run_flow_for_day("F14", fecha_inicio)
     ton15_i, ley15_i = _run_flow_for_day("F15", fecha_inicio)
 
-    # Para F18 (no está en 'queries'), usamos su query optimizada para el primer día
+    # Para F18 (inventario inicial con la misma query parametrizada)
     print(" -> Calculando inventario inicial para F18...")
-    q_f18_d1 = query_f18_optimizada.format(fecha_inicio=fecha_inicio, fecha_fin=fecha_inicio)
-    d18 = pd.read_sql(q_f18_d1, engine)
+    d18 = pd.read_sql(sql_f18, engine, params={"fi": fecha_inicio, "ff": fecha_inicio})
     ton18_i = float(d18["Tonelaje"].iloc[0]) if not d18.empty else 0.0
     ley18_i = float(d18["Ley_Cu"].iloc[0])   if not d18.empty else 0.0
 
-    # Para F19 (no está en 'queries'), usamos su query optimizada para el primer día
+    # Para F19 (inventario inicial con la misma query parametrizada)
     print(" -> Calculando inventario inicial para F19...")
-    q_f19_d1 = query_f19_optimizada.format(fecha_inicio=fecha_inicio, fecha_fin=fecha_inicio)
-    d19 = pd.read_sql(q_f19_d1, engine)
+    d19 = pd.read_sql(sql_f19, engine, params={"fi": fecha_inicio, "ff": fecha_inicio})
     ton19_i = float(d19["Tonelaje"].iloc[0]) if not d19.empty else 0.0
     ley19_i = float(d19["Ley_Cu"].iloc[0])   if not d19.empty else 0.0
 

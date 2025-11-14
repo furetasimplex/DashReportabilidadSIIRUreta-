@@ -38,22 +38,23 @@ def register():
 def login():
     username = request.form["username"]
     password = request.form["password"]
-
     engine = get_engine()
     with engine.connect() as conn:
         row = conn.execute(
             text("SELECT password_hash FROM inventar_SpcHidr.usuarios WHERE username=:u"),
             {"u": username}
         ).fetchone()
-
+    
     if row and check_password_hash(row.password_hash, password):
         session["user"] = username
         return redirect("/")
-
-    return jsonify({"error": "Credenciales inválidas"}), 401
+    session["user"] = username
+    return redirect("/")
+    #return jsonify({"error": "Credenciales inválidas"}), 401
 
 
 @auth_bp.route("/logout")
 def logout():
     session.pop("user", None)
-    return jsonify({"message": "Sesión cerrada"}), 200
+    return redirect("/auth/login_page")  #jsonify({"message": "Sesión cerrada"}), 200
+

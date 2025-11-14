@@ -73,7 +73,7 @@ def render_layout_reporte():
                 # Barra de acciones
                 dbc.Row([
                     dbc.Col([
-                        html.H5('Ejecutar reconciliador y revisión de resultados', className="mb-0")
+                        html.H5('Ejecutar reconciliador AREA SECA y revisión de resultados', className="mb-0")
                     ], width=8),
                     dbc.Col([
                         dbc.Button('Ejecutar', id='btn-recon', n_clicks=0,

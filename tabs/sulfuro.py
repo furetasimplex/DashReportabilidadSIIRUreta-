@@ -84,7 +84,7 @@ layout = html.Div([
                 display_format='YYYY-MM-DD'
             ),
         ], style={'display': 'flex', 'alignItems': 'center'}),
-        html.Div([html.Button('Reiniciar selección', id='sulfuro-reset-button', n_clicks=0)])
+        html.Div([html.Button('Reiniciar selección', id='sulfuro-reset-button', className='btn btn-primary', n_clicks=0)])
     ], style={
         'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center',
         'marginBottom': '8px', 'padding': '0 20px'
@@ -93,7 +93,7 @@ layout = html.Div([
     # Fila 2: Detectar campañas + selector campañas
     html.Div([
         html.Div([
-            html.Button('Detectar campañas por fecha', id='sulfuro-detect-camp-btn', n_clicks=0),
+            html.Button('Detectar campañas por fecha', id='sulfuro-detect-camp-btn', className='btn btn-primary', n_clicks=0),
             dcc.Dropdown(
                 id='sulfuro-campanias',
                 options=[],

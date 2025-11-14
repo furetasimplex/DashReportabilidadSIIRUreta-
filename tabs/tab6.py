@@ -18,9 +18,10 @@ import dash_ag_grid as dag
 from tabs.utils_recon import balance_core
 from tabs.utils_dash import  get_data_publica_casos, parse_contents
 from sqlalchemy import  create_engine, text
+from db_connection import get_connection, get_engine
 
-ENGINE = create_engine("mssql+pytds://sa:24gegepeNA@149.50.136.234:1433/inventar_SpcHidr")
-
+#ENGINE = create_engine("pyodbc + ODBC 18://sa:24gegepeNA@149.50.136.234:1433/inventar_SpcHidr")
+conn = get_engine()
 dict_style_boton_2 = {
         'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',
         'border-radius': '10px',
@@ -65,7 +66,7 @@ columnsDefs_hist_desb = [
 ]
 def render_tab6():
     return html.Div([
-        html.H3("📈 Reconciliador Area Seca", style={"textAlign": "center"}),
+        html.H4("📈 Reconciliador Area Seca", style={"textAlign": "center"}),
 
         html.Div([], style={
             'display': 'flex',
@@ -296,7 +297,7 @@ def register_tab6_callbacks(app):
             if not (shared and 'caso_id' in shared):
                 return [], "❌ No hay un caso activo. Carga un caso primero."
             caso_id = shared.get('caso_id')
-            with ENGINE.begin() as eng_conn:
+            with conn.begin() as eng_conn:
                 df_caso = pd.read_sql(
                     text("""
                         SELECT TOP 1 fecha_ini AS fi, fecha AS ff
@@ -315,10 +316,10 @@ def register_tab6_callbacks(app):
             df_val = ejecutar_balance_flujos(str(fi), str(ff))
             if df_val.empty:
                 return [], "⚠️ El script de balance no devolvió filas."
-            guardar_balance_en_bd(df_val, caso_id, str(fi), str(ff), ENGINE, truncate=True)
+            guardar_balance_en_bd(df_val, caso_id, str(fi), str(ff), conn, truncate=True)
 
             try:
-                with ENGINE.begin() as eng_conn:
+                with conn.begin() as eng_conn:
                     df_pl = pd.read_sql(
                         text("""
                             SELECT id AS id_flujo, codigo_flujo, nombre_flujo, Tolerancia, Tolerancia_cu
@@ -336,11 +337,11 @@ def register_tab6_callbacks(app):
                     "id_flujo": list(range(1, 26)),
                     "codigo_flujo": orden,
                     "nombre_flujo": [f"Flujo {i:02d}" for i in range(1, 26)],
-                    "Tolerancia": [1.5,1.5,1.5,1.0,2.0,1.0,1.0,0.5,0.5,0.0,0.0,1.0,1.0,1.0,1.0,1.0,1.0,0.5,0.5,2.0,1.5,1.5,0.0,0.0,0.5],
-                    "Tolerancia_cu": [2.0,2.0,2.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,0.0,1.0,1.0,1.0,1.0,1.0,1.0,2.0,2.0,2.0,2.0,2.0,0.0,0.0,2.0]
+                    "Tolerancia": [0.5,0.5,0.5,6.6,0.0,7.0,7.0,9.0,9.0,4.0,4.0,4.0,4.0,4.0,4.0,0.0,0.0,5.0,5.0,8.0,5.0,5.0,0.0,0.0,9.0],
+                    "Tolerancia_cu": [4.95,5.4,5.0,5.0,0.0,7.0,7.0,5.0,5.0,0.0,0.0,5.8,5.8,5.8,5.8,0.0,0.0,0.0,0.0,6.0,0.0,0.0,0.0,0.0,5.0]
                 })
 
-            with ENGINE.begin() as eng_conn:
+            with conn.begin() as eng_conn:
                 df_res = pd.read_sql(
                     text("""
                         SELECT codigo_flujo, Tonelaje AS Flujo, Cu, FCu
