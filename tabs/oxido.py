@@ -72,7 +72,8 @@ grid_children = [top_row, bottom_row]
 # =========================
 #  Layout del tab
 # =========================
-layout = html.Div([
+def layout():
+ return html.Div([
     # Fila 1: fechas + reset
     html.Div([
         html.Div([
@@ -325,7 +326,7 @@ def register_callbacks(app):
     # 1) Redibuja grilla con coloreo de celdas seleccionadas
     @app.callback(
         Output('oxido-grid-main-container', 'children'),
-        Input('selected-cells', 'data')
+        Input('selected-cells-oxido', 'data')
     )
     def update_grid_layout(selected_cells):
         def create_zoomed_cell(cell_index):
@@ -367,10 +368,10 @@ def register_callbacks(app):
 
     # 2) Toggle de selección de celdas (robusto con timestamps)
     @app.callback(
-        Output('selected-cells', 'data', allow_duplicate=True),
+        Output('selected-cells-oxido', 'data', allow_duplicate=True),
         Input({'type': 'oxido-inner-cell', 'index': ALL}, 'n_clicks_timestamp'),
         Input('oxido-reset-button', 'n_clicks'),
-        State('selected-cells', 'data'),
+        State('selected-cells-oxido', 'data'),
         prevent_initial_call=True
     )
     def update_selected_cells(ts_list, reset_clicks, selected_cells):
@@ -401,7 +402,7 @@ def register_callbacks(app):
         Output('oxido-campanias', 'options'),
         Output('oxido-campanias', 'value'),
         Input('oxido-detect-camp-btn', 'n_clicks'),
-        State('selected-cells', 'data'),
+        State('selected-cells-oxido', 'data'),
         State('oxido-date-picker-range', 'start_date'),
         State('oxido-date-picker-range', 'end_date'),
         prevent_initial_call=True
@@ -418,7 +419,7 @@ def register_callbacks(app):
         Output('oxido-cell-table', 'data'),
         Output('oxido-cell-graph', 'figure'),            # total ponderado
         Output('oxido-cell-graph-parcelas', 'figure'),   # por parcela
-        Input('selected-cells', 'data'),
+        Input('selected-cells-oxido', 'data'),
         Input('oxido-date-picker-range', 'start_date'),
         Input('oxido-date-picker-range', 'end_date'),
         Input('oxido-campanias', 'value')

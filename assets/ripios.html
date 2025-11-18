@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Area Seca Flowsheet (On-Screen Data)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background: #fcfcfc;
+        }
+        #chart {
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* --- Radio Button Controls --- */
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10;
+            border: 1px solid #ddd;
+            display: flex;
+            gap: 15px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+        }
+        .controls label {
+            margin-left: 5px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .controls input {
+            cursor: pointer;
+        }
+
+        /* --- Tooltip --- */
+        .tooltip {
+            position: absolute;
+            padding: 8px 12px;
+            font-size: 13px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+
+        /* --- Node Styling --- */
+        .node text {
+            pointer-events: none;
+            text-anchor: middle;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .node .node-label { fill: #333; }
+        .node .node-sublabel { font-size: 10px; fill: #777; }
+        
+        /* Data value text on node */
+        .node-value {
+            font-size: 10px;
+            font-weight: 700;
+            fill: #c94300; /* Rojo/Naranja para datos de nodos */
+        }
+
+        .node rect, .node ellipse, .node path {
+            cursor: pointer;
+            transition: all 0.2s;
+            stroke-width: 2px;
+        }
+        .node:not(.shape-text):hover rect, 
+        .node:not(.shape-text):hover ellipse, 
+        .node:not(.shape-text):hover path {
+            stroke: #007aff !important;
+            stroke-width: 3px !important;
+            filter: brightness(1.05);
+        }
+
+        /* --- Link Styling --- */
+        .link path {
+            fill: none;
+            stroke: #555;
+            stroke-width: 1.5px;
+        }
+        .link text {
+            font-size: 10px;
+            fill: #000;
+            font-weight: bold;
+            text-anchor: middle;
+            paint-order: stroke;
+            stroke: #fcfcfc;
+            stroke-width: 3px;
+        }
+        /* Data value text on link */
+        .link-value {
+            font-size: 10px;
+            fill: #007aff; /* Azul para datos de flujo */
+            font-weight: 700;
+            text-anchor: middle;
+            paint-order: stroke;
+            stroke: #fcfcfc;
+            stroke-width: 3px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Radio buttons for metric selection -->
+    <div class="controls">
+        <div class="control-group">
+            <input type="radio" id="metric-tms" name="metric" value="TMS" checked>
+            <label for="metric-tms">Medido</label>
+        </div>
+        <div class="control-group">
+            <input type="radio" id="metric-cu" name="metric" value="Cu">
+            <label for="metric-cu">Reconciliado</label>
+        </div>
+        <div class="control-group">
+            <input type="radio" id="metric-mo" name="metric" value="Mo">
+            <label for="metric-mo">Tolerancia</label>
+        </div>
+    </div>
+
+    <div id="chart"></div>
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+         function loadDashDataFromHash() {
+        try {
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+
+            const flowDataRaw = params.get("flowData");
+            const nodeDataRaw = params.get("nodeData");
+            const metric = params.get("metric") || "TMS";
+
+            if (!flowDataRaw || !nodeDataRaw) {
+                console.warn("⚠ No flowData/nodeData in hash");
+                return;
+            }
+
+            const flowData = JSON.parse(decodeURIComponent(flowDataRaw));
+            const nodeData = JSON.parse(decodeURIComponent(nodeDataRaw));
+
+            console.log("🔥 Data recibida desde Dash");
+            console.log("Flows:", flowData);
+            console.log("Nodes:", nodeData);
+
+            // 🔥 LLAMA TU FUNCIÓN DE ACTUALIZAR NODOS
+            // Ejemplo:
+            window.updateFlowsheet(flowData, nodeData, metric);
+
+        } catch (err) {
+            console.error("❌ Error leyendo hash:", err);
+        }
+    }
+
+    // Ejecutar cuando se carga el documento
+    window.addEventListener("DOMContentLoaded", loadDashDataFromHash);
+
+    // Ejecutar si el src del iframe cambia
+    window.addEventListener("hashchange", loadDashDataFromHash);
+        // ==================================================================
+        // SAFETY LOADER
+        // ==================================================================
+        document.addEventListener("DOMContentLoaded", () => {
+            const checkD3Interval = setInterval(() => {
+                if (window.d3) {
+                    clearInterval(checkD3Interval);
+                    initApp();
+                }
+            }, 100);
+        });
+
+        function initApp() {
+            // ==================================================================
+            // 1. DATA (Reconstructed from AREASECA.drawio.png)
+            // ==================================================================
+            
+            const nodesData = [
+                // Sources (Left)
+                { id: "mina", label: "Mina", x: 50, y: 150, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 20 },
+                { id: "stock", label: "Stock", x: 50, y: 250, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 20 },
+                
+                // Junctions (Circles)
+                { id: "N1", label: "N1", x: 150, y: 200, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
+                { id: "N4", label: "N4", x: 600, y: 150, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
+                { id: "N5", label: "N5", x: 600, y: 250, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
+                { id: "N10", label: "N10", x: 500, y: 350, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
+                { id: "N9", label: "N9", x: 900, y: 550, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
+                
+                // Process (Rectangles)
+                { id: "chancado", label: "Chancado", sublabel: "(1°, 2°, 3°)", x: 300, y: 200, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 120, h: 60 },
+                { id: "silo", label: "Silo", x: 450, y: 200, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 100, h: 60 },
+                { id: "aglomerado", label: "Aglomerado", sublabel: "(Tambor 1, Tambor 2)", x: 800, y: 200, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 160, h: 80 },
+                { id: "lix_sulf", label: "Lix", sublabel: "(Pad Sulf)", x: 800, y: 400, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 100, h: 60 },
+                { id: "lix_ox", label: "Lix", sublabel: "(Pad Ox)", x: 1000, y: 400, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 100, h: 60 },
+                
+                // Inventory (Triangles)
+                { id: "inv_silo", label: "Inventario", x: 450, y: 100, shape: 'triangle', color: '#ffff88', stroke: '#36393d', w: 40, h: 40 },
+                { id: "inv_sulf", label: "Inventario", x: 700, y: 400, shape: 'triangle', color: '#ffff88', stroke: '#36393d', w: 40, h: 40 },
+                { id: "inv_ox", label: "Inventario", x: 1100, y: 400, shape: 'triangle', color: '#ffff88', stroke: '#36393d', w: 40, h: 40 },
+
+                // Outputs (Dashed)
+                { id: "botaderos", label: "Hacia botaderos", x: 900, y: 700, shape: 'rect', color: 'none', stroke: '#333', w: 200, h: 30, dashed: true },
+                { id: "reclamo_sulf", label: "Reclamo...", sublabel: "ripios Sulfuros", x: 800, y: 620, shape: 'text', color: '#fff', stroke: 'none', w: 100, h: 40 },
+                { id: "reclamo_ox", label: "Reclamo...", sublabel: "ripios Oxidos", x: 1000, y: 620, shape: 'text', color: '#fff', stroke: 'none', w: 100, h: 40 },
+
+                // Inputs for N4/N5 (Texts)
+                { id: "srr_top", label: "SRR", sublabel: "CV 002", x: 550, y: 50, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 30 },
+                { id: "sal_top", label: "SAL", sublabel: "CV 201", x: 650, y: 50, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 30 },
+                { id: "srr_bot", label: "SRR", sublabel: "CV 003", x: 550, y: 350, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 30 },
+                { id: "sal_bot", label: "SAL", sublabel: "CV 202", x: 650, y: 350, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 30 },
+                
+                // Extra Outputs arrows F23/F24
+                { id: "out_f23", label: "", x: 650, y: 480, shape: 'text', color: '#fff', stroke: 'none', w: 20, h: 20 },
+                { id: "out_f24", label: "", x: 650, y: 520, shape: 'text', color: '#fff', stroke: 'none', w: 20, h: 20 },
+            ];
+
+            const edgesData = [
+                { id: "F2", source: "mina", target: "N1", label: "F2" },
+                { id: "F1", source: "stock", target: "N1", label: "F1" },
+                { id: "F3", source: "N1", target: "chancado", label: "F3" },
+                { id: "F4", source: "chancado", target: "silo", label: "F4" },
+                { id: "F5", source: "silo", target: "inv_silo", label: "F5" }, // Upward
+                { id: "F6", source: "silo", target: "N4", label: "F6" },
+                { id: "F7", source: "silo", target: "N5", label: "F7" },
+                
+                // N4 Inputs
+                { id: "F8", source: "srr_top", target: "N4", label: "F8" },
+                { id: "F10", source: "sal_top", target: "N4", label: "F10" },
+                
+                // N5 Inputs
+                { id: "F9", source: "srr_bot", target: "N5", label: "F9" },
+                { id: "F11", source: "sal_bot", target: "N5", label: "F11" },
+                
+                // N10 Input
+                { id: "F25", source: "srr_bot", target: "N10", label: "F25 (CV 001)" }, 
+
+                // To Aglomerado
+                { id: "F12", source: "N4", target: "aglomerado", label: "F12 (CV 008)" },
+                { id: "F13", source: "N5", target: "aglomerado", label: "F13 (CV 108)" },
+                
+                // From Aglomerado
+                { id: "F14", source: "aglomerado", target: "lix_sulf", label: "F14" },
+                { id: "F15", source: "aglomerado", target: "lix_ox", label: "F15" },
+                
+                // From Lix Sulf
+                { id: "F16", source: "lix_sulf", target: "inv_sulf", label: "F16" },
+                { id: "F18", source: "lix_sulf", target: "N9", label: "F18" },
+                { id: "F21", source: "lix_sulf", target: "botaderos", label: "F21" },
+                { id: "F23", source: "lix_sulf", target: "out_f23", label: "F23", color: '#ffb570' },
+
+                // From Lix Ox
+                { id: "F17", source: "lix_ox", target: "inv_ox", label: "F17" },
+                { id: "F19", source: "lix_ox", target: "N9", label: "F19" },
+                { id: "F22", source: "lix_ox", target: "botaderos", label: "F22" },
+                { id: "F24", source: "lix_ox", target: "out_f24", label: "F24", color: '#ffb570' },
+                
+                // From N9
+                { id: "F20", source: "N9", target: "botaderos", label: "F20" },
+            ];
+
+
+            // ==================================================================
+            // 1.5. MOCK DATA (With Mo)
+            // ==================================================================
+            window.flowData = {}; 
+            window.nodeData = {};
+            window.currentMetric = "TMS"; 
+
+            edgesData.forEach(e => {
+                window.flowData[e.id] = {
+                    "TMS": { "Masa medida": 0, "Masa recon": 0},
+                    "Cu": { "Ley medida Cu": 0, "Ley recon Cu": 0 },
+                    "Mo": { "Ley medida Mo": 0, "Ley recon Mo": 0 }
+                };
+            });
+
+            nodesData.forEach(n => {
+                if (n.shape !== 'text') {
+                    window.nodeData[n.id] = {
+                        "TMS": { "Desbalance masa inicial": 0 },
+                        "Cu": { "Desbalance fino inicial Cu": 0 },
+                        "Mo": { "Desbalance fino inicial Mo": 0 }
+                    };
+                }
+            });
+
+            // ==================================================================
+            // 2. D3 RENDERING
+            // ==================================================================
+
+            const container = document.getElementById("chart");
+            const width = 1200;  
+            const height = 800;
+
+            const svg = d3.select("#chart").append("svg")
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .attr("viewBox", `0 0 ${width} ${height}`)
+                .style("max-width", "100%")
+                .style("height", "auto");
+            
+            const g = svg.append("g");
+
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on("zoom", (e) => g.attr("transform", e.transform));
+            
+            svg.call(zoom);
+            svg.call(zoom.transform, d3.zoomIdentity.translate(50, 50).scale(0.9));
+
+            svg.append("defs").append("marker")
+                .attr("id", "arrow")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 8)
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto-start-reverse")
+                .append("path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("fill", "#555");
+
+            const tooltip = d3.select("#tooltip");
+            const nodeMap = new Map(nodesData.map(n => [n.id, n]));
+
+            // ==================================================================
+            // 2.5. UPDATE FUNCTIONS
+            // ==================================================================
+            
+            function formatNumber(num, metric) {
+                if (num === undefined || num === null) return "";
+                const n = parseFloat(num);
+                if (isNaN(n)) return num; 
+
+                if (metric === "TMS") {
+                    return n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                }
+                // Cu and Mo get 4 decimals
+                return n.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+            }
+            
+            function updateMetrics(metric) {
+                window.currentMetric = metric; 
+
+                // Update Node Values
+                g.selectAll(".node-value")
+                    .text(d => {
+                        const data = window.nodeData[d.id];
+                        let val = null;
+                        if (data && data[metric]) {
+                            if (metric === "TMS" && data[metric]["Desbalance masa inicial"] !== undefined) val = data[metric]["Desbalance masa inicial"];
+                            else if (metric === "Cu" && data[metric]["Desbalance fino inicial Cu"] !== undefined) val = data[metric]["Desbalance fino inicial Cu"];
+                            else if (metric === "Mo" && data[metric]["Desbalance fino inicial Mo"] !== undefined) val = data[metric]["Desbalance fino inicial Mo"];
+                        }
+                        return val !== null ? formatNumber(val, metric) : "";
+                    });
+
+                // Update Link Values
+                g.selectAll(".link-value")
+                    .text(d => {
+                        const data = window.flowData[d.id];
+                        if (!data || !data[metric]) return "";
+                        
+                        let mKey, rKey;
+                        if (metric === "TMS") { mKey = "Masa medida"; rKey = "Masa recon"; }
+                        else if (metric === "Cu") { mKey = "Ley medida Cu"; rKey = "Ley recon Cu"; }
+                        else if (metric === "Mo") { mKey = "Ley medida Mo"; rKey = "Ley recon Mo"; }
+
+                        const mVal = data[metric][mKey];
+                        const rVal = data[metric][rKey];
+
+                        if (mVal !== undefined && rVal !== undefined) {
+                             return `${formatNumber(mVal, metric)} / ${formatNumber(rVal, metric)}`;
+                        }
+                        return "";
+                    });
+            }
+
+
+            // ==================================================================
+            // 3. DRAW ELEMENTS
+            // ==================================================================
+
+            function drawFlowsheet() {
+                g.selectAll("*").remove(); 
+
+                const line = d3.line().curve(d3.curveStepBefore);
+
+                // --- LINKS ---
+                const linkGroup = g.selectAll(".link")
+                    .data(edgesData)
+                    .enter().append("g")
+                    .attr("class", "link")
+                    .on("mouseover", (e, d) => {
+                        tooltip.style("opacity", 1)
+                          .html(`Flow: <strong>${d.label || d.id}</strong>`)
+                          .style("left", (e.pageX + 15) + "px")
+                          .style("top", (e.pageY - 10) + "px");
+                    })
+                    .on("mouseout", () => tooltip.style("opacity", 0));
+
+                linkGroup.append("path")
+                    .attr("d", d => {
+                        const s = nodeMap.get(d.source);
+                        const t = nodeMap.get(d.target);
+                        if (!s || !t) return null;
+                        
+                        const sourcePos = [s.x + s.w / 2, s.y + s.h / 2];
+                        const targetPos = [t.x + t.w / 2, t.y + t.h / 2]; 
+
+                        // Simple routing adjustments
+                        if (d.id === "F5") { // Silo to Inv Silo (Up)
+                            return line([sourcePos, targetPos]); 
+                        }
+                        
+                        if (Math.abs(s.y - t.y) < 20) { // Horizontalish
+                             return line([sourcePos, [t.x, targetPos[1]]]);
+                        }
+                        if (Math.abs(s.x - t.x) < 20) { // Verticalish
+                             return line([sourcePos, [targetPos[0], t.y]]);
+                        }
+                        
+                        // Special cases for inputs/outputs
+                        if (d.id === "F23" || d.id === "F24") { // Point left
+                             return line([sourcePos, [t.x + t.w, targetPos[1]]]);
+                        }
+
+                        return line([sourcePos, targetPos]);
+                    })
+                    .attr("marker-end", "url(#arrow)")
+                    .style("stroke-dasharray", d => (d.dashed) ? "5,5" : "none")
+                    .style("stroke", d => d.color || "#555");
+
+                // Labels
+                linkGroup.append("text")
+                    .text(d => d.label)
+                    .attr("dy", -6)
+                    .attr("transform", d => {
+                        const s = nodeMap.get(d.source);
+                        const t = nodeMap.get(d.target);
+                        if (!s || !t) return "";
+                        const mx = (s.x + s.w / 2 + t.x + t.w/2) / 2;
+                        const my = (s.y + s.h / 2 + t.y + t.h/2) / 2;
+                        return `translate(${mx}, ${my})`;
+                    });
+                
+                // Values
+                linkGroup.append("text")
+                    .attr("class", "link-value")
+                    .attr("dy", 8)
+                    .attr("transform", d => {
+                        const s = nodeMap.get(d.source);
+                        const t = nodeMap.get(d.target);
+                        if (!s || !t) return "";
+                        const mx = (s.x + s.w / 2 + t.x + t.w/2) / 2;
+                        const my = (s.y + s.h / 2 + t.y + t.h/2) / 2;
+                        return `translate(${mx}, ${my})`;
+                    });
+
+                // --- NODES ---
+                const nodeGroup = g.selectAll(".node")
+                    .data(nodesData)
+                    .enter().append("g")
+                    .attr("class", d => `node shape-${d.shape}`)
+                    .attr("transform", d => `translate(${d.x}, ${d.y})`)
+                    .on("mouseover", (e, d) => {
+                        tooltip.style("opacity", 1)
+                          .html(`<strong>${d.label}</strong><br>ID: ${d.id}`)
+                          .style("left", (e.pageX + 15) + "px")
+                          .style("top", (e.pageY - 10) + "px");
+                    })
+                    .on("mouseout", () => tooltip.style("opacity", 0));
+
+                nodeGroup.each(function(d) {
+                    const el = d3.select(this);
+                    const w = d.w;
+                    const h = d.h;
+
+                    if (d.shape === 'ellipse') {
+                        el.append("ellipse")
+                          .attr("cx", w/2).attr("cy", h/2).attr("rx", w/2).attr("ry", h/2)
+                          .attr("fill", d.color).attr("stroke", d.stroke).style("stroke-dasharray", d.dashed?"5,5":"none");
+                    } else if (d.shape === 'triangle') {
+                        el.append("polygon")
+                          .attr("points", `${w/2},0 ${w},${h} 0,${h}`)
+                          .attr("fill", d.color).attr("stroke", d.stroke);
+                    } else if (d.shape === 'text') {
+                        // text only
+                    } else {
+                        el.append("rect")
+                          .attr("width", w).attr("height", h).attr("rx", 5)
+                          .attr("fill", d.color).attr("stroke", d.stroke).style("stroke-dasharray", d.dashed?"5,5":"none");
+                    }
+
+                    el.append("text")
+                      .attr("class", "node-label")
+                      .attr("x", w/2)
+                      .attr("y", d.sublabel ? h/2 - 4 : h/2 + 4)
+                      .text(d.label);
+
+                    if (d.sublabel) {
+                        el.append("text")
+                          .attr("class", "node-sublabel")
+                          .attr("x", w/2).attr("y", h/2 + 14)
+                          .text(d.sublabel);
+                    }
+
+                    // Value Text
+                    el.append("text")
+                      .attr("class", "node-value")
+                      .attr("x", w/2).attr("y", h + 14)
+                      .text(""); 
+                });
+            }
+
+            // ==================================================================
+            // 4. INITIALIZE & LISTEN FOR DATA
+            // ==================================================================
+            
+            drawFlowsheet();
+            updateMetrics(window.currentMetric);
+
+            // Listen for Dash updates
+            window.addEventListener("message", (event) => {
+                const { type, flowData, nodeData } = event.data;
+                if (type === 'DASH_DATA_UPDATE') {
+                    console.log("Data received from Dash:", { flowData, nodeData });
+                    window.flowData = flowData || {};
+                    window.nodeData = nodeData || {};
+                    updateMetrics(window.currentMetric);
+                }
+            });
+
+            // Listen for radio buttons
+            d3.selectAll(".controls input[name='metric']").on("change", function() {
+                updateMetrics(this.value);
+            });
+            
+            // Notify parent
+            if (window.parent) {
+                window.parent.postMessage({ type: 'IFRAME_READY' }, window.location.origin);
+            }
+        }
+    </script>
+</body>
+</html>

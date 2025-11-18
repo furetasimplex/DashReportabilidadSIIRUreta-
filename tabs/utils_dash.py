@@ -361,3 +361,83 @@ def local_img_to_html(path,img_name):
     image_filename = os.path.join(path, img_name)
     encoded_image = base64.b64encode(open(image_filename, 'rb').read()).decode("UTF-8")
     return 'data:image/png;base64,{}'.format(encoded_image)
+
+
+def get_info_caso_html(maxid):
+    """
+    Devuelve los datos para el flowsheet D3:
+    - flowData con Medido / Reconciliado / Tolerancias (TMS, Cu, Mo)
+    - nodeData vacío por ahora
+    """
+    db = get_connection()
+
+    sql = """
+        SELECT ID, id_flujo, Etiqueta, Descripcion, fecha, X, Y, X_l, Y_l, modelo, 
+               Medido, Reconciliado, Medido_cu, Reconciliado_cu, Tolerancia, 
+               Tolerancia_cu, caso
+        FROM inventar_SpcHidr.flujo_caso_coord
+        WHERE caso = ?
+    """
+
+    df = pd.read_sql(sql, db, params=(maxid,))
+    db.close()
+
+    flowData = {}
+
+    if not df.empty:
+        for _, row in df.iterrows():
+            flujo = str(row["id_flujo"]).strip()  # p.ej "F3"
+
+            if flujo not in flowData:
+                flowData[flujo] = {
+                    "TMS": {  # medido
+                        "Masa medida": None,
+                        "Masa recon": None,
+                    },
+                    "Cu": {   # recon
+                        "Ley medida Cu": None,
+                        "Ley recon Cu": None,
+                    },
+                    "Mo": {   # TOLERANCIAS
+                        "Ley medida Mo": None,
+                        "Ley recon Mo": None,
+                    }
+                }
+
+            # -----------------------------
+            # MASA (TMS)
+            # -----------------------------
+            flowData[flujo]["TMS"]["Masa medida"] = (
+                float(row["Medido"]) if row["Medido"] is not None else None
+            )
+            flowData[flujo]["TMS"]["Masa recon"] = (
+                float(row["Reconciliado"]) if row["Reconciliado"] is not None else None
+            )
+
+            # -----------------------------
+            # LEY CU
+            # -----------------------------
+            flowData[flujo]["Cu"]["Ley medida Cu"] = (
+                float(row["Medido_cu"]) if row["Medido_cu"] is not None else None
+            )
+            flowData[flujo]["Cu"]["Ley recon Cu"] = (
+                float(row["Reconciliado_cu"]) if row["Reconciliado_cu"] is not None else None
+            )
+
+            # -----------------------------
+            # TOLERANCIAS (Mo en el flowsheet)
+            # -----------------------------
+            flowData[flujo]["Mo"]["Ley medida Mo"] = (
+                float(row["Tolerancia"]) if row["Tolerancia"] is not None else None
+            )
+            flowData[flujo]["Mo"]["Ley recon Mo"] = (
+                float(row["Tolerancia_cu"]) if row["Tolerancia_cu"] is not None else None
+            )
+
+    # nodeData vacío por ahora
+    nodeData = {}
+
+    return {
+        "flowData": flowData,
+        "nodeData": nodeData
+    }

@@ -5,6 +5,7 @@ from dash.dependencies import Input, Output
 import base64, os
 from dash import callback_context
 import flask
+from flask import app
 
 # === Importa tus tabs ===
 from tabs.tab1 import render_tab1, register_tab1_callbacks
@@ -97,6 +98,118 @@ def render_footer():
         className="footer-container bg-white border-top shadow-sm mt-4 py-2 rounded-3",
     )
 
+subtabs = html.Div(
+    id="subtabs-container",
+    className="tab-anim",#ANIMACION DE TRANSICION
+    children=[
+        
+        # ============ MINA =============
+        html.Div(id="subtabs-mina", children=render_tab1()),
+
+        # ============ AREA SECA ============
+        html.Div(id="subtabs-seca", children=
+            dcc.Tabs(
+                id="subtabs-seca-tabs",
+                value="tab2",
+                children=[
+                    dcc.Tab(label="Conciliación Operacional", value="tab2", children=render_tab2()),
+                    dcc.Tab(label="Control Apilado", value="tab3", children=render_tab3()),
+                    dcc.Tab(label="Torres de Muestreo", value="tab4", children=render_tab4()),
+                ],
+            )
+        ),
+
+        # ============ AREA HUMEDA =============
+        html.Div(id="subtabs-humeda", children=
+            dcc.Tabs(
+                id="subtabs-humeda-tabs",
+                value="tab5",
+                children=[
+                    dcc.Tab(label="Recuperación", value="tab5",children=render_tab()),
+                    dcc.Tab(label="Control de Riego", value="tab8",disabled=True,
+                            children=html.Div("Control de riego no implementado aún.")),
+                    dcc.Tab(label="Producción Catódica", value="tab9",disabled=True,
+                            children=html.Div("Producción catódica no implementada aún.")),
+                ],
+            )
+        ),
+
+        # ============ ADMIN =============
+        html.Div(id="subtabs-admin", children=
+            dcc.Tabs(
+                id="subtabs-admin-tabs",
+                value="tab7",
+                children=[
+                    dcc.Tab(label="Importar data base", value="tab7", children=tab_import_container.layout),
+                    dcc.Tab(label="Reconciliador Area Seca", value="recon", children=tab_recon_container.layout),
+                    dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro",disabled=True,
+                    children=tab_recon_container_hidro.layout),
+                ],
+            )
+        ),
+
+        # ============ REPORTABILIDAD ============
+        html.Div(id="subtabs-report", children=tab_report.layout()),
+    ]
+)
+
+
+navbar = dbc.Navbar(
+    dbc.Container(
+        [
+            dbc.Nav(
+                [
+                    dbc.NavLink("📊 Resumen Estadístico Mina", href="#", id="nav-mina", className="text-primary fw-semibold mx-2"),
+                    dbc.NavLink("⚙️ Control Área Seca", href="#", id="nav-seca", className="text-primary fw-semibold mx-2"),
+                    dbc.NavLink("💧 Control Área Húmeda", href="#", id="nav-humeda", className="text-primary fw-semibold mx-2"),
+                    dbc.NavLink("📦 Administración y Reconciliación", href="#", id="nav-admin", className="text-primary fw-semibold mx-2"),
+                    dbc.NavLink("📝 Reportabilidad", href="#", id="nav-reportabilidad", className="text-primary fw-semibold mx-2"),
+                ],
+                pills=True,
+                justified=True,
+                className="rounded-3 p-1 bg-white",
+            ),
+            dbc.NavbarToggler(id="navbar-toggler"),
+            dbc.Collapse(
+                dbc.Nav(
+                    [
+                        dbc.DropdownMenu(
+                            label=html.Span(
+                                [
+                                    html.I(className="bi bi-person-circle me-2"),  # ícono Bootstrap
+                                    html.Span("Bienvenido"),
+                                ],
+                                className="align-items-center",
+                            ),
+                            children=[
+                                #dbc.DropdownMenuItem("Perfil", href="#"),
+                                #dbc.DropdownMenuItem(divider=True),
+                                dbc.DropdownMenuItem(
+                                "Cerrar sesión",
+                                id="logout-link",
+                                n_clicks=0,
+                                )
+                            ],
+                            nav=True,
+                            align_end=True,
+                            className="",
+                        ),
+                    ],
+                    className="ms-auto",  # alinea a la derecha
+                    navbar=True,
+                ),
+                id="navbar-collapse",
+                navbar=True,
+            ),
+            dcc.Location(id="page-url", refresh=True),
+        ],
+        fluid=True,
+    ),
+    color="",
+    dark=False,
+    class_name="border-0 shadow-sm rounded-3 mb-3 py-1 px-3",
+)
+
 
 def create_layout(app):
     # Registrar callbacks previos (igual que antes)
@@ -113,67 +226,12 @@ def create_layout(app):
     tabreportabilidad.register_callbacks_reporte(app)
     tabreportabilidad_hidro.register_callbacks_reporte(app)
     tab_report.register_callbacks(app)
-    navbar = dbc.Navbar(
-        dbc.Container(
-            [
-                dbc.Nav(
-                    [
-                        dbc.NavLink("📊 Resumen Estadístico Mina", href="#", id="nav-mina", className="text-primary fw-semibold mx-2"),
-                        dbc.NavLink("⚙️ Control Área Seca", href="#", id="nav-seca", className="text-primary fw-semibold mx-2"),
-                        dbc.NavLink("💧 Control Área Húmeda", href="#", id="nav-humeda", className="text-primary fw-semibold mx-2"),
-                        dbc.NavLink("📦 Administración y Reconciliación", href="#", id="nav-admin", className="text-primary fw-semibold mx-2"),
-                        dbc.NavLink("📝 Reportabilidad", href="#", id="nav-reportabilidad", className="text-primary fw-semibold mx-2"),
-                    ],
-                    pills=True,
-                    justified=True,
-                    className="rounded-3 p-1 bg-white",
-                ),
-                dbc.NavbarToggler(id="navbar-toggler"),
-                dbc.Collapse(
-                    dbc.Nav(
-                        [
-                            dbc.DropdownMenu(
-                                label=html.Span(
-                                    [
-                                        html.I(className="bi bi-person-circle me-2"),  # ícono Bootstrap
-                                        html.Span("Bienvenido"),
-                                    ],
-                                    className="align-items-center",
-                                ),
-                                children=[
-                                    #dbc.DropdownMenuItem("Perfil", href="#"),
-                                    #dbc.DropdownMenuItem(divider=True),
-                                    dbc.DropdownMenuItem(
-                                    "Cerrar sesión",
-                                    id="logout-link",
-                                    n_clicks=0,
-                                    )
-                                ],
-                                nav=True,
-                                align_end=True,
-                                className="",
-                            ),
-                        ],
-                        className="ms-auto",  # alinea a la derecha
-                        navbar=True,
-                    ),
-                    id="navbar-collapse",
-                    navbar=True,
-                ),
-                dcc.Location(id="page-url", refresh=True),
-            ],
-            fluid=True,
-        ),
-        color="",
-        dark=False,
-        class_name="border-0 shadow-sm rounded-3 mb-3 py-1 px-3",
-    )
 
     return dbc.Container(
         [
             render_header(),
             navbar,
-            html.Div(id="subtabs-container", className="mt-2"),
+            subtabs,
             html.Div(id="tab-content", className="mt-3"),
             render_footer(),
 
@@ -185,11 +243,12 @@ def create_layout(app):
 
 def register_callbacks(app):
     @app.callback(
-        Output("nav-mina", "active"),
-        Output("nav-seca", "active"),
-        Output("nav-humeda", "active"),
-        Output("nav-admin", "active"),
-        Output("nav-reportabilidad", "active"),
+        Output("subtabs-mina", "style"),
+        Output("subtabs-seca", "style"),
+        Output("subtabs-humeda", "style"),
+        Output("subtabs-admin", "style"),
+        Output("subtabs-report", "style"),
+
         Input("nav-mina", "n_clicks"),
         Input("nav-seca", "n_clicks"),
         Input("nav-humeda", "n_clicks"),
@@ -197,111 +256,26 @@ def register_callbacks(app):
         Input("nav-reportabilidad", "n_clicks"),
         prevent_initial_call=False,
     )
-    def toggle_active(mina, seca, humeda, admin, reportabilidad):
-        ctx = callback_context
-        # Si no hay interacción aún, deja activo el primero
+    def toggle_subtabs(mina, seca, humeda, admin, rep):
+        ctx = dash.callback_context
+
+        visible = {"display": "block"}
+        hidden = {"display": "none"}
+
+        # Caso inicial sin interacción
         if not ctx.triggered:
-            return True, False, False, False, False
+            return visible, hidden, hidden, hidden, hidden
 
         clicked = ctx.triggered[0]["prop_id"].split(".")[0]
+
         return (
-            clicked == "nav-mina",
-            clicked == "nav-seca",
-            clicked == "nav-humeda",
-            clicked == "nav-admin",
-            clicked == "nav-reportabilidad",
+            visible if clicked == "nav-mina" else hidden,
+            visible if clicked == "nav-seca" else hidden,
+            visible if clicked == "nav-humeda" else hidden,
+            visible if clicked == "nav-admin" else hidden,
+            visible if clicked == "nav-reportabilidad" else hidden,
         )
-        # === 2️⃣ Renderizar subtabs según grupo activo ===
 
-    @app.callback(
-        Output("subtabs-container", "children"),
-        [
-            Input("nav-mina", "n_clicks"),
-            Input("nav-seca", "n_clicks"),
-            Input("nav-humeda", "n_clicks"),
-            Input("nav-admin", "n_clicks"),
-            Input("nav-reportabilidad", "n_clicks"),
-        ],
-        prevent_initial_call=False,
-    )
-    def render_subtabs(mina, seca, humeda, admin, reportabilidad):
-        ctx = callback_context
-        if not ctx.triggered:
-            return render_tab1()
-        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-
-        if button_id == "nav-mina":
-            return render_tab1()
-
-        elif button_id == "nav-seca":
-            return dcc.Tabs(
-                id="subtabs",
-                value="tab2",
-                className="subtabs",
-                children=[
-                    dcc.Tab(label="Conciliación Operacional", value="tab2"),
-                    dcc.Tab(label="Control Apilado", value="tab3"),
-                    dcc.Tab(label="Torres de Muestreo", value="tab4"),
-                ],
-            )
-
-        elif button_id == "nav-humeda":
-            return dcc.Tabs(
-                id="subtabs",
-                value="tab5",
-                className="subtabs",
-                children=[
-                    dcc.Tab(label="Recuperación", value="tab5"),
-                    dcc.Tab(label="Control de Riego", value="tab8"),
-                    dcc.Tab(label="Producción Catódica", value="tab9"),
-                ],
-            )
-
-        elif button_id == "nav-admin":
-            return dcc.Tabs(
-                id="subtabs",
-                value="tab7",
-                className="subtabs",
-                children=[
-                    dcc.Tab(label="Importar data base", value="tab7"),
-                    dcc.Tab(label="Reconciliador Area Seca", value="recon"),
-                    #dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro"),
-                    #dcc.Tab(label="Reportabilidad", value="tab_reportabilidad"),
-                ],
-            )
-
-        elif button_id == "nav-reportabilidad":
-            return tab_report.layout()
-
-        return None
-
-    # === Renderizar contenido según subtab activo ===
-    @app.callback(Output("tab-content", "children"), Input("subtabs", "value"), prevent_initial_call=True)
-    def render_subtab_content(tab):
-        if tab == "tab2":
-            return render_tab2()
-        elif tab == "tab3":
-            return render_tab3()
-        elif tab == "tab4":
-            return render_tab4()
-        elif tab == "tab5":
-            return render_tab()
-        elif tab == "tab8":
-            return html.Div("Control de riego no implementado aún.", className="fw-semibold")
-        elif tab == "tab9":
-            return html.Div("Producción catódica no implementado aún.", className="fw-semibold")
-        elif tab == "tab7":
-            return tab_import_container.layout
-        elif tab == "recon":
-            return tab_recon_container.layout
-        elif tab == "recon_hidro":
-            return tab_recon_container_hidro.layout
-        #elif tab == "tab_reportabilidad":
-            #return html.Div("Reportabilidad no implementado aún.", className="fw-semibold")
-        #elif tab == "recon_agua":
-            #return render_layout_agua()
-        return html.Div("Seleccione una pestaña.")
-     
     # === Cerrar sesión ===
     clientside_callback(
         """
@@ -321,3 +295,50 @@ def register_callbacks(app):
         Input("logout-link", "n_clicks"),
         prevent_initial_call=True
 )
+    
+    """ 
+    ANTIGUO CALLBACK DINAMICO DE SUBTABS
+    @app.callback(
+        Output("tab-content", "children"),
+
+        # Inputs de todos los grupos de subtabs
+        Input("subtabs-seca-tabs", "value"),
+        Input("subtabs-humeda-tabs", "value"),
+        Input("subtabs-admin-tabs", "value"),
+
+        prevent_initial_call=False,
+    )
+    def render_subtab_content(tab2, tab_hum, tab_admin):
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return render_tab2()  # inicial
+
+        active = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        # === Area Seca ===
+        if active == "subtabs-seca-tabs":
+            if tab2 == "tab2":
+                return render_tab2()
+            elif tab2 == "tab3":
+               return render_tab3()
+            elif tab2 == "tab4":
+               return render_tab4()
+
+        # === Área Húmeda ===
+        if active == "subtabs-humeda-tabs":
+            if tab_hum == "tab5":
+                return render_tab()
+            elif tab_hum == "tab8":
+                return html.Div("Control de riego no implementado aún.")
+            elif tab_hum == "tab9":
+                return html.Div("Producción catódica no implementada aún.")
+
+        # === Admin ===
+        if active == "subtabs-admin-tabs":
+            if tab_admin == "tab7":
+                return tab_import_container.layout
+            elif tab_admin == "recon":
+                return tab_recon_container.layout
+
+        return html.Div("Seleccione una pestaña.")
+ """
