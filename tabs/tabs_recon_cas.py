@@ -312,24 +312,36 @@ def register_recon_callbacks(app):
             info = get_info_caso_html(caso_id)
             flows = info["flowData"]
             nodes = info["nodeData"]
-                    # Encode the JSON strings to be URL-safe
-            encoded_flow_data = urllib.parse.quote(json.dumps(flows))
-            encoded_node_data = urllib.parse.quote(json.dumps(nodes))
-            html_file = "/assets/ripios.html" 
-            default_metric = "TMS"
-            
-            # Add a cache-buster (?v=...) to force the browser to reload
+
+            # Convertir a JSON
+            flow_json_str = json.dumps(flows)
+            node_json_str = json.dumps(nodes)
+
+            # Encode seguro
+            flow_encoded = urllib.parse.quote(flow_json_str, safe='')
+            node_encoded = urllib.parse.quote(node_json_str, safe='')
+            metric_encoded = urllib.parse.quote("TMS")
+
+            html_file = "/assets/ripios.html"
+
+            # Cache-buster para forzar recarga REAL del HTML
             cache_buster = f"?v={time.time()}"
-            
-            # Construct the new src URL
-            hash_string = f"#flowData={encoded_flow_data}&nodeData={encoded_node_data}&metric={default_metric}"
-            new_src = f"{html_file}{cache_buster}{hash_string}"
-            print("Updated iframe src:", new_src    )
-            return new_src 
+
+            # Construcción FINAL del src
+            new_src = (
+                f"{html_file}{cache_buster}"
+                f"#flowData={flow_encoded}"
+                f"&nodeData={node_encoded}"
+                f"&metric={metric_encoded}"
+            )
+
+            print("Updated iframe src:", new_src)
+            return new_src
 
         except Exception as e:
             print("❌ ERROR en actualizar_flowsheet:", e)
             return no_update
+
 
 """
    # Actualizar imagen según selección e id caso activo

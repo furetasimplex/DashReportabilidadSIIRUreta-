@@ -138,58 +138,88 @@
     <div id="tooltip" class="tooltip"></div>
 
     <script>
-         function loadDashDataFromHash() {
+(function () {
+
+    // =======================================================
+    // ESTADO GLOBAL
+    // =======================================================
+    window.flowData = {};
+    window.nodeData = {};
+    window.currentMetric = "TMS";
+    window._updateMetrics = null;
+    window.flowsheetReady = false;
+
+    // =======================================================
+    // PARSE HASH
+    // =======================================================
+    function parseHashParams() {
+        if (!window.location.hash || window.location.hash.length <= 1) return null;
+        const query = window.location.hash.substring(1);
+        const params = new URLSearchParams(query);
+        const out = {};
+
+        for (const [k, v] of params.entries()) out[k] = v;
+        return out;
+    }
+
+    function safeJSONDecode(encoded) {
+        if (!encoded) return null;
+
         try {
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-
-            const flowDataRaw = params.get("flowData");
-            const nodeDataRaw = params.get("nodeData");
-            const metric = params.get("metric") || "TMS";
-
-            if (!flowDataRaw || !nodeDataRaw) {
-                console.warn("⚠ No flowData/nodeData in hash");
-                return;
+            return JSON.parse(decodeURIComponent(encoded));
+        } catch (e1) {
+            console.warn("Decode 1 falló → intentando sanitizar %...");
+            try {
+                const fixed = encoded.replace(/%(?![0-9A-F]{2})/gi, "%25");
+                return JSON.parse(decodeURIComponent(fixed));
+            } catch (e2) {
+                console.error("❌ JSON corrupto incluso después del fix:", e2);
+                return null;
             }
-
-            const flowData = JSON.parse(decodeURIComponent(flowDataRaw));
-            const nodeData = JSON.parse(decodeURIComponent(nodeDataRaw));
-
-            console.log("🔥 Data recibida desde Dash");
-            console.log("Flows:", flowData);
-            console.log("Nodes:", nodeData);
-
-            // 🔥 LLAMA TU FUNCIÓN DE ACTUALIZAR NODOS
-            // Ejemplo:
-            window.updateFlowsheet(flowData, nodeData, metric);
-
-        } catch (err) {
-            console.error("❌ Error leyendo hash:", err);
         }
     }
 
-    // Ejecutar cuando se carga el documento
-    window.addEventListener("DOMContentLoaded", loadDashDataFromHash);
+    // =======================================================
+    // API PARA DASH (postMessage opcional)
+    // =======================================================
+    window.updateFlowsheet = function (flowData, nodeData) {
+        console.log("🔥 updateFlowsheet() nuevos datos:", flowData, nodeData);
 
-    // Ejecutar si el src del iframe cambia
-    window.addEventListener("hashchange", loadDashDataFromHash);
-        // ==================================================================
-        // SAFETY LOADER
-        // ==================================================================
-        document.addEventListener("DOMContentLoaded", () => {
-            const checkD3Interval = setInterval(() => {
-                if (window.d3) {
-                    clearInterval(checkD3Interval);
-                    initApp();
-                }
-            }, 100);
-        });
+        window.flowData = flowData || {};
+        window.nodeData = nodeData || {};
 
+        if (typeof window._updateMetrics === "function")
+            window._updateMetrics(window.currentMetric);
+    };
+
+    // =======================================================
+    // LECTURA DE HASH
+    // =======================================================
+    function loadDataFromHash() {
+        const hash = window.location.hash.substring(1);
+        if (!hash) return;
+
+        const params = new URLSearchParams(hash);
+
+        const flowRaw = params.get("flowData");
+        const nodeRaw = params.get("nodeData");
+
+        window.flowData = safeJSONDecode(flowRaw) || {};
+        window.nodeData = safeJSONDecode(nodeRaw) || {};
+
+        console.log("🔥 Datos hash cargados:", window.flowData, window.nodeData);
+
+        if (window.flowsheetReady && typeof window._updateMetrics === "function")
+            window._updateMetrics(window.currentMetric);
+    }
+
+        // =======================================================
+        // APLICACIÓN PRINCIPAL D3
+        // =======================================================
         function initApp() {
-            // ==================================================================
-            // 1. DATA (Reconstructed from AREASECA.drawio.png)
-            // ==================================================================
-            
+            // ============================
+            // 1. DEFINICIÓN DE NODOS
+            // ============================
             const nodesData = [
                 // Sources (Left)
                 { id: "mina", label: "Mina", x: 50, y: 150, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 20 },
@@ -230,6 +260,9 @@
                 { id: "out_f24", label: "", x: 650, y: 520, shape: 'text', color: '#fff', stroke: 'none', w: 20, h: 20 },
             ];
 
+            // ============================
+            // 2. DEFINICIÓN DE ARISTAS
+            // ============================
             const edgesData = [
                 { id: "F2", source: "mina", target: "N1", label: "F2" },
                 { id: "F1", source: "stock", target: "N1", label: "F1" },
@@ -274,53 +307,26 @@
                 { id: "F20", source: "N9", target: "botaderos", label: "F20" },
             ];
 
-
-            // ==================================================================
-            // 1.5. MOCK DATA (With Mo)
-            // ==================================================================
-            window.flowData = {}; 
-            window.nodeData = {};
-            window.currentMetric = "TMS"; 
-
-            edgesData.forEach(e => {
-                window.flowData[e.id] = {
-                    "TMS": { "Masa medida": 0, "Masa recon": 0},
-                    "Cu": { "Ley medida Cu": 0, "Ley recon Cu": 0 },
-                    "Mo": { "Ley medida Mo": 0, "Ley recon Mo": 0 }
-                };
-            });
-
-            nodesData.forEach(n => {
-                if (n.shape !== 'text') {
-                    window.nodeData[n.id] = {
-                        "TMS": { "Desbalance masa inicial": 0 },
-                        "Cu": { "Desbalance fino inicial Cu": 0 },
-                        "Mo": { "Desbalance fino inicial Mo": 0 }
-                    };
-                }
-            });
-
-            // ==================================================================
-            // 2. D3 RENDERING
-            // ==================================================================
-
-            const container = document.getElementById("chart");
-            const width = 1200;  
+            // ============================
+            // 3. SETUP SVG + ZOOM
+            // ============================
+            const width = 1200;
             const height = 800;
 
-            const svg = d3.select("#chart").append("svg")
+            const svg = d3.select("#chart")
+                .append("svg")
                 .attr("width", "100%")
                 .attr("height", "100%")
                 .attr("viewBox", `0 0 ${width} ${height}`)
                 .style("max-width", "100%")
                 .style("height", "auto");
-            
+
             const g = svg.append("g");
 
             const zoom = d3.zoom()
                 .scaleExtent([0.1, 4])
                 .on("zoom", (e) => g.attr("transform", e.transform));
-            
+
             svg.call(zoom);
             svg.call(zoom.transform, d3.zoomIdentity.translate(50, 50).scale(0.9));
 
@@ -339,79 +345,110 @@
             const tooltip = d3.select("#tooltip");
             const nodeMap = new Map(nodesData.map(n => [n.id, n]));
 
-            // ==================================================================
-            // 2.5. UPDATE FUNCTIONS
-            // ==================================================================
-            
-            function formatNumber(num, metric) {
-                if (num === undefined || num === null) return "";
-                const n = parseFloat(num);
-                if (isNaN(n)) return num; 
+            // ============================
+            // 4. FUNCIÓN DE FORMATEO
+            // ============================
+function formatNumber(num, metric) {
+    if (num === undefined || num === null) return "";
+    const n = parseFloat(num);
+    if (isNaN(n)) return num;
 
-                if (metric === "TMS") {
-                    return n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                }
-                // Cu and Mo get 4 decimals
-                return n.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-            }
-            
+    // === TMS: sin decimales ===
+    if (metric === "TMS") {
+        return n.toString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits:1
+        });
+    }
+
+    // === Cu y Mo: 4 decimales ===
+    return n.toLocaleString(undefined, {
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4
+    });
+}
+
+            // ============================
+            // 5. FUNCIÓN UPDATE METRICS
+            // ============================
             function updateMetrics(metric) {
-                window.currentMetric = metric; 
+                window.currentMetric = metric;
 
-                // Update Node Values
+                // Nodos
                 g.selectAll(".node-value")
                     .text(d => {
                         const data = window.nodeData[d.id];
                         let val = null;
                         if (data && data[metric]) {
-                            if (metric === "TMS" && data[metric]["Desbalance masa inicial"] !== undefined) val = data[metric]["Desbalance masa inicial"];
-                            else if (metric === "Cu" && data[metric]["Desbalance fino inicial Cu"] !== undefined) val = data[metric]["Desbalance fino inicial Cu"];
-                            else if (metric === "Mo" && data[metric]["Desbalance fino inicial Mo"] !== undefined) val = data[metric]["Desbalance fino inicial Mo"];
+                            if (metric === "TMS" && data[metric]["Desbalance masa inicial"] !== undefined) {
+                                val = data[metric]["Desbalance masa inicial"];
+                            } else if (metric === "Cu" && data[metric]["Desbalance fino inicial Cu"] !== undefined) {
+                                val = data[metric]["Desbalance fino inicial Cu"];
+                            } else if (metric === "Mo" && data[metric]["Desbalance fino inicial Mo"] !== undefined) {
+                                val = data[metric]["Desbalance fino inicial Mo"];
+                            }
                         }
                         return val !== null ? formatNumber(val, metric) : "";
                     });
 
-                // Update Link Values
+                // Flujos
+                // FLOW ID → INDEX MAPPING
+                const flowIdMap = {
+                    "F1": "1",   "F2": "2",   "F3": "3",   "F4": "4",   "F5": "5",
+                    "F6": "6",   "F7": "7",   "F8": "8",   "F9": "9",   "F10": "10",
+                    "F11": "11", "F12": "12", "F13": "13", "F14": "14", "F15": "15",
+                    "F16": "16", "F17": "17", "F18": "18", "F19": "19", "F20": "20",
+                    "F21": "21", "F22": "22", "F23": "23", "F24": "24", "F25": "25"
+                };
+
                 g.selectAll(".link-value")
-                    .text(d => {
-                        const data = window.flowData[d.id];
-                        if (!data || !data[metric]) return "";
-                        
-                        let mKey, rKey;
-                        if (metric === "TMS") { mKey = "Masa medida"; rKey = "Masa recon"; }
-                        else if (metric === "Cu") { mKey = "Ley medida Cu"; rKey = "Ley recon Cu"; }
-                        else if (metric === "Mo") { mKey = "Ley medida Mo"; rKey = "Ley recon Mo"; }
+                .text(d => {
+                    const mappedId = flowIdMap[d.id];
+                    const data = window.flowData[mappedId];
+                    if (!data || !data[metric]) return "";
 
-                        const mVal = data[metric][mKey];
-                        const rVal = data[metric][rKey];
+                    let mKey, rKey;
+                    if (metric === "TMS") {
+                        mKey = "Masa medida";
+                        rKey = "Masa recon";
+                    } else if (metric === "Cu") {
+                        mKey = "Ley medida Cu";
+                        rKey = "Ley recon Cu";
+                    } else if (metric === "Mo") {
+                        mKey = "Ley medida Mo";
+                        rKey = "Ley recon Mo";
+                    }
 
-                        if (mVal !== undefined && rVal !== undefined) {
-                             return `${formatNumber(mVal, metric)} / ${formatNumber(rVal, metric)}`;
-                        }
-                        return "";
-                    });
+                    const mVal = data[metric][mKey];
+                    const rVal = data[metric][rKey];
+
+                    return `${formatNumber(mVal, metric)} / ${formatNumber(rVal, metric)}`;
+                });
+
             }
 
+            // Exponemos la función para que pueda ser usada por updateFlowsheet
+            window._updateMetrics = updateMetrics;
 
-            // ==================================================================
-            // 3. DRAW ELEMENTS
-            // ==================================================================
-
+            // ============================
+            // 6. DIBUJAR FLOWSHEET
+            // ============================
             function drawFlowsheet() {
-                g.selectAll("*").remove(); 
+                g.selectAll("*").remove();
 
                 const line = d3.line().curve(d3.curveStepBefore);
 
                 // --- LINKS ---
                 const linkGroup = g.selectAll(".link")
                     .data(edgesData)
-                    .enter().append("g")
+                    .enter()
+                    .append("g")
                     .attr("class", "link")
                     .on("mouseover", (e, d) => {
                         tooltip.style("opacity", 1)
-                          .html(`Flow: <strong>${d.label || d.id}</strong>`)
-                          .style("left", (e.pageX + 15) + "px")
-                          .style("top", (e.pageY - 10) + "px");
+                            .html(`Flow: <strong>${d.label || d.id}</strong>`)
+                            .style("left", (e.pageX + 15) + "px")
+                            .style("top", (e.pageY - 10) + "px");
                     })
                     .on("mouseout", () => tooltip.style("opacity", 0));
 
@@ -420,34 +457,32 @@
                         const s = nodeMap.get(d.source);
                         const t = nodeMap.get(d.target);
                         if (!s || !t) return null;
-                        
-                        const sourcePos = [s.x + s.w / 2, s.y + s.h / 2];
-                        const targetPos = [t.x + t.w / 2, t.y + t.h / 2]; 
 
-                        // Simple routing adjustments
+                        const sourcePos = [s.x + s.w / 2, s.y + s.h / 2];
+                        const targetPos = [t.x + t.w / 2, t.y + t.h / 2];
+
                         if (d.id === "F5") { // Silo to Inv Silo (Up)
-                            return line([sourcePos, targetPos]); 
+                            return line([sourcePos, targetPos]);
                         }
-                        
-                        if (Math.abs(s.y - t.y) < 20) { // Horizontalish
-                             return line([sourcePos, [t.x, targetPos[1]]]);
+
+                        if (Math.abs(s.y - t.y) < 20) { // Horizontal-ish
+                            return line([sourcePos, [t.x, targetPos[1]]]);
                         }
-                        if (Math.abs(s.x - t.x) < 20) { // Verticalish
-                             return line([sourcePos, [targetPos[0], t.y]]);
+                        if (Math.abs(s.x - t.x) < 20) { // Vertical-ish
+                            return line([sourcePos, [targetPos[0], t.y]]);
                         }
-                        
-                        // Special cases for inputs/outputs
-                        if (d.id === "F23" || d.id === "F24") { // Point left
-                             return line([sourcePos, [t.x + t.w, targetPos[1]]]);
+
+                        if (d.id === "F23" || d.id === "F24") { // outputs especiales
+                            return line([sourcePos, [t.x + t.w, targetPos[1]]]);
                         }
 
                         return line([sourcePos, targetPos]);
                     })
                     .attr("marker-end", "url(#arrow)")
-                    .style("stroke-dasharray", d => (d.dashed) ? "5,5" : "none")
+                    .style("stroke-dasharray", d => (d.dashed ? "5,5" : "none"))
                     .style("stroke", d => d.color || "#555");
 
-                // Labels
+                // Etiquetas de los flujos
                 linkGroup.append("text")
                     .text(d => d.label)
                     .attr("dy", -6)
@@ -455,12 +490,12 @@
                         const s = nodeMap.get(d.source);
                         const t = nodeMap.get(d.target);
                         if (!s || !t) return "";
-                        const mx = (s.x + s.w / 2 + t.x + t.w/2) / 2;
-                        const my = (s.y + s.h / 2 + t.y + t.h/2) / 2;
+                        const mx = (s.x + s.w / 2 + t.x + t.w / 2) / 2;
+                        const my = (s.y + s.h / 2 + t.y + t.h / 2) / 2;
                         return `translate(${mx}, ${my})`;
                     });
-                
-                // Values
+
+                // Valores de los flujos
                 linkGroup.append("text")
                     .attr("class", "link-value")
                     .attr("dy", 8)
@@ -468,95 +503,132 @@
                         const s = nodeMap.get(d.source);
                         const t = nodeMap.get(d.target);
                         if (!s || !t) return "";
-                        const mx = (s.x + s.w / 2 + t.x + t.w/2) / 2;
-                        const my = (s.y + s.h / 2 + t.y + t.h/2) / 2;
+                        const mx = (s.x + s.w / 2 + t.x + t.w / 2) / 2;
+                        const my = (s.y + s.h / 2 + t.y + t.h / 2) / 2;
                         return `translate(${mx}, ${my})`;
                     });
 
                 // --- NODES ---
                 const nodeGroup = g.selectAll(".node")
                     .data(nodesData)
-                    .enter().append("g")
+                    .enter()
+                    .append("g")
                     .attr("class", d => `node shape-${d.shape}`)
                     .attr("transform", d => `translate(${d.x}, ${d.y})`)
                     .on("mouseover", (e, d) => {
                         tooltip.style("opacity", 1)
-                          .html(`<strong>${d.label}</strong><br>ID: ${d.id}`)
-                          .style("left", (e.pageX + 15) + "px")
-                          .style("top", (e.pageY - 10) + "px");
+                            .html(`<strong>${d.label}</strong><br>ID: ${d.id}`)
+                            .style("left", (e.pageX + 15) + "px")
+                            .style("top", (e.pageY - 10) + "px");
                     })
                     .on("mouseout", () => tooltip.style("opacity", 0));
 
-                nodeGroup.each(function(d) {
+                nodeGroup.each(function (d) {
                     const el = d3.select(this);
                     const w = d.w;
                     const h = d.h;
 
                     if (d.shape === 'ellipse') {
                         el.append("ellipse")
-                          .attr("cx", w/2).attr("cy", h/2).attr("rx", w/2).attr("ry", h/2)
-                          .attr("fill", d.color).attr("stroke", d.stroke).style("stroke-dasharray", d.dashed?"5,5":"none");
+                            .attr("cx", w / 2)
+                            .attr("cy", h / 2)
+                            .attr("rx", w / 2)
+                            .attr("ry", h / 2)
+                            .attr("fill", d.color)
+                            .attr("stroke", d.stroke)
+                            .style("stroke-dasharray", d.dashed ? "5,5" : "none");
                     } else if (d.shape === 'triangle') {
                         el.append("polygon")
-                          .attr("points", `${w/2},0 ${w},${h} 0,${h}`)
-                          .attr("fill", d.color).attr("stroke", d.stroke);
+                            .attr("points", `${w / 2},0 ${w},${h} 0,${h}`)
+                            .attr("fill", d.color)
+                            .attr("stroke", d.stroke);
                     } else if (d.shape === 'text') {
-                        // text only
+                        // sólo texto, no shape
                     } else {
                         el.append("rect")
-                          .attr("width", w).attr("height", h).attr("rx", 5)
-                          .attr("fill", d.color).attr("stroke", d.stroke).style("stroke-dasharray", d.dashed?"5,5":"none");
+                            .attr("width", w)
+                            .attr("height", h)
+                            .attr("rx", 5)
+                            .attr("fill", d.color)
+                            .attr("stroke", d.stroke)
+                            .style("stroke-dasharray", d.dashed ? "5,5" : "none");
                     }
 
                     el.append("text")
-                      .attr("class", "node-label")
-                      .attr("x", w/2)
-                      .attr("y", d.sublabel ? h/2 - 4 : h/2 + 4)
-                      .text(d.label);
+                        .attr("class", "node-label")
+                        .attr("x", w / 2)
+                        .attr("y", d.sublabel ? h / 2 - 4 : h / 2 + 4)
+                        .text(d.label);
 
                     if (d.sublabel) {
                         el.append("text")
-                          .attr("class", "node-sublabel")
-                          .attr("x", w/2).attr("y", h/2 + 14)
-                          .text(d.sublabel);
+                            .attr("class", "node-sublabel")
+                            .attr("x", w / 2)
+                            .attr("y", h / 2 + 14)
+                            .text(d.sublabel);
                     }
 
-                    // Value Text
+                    // Texto de valor
                     el.append("text")
-                      .attr("class", "node-value")
-                      .attr("x", w/2).attr("y", h + 14)
-                      .text(""); 
+                        .attr("class", "node-value")
+                        .attr("x", w / 2)
+                        .attr("y", h + 14)
+                        .text("");
                 });
             }
 
-            // ==================================================================
-            // 4. INITIALIZE & LISTEN FOR DATA
-            // ==================================================================
-            
-            drawFlowsheet();
-            updateMetrics(window.currentMetric);
+            // Dibujamos el flowsheet una vez
+            loadDataFromHash();
 
-            // Listen for Dash updates
-            window.addEventListener("message", (event) => {
-                const { type, flowData, nodeData } = event.data;
-                if (type === 'DASH_DATA_UPDATE') {
-                    console.log("Data received from Dash:", { flowData, nodeData });
-                    window.flowData = flowData || {};
-                    window.nodeData = nodeData || {};
-                    updateMetrics(window.currentMetric);
+            drawFlowsheet();
+
+            // Vinculamos radios
+            d3.selectAll(".controls input[name='metric']").on("change", function () {
+                const val = this.value;
+                if (["TMS", "Cu", "Mo"].includes(val)) {
+                    window.currentMetric = val;
+                    updateMetrics(val);
                 }
             });
 
-            // Listen for radio buttons
-            d3.selectAll(".controls input[name='metric']").on("change", function() {
-                updateMetrics(this.value);
-            });
-            
-            // Notify parent
-            if (window.parent) {
-                window.parent.postMessage({ type: 'IFRAME_READY' }, window.location.origin);
-            }
+            // Aplicamos la métrica inicial (por defecto TMS)
+            updateMetrics(window.currentMetric);
         }
+
+        // =======================================================
+        // ARRANQUE: DOMContentLoaded
+        // =======================================================
+        document.addEventListener("DOMContentLoaded", () => {
+            // Inicializa D3
+            initApp();
+
+            // Leer datos desde el hash (cuando se recarga con src que trae flowData/nodeData)
+            const hashParams = parseHashParams();
+            if (hashParams) {
+                const metricFromHash = hashParams.metric;
+                if (metricFromHash && ["TMS", "Cu", "Mo"].includes(metricFromHash)) {
+                    window.currentMetric = metricFromHash;
+                    const input = document.querySelector(`input[name="metric"][value="${metricFromHash}"]`);
+                    if (input) input.checked = true;
+                }
+
+                const flowFromHash = safeJSONDecode(hashParams.flowData);
+                const nodesFromHash = safeJSONDecode(hashParams.nodeData);
+                if (flowFromHash && nodesFromHash) {
+                    window.updateFlowsheet(flowFromHash, nodesFromHash);
+                }
+            }
+
+            // Notificar al padre que el iframe está listo
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: "IFRAME_READY" }, "*");
+                }
+            } catch (e) {
+                console.warn("No se pudo enviar IFRAME_READY al padre:", e);
+            }
+        });
+    })();
     </script>
 </body>
 </html>
