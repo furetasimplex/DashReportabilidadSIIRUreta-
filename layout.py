@@ -46,7 +46,7 @@ def render_header():
         [
             dbc.Col(html.Img(src=local_img_to_html(assets_folder, 'spenceBhpLogo.png'),
                              style={'height': '70px'}), width="auto"),
-            dbc.Col(html.Div("Control Estadístico Hidrometalúrgico",
+            dbc.Col(html.Div("Sistema Estadístico Balance Metalúrgico",
                              className="fs-3 fw-bold"), width="auto"),
         ],
         className="align-items-center g-4 py-2"

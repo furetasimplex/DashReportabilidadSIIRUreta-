@@ -57,7 +57,7 @@ def create_cell(cell_index):
         n_clicks=0
     )
     return html.Div(
-        id={'type': 'grid-cell-container', 'index': cell_index},
+        id={'type': 'grid-cell-container-sulfuro', 'index': cell_index},
         children=[html.Div(f'{cell_index}'), html.Div([inner_cell], style=grid_style)],
         className='grid-cell',
         style=outer_style
@@ -363,7 +363,7 @@ def register_callbacks(app):
                 n_clicks=0
             )
             return html.Div(
-                id={'type': 'grid-cell-container', 'index': cell_index},
+                id={'type': 'grid-cell-container-sulfuro', 'index': cell_index},
                 children=[html.Div(f'{cell_index}'), html.Div([inner_cell], style=grid_style)],
                 className='grid-cell',
                 style=outer_style

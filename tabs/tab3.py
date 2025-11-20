@@ -93,7 +93,7 @@ def render_tab3():
                      dbc.Col([
                         html.Label("Fecha Inicio", className="form-label fw-semibold"),
                         dcc.DatePickerSingle(
-                            id="fecha-inicio",
+                            id="fecha-inicio-t3",
                             date="2024-01-01",
                             display_format="YYYY-MM-DD",
                             className="w-100"   # ocupa el ancho de la columna
@@ -102,7 +102,7 @@ def render_tab3():
                     dbc.Col([
                         html.Label("Fecha Inicio", className="form-label fw-semibold"),
                         dcc.DatePickerSingle(
-                            id="fecha-fin",
+                            id="fecha-fin-t3",
                             date="2025-12-31",
                             display_format="YYYY-MM-DD",
                             className="w-100"   # ocupa el ancho de la columna
@@ -123,7 +123,7 @@ def render_tab3():
                     dbc.Col(
                         dbc.Button(
                             [html.I(className="bi bi-arrow-repeat me-2"), "Actualizar"],
-                            id="boton-filtrar", n_clicks=1, color="primary", className="mt-2 mt-md-0"
+                            id="boton-filtrar-t3", n_clicks=1, color="primary", className="mt-2 mt-md-0"
                         ),
                         md=2
                     )
@@ -228,9 +228,9 @@ def register_tab3_callbacks(app):
             Output("parcela_tab3", "value"),
             Output("modulo_tab3", "value"),
         ],
-        [Input("boton-filtrar", "n_clicks")],
-        [State("fecha-inicio", "date"),
-         State("fecha-fin", "date"),
+        [Input("boton-filtrar-t3", "n_clicks")],
+        [State("fecha-inicio-t3", "date"),
+         State("fecha-fin-t3", "date"),
          State("sel-PAD", "value")]
     )
     def actualizar_filtros(n_clicks, f_ini, f_fin, pad):
@@ -272,8 +272,8 @@ def register_tab3_callbacks(app):
             Input("campania_tab3", "value"),
             Input("parcela_tab3", "value"),
             Input("modulo_tab3", "value"),
-            Input("fecha-inicio", "date"),
-            Input("fecha-fin", "date"),
+            Input("fecha-inicio-t3", "date"),
+            Input("fecha-fin-t3", "date"),
             Input("sel-PAD", "value")
         ]
     )
