@@ -142,8 +142,8 @@ subtabs = html.Div(
                 children=[
                     dcc.Tab(label="Importar data base", value="tab7", children=tab_import_container.layout),
                     dcc.Tab(label="Reconciliador Area Seca", value="recon", children=tab_recon_container.layout),
-                    dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro",disabled=True,
-                    children=tab_recon_container_hidro.layout),
+                    #dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro",disabled=True,
+                    #children=tab_recon_container_hidro.layout),
                 ],
             )
         ),

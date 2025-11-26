@@ -1,4 +1,4 @@
-# tabs/tab_recon_container.py
+
 from dash import html, dcc
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
@@ -10,13 +10,12 @@ from tabs import tabreportabilidad
 layout = dbc.Card(
     [
         dcc.Store(id="active-case", data={}),
-        dcc.Store(id="recon-data", data=None, storage_type="local"),
+        dcc.Store(id="recon-data", data=None, storage_type="memory"),
         dbc.CardHeader(
             html.H4(id="header-recon-title", className="mb-0 text-primary fw-bold")
         ),
         dbc.CardBody(
             [
-                
                 dcc.Tabs(
                     id="recon-subtabs",
                     value="recon-admin",
@@ -28,7 +27,28 @@ layout = dbc.Card(
                         dcc.Tab(label="3 Resumen Reconciliación", value="tab-reporte"),
                     ],
                 ),
-                html.Div(id="recon-content", className="mt-3"),
+                
+                html.Div(
+                    id="recon-content-container", 
+                    className="mt-3", 
+                    children=[
+                        html.Div(
+                            id="content-recon-admin", 
+                            children=render_recon_cas(), 
+                            style={'display': 'block'} 
+                        ),
+                        html.Div(
+                            id="content-recon-6", 
+                            children=render_tab6(), 
+                            style={'display': 'none'} 
+                        ),
+                        html.Div(
+                            id="content-tab-reporte", 
+                            children=tabreportabilidad.render_layout_reporte(), 
+                            style={'display': 'none'} 
+                        ),
+                    ]
+                ),
             ]
         ),
     ],
@@ -39,16 +59,27 @@ def register_callbacks(app):
     register_recon_callbacks(app)
     register_tab6_callbacks(app)
 
-    @app.callback(Output("recon-content", "children"), Input("recon-subtabs", "value"))
-    def _render_content(subtab_value):
+    @app.callback(
+        [
+            Output("content-recon-admin", "style"),
+            Output("content-recon-6", "style"),
+            Output("content-tab-reporte", "style"),
+        ],
+        Input("recon-subtabs", "value"),
+    )
+    def toggle_tab_content(subtab_value):
+        style_show = {'display': 'block'}
+        style_hide = {'display': 'none'}
+
         if subtab_value == "recon-admin":
-            return render_recon_cas()
+            return style_show, style_hide, style_hide
         elif subtab_value == "recon-6":
-            return render_tab6()
+            return style_hide, style_show, style_hide
         elif subtab_value == "tab-reporte":
-            # Aquí puedes llamar a una nueva función o archivo para el layout de reportes
-            return tabreportabilidad.render_layout_reporte()
-        return html.Div("Seleccione una pestaña de importación.", className="text-muted")
+            return style_hide, style_hide, style_show
+            
+        
+        return style_show, style_hide, style_hide
     
     @app.callback(
         Output("header-recon-title", "children"),
