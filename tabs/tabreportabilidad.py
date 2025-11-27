@@ -12,6 +12,45 @@ import dash_ag_grid as dag
 import numpy as np
 import io
 
+GEKKO_ERROR_MAP = {
+    "Solution Not Found": "No se encontró una solución válida. "
+                          "El modelo no pudo cerrar los balances con las mediciones actuales. Revise datos de entrada y tolerancias.",
+
+    "Infeasible": "El modelo es infactible: las restricciones o ecuaciones se contradicen. "
+                  "Revise signos, matriz de balance y límites de variables.",
+
+    "Maximum Iterations": "La optimización no convergió dentro del número máximo de iteraciones. "
+                          "Puede requerir más iteraciones o datos menos ruidosos.",
+
+    "APMonitor Error": "Error interno de APMonitor. "
+                       "Puede deberse a divisiones por cero o formulación problemática.",
+
+    "Model Error": "El modelo tiene un error en su estructura o ecuaciones. "
+                   "Verifique índices, tamaños de matrices y límites.",
+
+    # fallback
+    "Unknown": "Ocurrió un error inesperado durante la optimización."
+}
+def traducir_error_gekkp(e: Exception):
+    mensaje = str(e)
+
+    for key in GEKKO_ERROR_MAP:
+        if key in mensaje:
+            return GEKKO_ERROR_MAP[key]
+
+    return GEKKO_ERROR_MAP["Unknown"]
+def make_toast(mensaje, header="Error en Reconciliación", color="danger", duration=5000):
+    return dbc.Toast(
+        mensaje,
+        header=header,
+        icon=color,
+        duration=duration,
+        is_open=True,
+        dismissable=True,
+        style={"maxWidth": "350px"},
+    )
+
+
 dict_style_boton_2 = {
     'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',
     'border-radius': '10px',
@@ -57,8 +96,13 @@ OUTPUT_DIR = BASE_DIR / "Desbalances"
 
 # 1) LAYOUT (vista)
 def render_layout_reporte():
-    return html.Div([
+        return html.Div([
         # Componente de descarga (si usas exportación adicional)
+        html.Div(
+        id="toast-container-reporte",
+        className="position-fixed top-0 end-0 p-3",
+        style={"zIndex": 9999},
+        ),
         dcc.Download(id="dl-reporte-caso"),
 
         # ——————————————————————  SECCIÓN: RECONCILIADOR (arriba)  ——————————————————————
@@ -73,7 +117,7 @@ def render_layout_reporte():
                 # Barra de acciones
                 dbc.Row([
                     dbc.Col([
-                        html.H5('Ejecutar reconciliador AREA SECA y revisión de resultados', className="mb-0")
+                        html.H5('Ejecutar reconciliador y revisión de resultados', className="mb-0")
                     ], width=8),
                     dbc.Col([
                         dbc.Button('Ejecutar', id='btn-recon', n_clicks=0,
@@ -197,21 +241,23 @@ def register_callbacks_reporte(app):
     @callback(
     Output('recon-resultados','rowData'),
     Output('recon-desbalances','rowData'),
+    Output('toast-container-reporte', 'children'),
     Input('btn-recon','n_clicks'),
     State('recon-data','data'),               # ← datos persistidos
     State('active-case','data'),              # ← caso activo unificado
     prevent_initial_call=True
 )
     def get_recon(n_clicks, data_base, active_case):
+        print(f"data_base: {data_base}")
         if not n_clicks:
-            return [], []
+            return [], [], []
         if not data_base:
-            return [], []
+            return [], [], []
 
         try:
             # 1) Base desde la grilla
             dfb = pd.DataFrame(data_base)
-
+            print(dfb)
             # 2) Normalización numérica
             dfb['id_flujo'] = pd.to_numeric(dfb.get('id_flujo', np.arange(1, len(dfb)+1)), errors='coerce')
             dfb.sort_values('id_flujo', inplace=True)
@@ -248,11 +294,20 @@ def register_callbacks_reporte(app):
             df_med_all.rename(columns={'Flujo': 'Masa Medida', 'nombre_flujo': 'Flujo', 'codigo_flujo': 'Codigo'}, inplace=True)
             df_out = resultados.merge(df_med_all, how='left', on='Flujo')
 
-            return df_out.round(4).to_dict('records'), df_des.round(4).to_dict('records')
+            return df_out.round(4).to_dict('records'), df_des.round(4).to_dict('records'),[]
 
         except Exception as e:
-            print(f"❌ Error durante la reconciliación final: {e}")
-            return [], []
+            error_es = traducir_error_gekkp(e)
+            print(f"❌ Error durante la reconciliación final: {error_es}\n🔍 Detalle técnico: {e}")
+
+            toast = make_toast(
+                mensaje=error_es,
+                header="Error en Reconciliación",
+                color="danger",
+                duration=6000
+            )
+
+            return [], [], [toast]
 
     # ==============================================================================
     # CALLBACK #3: PUBLICAR DATOS

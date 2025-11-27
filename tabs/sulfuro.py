@@ -57,7 +57,7 @@ def create_cell(cell_index):
         n_clicks=0
     )
     return html.Div(
-        id={'type': 'grid-cell-container', 'index': cell_index},
+        id={'type': 'grid-cell-container-sulfuro', 'index': cell_index},
         children=[html.Div(f'{cell_index}'), html.Div([inner_cell], style=grid_style)],
         className='grid-cell',
         style=outer_style
@@ -72,7 +72,8 @@ grid_children = [top_row, bottom_row]
 # =========================
 #  Layout del tab
 # =========================
-layout = html.Div([
+def layout():
+    return html.Div([
     # Fila 1: fechas + reset
     html.Div([
         html.Div([
@@ -334,7 +335,7 @@ def register_callbacks(app):
     # 1) Redibuja grilla con coloreo de celdas seleccionadas
     @app.callback(
         Output('sulfuro-grid-main-container', 'children'),
-        Input('selected-cells', 'data')
+        Input('selected-cells-sulfuro', 'data')
     )
     def update_grid_layout(selected_cells):
         def create_zoomed_cell(cell_index):
@@ -362,7 +363,7 @@ def register_callbacks(app):
                 n_clicks=0
             )
             return html.Div(
-                id={'type': 'grid-cell-container', 'index': cell_index},
+                id={'type': 'grid-cell-container-sulfuro', 'index': cell_index},
                 children=[html.Div(f'{cell_index}'), html.Div([inner_cell], style=grid_style)],
                 className='grid-cell',
                 style=outer_style
@@ -376,10 +377,10 @@ def register_callbacks(app):
 
     # 2) Toggle de selección de celdas (tolerante a versiones Dash)
     @app.callback(
-        Output('selected-cells', 'data', allow_duplicate=True),
+        Output('selected-cells-sulfuro', 'data', allow_duplicate=True),
         Input({'type': 'sulfuro-inner-cell', 'index': ALL}, 'n_clicks_timestamp'),
         Input('sulfuro-reset-button', 'n_clicks'),
-        State('selected-cells', 'data'),
+        State('selected-cells-sulfuro', 'data'),
         prevent_initial_call=True
     )
     def update_selected_cells(ts_list, reset_clicks, selected_cells):
@@ -410,7 +411,7 @@ def register_callbacks(app):
         Output('sulfuro-campanias', 'options'),
         Output('sulfuro-campanias', 'value'),
         Input('sulfuro-detect-camp-btn', 'n_clicks'),
-        State('selected-cells', 'data'),
+        State('selected-cells-sulfuro', 'data'),
         State('sulfuro-date-picker-range', 'start_date'),
         State('sulfuro-date-picker-range', 'end_date'),
         prevent_initial_call=True
@@ -427,7 +428,7 @@ def register_callbacks(app):
         Output('sulfuro-cell-table', 'data'),
         Output('sulfuro-cell-graph', 'figure'),            # total ponderado
         Output('sulfuro-cell-graph-parcelas', 'figure'),   # por parcela
-        Input('selected-cells', 'data'),
+        Input('selected-cells-sulfuro', 'data'),
         Input('sulfuro-date-picker-range', 'start_date'),
         Input('sulfuro-date-picker-range', 'end_date'),
         Input('sulfuro-campanias', 'value')

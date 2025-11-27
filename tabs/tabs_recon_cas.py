@@ -1,4 +1,5 @@
 # tabs_recon_cas.py
+import json
 import os
 import io
 import base64
@@ -10,13 +11,16 @@ from dash import html, dcc, Input, Output, State, ctx
 import dash_bootstrap_components as dbc
 import dash_ag_grid as dag
 from dash import no_update
+import urllib
+import time
 
 # Utils propios
 from tabs.utils_dash import (
     get_fig_bal_casos,        # devuelve src para <img> (base64/data-url o ruta servible)
     get_agua_his_casos,       # histórico
     get_data_agua_casos,      # caso activo
-    get_data_save_casos,      # persiste edición de caso
+    get_data_save_casos,
+    get_info_caso_html,      # persiste edición de caso
 )
 
 # ====== Definiciones de columnas (AgGrid) ======
@@ -128,57 +132,34 @@ def render_recon_cas():
         dbc.Card([
             dbc.CardHeader(html.H5("Visualización", className="mb-0")),
             dbc.CardBody([
-                html.Label("Valores a visualizar", className="fw-semibold"),
-                dbc.RadioItems(
-                    id="agg-tab2",
-                    options=[
-                        {"label": "Medidos",      "value": "Medido"},
-                        {"label": "Reconciliado", "value": "Reconciliado"},
-                        {"label": "Tolerancia",   "value": "Tolerancia"},
-                    ],
-                    value="Reconciliado",
-                    inline=True,
-                ),
+                
                 html.Div(className="my-3"),
                 dbc.Row([
                     dbc.Col([
                         dcc.Loading(
-                            html.Img(
-                                id="imagen_balance",
-                                style={"width": "100%", "maxWidth": "1100px", "cursor": "zoom-in"}
-                            ),
+                                html.Iframe(
+                                    id="flowsheet-iframe",
+                                    src="/assets/ripios.html",
+                                    style={
+                                        "width": "100%",
+                                        "height": "80vh",
+                                        "border": "none",
+                                        "overflow": "hidden"
+                                    }
+                                ),
                             type="default"
                         ),
-                        dbc.Stack(direction="horizontal", gap=2, className="mt-2", children=[
-                            dbc.Button(
-                                [html.I(className="bi bi-arrows-fullscreen me-2"), "Ver a pantalla completa"],
-                                id="btn-full-img", color="secondary", outline=True
-                            ),
-                        ]),
+                        html.Div(id="dummy-div", style={"display": "none"}),
+                        #dbc.Stack(direction="horizontal", gap=2, className="mt-2", children=[
+                        #    dbc.Button(
+                        #        [html.I(className="bi bi-arrows-fullscreen me-2"), "Ver a pantalla completa"],
+                        #        id="btn-full-img", color="secondary", outline=True
+                        #    ),
+                        #]),
                     ], md=12),
                 ]),
 
-                # Modal fullscreen con zoom
-                dbc.Modal(
-                    id="modal-img", is_open=False, fullscreen=True, scrollable=True, size="xl",
-                    children=[
-                        dbc.ModalHeader(dbc.ModalTitle("Imagen: Balance")),
-                        dbc.ModalBody([
-                            html.Div("Zoom", className="mb-1 small text-muted"),
-                            dcc.Slider(id="zoom-img", min=0.5, max=3, step=0.1, value=1),
 
-                            # Contenedor con scroll para la imagen ampliada
-                            html.Div(
-                                id="img-zoom-wrapper",
-                                style={"overflow": "auto", "border": "1px solid #eee", "height": "70vh", "marginTop": "0.5rem"},
-                                children=html.Img(id="imagen_balance_modal", style={"width": "100%", "height": "auto"})
-                            ),
-                        ]),
-                        dbc.ModalFooter(
-                            dbc.Button("Cerrar", id="close-modal-img", className="ms-auto")
-                        ),
-                    ]
-                )
             ])
         ], className="mb-4 shadow-sm border-0"),
 
@@ -316,7 +297,54 @@ def register_recon_callbacks(app):
         except Exception as e:
             return f"❌ Error al guardar: {e}"
 
-    # Actualizar imagen según selección e id caso activo
+ 
+    
+    @app.callback(
+        Output('flowsheet-iframe', 'src'),
+        Input("id_caso_activo", "value"),
+        prevent_initial_call=True,
+    )
+    def actualizar_flowsheet(caso_id):
+        if not caso_id:
+            return no_update
+
+        try:
+            info = get_info_caso_html(caso_id)
+            flows = info["flowData"]
+            nodes = info["nodeData"]
+
+            # Convertir a JSON
+            flow_json_str = json.dumps(flows)
+            node_json_str = json.dumps(nodes)
+
+            # Encode seguro
+            flow_encoded = urllib.parse.quote(flow_json_str, safe='')
+            node_encoded = urllib.parse.quote(node_json_str, safe='')
+            metric_encoded = urllib.parse.quote("TMS")
+
+            html_file = "/assets/ripios.html"
+
+            # Cache-buster para forzar recarga REAL del HTML
+            cache_buster = f"?v={time.time()}"
+
+            # Construcción FINAL del src
+            new_src = (
+                f"{html_file}{cache_buster}"
+                f"#flowData={flow_encoded}"
+                f"&nodeData={node_encoded}"
+                f"&metric={metric_encoded}"
+            )
+
+            print("Updated iframe src:", new_src)
+            return new_src
+
+        except Exception as e:
+            print("❌ ERROR en actualizar_flowsheet:", e)
+            return no_update
+
+
+"""
+   # Actualizar imagen según selección e id caso activo
     @app.callback(
         Output('imagen_balance', 'src'),
         Input('agg-tab2', 'value'),
@@ -358,3 +386,5 @@ def register_recon_callbacks(app):
     def zoom_image(zoom):
         zoom = zoom or 1
         return {"width": f"{int(zoom*100)}%", "height": "auto"}
+        
+"""

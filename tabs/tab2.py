@@ -81,6 +81,7 @@ def render_tab2():
                 dbc.RadioItems(
                     id="agg-tab2",
                     options=[
+                        {"label": "Diaria", "value": "dia"},
                         {"label": "Semanal", "value": "semana"},
                         {"label": "Mensual", "value": "mes"}
                     ],
@@ -209,27 +210,51 @@ def register_tab2_callbacks(app):
         df['Semana'] = df['Fecha'].dt.isocalendar().week
         df['Año'] = df['Fecha'].dt.year
         df['Mes'] = df['Fecha'].dt.month
-
-        # Si no hay variables seleccionadas, devolver placeholders
-        if not var_list:
-            empty = go.Figure()
-            empty.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=10, b=10))
-            return empty, empty, empty, empty, html.Div(), html.Div()
-
-        group_col = "Semana" if agg == "semana" else "Mes"
-
-        # Tendencia temporal
+        df['Dia'] = df['Fecha'].dt.day
         fig_linea = go.Figure()
         for var in var_list:
             if var not in df.columns:
                 continue
-            df_group = df.groupby(["Año", group_col])[var].mean().reset_index()
-            df_group["Periodo"] = df_group["Año"].astype(str) + "-" + df_group[group_col].astype(str)
+            # ---- DIA ----
+            if agg == "dia":
+                df_group = df.groupby(df["Fecha"].dt.date)[var].mean().reset_index()
+                df_group["Periodo"] = pd.to_datetime(df_group["Fecha"])
+
+            # ---- SEMANA ----
+            elif agg == "semana":
+                df_group = (
+                    df.groupby(["Año", "Semana"])[var]
+                    .mean()
+                    .reset_index()
+                )
+                df_group["Periodo"] = pd.to_datetime(
+                    df_group["Año"].astype(str) + "-W" + df_group["Semana"].astype(str) + "-1",
+                    format="%G-W%V-%u"
+                )
+
+            # ---- MES ----
+            else:
+                df_group = (
+                    df.groupby("Mes")[var]
+                    .mean()
+                    .reset_index()
+                )
+                df_group["Periodo"] = pd.to_datetime(df_group["Mes"] + "-01")
+
+            # ---- Plot ----
             fig_linea.add_trace(go.Scatter(
-                x=df_group["Periodo"], y=df_group[var], mode='lines+markers', name=var
+                x=df_group["Periodo"],
+                y=df_group[var],
+                mode="lines+markers",
+                name=var
             ))
-        fig_linea.update_layout(template="plotly_white", xaxis_tickangle=-45,
-                               margin=dict(l=10, r=10, t=10, b=10))
+
+        fig_linea.update_layout(
+            template="plotly_white",
+            xaxis_tickangle=-45,
+            margin=dict(l=10, r=10, t=10, b=10),
+            hovermode="x unified"
+        )
 
         # Dispersión con tendencia
         if var2 and var2 in df.columns and var_list[0] in df.columns:

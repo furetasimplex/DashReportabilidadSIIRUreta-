@@ -67,7 +67,7 @@ def render_tab1():
                 dbc.Row([
                     
                      dbc.Col([
-                        html.Label("Fecha Inicio", className="form-label fw-semibold"),
+                        html.Label("Fecha Fin", className="form-label fw-semibold"),
                         dcc.DatePickerSingle(
                             id="fecha-inicio",
                             date="2024-01-01",
@@ -156,6 +156,7 @@ def register_tab1_callbacks(app):
                             dbc.RadioItems(
                                 id="agregacion-tiempo",
                                 options=[
+                                    {"label": "Diaria", "value": "dia"},
                                     {"label": "Semanal", "value": "semana"},
                                     {"label": "Mensual", "value": "mes"}
                                 ],
@@ -280,7 +281,16 @@ def register_tab1_callbacks(app):
             df = df[df["Fase"] == fase]
 
         # Agregación temporal
-        if frecuencia == "semana":
+        if frecuencia == "dia":
+            df["Fecha"] = pd.to_datetime(df["Fecha"])  # asegúrate de que sea datetime real
+            df_group = (
+                df.groupby(df["Fecha"].dt.date)[variables]
+                .mean()
+                .reset_index()
+                .rename(columns={"Fecha": "Fecha"})
+            )
+            df_group["Fecha"] = pd.to_datetime(df_group["Fecha"])
+        elif frecuencia == "semana":
             df_group = df.groupby(["Año", "Semana"])[variables].mean().reset_index()
             df_group["Fecha"] = pd.to_datetime(
                 df_group["Año"].astype(str) + "-W" + df_group["Semana"].astype(str) + "-1",
