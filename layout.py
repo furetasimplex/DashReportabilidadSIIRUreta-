@@ -25,7 +25,10 @@ from tabs import tab_report
 
 from tabs.tabReconHidro.tab_recon_hidro import render_recon_hidro
 
-
+# en tu main (si centralizas imports)
+import report_export.callbacks.reportabilidad_cb
+# (opcional) si usarás también el export mensual
+import report_export.callbacks.report_cb
 # === Utilidades ===
 project_folder = os.path.dirname(os.path.realpath(__file__))
 assets_folder = os.path.join(project_folder, 'assets')
@@ -225,7 +228,7 @@ def create_layout(app):
     tab_oxido.register_callbacks(app)#
     tabreportabilidad.register_callbacks_reporte(app)
     tabreportabilidad_hidro.register_callbacks_reporte(app)
-    tab_report.register_callbacks(app)
+    #tab_report.register_callbacks(app)
 
     return dbc.Container(
         [
