@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Area Seca Flowsheet (On-Screen Data)</title>
+    <title>Flowsheet Area Seca - Espaciado N9 Mejorado</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             overflow: hidden;
             background: #fcfcfc;
@@ -16,121 +16,90 @@
             height: 100vh;
         }
         
-        /* --- Radio Button Controls --- */
+        /* --- Controles --- */
         .controls {
             position: fixed;
             top: 20px;
             left: 20px;
             background: rgba(255, 255, 255, 0.95);
-            padding: 12px 15px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 10;
-            border: 1px solid #ddd;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+            border: 1px solid #ccc;
             display: flex;
             gap: 15px;
         }
-        .control-group {
-            display: flex;
-            align-items: center;
-        }
-        .controls label {
-            margin-left: 5px;
-            font-weight: 500;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .controls input {
-            cursor: pointer;
-        }
+        .control-group { display: flex; align-items: center; }
+        .controls label { margin-left: 5px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .controls input { cursor: pointer; }
 
         /* --- Tooltip --- */
         .tooltip {
             position: absolute;
             padding: 8px 12px;
-            font-size: 13px;
+            font-size: 12px;
             background: rgba(0, 0, 0, 0.85);
             color: white;
             border-radius: 4px;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.2s;
-            z-index: 10;
+            z-index: 100;
         }
 
-        /* --- Node Styling --- */
-        .node text {
-            pointer-events: none;
-            text-anchor: middle;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .node .node-label { fill: #333; }
-        .node .node-sublabel { font-size: 10px; fill: #777; }
+        /* --- Estilos Generales SVG --- */
+        text { font-family: sans-serif; pointer-events: none; }
         
-        /* Data value text on node */
-        .node-value {
-            font-size: 10px;
-            font-weight: 700;
-            fill: #c94300; /* Rojo/Naranja para datos de nodos */
-        }
+        /* Etiquetas de Nodos */
+        .node-label { font-size: 11px; font-weight: bold; fill: #000; text-anchor: middle; }
+        .node-sublabel { font-size: 9px; fill: #555; text-anchor: middle; }
+        .node-value { font-size: 10px; font-weight: 800; fill: #c0392b; text-anchor: middle; }
+        
+        /* Zonas (Cajas punteadas) */
+        .zone-rect { fill: none; stroke-width: 2px; stroke-dasharray: 8,5; }
+        .zone-label { font-size: 14px; font-weight: bold; fill: #333; text-anchor: end; }
 
-        .node rect, .node ellipse, .node path {
+        /* Interacción Nodos */
+        .node rect, .node circle, .node polygon, .node ellipse {
+            stroke-width: 1.5px;
+            transition: all 0.3s;
             cursor: pointer;
-            transition: all 0.2s;
-            stroke-width: 2px;
         }
-        .node:not(.shape-text):hover rect, 
-        .node:not(.shape-text):hover ellipse, 
-        .node:not(.shape-text):hover path {
+        .node:hover rect, .node:hover circle, .node:hover ellipse, .node:hover polygon {
             stroke: #007aff !important;
             stroke-width: 3px !important;
-            filter: brightness(1.05);
+            filter: drop-shadow(0 0 5px rgba(0,122,255,0.4));
         }
 
-        /* --- Link Styling --- */
+        /* Enlaces */
         .link path {
             fill: none;
-            stroke: #555;
+            stroke: #444;
             stroke-width: 1.5px;
+            transition: stroke-width 0.2s;
         }
-        .link text {
-            font-size: 10px;
-            fill: #000;
-            font-weight: bold;
-            text-anchor: middle;
-            paint-order: stroke;
-            stroke: #fcfcfc;
-            stroke-width: 3px;
-        }
-        /* Data value text on link */
-        .link-value {
-            font-size: 10px;
-            fill: #007aff; /* Azul para datos de flujo */
-            font-weight: 700;
-            text-anchor: middle;
-            paint-order: stroke;
-            stroke: #fcfcfc;
-            stroke-width: 3px;
-        }
+        .link:hover path { stroke: #007aff; stroke-width: 2.5px; }
+        
+        .link-label { font-size: 10px; font-weight: bold; fill: #000; text-anchor: middle; paint-order: stroke; stroke: #fcfcfc; stroke-width: 3px; }
+        .link-value { font-size: 9px; font-weight: bold; fill: #0056b3; text-anchor: middle; paint-order: stroke; stroke: #fcfcfc; stroke-width: 3px; }
 
     </style>
 </head>
 <body>
 
-    <!-- Radio buttons for metric selection -->
     <div class="controls">
         <div class="control-group">
             <input type="radio" id="metric-tms" name="metric" value="TMS" checked>
-            <label for="metric-tms">Medido</label>
+            <label for="metric-tms">Medido (TMS)</label>
         </div>
         <div class="control-group">
             <input type="radio" id="metric-cu" name="metric" value="Cu">
-            <label for="metric-cu">Reconciliado</label>
+            <label for="metric-cu">Reconciliado (Cu)</label>
         </div>
         <div class="control-group">
             <input type="radio" id="metric-mo" name="metric" value="Mo">
-            <label for="metric-mo">Tolerancia</label>
+            <label for="metric-mo">Tolerancia (Mo)</label>
         </div>
     </div>
 
@@ -138,496 +107,358 @@
     <div id="tooltip" class="tooltip"></div>
 
     <script>
-(function () {
+    (function () {
+        // --- ESTADO GLOBAL ---
+        window.flowData = {};
+        window.nodeData = {};
+        window.currentMetric = "TMS";
 
-    // =======================================================
-    // ESTADO GLOBAL
-    // =======================================================
-    window.flowData = {};
-    window.nodeData = {};
-    window.currentMetric = "TMS";
-    window._updateMetrics = null;
-    window.flowsheetReady = false;
+        // =========================================================
+        // 1. DATOS DE NODOS (Con N9 más espaciado)
+        // =========================================================
+        const nodesData = [
+            // --- ZONA AREA SECA (AZUL) ---
+            { id: "mina", label: "Mina", x: 50, y: 150, type: "box-open", w: 80, h: 40 },
+            { id: "stock", label: "Stock", x: 50, y: 300, type: "box-open", w: 80, h: 40 },
+            
+            { id: "N1", label: "N1", x: 200, y: 225, type: "circle", r: 20, fill: "#cfe2f3", stroke: "#6fa8dc" },
+            
+            { id: "chancado", label: "Chancado", sublabel: "(1°,2°,3°)", x: 350, y: 205, type: "rect", w: 120, h: 50, fill: "#cfe2f3", stroke: "#6fa8dc" },
+            
+            { id: "silo", label: "Silo", x: 550, y: 205, type: "rect", w: 60, h: 50, fill: "#cfe2f3", stroke: "#6fa8dc" },
+            { id: "inv_silo", label: "Inventario", x: 560, y: 100, type: "triangle", w: 40, h: 40, fill: "#ffff88", stroke: "#d6b656" },
+            
+            { id: "N4", label: "N4", x: 750, y: 150, type: "circle", r: 18, fill: "#cfe2f3", stroke: "#6fa8dc" },
+            { id: "N5", label: "N5", x: 750, y: 300, type: "circle", r: 18, fill: "#cfe2f3", stroke: "#6fa8dc" },
+            
+            { id: "srr_top", label: "SRR", sublabel: "CV 002", x: 680, y: 80, type: "circle-small", r: 15, fill: "#cfe2f3", stroke: "#999" },
+            { id: "sal_top", label: "SAL", sublabel: "CV 201", x: 820, y: 80, type: "circle-small", r: 15, fill: "#cfe2f3", stroke: "#999" },
+            { id: "srr_bot", label: "SRR", sublabel: "CV 003", x: 680, y: 400, type: "circle-small", r: 15, fill: "#cfe2f3", stroke: "#999" },
+            { id: "sal_bot", label: "SAL", sublabel: "CV 202", x: 820, y: 400, type: "circle-small", r: 15, fill: "#cfe2f3", stroke: "#999" },
+            
+            { id: "aglomerado", label: "Aglomerado", sublabel: "(Tambor 1, Tambor 2)", x: 1200, y: 200, type: "rect", w: 160, h: 60, fill: "#cfe2f3", stroke: "#6fa8dc" },
 
-    // =======================================================
-    // PARSE HASH
-    // =======================================================
-    function parseHashParams() {
-        if (!window.location.hash || window.location.hash.length <= 1) return null;
-        const query = window.location.hash.substring(1);
-        const params = new URLSearchParams(query);
-        const out = {};
+            // --- ZONA LIXIVIACION (ROJA) ---
+            { id: "lix_sulf", label: "Lix", sublabel: "(Pad Sulf)", x: 850, y: 650, type: "rect", w: 100, h: 60, fill: "#fce5cd", stroke: "#e69138" },
+            { id: "lix_ox", label: "Lix", sublabel: "(Pad Ox)", x: 1050, y: 650, type: "rect", w: 100, h: 60, fill: "#fce5cd", stroke: "#e69138" },
+            
+            { id: "inv_sulf", label: "Inventario", x: 700, y: 660, type: "triangle", w: 30, h: 30, fill: "#ffff88", stroke: "#d6b656" },
+            { id: "inv_ox", label: "Inventario", x: 1300, y: 660, type: "triangle", w: 30, h: 30, fill: "#ffff88", stroke: "#d6b656" },
+            
+            // >> CAMBIO AQUI: N9 bajado de 800 a 860
+            { id: "N9", label: "N9", x: 950, y: 860, type: "circle", r: 20, fill: "#fce5cd", stroke: "#e69138" },
+            
+            // >> CAMBIO AQUI: Botaderos bajado de 900 a 980 y hecho más ancho
+            { id: "botaderos", label: "Hacia botaderos", x: 850, y: 980, type: "dashed-rect", w: 300, h: 30 }
+        ];
 
-        for (const [k, v] of params.entries()) out[k] = v;
-        return out;
-    }
+        // =========================================================
+        // 2. DATOS DE CONEXIONES
+        // =========================================================
+        const edgesData = [
+            { id: "F2", source: "mina", target: "N1", label: "F2", pathType: "h-v" },
+            { id: "F1", source: "stock", target: "N1", label: "F1", pathType: "h-v" },
+            { id: "F3", source: "N1", target: "chancado", label: "F3", pathType: "straight" },
+            { id: "F4", source: "chancado", target: "silo", label: "F4", pathType: "straight" },
+            { id: "F5", source: "silo", target: "inv_silo", label: "F5", pathType: "straight" },
+            
+            { id: "F6", source: "silo", target: "N4", label: "F6", pathType: "h-v-h" },
+            { id: "F7", source: "silo", target: "N5", label: "F7", pathType: "h-v-h" },
+            
+            { id: "F8", source: "srr_top", target: "N4", label: "F8", pathType: "v-h" },
+            { id: "F10", source: "sal_top", target: "N4", label: "F10", pathType: "v-h" },
+            
+            { id: "F9", source: "srr_bot", target: "N5", label: "F9", pathType: "v-h" },
+            { id: "F11", source: "sal_bot", target: "N5", label: "F11", pathType: "v-h" },
+            
+            { id: "F12", source: "N4", target: "aglomerado", label: "F12 (CV008)", pathType: "h-v" },
+            { id: "F13", source: "N5", target: "aglomerado", label: "F13 (CV108)", pathType: "h-v" },
+            
+            { id: "F14", source: "aglomerado", target: "lix_sulf", label: "F14", pathType: "v-h-v" },
+            { id: "F15", source: "aglomerado", target: "lix_ox", label: "F15", pathType: "v-h-v" },
 
-    function safeJSONDecode(encoded) {
-        if (!encoded) return null;
+            { id: "F16", source: "lix_sulf", target: "inv_sulf", label: "F16", pathType: "straight" },
+            { id: "F17", source: "lix_ox", target: "inv_ox", label: "F17", pathType: "straight" },
+            
+            { id: "F18", source: "lix_sulf", target: "N9", label: "F18", pathType: "v-h" },
+            { id: "F19", source: "lix_ox", target: "N9", label: "F19", pathType: "v-h" },
+            
+            { id: "F20", source: "N9", target: "botaderos", label: "F20", pathType: "straight" },
+            
+            // Ajuste visual offset para llegar a la nueva caja ancha de botaderos
+            { id: "F21", source: "lix_sulf", target: "botaderos", label: "F21", pathType: "v-direct-bot", offset: -50 },
+            { id: "F22", source: "lix_ox", target: "botaderos", label: "F22", pathType: "v-direct-bot", offset: 50 }
+        ];
+        
+        // >> CAMBIO AQUI: Zona lix altura aumentada a 520 para que quepa N9 y Botaderos
+        const zonesData = [
+            { id: "seca", label: "APILADO / AREA SECA", x: 10, y: 20, w: 1400, h: 480, color: "blue" },
+            { id: "lix", label: "LIXIVIACIÓN", x: 600, y: 530, w: 850, h: 520, color: "red" }
+        ];
 
-        try {
-            return JSON.parse(decodeURIComponent(encoded));
-        } catch (e1) {
-            console.warn("Decode 1 falló → intentando sanitizar %...");
-            try {
-                const fixed = encoded.replace(/%(?![0-9A-F]{2})/gi, "%25");
-                return JSON.parse(decodeURIComponent(fixed));
-            } catch (e2) {
-                console.error("❌ JSON corrupto incluso después del fix:", e2);
-                return null;
-            }
-        }
-    }
+        // --- SETUP D3 ---
+        const width = 1500;
+        // >> CAMBIO: Height aumentado a 1100
+        const height = 1100;
+        
+        const svg = d3.select("#chart").append("svg")
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet");
+        
+        const g = svg.append("g");
+        
+        const zoom = d3.zoom().scaleExtent([0.5, 3]).on("zoom", e => g.attr("transform", e.transform));
+        svg.call(zoom);
 
-    // =======================================================
-    // API PARA DASH (postMessage opcional)
-    // =======================================================
-    window.updateFlowsheet = function (flowData, nodeData) {
-        console.log("🔥 updateFlowsheet() nuevos datos:", flowData, nodeData);
+        // --- FLECHA ---
+        svg.append("defs").append("marker")
+            .attr("id", "arrow")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 8) 
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("fill", "#444");
 
-        window.flowData = flowData || {};
-        window.nodeData = nodeData || {};
+        const nodeMap = new Map(nodesData.map(n => [n.id, n]));
 
-        if (typeof window._updateMetrics === "function")
-            window._updateMetrics(window.currentMetric);
-    };
-
-    // =======================================================
-    // LECTURA DE HASH
-    // =======================================================
-    function loadDataFromHash() {
-        const hash = window.location.hash.substring(1);
-        if (!hash) return;
-
-        const params = new URLSearchParams(hash);
-
-        const flowRaw = params.get("flowData");
-        const nodeRaw = params.get("nodeData");
-
-        window.flowData = safeJSONDecode(flowRaw) || {};
-        window.nodeData = safeJSONDecode(nodeRaw) || {};
-
-        console.log("🔥 Datos hash cargados:", window.flowData, window.nodeData);
-
-        if (window.flowsheetReady && typeof window._updateMetrics === "function")
-            window._updateMetrics(window.currentMetric);
-    }
-
-        // =======================================================
-        // APLICACIÓN PRINCIPAL D3
-        // =======================================================
-        function initApp() {
-            // ============================
-            // 1. DEFINICIÓN DE NODOS
-            // ============================
-            const nodesData = [
-                // Sources (Left)
-                { id: "mina", label: "Mina", x: 50, y: 150, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 20 },
-                { id: "stock", label: "Stock", x: 50, y: 250, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 20 },
-                
-                // Junctions (Circles)
-                { id: "N1", label: "N1", x: 150, y: 200, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
-                { id: "N4", label: "N4", x: 600, y: 150, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
-                { id: "N5", label: "N5", x: 600, y: 250, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
-                { id: "N10", label: "N10", x: 500, y: 350, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
-                { id: "N9", label: "N9", x: 900, y: 550, shape: 'ellipse', color: '#ffe6cc', stroke: '#d79b00', w: 40, h: 40 },
-                
-                // Process (Rectangles)
-                { id: "chancado", label: "Chancado", sublabel: "(1°, 2°, 3°)", x: 300, y: 200, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 120, h: 60 },
-                { id: "silo", label: "Silo", x: 450, y: 200, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 100, h: 60 },
-                { id: "aglomerado", label: "Aglomerado", sublabel: "(Tambor 1, Tambor 2)", x: 800, y: 200, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 160, h: 80 },
-                { id: "lix_sulf", label: "Lix", sublabel: "(Pad Sulf)", x: 800, y: 400, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 100, h: 60 },
-                { id: "lix_ox", label: "Lix", sublabel: "(Pad Ox)", x: 1000, y: 400, shape: 'rect', color: '#ffe6cc', stroke: '#d79b00', w: 100, h: 60 },
-                
-                // Inventory (Triangles)
-                { id: "inv_silo", label: "Inventario", x: 450, y: 100, shape: 'triangle', color: '#ffff88', stroke: '#36393d', w: 40, h: 40 },
-                { id: "inv_sulf", label: "Inventario", x: 700, y: 400, shape: 'triangle', color: '#ffff88', stroke: '#36393d', w: 40, h: 40 },
-                { id: "inv_ox", label: "Inventario", x: 1100, y: 400, shape: 'triangle', color: '#ffff88', stroke: '#36393d', w: 40, h: 40 },
-
-                // Outputs (Dashed)
-                { id: "botaderos", label: "Hacia botaderos", x: 900, y: 700, shape: 'rect', color: 'none', stroke: '#333', w: 200, h: 30, dashed: true },
-                { id: "reclamo_sulf", label: "Reclamo...", sublabel: "ripios Sulfuros", x: 800, y: 620, shape: 'text', color: '#fff', stroke: 'none', w: 100, h: 40 },
-                { id: "reclamo_ox", label: "Reclamo...", sublabel: "ripios Oxidos", x: 1000, y: 620, shape: 'text', color: '#fff', stroke: 'none', w: 100, h: 40 },
-
-                // Inputs for N4/N5 (Texts)
-                { id: "srr_top", label: "SRR", sublabel: "CV 002", x: 550, y: 50, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 30 },
-                { id: "sal_top", label: "SAL", sublabel: "CV 201", x: 650, y: 50, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 30 },
-                { id: "srr_bot", label: "SRR", sublabel: "CV 003", x: 550, y: 350, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 30 },
-                { id: "sal_bot", label: "SAL", sublabel: "CV 202", x: 650, y: 350, shape: 'text', color: '#fff', stroke: 'none', w: 80, h: 30 },
-                
-                // Extra Outputs arrows F23/F24
-                { id: "out_f23", label: "", x: 650, y: 480, shape: 'text', color: '#fff', stroke: 'none', w: 20, h: 20 },
-                { id: "out_f24", label: "", x: 650, y: 520, shape: 'text', color: '#fff', stroke: 'none', w: 20, h: 20 },
-            ];
-
-            // ============================
-            // 2. DEFINICIÓN DE ARISTAS
-            // ============================
-            const edgesData = [
-                { id: "F2", source: "mina", target: "N1", label: "F2" },
-                { id: "F1", source: "stock", target: "N1", label: "F1" },
-                { id: "F3", source: "N1", target: "chancado", label: "F3" },
-                { id: "F4", source: "chancado", target: "silo", label: "F4" },
-                { id: "F5", source: "silo", target: "inv_silo", label: "F5" }, // Upward
-                { id: "F6", source: "silo", target: "N4", label: "F6" },
-                { id: "F7", source: "silo", target: "N5", label: "F7" },
-                
-                // N4 Inputs
-                { id: "F8", source: "srr_top", target: "N4", label: "F8" },
-                { id: "F10", source: "sal_top", target: "N4", label: "F10" },
-                
-                // N5 Inputs
-                { id: "F9", source: "srr_bot", target: "N5", label: "F9" },
-                { id: "F11", source: "sal_bot", target: "N5", label: "F11" },
-                
-                // N10 Input
-                { id: "F25", source: "srr_bot", target: "N10", label: "F25 (CV 001)" }, 
-
-                // To Aglomerado
-                { id: "F12", source: "N4", target: "aglomerado", label: "F12 (CV 008)" },
-                { id: "F13", source: "N5", target: "aglomerado", label: "F13 (CV 108)" },
-                
-                // From Aglomerado
-                { id: "F14", source: "aglomerado", target: "lix_sulf", label: "F14" },
-                { id: "F15", source: "aglomerado", target: "lix_ox", label: "F15" },
-                
-                // From Lix Sulf
-                { id: "F16", source: "lix_sulf", target: "inv_sulf", label: "F16" },
-                { id: "F18", source: "lix_sulf", target: "N9", label: "F18" },
-                { id: "F21", source: "lix_sulf", target: "botaderos", label: "F21" },
-                { id: "F23", source: "lix_sulf", target: "out_f23", label: "F23", color: '#ffb570' },
-
-                // From Lix Ox
-                { id: "F17", source: "lix_ox", target: "inv_ox", label: "F17" },
-                { id: "F19", source: "lix_ox", target: "N9", label: "F19" },
-                { id: "F22", source: "lix_ox", target: "botaderos", label: "F22" },
-                { id: "F24", source: "lix_ox", target: "out_f24", label: "F24", color: '#ffb570' },
-                
-                // From N9
-                { id: "F20", source: "N9", target: "botaderos", label: "F20" },
-            ];
-
-            // ============================
-            // 3. SETUP SVG + ZOOM
-            // ============================
-            const width = 1200;
-            const height = 800;
-
-            const svg = d3.select("#chart")
-                .append("svg")
-                .attr("width", "100%")
-                .attr("height", "100%")
-                .attr("viewBox", `0 0 ${width} ${height}`)
-                .style("max-width", "100%")
-                .style("height", "auto");
-
-            const g = svg.append("g");
-
-            const zoom = d3.zoom()
-                .scaleExtent([0.1, 4])
-                .on("zoom", (e) => g.attr("transform", e.transform));
-
-            svg.call(zoom);
-            svg.call(zoom.transform, d3.zoomIdentity.translate(50, 50).scale(0.9));
-
-            svg.append("defs").append("marker")
-                .attr("id", "arrow")
-                .attr("viewBox", "0 -5 10 10")
-                .attr("refX", 8)
-                .attr("refY", 0)
-                .attr("markerWidth", 6)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto-start-reverse")
-                .append("path")
-                .attr("d", "M0,-5L10,0L0,5")
-                .attr("fill", "#555");
-
-            const tooltip = d3.select("#tooltip");
-            const nodeMap = new Map(nodesData.map(n => [n.id, n]));
-
-            // ============================
-            // 4. FUNCIÓN DE FORMATEO
-            // ============================
-function formatNumber(num, metric) {
-    if (num === undefined || num === null) return "";
-    const n = parseFloat(num);
-    if (isNaN(n)) return num;
-
-    // === TMS: sin decimales ===
-    if (metric === "TMS") {
-        return n.toString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits:1
-        });
-    }
-
-    // === Cu y Mo: 4 decimales ===
-    return n.toLocaleString(undefined, {
-        minimumFractionDigits: 4,
-        maximumFractionDigits: 4
-    });
-}
-
-            // ============================
-            // 5. FUNCIÓN UPDATE METRICS
-            // ============================
-            function updateMetrics(metric) {
-                window.currentMetric = metric;
-
-                // Nodos
-                g.selectAll(".node-value")
-                    .text(d => {
-                        const data = window.nodeData[d.id];
-                        let val = null;
-                        if (data && data[metric]) {
-                            if (metric === "TMS" && data[metric]["Desbalance masa inicial"] !== undefined) {
-                                val = data[metric]["Desbalance masa inicial"];
-                            } else if (metric === "Cu" && data[metric]["Desbalance fino inicial Cu"] !== undefined) {
-                                val = data[metric]["Desbalance fino inicial Cu"];
-                            } else if (metric === "Mo" && data[metric]["Desbalance fino inicial Mo"] !== undefined) {
-                                val = data[metric]["Desbalance fino inicial Mo"];
-                            }
-                        }
-                        return val !== null ? formatNumber(val, metric) : "";
-                    });
-
-                // Flujos
-                // FLOW ID → INDEX MAPPING
-                const flowIdMap = {
-                    "F1": "1",   "F2": "2",   "F3": "3",   "F4": "4",   "F5": "5",
-                    "F6": "6",   "F7": "7",   "F8": "8",   "F9": "9",   "F10": "10",
-                    "F11": "11", "F12": "12", "F13": "13", "F14": "14", "F15": "15",
-                    "F16": "16", "F17": "17", "F18": "18", "F19": "19", "F20": "20",
-                    "F21": "21", "F22": "22", "F23": "23", "F24": "24", "F25": "25"
-                };
-
-                g.selectAll(".link-value")
-                .text(d => {
-                    const mappedId = flowIdMap[d.id];
-                    const data = window.flowData[mappedId];
-                    if (!data || !data[metric]) return "";
-
-                    let mKey, rKey;
-                    if (metric === "TMS") {
-                        mKey = "Masa medida";
-                        rKey = "Masa recon";
-                    } else if (metric === "Cu") {
-                        mKey = "Ley medida Cu";
-                        rKey = "Ley recon Cu";
-                    } else if (metric === "Mo") {
-                        mKey = "Ley medida Mo";
-                        rKey = "Ley recon Mo";
-                    }
-
-                    const mVal = data[metric][mKey];
-                    const rVal = data[metric][rKey];
-
-                    return `${formatNumber(mVal, metric)} / ${formatNumber(rVal, metric)}`;
-                });
-
-            }
-
-            // Exponemos la función para que pueda ser usada por updateFlowsheet
-            window._updateMetrics = updateMetrics;
-
-            // ============================
-            // 6. DIBUJAR FLOWSHEET
-            // ============================
-            function drawFlowsheet() {
-                g.selectAll("*").remove();
-
-                const line = d3.line().curve(d3.curveStepBefore);
-
-                // --- LINKS ---
-                const linkGroup = g.selectAll(".link")
-                    .data(edgesData)
-                    .enter()
-                    .append("g")
-                    .attr("class", "link")
-                    .on("mouseover", (e, d) => {
-                        tooltip.style("opacity", 1)
-                            .html(`Flow: <strong>${d.label || d.id}</strong>`)
-                            .style("left", (e.pageX + 15) + "px")
-                            .style("top", (e.pageY - 10) + "px");
-                    })
-                    .on("mouseout", () => tooltip.style("opacity", 0));
-
-                linkGroup.append("path")
-                    .attr("d", d => {
-                        const s = nodeMap.get(d.source);
-                        const t = nodeMap.get(d.target);
-                        if (!s || !t) return null;
-
-                        const sourcePos = [s.x + s.w / 2, s.y + s.h / 2];
-                        const targetPos = [t.x + t.w / 2, t.y + t.h / 2];
-
-                        if (d.id === "F5") { // Silo to Inv Silo (Up)
-                            return line([sourcePos, targetPos]);
-                        }
-
-                        if (Math.abs(s.y - t.y) < 20) { // Horizontal-ish
-                            return line([sourcePos, [t.x, targetPos[1]]]);
-                        }
-                        if (Math.abs(s.x - t.x) < 20) { // Vertical-ish
-                            return line([sourcePos, [targetPos[0], t.y]]);
-                        }
-
-                        if (d.id === "F23" || d.id === "F24") { // outputs especiales
-                            return line([sourcePos, [t.x + t.w, targetPos[1]]]);
-                        }
-
-                        return line([sourcePos, targetPos]);
-                    })
-                    .attr("marker-end", "url(#arrow)")
-                    .style("stroke-dasharray", d => (d.dashed ? "5,5" : "none"))
-                    .style("stroke", d => d.color || "#555");
-
-                // Etiquetas de los flujos
-                linkGroup.append("text")
-                    .text(d => d.label)
-                    .attr("dy", -6)
-                    .attr("transform", d => {
-                        const s = nodeMap.get(d.source);
-                        const t = nodeMap.get(d.target);
-                        if (!s || !t) return "";
-                        const mx = (s.x + s.w / 2 + t.x + t.w / 2) / 2;
-                        const my = (s.y + s.h / 2 + t.y + t.h / 2) / 2;
-                        return `translate(${mx}, ${my})`;
-                    });
-
-                // Valores de los flujos
-                linkGroup.append("text")
-                    .attr("class", "link-value")
-                    .attr("dy", 8)
-                    .attr("transform", d => {
-                        const s = nodeMap.get(d.source);
-                        const t = nodeMap.get(d.target);
-                        if (!s || !t) return "";
-                        const mx = (s.x + s.w / 2 + t.x + t.w / 2) / 2;
-                        const my = (s.y + s.h / 2 + t.y + t.h / 2) / 2;
-                        return `translate(${mx}, ${my})`;
-                    });
-
-                // --- NODES ---
-                const nodeGroup = g.selectAll(".node")
-                    .data(nodesData)
-                    .enter()
-                    .append("g")
-                    .attr("class", d => `node shape-${d.shape}`)
-                    .attr("transform", d => `translate(${d.x}, ${d.y})`)
-                    .on("mouseover", (e, d) => {
-                        tooltip.style("opacity", 1)
-                            .html(`<strong>${d.label}</strong><br>ID: ${d.id}`)
-                            .style("left", (e.pageX + 15) + "px")
-                            .style("top", (e.pageY - 10) + "px");
-                    })
-                    .on("mouseout", () => tooltip.style("opacity", 0));
-
-                nodeGroup.each(function (d) {
-                    const el = d3.select(this);
-                    const w = d.w;
-                    const h = d.h;
-
-                    if (d.shape === 'ellipse') {
-                        el.append("ellipse")
-                            .attr("cx", w / 2)
-                            .attr("cy", h / 2)
-                            .attr("rx", w / 2)
-                            .attr("ry", h / 2)
-                            .attr("fill", d.color)
-                            .attr("stroke", d.stroke)
-                            .style("stroke-dasharray", d.dashed ? "5,5" : "none");
-                    } else if (d.shape === 'triangle') {
-                        el.append("polygon")
-                            .attr("points", `${w / 2},0 ${w},${h} 0,${h}`)
-                            .attr("fill", d.color)
-                            .attr("stroke", d.stroke);
-                    } else if (d.shape === 'text') {
-                        // sólo texto, no shape
-                    } else {
-                        el.append("rect")
-                            .attr("width", w)
-                            .attr("height", h)
-                            .attr("rx", 5)
-                            .attr("fill", d.color)
-                            .attr("stroke", d.stroke)
-                            .style("stroke-dasharray", d.dashed ? "5,5" : "none");
-                    }
-
-                    el.append("text")
-                        .attr("class", "node-label")
-                        .attr("x", w / 2)
-                        .attr("y", d.sublabel ? h / 2 - 4 : h / 2 + 4)
-                        .text(d.label);
-
-                    if (d.sublabel) {
-                        el.append("text")
-                            .attr("class", "node-sublabel")
-                            .attr("x", w / 2)
-                            .attr("y", h / 2 + 14)
-                            .text(d.sublabel);
-                    }
-
-                    // Texto de valor
-                    el.append("text")
-                        .attr("class", "node-value")
-                        .attr("x", w / 2)
-                        .attr("y", h + 14)
-                        .text("");
-                });
-            }
-
-            // Dibujamos el flowsheet una vez
-            loadDataFromHash();
-
-            drawFlowsheet();
-
-            // Vinculamos radios
-            d3.selectAll(".controls input[name='metric']").on("change", function () {
-                const val = this.value;
-                if (["TMS", "Cu", "Mo"].includes(val)) {
-                    window.currentMetric = val;
-                    updateMetrics(val);
-                }
+        // --- DIBUJAR ZONAS ---
+        g.selectAll(".zone")
+            .data(zonesData).enter().append("g")
+            .each(function(d) {
+                d3.select(this).append("rect")
+                    .attr("class", "zone-rect")
+                    .attr("x", d.x).attr("y", d.y)
+                    .attr("width", d.w).attr("height", d.h)
+                    .attr("stroke", d.color);
+                d3.select(this).append("text")
+                    .attr("class", "zone-label")
+                    .attr("x", d.x + d.w - 15).attr("y", d.y + 30)
+                    .attr("fill", d.color)
+                    .text(d.label);
             });
 
-            // Aplicamos la métrica inicial (por defecto TMS)
-            updateMetrics(window.currentMetric);
+        // =========================================================
+        // 3. GENERADOR DE RUTAS
+        // =========================================================
+        function getPath(d) {
+            const s = nodeMap.get(d.source);
+            const t = nodeMap.get(d.target);
+            if (!s || !t) return "";
+
+            let sx = s.type.includes('circle') ? s.x : s.x + s.w/2;
+            let sy = s.type.includes('circle') ? s.y : s.y + s.h/2;
+            
+            let tx = t.type.includes('circle') ? t.x : t.x + t.w/2;
+            let ty = t.type.includes('circle') ? t.y : t.y + t.h/2;
+            
+            // Padding flecha
+            let pad = 0; 
+            if(t.type === 'circle') pad = t.r + 2;
+            else if(t.type === 'circle-small') pad = t.r + 2;
+            else if(t.type === 'rect') pad = (t.h/2) + 2; 
+            else if(t.type === 'triangle') pad = 20;
+
+            if(d.id === "F5") sy -= s.h/2; 
+
+            const path = d3.path();
+            path.moveTo(sx, sy);
+
+            if (d.pathType === "straight") {
+                const angle = Math.atan2(ty - sy, tx - sx);
+                const shorten = pad;
+                const finalX = tx - Math.cos(angle) * shorten;
+                const finalY = ty - Math.sin(angle) * shorten;
+                path.lineTo(finalX, finalY);
+            
+            } else if (d.pathType === "h-v") {
+                path.lineTo(tx, sy);
+                const dir = ty > sy ? -1 : 1; 
+                path.lineTo(tx, ty + (dir * pad));
+
+            } else if (d.pathType === "v-h") {
+                path.lineTo(sx, ty);
+                const dir = tx > sx ? -1 : 1;
+                path.lineTo(tx + (dir * pad), ty);
+
+            } else if (d.pathType === "h-v-h") {
+                const midX = sx + (tx - sx) / 2;
+                path.lineTo(midX, sy);
+                path.lineTo(midX, ty);
+                const dir = tx > midX ? -1 : 1;
+                path.lineTo(tx + (dir * pad), ty);
+
+            } else if (d.pathType === "v-h-v") {
+                const dropY = 480; 
+                path.lineTo(sx, dropY);
+                path.lineTo(tx, dropY);
+                path.lineTo(tx, ty - pad); 
+
+            } else if (d.pathType === "v-direct-bot") {
+                // Caso especial botaderos (simplemente bajar)
+                // Usamos el offset si queremos que llegue más a la izq o der de la caja
+                path.lineTo(sx, ty - 15); 
+            }
+
+            return path.toString();
         }
 
-        // =======================================================
-        // ARRANQUE: DOMContentLoaded
-        // =======================================================
-        document.addEventListener("DOMContentLoaded", () => {
-            // Inicializa D3
-            initApp();
+        // --- DIBUJAR ENLACES ---
+        const linksGroup = g.selectAll(".link")
+            .data(edgesData).enter().append("g").attr("class", "link");
 
-            // Leer datos desde el hash (cuando se recarga con src que trae flowData/nodeData)
-            const hashParams = parseHashParams();
-            if (hashParams) {
-                const metricFromHash = hashParams.metric;
-                if (metricFromHash && ["TMS", "Cu", "Mo"].includes(metricFromHash)) {
-                    window.currentMetric = metricFromHash;
-                    const input = document.querySelector(`input[name="metric"][value="${metricFromHash}"]`);
-                    if (input) input.checked = true;
-                }
+        linksGroup.append("path")
+            .attr("d", d => getPath(d))
+            .attr("marker-end", "url(#arrow)");
 
-                const flowFromHash = safeJSONDecode(hashParams.flowData);
-                const nodesFromHash = safeJSONDecode(hashParams.nodeData);
-                if (flowFromHash && nodesFromHash) {
-                    window.updateFlowsheet(flowFromHash, nodesFromHash);
-                }
+        // Posición de etiquetas
+        function getLabelPos(d) {
+            const s = nodeMap.get(d.source);
+            const t = nodeMap.get(d.target);
+            let sx = s.type.includes('circle') ? s.x : s.x + s.w/2;
+            let sy = s.type.includes('circle') ? s.y : s.y + s.h/2;
+            let tx = t.type.includes('circle') ? t.x : t.x + t.w/2;
+            let ty = t.type.includes('circle') ? t.y : t.y + t.h/2;
+            
+            if(d.id === "F12") return { x: (sx+tx)/2, y: sy - 10 };
+            if(d.id === "F13") return { x: (sx+tx)/2, y: sy - 10 };
+            if(d.id === "F14" || d.id === "F15") return { x: sx + 10, y: (sy+ty)/2 - 40 };
+
+            return { x: (sx+tx)/2, y: (sy+ty)/2 - 5 };
+        }
+
+        linksGroup.append("text")
+            .attr("class", "link-label")
+            .attr("x", d => getLabelPos(d).x)
+            .attr("y", d => getLabelPos(d).y)
+            .text(d => d.label);
+            
+        linksGroup.append("text")
+            .attr("class", "link-value")
+            .attr("x", d => getLabelPos(d).x)
+            .attr("y", d => getLabelPos(d).y + 12)
+            .text(""); 
+
+        // --- DIBUJAR NODOS ---
+        const nodesGroup = g.selectAll(".node")
+            .data(nodesData).enter().append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.x}, ${d.y})`)
+            .on("mouseover", (e, d) => {
+                d3.select("#tooltip").style("opacity", 1)
+                  .html(`<strong>${d.label}</strong><br>ID: ${d.id}`)
+                  .style("left", (e.pageX + 10) + "px").style("top", (e.pageY - 20) + "px");
+            })
+            .on("mouseout", () => d3.select("#tooltip").style("opacity", 0));
+
+        nodesGroup.each(function(d) {
+            const el = d3.select(this);
+            
+            if (d.type === 'rect') {
+                el.append("rect").attr("width", d.w).attr("height", d.h)
+                  .attr("fill", d.fill).attr("stroke", d.stroke).attr("rx", 4);
+                el.append("text").attr("class", "node-label")
+                  .attr("x", d.w/2).attr("y", d.h/2 + 4).text(d.label);
+                if(d.sublabel) el.append("text").attr("class", "node-sublabel")
+                  .attr("x", d.w/2).attr("y", d.h/2 + 16).text(d.sublabel);
+            
+            } else if (d.type === 'box-open') {
+                el.append("path").attr("d", `M0,0 L0,${d.h} L${d.w},${d.h} L${d.w},0`)
+                  .attr("fill", "none").attr("stroke", "#333");
+                el.append("text").attr("x", 5).attr("y", 15).style("font-size","11px").text(d.label);
+
+            } else if (d.type === 'circle') {
+                el.append("circle").attr("r", d.r).attr("fill", d.fill).attr("stroke", d.stroke);
+                el.append("text").attr("class", "node-label").attr("dy", 4).text(d.label);
+
+            } else if (d.type === 'circle-small') {
+                el.append("circle").attr("r", d.r).attr("fill", d.fill).attr("stroke", d.stroke);
+                el.append("text").attr("class", "node-sublabel").attr("dy", -20).text(d.label); 
+                el.append("text").attr("class", "node-sublabel").attr("dy", 20).style("font-size", "8px").text(d.sublabel);
+
+            } else if (d.type === 'triangle') {
+                el.append("path").attr("d", `M0,${d.h} L${d.w/2},0 L${d.w},${d.h} Z`)
+                  .attr("fill", d.fill).attr("stroke", d.stroke);
+                el.append("text").attr("class", "node-sublabel")
+                  .attr("x", d.w/2).attr("y", d.h + 12).text(d.label);
+                  
+            } else if (d.type === 'dashed-rect') {
+                el.append("rect").attr("width", d.w).attr("height", d.h)
+                  .attr("fill", "none").attr("stroke", "#333")
+                  .attr("stroke-dasharray", "4,4");
+                el.append("text").attr("class", "node-label")
+                  .attr("x", d.w/2).attr("y", d.h/2 + 4).text(d.label);
             }
 
-            // Notificar al padre que el iframe está listo
-            try {
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({ type: "IFRAME_READY" }, "*");
-                }
-            } catch (e) {
-                console.warn("No se pudo enviar IFRAME_READY al padre:", e);
-            }
+            // Valor debajo
+            el.append("text").attr("class", "node-value")
+              .attr("x", (d.w || 0)/2).attr("y", (d.h || d.r*2) + 15)
+              .text("");
         });
+
+        // --- LÓGICA DE DATOS ---
+        function formatNumber(num, metric) {
+            if (num === undefined || num === null) return "";
+            const n = parseFloat(num);
+            if (isNaN(n)) return num;
+            return metric === "TMS" 
+                ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) 
+                : n.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+        }
+
+        window.updateFlowsheet = function(flowD, nodeD) {
+            window.flowData = flowD || {};
+            window.nodeData = nodeD || {};
+            updateVisuals();
+        };
+
+        function updateVisuals() {
+            const metric = window.currentMetric;
+            
+            d3.selectAll(".node-value").text(d => {
+                const data = window.nodeData[d.id];
+                if(!data || !data[metric]) return "";
+                let val = metric === "TMS" ? data[metric]["Desbalance masa inicial"] : data[metric]["Desbalance fino inicial " + metric];
+                return val ? formatNumber(val, metric) : "";
+            });
+
+            d3.selectAll(".link-value").text(d => {
+                const flowKey = d.id.replace("F", "");
+                const data = window.flowData[flowKey];
+                if(!data || !data[metric]) return "";
+                
+                let mKey = metric === "TMS" ? "Masa medida" : `Ley medida ${metric}`;
+                let rKey = metric === "TMS" ? "Masa recon" : `Ley recon ${metric}`;
+                
+                const mVal = data[metric][mKey];
+                const rVal = data[metric][rKey];
+                
+                if(mVal || rVal) return `${formatNumber(mVal, metric)} / ${formatNumber(rVal, metric)}`;
+                return "";
+            });
+        }
+
+        function loadFromHash() {
+            if(window.location.hash.length > 1) {
+                try {
+                    const params = new URLSearchParams(window.location.hash.substring(1));
+                    if(params.get("flowData")) window.flowData = JSON.parse(decodeURIComponent(params.get("flowData")));
+                    if(params.get("nodeData")) window.nodeData = JSON.parse(decodeURIComponent(params.get("nodeData")));
+                    updateVisuals();
+                } catch(e) { console.error("Error parsing hash", e); }
+            }
+        }
+
+        d3.selectAll("input[name='metric']").on("change", function() {
+            window.currentMetric = this.value;
+            updateVisuals();
+        });
+
+        loadFromHash();
+
     })();
     </script>
 </body>
