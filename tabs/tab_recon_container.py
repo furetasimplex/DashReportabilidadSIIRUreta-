@@ -29,6 +29,7 @@ layout = dbc.Card(
                         dcc.Tab(label="1 Administrar casos", value="recon-admin"),
                         dcc.Tab(label="2 Reconciliar", value="recon-6"),
                         dcc.Tab(label="3 Resumen Reconciliación", value="tab-reporte"),
+                        dcc.Tab(label="4 Estadística Reconciliación", value="tab-estadistica"),
                     ],
                 ),
                 
