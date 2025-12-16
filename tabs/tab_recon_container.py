@@ -23,8 +23,8 @@ layout = dbc.Card(
                     persistence_type="session",
                     children=[
                         dcc.Tab(label="1 Administrar casos", value="recon-admin"),
-                        dcc.Tab(label="2 Reconciliar", value="recon-6"),
-                        dcc.Tab(label="3 Resumen Reconciliación", value="tab-reporte"),
+                        dcc.Tab(label="2 Analisis data entrada", value="recon-6"),
+                        dcc.Tab(label="3 Reconciliar", value="tab-reporte"),
                     ],
                 ),
                 

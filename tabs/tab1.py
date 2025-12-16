@@ -67,7 +67,7 @@ def render_tab1():
                 dbc.Row([
                     
                      dbc.Col([
-                        html.Label("Fecha Fin", className="form-label fw-semibold"),
+                        html.Label("Fecha Inicio", className="form-label fw-semibold"),
                         dcc.DatePickerSingle(
                             id="fecha-inicio",
                             date="2024-01-01",
@@ -76,7 +76,7 @@ def render_tab1():
                         ),
                     ], md=2),
                     dbc.Col([
-                        html.Label("Fecha Inicio", className="form-label fw-semibold"),
+                        html.Label("Fecha Fin", className="form-label fw-semibold"),
                         dcc.DatePickerSingle(
                             id="fecha-fin",
                             date="2025-12-31",
