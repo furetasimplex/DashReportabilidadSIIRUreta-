@@ -184,7 +184,7 @@ def render_layout_reporte():
         # ——————————————————————  SECCIÓN: REPORTE (debajo)  ——————————————————————
         dbc.Card(
             dbc.CardBody([
-                html.H4("Módulo de Reportabilidad", className="mb-3"),
+                html.H4("Resumen reconciliación", className="mb-3"),
                 dbc.Row([
                     # Columna 1: Controles e información del caso
                     dbc.Col([

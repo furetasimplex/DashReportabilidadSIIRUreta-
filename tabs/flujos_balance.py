@@ -79,12 +79,16 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
             COALESCE(tms_i.total_tms, 0) AS TMS_Inicial,
             COALESCE(tms_f.total_tms, 0) AS TMS_Final,
             COALESCE(tms_f.total_tms, 0) - COALESCE(tms_i.total_tms, 0) AS Tonelaje,
-            ley_i.ley_cu AS Ley_Cu_1,
-            ley_f.ley_cu AS Ley_Cu_2,
+            
+            -- Visualización: Si falta una ley, mostramos la otra para referencia
+            COALESCE(ley_i.ley_cu, ley_f.ley_cu) AS Ley_Cu_1,
+            COALESCE(ley_f.ley_cu, ley_i.ley_cu) AS Ley_Cu_2,
+
+            -- CALCULO CORREGIDO CON IMPUTACIÓN CRUZADA
             COALESCE(
                 (
-                    (COALESCE(tms_f.total_tms, 0) * ley_f.ley_cu / 100.0) -
-                    (COALESCE(tms_i.total_tms, 0) * ley_i.ley_cu / 100.0)
+                    (COALESCE(tms_f.total_tms, 0) * COALESCE(ley_f.ley_cu, ley_i.ley_cu) / 100.0) -
+                    (COALESCE(tms_i.total_tms, 0) * COALESCE(ley_i.ley_cu, ley_f.ley_cu) / 100.0)
                 ) / NULLIF(COALESCE(tms_f.total_tms, 0) - COALESCE(tms_i.total_tms, 0), 0) * 100.0,
                 0
             ) AS Ley_Cu
@@ -163,7 +167,7 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
                                 FROM inventar_SpcHidr.mov_cam
                                 WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                                 AND Fase = 'SRR'
-                                AND Destino = 'prueba'
+                                AND (Destino = 'prueba' OR Destino = 'CH01')
                             )
                     ), 0
                 )
@@ -276,7 +280,7 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
                                 FROM inventar_SpcHidr.mov_cam
                                 WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
                                 AND Fase = 'SRR'
-                                AND Destino = 'prueba'
+                                AND (Destino = 'prueba' OR Destino = 'CH01')
                             )
                     ), 0
                 )
@@ -331,7 +335,7 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         -- CORRECCIÓN: Se ajustó el rango de fechas para que coincida con el tonelaje
         WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         AND Fase = 'SRR'
-        AND Destino = 'prueba'
+        AND (Destino = 'prueba' OR Destino = 'CH01')
     ) AS Ley_Cu;
     """,
         "F9": f"""SELECT
@@ -347,7 +351,7 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
         -- CORRECCIÓN: Se ajustó el rango de fechas para que coincida con el tonelaje
         WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
         AND Fase = 'SRR'
-        AND Destino = 'prueba'
+        AND (Destino = 'prueba' OR Destino = 'CH01')
     ) AS Ley_Cu;
     """,
         "F10": f"""SELECT 
@@ -512,25 +516,23 @@ WHERE
     "F20": f"""SELECT ISNULL(SUM(cv025_tot * 0.89), 0) AS Tonelaje, '0' AS Ley_Cu FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
         "F21": f"""SELECT ISNULL(SUM(ton_reclamo_camiones), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.reclamos_tonelaje WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
         "F22": f"""SELECT ISNULL(SUM(Camiones_TMS_Reclamo_Oxidos), 0) AS Tonelaje, 0 AS Ley_Cu FROM inventar_SpcHidr.Datos_conciliados_of WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}';""",
-        "F23": f"""SELECT
-            COALESCE(
-                (
-                    (SELECT SUM(fino_producido) FROM inventar_SpcHidr.control_ley_ripio WHERE fecha_drenaje = '{fecha_fin}' AND PAD = 'OXIDOS') -
-                    (SELECT SUM(fino_producido) FROM inventar_SpcHidr.control_ley_ripio WHERE fecha_drenaje = '{fecha_inicio}' AND PAD = 'OXIDOS')
-                ), 0
-            ) AS Tonelaje,
-            100 AS Ley_Cu;""",
-        "F24": f"""SELECT
-            COALESCE(
-                (
-                    (SELECT SUM(fino_producido) FROM inventar_SpcHidr.control_ley_ripio WHERE fecha_drenaje = '{fecha_fin}' AND PAD = 'SULFUROS') -
-                    (SELECT SUM(fino_producido) FROM inventar_SpcHidr.control_ley_ripio WHERE fecha_drenaje = '{fecha_inicio}' AND PAD = 'SULFUROS')
-                ), 0
-            ) AS Tonelaje,
-            100 AS Ley_Cu;""",
+        "F23": f"""SELECT 
+        COALESCE(SUM(v.fino_dia), 0) AS Tonelaje,
+        100 AS Ley_Cu
+    FROM inventar_SpcHidr.control_ley_ripio_diario v
+    WHERE v.Fecha_drenaje > '{fecha_inicio}' 
+      AND v.Fecha_drenaje <= '{fecha_fin}'
+      AND v.PAD = 'OXIDOS';""",
+        "F24": f"""SELECT 
+        COALESCE(SUM(v.fino_dia), 0) AS Tonelaje,
+        100 AS Ley_Cu
+    FROM inventar_SpcHidr.control_ley_ripio_diario v
+    WHERE v.Fecha_drenaje > '{fecha_inicio}' 
+      AND v.Fecha_drenaje <= '{fecha_fin}'
+      AND v.PAD = 'SULFUROS';""",
         "F25": f"""SELECT
             (SELECT sum(cv001_tot) * 0.93 FROM inventar_SpcHidr.vista_resumen_datos_filtrados WHERE fecha_turno BETWEEN '{fecha_inicio}' AND '{fecha_fin}') AS Tonelaje,
-            (SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Fase = 'SRR' AND Destino = 'prueba') AS Ley_Cu;"""
+            (SELECT (SUM(Ton * CuTG00 / 100) / NULLIF(SUM(Ton), 0)) * 100 FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Fase = 'SRR' AND (Destino = 'prueba' OR Destino = 'CH01')) AS Ley_Cu;"""
     }
 
     # --- 4. Función Auxiliar (Requerida para cálculos de inventario inicial) ---
@@ -797,12 +799,14 @@ WHERE
     ton_f21 = _get_single(df_final, "F21", "Tonelaje")
     ley_f21 = _get_single(df_final, "F21", "Ley_Cu")
     ton_f24 = _get_single(df_final, "F24", "Tonelaje")
+    ley_f24 = _get_single(df_final, "F24", "Ley_Cu")
     ton_f16 = ton_f14 - ton_f18 - ton_f21 - ton_f24
-    finos_in_16 = ton_f14 * ley_f14
-    finos_out_16 = (ton_f18 * ley_f18) + (ton_f21 * ley_f21)
-    ley_f16 = ((finos_in_16 - finos_out_16) / ton_f16) if ton_f16 != 0 else 0.0
+    finos_entran_16 = ton_f14 * ley_f14
+    finos_salen_16 = (ton_f18 * ley_f18) + (ton_f21 * ley_f18) + (ton_f24 * ley_f24)
+    ley_f16 = ((finos_entran_16 - finos_salen_16) / ton_f16) if ton_f16 != 0 else 0.0
     df_f16 = pd.DataFrame({"Flujo": ["F16"], "Tonelaje": [ton_f16], "Ley_Cu": [ley_f16]})
     todos_los_resultados.append(df_f16)
+    print(f'entran:{finos_entran_16} salen:{finos_salen_16} camiones:{ton_f21}  ley:{ley_f21}')
 
     # Cálculo F17
     ton_f15 = _get_single(df_final, "F15", "Tonelaje")
@@ -812,13 +816,15 @@ WHERE
     ton_f22 = _get_single(df_final, "F22", "Tonelaje")
     ley_f22 = _get_single(df_final, "F22", "Ley_Cu")
     ton_f23 = _get_single(df_final, "F23", "Tonelaje")
+    ley_f23 = _get_single(df_final, "F23", "Ley_Cu")
     
     ton_f17 = ton_f15 - ton_f19 - ton_f22 - ton_f23
-    finos_in_17 = ton_f15 * ley_f15
-    finos_out_17 = (ton_f19 * ley_f19) + (ton_f22 * ley_f22)
-    ley_f17 = ((finos_in_17 - finos_out_17) / ton_f17) if ton_f17 != 0 else 0.0
+    finos_entran_17 = ton_f15 * ley_f15
+    finos_salen_17 = (ton_f19 * ley_f19) + (ton_f22 * ley_f19) + (ton_f23 * ley_f23)
+    ley_f17 = ((finos_entran_17 - finos_salen_17) / ton_f17) if ton_f17 != 0 else 0.0
     df_f17 = pd.DataFrame({"Flujo": ["F17"], "Tonelaje": [ton_f17], "Ley_Cu": [ley_f17]})
     todos_los_resultados.append(df_f17)
+    print(f'entran:{finos_entran_17} salen:{finos_salen_17}')
 
     # --- 6.2 Inventarios Iniciales para F16 y F17 (CORREGIDO) ---
     print("Calculando inventarios iniciales...")

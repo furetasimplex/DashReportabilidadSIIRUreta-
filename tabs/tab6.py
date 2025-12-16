@@ -31,14 +31,14 @@ dict_style_boton_2 = {
         'textAlign': 'center'
     }
 columnsDefs_data_base =  [
-        {'field': 'id_flujo', 'maxWidth': 80, 'editable': False},
-        {'field': 'codigo_flujo', 'maxWidth': 100, 'editable': False},
-        {'field': 'nombre_flujo', 'maxWidth': 350, 'editable': False},
-        {'field': 'Flujo', 'maxWidth': 100, 'editable': True},
-        {'field': 'Cu', 'maxWidth': 100, 'editable': True},
-        {'field': 'FCu', 'maxWidth': 100, 'editable': True},
-        {'field': 'Tolerancia', 'maxWidth': 100, 'editable': True},
-        {'field': 'Tolerancia_cu', 'maxWidth': 120, 'editable': True},
+        {'field': 'id_flujo', 'type': 'numericColumn', 'editable': True, 'flex': 1},
+        {'field': 'codigo_flujo', 'type': 'numericColumn', 'editable': True, 'flex': 1},
+        {'field': 'nombre_flujo', 'type': 'numericColumn', 'editable': True, 'flex': 1},
+        {'field': 'Flujo', 'type': 'numericColumn', 'editable': True, 'flex': 1},
+        {'field': 'Cu', 'type': 'numericColumn', 'editable': True, 'flex': 1},
+        {'field': 'FCu', 'type': 'numericColumn', 'editable': True, 'flex': 1},
+        {'field': 'Tolerancia', 'type': 'numericColumn', 'editable': True, 'flex': 1},
+        {'field': 'Tolerancia_cu', 'type': 'numericColumn', 'editable': True, 'flex': 1},
         ]
 columnsDefs_resultados =  [
         {'field': 'Codigo'         , 'maxWidth': 100},
@@ -77,190 +77,156 @@ def render_tab6():
         }),
 
         html.Hr(),
-        html.H4("Sección 1: Carga Template", style={"textAlign": "left"}),
-        html.Div(
-            id="kpi-tab6",
-            style={"display": "flex", "justifyContent": "space-around", "paddingBottom": "20px"}
-        ),
-
-        # ===== Sección 1: Carga Template (2 columnas) =====
+        
+        # —————————————————————— SECCIÓN 1: CARGA Y SIMULACIÓN ——————————————————————
         dbc.Card([
             dbc.CardHeader(
-                html.H6("Sección 1: Carga Template", className="mb-0"),
+                html.H6("Sección 1: Carga y Cálculo de Desbalances", className="mb-0"),
                 className="py-2",
-                style={"backgroundColor": "#f8f9fa", "letterSpacing": "0.06em", "textTransform": "uppercase"}
+                style={"backgroundColor": "#f8f9fa", "textTransform": "uppercase"}
             ),
             dbc.CardBody([
                 dbc.Row([
-                    # --- Columna izquierda (≈20%) ---
+                    # Columna Izquierda: Botones
                     dbc.Col([
-                        html.H6('Parámetros de entrada (tabla editable)', className="mb-3"),
-
-                        # Opción A: Template Excel
+                        html.H6('1. Cargar Datos', className="mb-3 fw-bold"),
                         dcc.Upload(
                             id='data-base-upload',
                             children=dbc.Button(
-                                [html.I(className="bi bi-cloud-arrow-up me-2"), "Cargar Excel Datos Base"],
-                                color="primary", outline=True, className="w-100", size="sm"
+                                [html.I(className="bi bi-cloud-arrow-up me-2"), "Cargar Excel"],
+                                color="primary", outline=True, className="w-100 mb-2", size="sm"
                             ),
                             className="w-100",
                         ),
-                        html.Small("Formatos: .xlsx / .xlsm | Hoja: 'Datos bases'",
-                                className="text-muted d-block mt-2"),
-
-                        html.Hr(className="my-3"),
-
-                        # Opción B: Cargar directo desde BD
                         dbc.Button(
                             [html.I(className="bi bi-database-down me-2"), "Cargar desde Base de Datos"],
                             id="btn-cargar-db", n_clicks=0,
                             color="success", className="w-100", size="sm"
                         ),
-
-                        # Mensaje/estado (se actualiza por callback si aplica)
                         html.Div(id="msg-carga-grid", className="small text-muted mt-2"),
+                    ], md=2),
 
-                    ], md=2, lg=2, xl=2),
-
-                    # --- Columna derecha (tabla + gráfico en dos columnas) ---
+                    # Columna Derecha: Tabla Editable
                     dbc.Col([
-                        dbc.Row([
-                            # Subcolumna: Tabla (reducida y más densa)
-                            dbc.Col([
-                                html.Label("Datos base de entrada a reconciliador (editable)", className="fw-semibold"),
+                        html.Label("2. Datos medidos", className="fw-semibold"),
+                        dcc.Loading(
+                            dag.AgGrid(
+                                id="recon-data-base",
+                                columnSize="autoSize",
+                                columnDefs=columnsDefs_data_base,
+                                className='ag-theme-balham',
+                                style={"height": "400px", "width": "100%"},
+                                defaultColDef={
+                                    "resizable": True,
+                                    "minWidth": 120,
+                                    "cellStyle": {
+                                        "fontSize": "14px",
+                                        "textAlign": "right"
+                                    },
+                                    "headerClass": "ag-header-center"
+                                },
+                                dashGridOptions={
+                                    "rowHeight": 36,
+                                    "headerHeight": 36,
+                                    "domLayout": "normal"
+                                }
+                            ),
+                            type="default"
+                        )
+                    ], md=10),
+                ], className="mb-4"),
+
+                # Fila inferior: Gráfico de resultados inmediatos
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Card([
+                            dbc.CardHeader("3. Desbalances iniciales"),
+                            dbc.CardBody([
+                                dbc.Button(
+                                    [html.I(className="bi bi-save me-2"), "Calcular desbalances iniciales"],
+                                    id="btn-graf-desb-ini",
+                                    n_clicks=0,
+                                    color="danger", # Color rojo/naranja para destacar la acción
+                                    className="mb-3"
+                                ),
                                 dcc.Loading(
-                                    dag.AgGrid(
-                                        id="recon-data-base",
-                                        columnSize="autoSize",
-                                        columnDefs=columnsDefs_data_base,
-                                        className='ag-theme-balham',
-                                        style={"height": "500px", "width": "100%"},
-                                        defaultColDef={
-                                            "sortable": False,
-                                            "filter": False,
-                                            "resizable": True,
-                                            "minWidth": 90,
-                                            "suppressHeaderMenuButton": True
-                                        },
-                                        dashGridOptions={
-                                            "rowHeight": 28,
-                                            "headerHeight": 28,
-                                            "animateRows": False,
-                                            "suppressMenuHide": False,
-                                            "ensureDomOrder": True,
-                                            "alwaysShowHorizontalScroll": False,
-                                             "floatingFilter": False 
-                                        }
+                                    dcc.Graph(
+                                        id="graf-desbalances-ini",
+                                        style={"height": "500px", "width": "100%"} # Gráfico alto
                                     ),
                                     type="default"
                                 )
-                            ], md=7, lg=7, xl=7),
-
-                            # Subcolumna: Botón + Gráfico desbalances iniciales
-                            dbc.Col([
-                                dbc.Card([
-                                    dbc.CardHeader(
-                                        html.Span([html.I(className="bi bi-graph-up me-2"),
-                                                "Desbalances iniciales (a partir de la tabla)"]),
-                                        className="py-2",
-                                        style={"backgroundColor": "#f8f9fa"}
-                                    ),
-                                    dbc.CardBody([
-                                        dbc.Button(
-                                            [html.I(className="bi bi-bar-chart-fill me-2"), "Generar gráfico"],
-                                            id="btn-graf-desb-ini",
-                                            n_clicks=0,
-                                            color="success",
-                                            className="w-100 mb-2",
-                                            size="sm"
-                                        ),
-                                        dcc.Loading(
-                                            dcc.Graph(
-                                                id="graf-desbalances-ini",
-                                                config={
-                                                    "displaylogo": False,
-                                                    "responsive": True,
-                                                    "modeBarButtonsToRemove": ["zoom", "select", "lasso2d", "toggleSpikelines"]
-                                                },
-                                                style={"height": "340px", "width": "100%"}
-                                            ),
-                                            type="default"
-                                        )
-                                    ], className="pt-2")
-                                ], className="h-100 shadow-sm border-0")
-                            ], md=5, lg=5, xl=5),
-                        ], className="g-3 align-items-start")
-                    ], md=10, lg=10, xl=10),
-                ], className="g-3 align-items-start")
+                            ])
+                        ])
+                    ], width=12)
+                ])
             ], className="pt-3 pb-2")
-        ], className="mb-3 shadow-sm border-0"),
-                    # ——————————————————————  SECCIÓN 2: DESBALANCES HISTÓRICOS  ——————————————————————
+        ], className="mb-4 shadow-sm border-0"),
+
+        # —————————————————————— SECCIÓN 2: HISTÓRICO (MODIFICADA) ——————————————————————
         dbc.Card([
             dbc.CardHeader(
-                html.H6("Sección 2: Desbalances históricos", className="mb-0"),
+                html.H6("Sección 2: Desbalances Históricos (Base de Datos)", className="mb-0"),
                 className="py-2",
-                style={"backgroundColor": "#f8f9fa", "letterSpacing": "0.06em", "textTransform": "uppercase"}
+                style={"backgroundColor": "#e9ecef", "textTransform": "uppercase"} # Color diferente para distinguir
             ),
             dbc.CardBody([
-                # Filtros
+                # 1. Filtros de Búsqueda
                 dbc.Row([
                     dbc.Col([
                         html.Label("Rango de fechas", className="fw-semibold"),
-                        dcc.DatePickerRange(
-                            id="hist-fechas",
-                            clearable=True,
-                            minimum_nights=0,
-                            display_format="YYYY-MM-DD"
-                        )
+                        dcc.DatePickerRange(id="hist-fechas", display_format="YYYY-MM-DD", clearable=True)
                     ], md=4),
                     dbc.Col([
                         html.Label("Áreas", className="fw-semibold"),
                         dcc.Dropdown(
                             id="hist-areas",
-                            options=[{"label": a, "value": a} for a in [
-                                "N1","Chancado","Silo","N4","N5","Aglomerado","Apilado Sulfuro",
-                                "Apilado Óxido","N9","N10"    # ajusta esta lista a tus áreas reales
-                            ]],
-                            value=[],
-                            multi=True,
-                            placeholder="(Opcional) Selecciona áreas"
+                            options=[{"label": a, "value": a} for a in ["N1","Chancado","Silo","N4","N5","Aglomerado","Apilado Sulfuro","Apilado Óxido","N9","N10"]],
+                            multi=True, placeholder="Todas las áreas"
                         )
                     ], md=6),
                     dbc.Col([
                         html.Label(" ", className="d-block"),
-                        dbc.Button([html.I(className="bi bi-search me-2"), "Buscar"],
-                                id="btn-hist-buscar", n_clicks=0, color="secondary", className="w-100")
+                        dbc.Button([html.I(className="bi bi-search me-2"), "Buscar en Historial"],
+                                id="btn-hist-buscar", n_clicks=0, color="dark", className="w-100")
                     ], md=2),
-                ], className="g-3 align-items-end mb-3"),
+                ], className="mb-4 align-items-end"),
 
-                # Gráfico + Tabla
+                # 2. Visualización Gráfica (Fila Completa)
                 dbc.Row([
                     dbc.Col([
+                        html.H5("Evolución Gráfica", className="text-muted"),
+                        html.Hr(),
                         dcc.Loading(
                             dcc.Graph(
                                 id="hist-graf",
-                                config={"displaylogo": False, "responsive": True},
-                                style={"height": "360px", "width": "100%"}
-                            ),
-                            type="default"
+                                config={"displaylogo": False},
+                                style={"height": "450px", "width": "100%"} # Ancho completo
+                            )
                         )
-                    ], md=7),
+                    ], width=12)
+                ], className="mb-5"), # Margen grande abajo
+
+                # 3. Visualización Tabla (Fila Completa Abajo)
+                dbc.Row([
                     dbc.Col([
+                        html.H5("Detalle Numérico (Tabla)", className="text-muted"),
+                        html.Hr(),
                         dcc.Loading(
                             dag.AgGrid(
                                 id="hist-tabla",
                                 columnDefs=columnsDefs_hist_desb,
                                 className='ag-theme-balham',
-                                style={"height": "360px", "width": "100%"},
-                                defaultColDef={"sortable": True, "filter": True, "resizable": True, "minWidth": 90},
-                                dashGridOptions={"rowHeight": 28, "headerHeight": 28, "ensureDomOrder": True}
-                            ),
-                            type="default"
+                                style={"height": "400px", "width": "100%"}, # Tabla ancha y alta
+                                defaultColDef={"sortable": True, "filter": True, "resizable": True},
+                                dashGridOptions={"rowHeight": 28}
+                            )
                         )
-                    ], md=5),
-                ], className="g-3")
-            ], className="pt-3 pb-2")
-        ], className="mb-3 shadow-sm border-0"),
+                    ], width=12)
+                ])
+
+            ])
+        ], className="mb-5 shadow-sm border-0"),
     ])
 
 def register_tab6_callbacks(app):
@@ -337,8 +303,8 @@ def register_tab6_callbacks(app):
                     "id_flujo": list(range(1, 26)),
                     "codigo_flujo": orden,
                     "nombre_flujo": [f"Flujo {i:02d}" for i in range(1, 26)],
-                    "Tolerancia": [0.5,0.5,0.5,6.6,0.0,7.0,7.0,9.0,9.0,4.0,4.0,4.0,4.0,4.0,4.0,0.0,0.0,5.0,5.0,8.0,5.0,5.0,0.0,0.0,9.0],
-                    "Tolerancia_cu": [4.95,5.4,5.0,5.0,0.0,7.0,7.0,5.0,5.0,0.0,0.0,5.8,5.8,5.8,5.8,0.0,0.0,0.0,0.0,6.0,0.0,0.0,0.0,0.0,5.0]
+                    "Tolerancia": [0.5,0.5,0.5,6.6,0.0,7.0,7.0,9.0,9.0,0.0,0.0,4.0,4.0,4.0,4.0,0.0,0.0,5.0,5.0,8.0,5.0,5.0,0.0,0.0,1.0],
+                    "Tolerancia_cu": [4.95,5.4,5.0,5.0,0.0,7.0,7.0,5.0,5.0,0.0,0.0,0.5,0.5,5.8,5.8,0.0,0.0,0.0,0.0,6.0,0.0,0.0,0.0,0.0,1.0]
                 })
 
             with conn.begin() as eng_conn:
@@ -423,8 +389,8 @@ def register_tab6_callbacks(app):
             des_ini = des_df
             # 3) Formateo y gráfico
             des_ini = des_ini.rename(columns={0: 'Nodo'})
-            values_to_select = ['Chancado', 'Silo','N9',"N10"]
-            des_ini = des_ini.loc[des_ini['Nodo'].isin(values_to_select)]
+            #values_to_select = ['Chancado', 'Silo','N9',"N10"]
+            #des_ini = des_ini.loc[des_ini['Nodo'].isin(values_to_select)]
 
             # Aseguramos nombres consistentes: masa y fino iniciales
             # Si tus columnas son 'Desbalance masa' y 'Desbalance fino Cu', se renombra para claridad
@@ -465,33 +431,46 @@ def register_tab6_callbacks(app):
         prevent_initial_call=True
     )
     def cargar_desbalances_historicos(n_clicks, f_ini, f_fin, areas):
-        if not n_clicks:
+        with conn.begin() as eng_conn:
+            df = pd.read_sql(
+                text("""
+                    SELECT
+                        fecha_fin   AS Fecha,
+                        area        AS Area,
+                        desb_masa   AS Desb_masa,
+                        desb_fino_cu AS Desb_fino_cu
+                    FROM inventar_SpcHidr.historial_desbalances
+                    WHERE fecha_fin BETWEEN :f_ini AND :f_fin
+                """),
+                eng_conn,
+                params={"f_ini": f_ini, "f_fin": f_fin}
+            )
+
+        if df.empty:
             return Figure(), []
-        if not (f_ini and f_fin):
-            return Figure(), []
 
-        try:
-            data = [
-                {"Fecha": "2025-01-01", "Area": "Chancado", "Desb_masa": 1000, "Desb_fino_cu": 50},
-                {"Fecha": "2025-01-02", "Area": "Silo",      "Desb_masa": -500,  "Desb_fino_cu": -20},
-            ]
-            df = pd.DataFrame(data)
-            if areas:
-                df = df[df["Area"].isin(areas)]
+        if areas:
+            df = df[df["Area"].isin(areas)]
 
-            df_fecha = df.groupby("Fecha", as_index=False)[["Desb_masa", "Desb_fino_cu"]].sum()
-            df_long  = df_fecha.melt(id_vars="Fecha", value_vars=["Desb_masa", "Desb_fino_cu"],
-                                    var_name="Magnitud", value_name="Valor")
+        df_fecha = df.groupby("Fecha", as_index=False)[["Desb_masa", "Desb_fino_cu"]].sum()
+        df_long = df_fecha.melt(
+            id_vars="Fecha",
+            value_vars=["Desb_masa", "Desb_fino_cu"],
+            var_name="Magnitud",
+            value_name="Valor"
+        )
 
-            fig = px.line(df_long, x="Fecha", y="Valor", color="Magnitud",
-                        title="Desbalances históricos (suma por fecha)")
-            fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=48, b=10))
+        fig = px.line(
+            df_long,
+            x="Fecha",
+            y="Valor",
+            color="Magnitud",
+            title="Desbalances históricos (suma por fecha)"
+        )
 
-            return fig, df.to_dict("records")
+        fig.update_layout(template="plotly_white")
 
-        except Exception as e:
-            print(f"❌ Error al cargar desbalances históricos: {e}")
-            return Figure(), []
+        return fig, df.to_dict("records")
     
     @app.callback(
     Output('recon-data', 'data', allow_duplicate=True),

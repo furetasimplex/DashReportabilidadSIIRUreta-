@@ -147,7 +147,7 @@ def register_callbacks(app):
             # --- Lectura Sulfuros ---
             def read_sulf(path):
                 re = pd.read_excel(path, sheet_name="Recuperaciones Sulfuros")
-                raw = re.iloc[2:, 1:20]
+                raw = re.iloc[2:, 1:31]
                 headers = raw.iloc[0, :]
                 df = raw.iloc[1:, :].copy()
                 df.columns = headers
