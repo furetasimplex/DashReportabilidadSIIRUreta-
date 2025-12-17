@@ -245,3 +245,88 @@ def balance_core(mediciones,error,fn="Normal",u=1,cf=1,cw=1,expk=1,cp=1):
     return resultados, masa_df, masa_ini
 
 
+def desbalances(mediciones,error,fn="Normal",u=1,cf=1,cw=1,expk=1,cp=1):
+
+    #mediciones[:,1] = mediciones[:,1]/100
+    deltas = [5,16,17]
+    deltas = [i-1 for i in deltas]
+    deltas = np.array(deltas)
+
+    matriz = np.array([[ 1.,   2.,  -3.,   0.,   0.],
+           [  3.,  -4,   0.,    0.,   0.],
+           [  4.,  -5,  -6.,   -7.,   0.],
+           [  6.,  8.,  10.,   -12.,  0.],
+           [  7.,  9.,  11.,  -13.,   0.],
+           [ 12.,  13., -14., -15.,   0.],
+           [ 14., -16., -18., -21., -24.],
+           [ 15., -17., -19., -22., -23.],
+           [ 18.,  19., 0.,   -20., 0.],
+	         [ 25., -8., -9.,    0. , 0.]])
+
+    lista_rows = []
+    lista_columns = []
+    lista_data = []
+    for i in range(matriz.shape[0]):
+        for j in range(matriz.shape[1]):
+            if matriz[i,j] != 0:
+                lista_rows.append(i)
+                col = int(np.abs(matriz[i,j])-1)
+                lista_columns.append(col)
+                lista_data.append(np.sign(matriz[i,j]))
+    coo = sparse.coo_array((lista_data, (lista_rows, lista_columns)))
+    matriz = coo.toarray()
+
+    for k in deltas:
+        bool_values = matriz[:,k] != 0
+        matriz[bool_values,k] = -np.sign(mediciones[k,0])
+    inventarios_masa = 2*(mediciones[:,0] >= 0)-1
+    mediciones[:,0] = np.abs(mediciones[:,0])
+    m = GEKKO(remote=False)
+    n_components = 1
+    x = m.Array(m.Var,(matriz.shape[1]))
+    x_c = m.Array(m.Var,(matriz.shape[1],n_components))
+    tms_medicion = mediciones[:,0]
+
+    mediciones_leyes = []
+    for k in range(n_components):
+        leyes_medicion = mediciones[:,k+1]
+        mediciones_leyes.append(leyes_medicion)
+
+
+    b_masa_ini = np.dot(matriz,mediciones[:,0])
+    b_fino_ini_Cu = np.dot(matriz,mediciones[:,0]*mediciones[:,1])
+
+    nombres_flujos = ['Flujo 01','Flujo 02', 'Flujo 03', 'Flujo 04', 'Flujo 05', 'Flujo 06',
+           'Flujo 07', 'Flujo 08', 'Flujo 09', 'Flujo 10', 'Flujo 11',
+           'Flujo 12', 'Flujo 13', 'Flujo 14', 'Flujo 15', 'Flujo 16',
+           'Flujo 17', 'Flujo 18', 'Flujo 19', 'Flujo 20', 'Flujo 21', 'Flujo 22', 'Flujo 23', 'Flujo 24', 'Flujo 25']
+    nodos_names = ["N1",'Chancado', 'Silo', "N4","N5",'Aglomerado',
+           'Apilado Sulfuro', 'Apilado Óxido', 'N9',"N10"]#,"Mina-Aglomerado"]
+
+    resultados= pd.DataFrame(nombres_flujos,columns=["Flujo"])
+    resultados["Masa medida"] =  np.multiply(mediciones[:,0],inventarios_masa)
+    resultados["Masa recon"] =  0
+    resultados["Error masa"] =  0
+
+    resultados["Ley medida Cu"] =  mediciones[:,1]*100
+    resultados["Ley recon Cu" ] =  0
+    resultados["Error ley Cu"] =  0
+
+    resultados["Fino medida Cu"] =  mediciones[:,1]*mediciones[:,0]
+    resultados["Fino recon Cu" ] =  0
+    resultados["Error Fino Cu"] =  0
+
+    #b_masa_ini[1] = b_masa_ini[1]/x_values[2]*100
+    #b_masa_ini[2] = b_masa_ini[2]/x_values[3]*100
+    ##b_masa_ini[10] = b_masa_ini[10]/x_values[2]*100
+    #b_fino_ini_Cu[10] = b_fino_ini_Cu[10]/(x_values[2]*x_c_values[2,0])*100
+    masa_df = pd.DataFrame(nodos_names)
+    masa_df["Desbalance masa inicial"] = b_masa_ini
+    masa_df["Desbalance masa"] = 0
+    masa_df["Desbalance fino inicial Cu"] = b_fino_ini_Cu
+    masa_df["Desbalance fino Cu"] = 0
+    masa_ini = pd.DataFrame(nodos_names)
+
+    return resultados, masa_df, masa_ini
+
+

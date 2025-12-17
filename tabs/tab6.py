@@ -15,7 +15,7 @@ import base64
 import dash_bootstrap_components as dbc
 from dash import Dash
 import dash_ag_grid as dag
-from tabs.utils_recon import balance_core
+from tabs.utils_recon import balance_core, desbalances
 from tabs.utils_dash import  get_data_publica_casos, parse_contents
 from sqlalchemy import  create_engine, text
 from db_connection import get_connection, get_engine
@@ -385,7 +385,7 @@ def register_tab6_callbacks(app):
             })
 
             # 2) Llamada a balance_core para obtener desbalances iniciales (sin usar los reconciliados)
-            _, des_df, des_ini = balance_core(mediciones, error=error_df, fn="Normal")
+            _, des_df, des_ini = desbalances(mediciones, error=error_df, fn="Normal")
             des_ini = des_df
             # 3) Formateo y gráfico
             des_ini = des_ini.rename(columns={0: 'Nodo'})
