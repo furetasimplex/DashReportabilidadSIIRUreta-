@@ -20,12 +20,28 @@ def run_query(query: str, params=None) -> pd.DataFrame:
 
 
 # ============================================================
-# HELPERS: SELECT ALL
+# CONSTANTES / TOKENS
 # ============================================================
+ALL_CASES = "__ALL__"
+ALL_FLOWS = "__ALL_FLOWS__"
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+def safe_date_str(x):
+    if x is None or (isinstance(x, float) and np.isnan(x)):
+        return ""
+    try:
+        return pd.to_datetime(x).strftime("%Y-%m-%d")
+    except Exception:
+        return str(x)
+
+
 def normalize_casos(casos):
     if not casos:
         return []
-    if "__ALL__" in casos:
+    if ALL_CASES in casos:
         df = run_query("""
             SELECT DISTINCT cb.caso_id
             FROM inventar_SpcHidr.casos_balance cb
@@ -39,18 +55,18 @@ def normalize_casos(casos):
 def normalize_flujos(flujos, casos, fi, ff):
     if not flujos:
         return []
-    if "__ALL_FLOWS__" in flujos:
+    if ALL_FLOWS in flujos:
         casos = normalize_casos(casos)
         if not casos or not fi or not ff:
             return []
         ph = ",".join("?" for _ in casos)
         df = run_query(
             f"""
-            SELECT DISTINCT Flujo
-            FROM inventar_SpcHidr.Data_balance_rec
-            WHERE caso_id IN ({ph})
-              AND fecha_bm BETWEEN ? AND ?
-            ORDER BY Flujo
+            SELECT DISTINCT dbr.Flujo
+            FROM inventar_SpcHidr.Data_balance_rec dbr
+            WHERE dbr.caso_id IN ({ph})
+              AND dbr.fecha_bm BETWEEN ? AND ?
+            ORDER BY dbr.Flujo
             """,
             casos + [fi, ff]
         )
@@ -59,17 +75,12 @@ def normalize_flujos(flujos, casos, fi, ff):
 
 
 # ============================================================
-# CONTROL ESTADÍSTICO: SERIE ÚNICA POR FLUJO (NO por caso)
+# CONTROL TEMPORAL (serie única por flujo; casos solo filtran)
 # ============================================================
-def control_temporal_por_flujo(df: pd.DataFrame, tipo: str, lam: float = 0.2, L: float = 3.0) -> pd.DataFrame:
-    """
-    df: debe incluir columnas caso_id, fecha_bm, Flujo y variables.
-    Construye control por flujo concatenando en el tiempo (casos solo filtran).
-    """
+def control_temporal_por_flujo(df, tipo, lam=0.2, L=3.0):
     if df.empty:
         return df
 
-    # Selección de variable
     if tipo == "masa":
         med, rec, tol_col = "Masa_medida", "Masa_recon", "Tolerancia"
     else:
@@ -77,102 +88,73 @@ def control_temporal_por_flujo(df: pd.DataFrame, tipo: str, lam: float = 0.2, L:
 
     df = df.copy()
     df["fecha_bm"] = pd.to_datetime(df["fecha_bm"], errors="coerce")
-    df[med] = pd.to_numeric(df[med], errors="coerce")
-    df[rec] = pd.to_numeric(df[rec], errors="coerce")
-    df[tol_col] = pd.to_numeric(df[tol_col], errors="coerce")
+    df = df.dropna(subset=["fecha_bm", "Flujo"])
 
-    # z = (rec - med)/med
-    df["z"] = np.where(df[med] != 0, (df[rec] - df[med]) / df[med], np.nan)
+    for c in [med, rec, tol_col]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    # Orden SOLO por tiempo (por flujo)
+    df["z"] = np.where(df[med] != 0, (df[rec] - df[med]) / df[med], 0.0)
     df = df.sort_values(["Flujo", "fecha_bm"]).copy()
 
     out = []
     for flujo, g in df.groupby("Flujo", sort=False):
         g = g.sort_values("fecha_bm").copy()
-        z = g["z"].astype(float).fillna(0.0)
+        z = g["z"].fillna(0.0).to_numpy()
 
-        # sigma: std(z) o proxy por tolerancia
-        sigma = float(z.std(ddof=0)) if z.notna().sum() >= 3 else 0.0
+        sigma = float(np.std(z)) if len(z) >= 3 else 0.0
         tol_pct = float((g[tol_col].dropna().mean() or 0.0) / 100.0)
-        sigma = max(sigma, tol_pct / 3 if tol_pct > 0 else 0.001)
+        sigma = max(sigma, (tol_pct / 3) if tol_pct > 0 else 0.001)
 
-        # CUSUM parámetros
+        # CUSUM
         k = 0.5 * sigma
-
-        c_pos, c_neg = 0.0, 0.0
-        cusum_p, cusum_n = [], []
-        for v in z.to_numpy():
-            c_pos = max(0.0, c_pos + (v - k))
-            c_neg = min(0.0, c_neg + (v + k))
-            cusum_p.append(c_pos)
-            cusum_n.append(c_neg)
+        cpos, cneg = 0.0, 0.0
+        cp, cn = [], []
+        for v in z:
+            cpos = max(0.0, cpos + (v - k))
+            cneg = min(0.0, cneg + (v + k))
+            cp.append(cpos)
+            cn.append(cneg)
 
         # EWMA
-        arr = z.to_numpy()
-        ew = arr[0] if len(arr) else 0.0
+        ew = z[0] if len(z) else 0.0
         ewma = []
-        for v in arr:
+        for v in z:
             ew = lam * v + (1 - lam) * ew
             ewma.append(ew)
 
-        ewma_lim = L * sigma * np.sqrt(lam / (2 - lam))
-
-        g["cusum_pos"] = cusum_p
-        g["cusum_neg"] = cusum_n
+        g["cusum_pos"] = cp
+        g["cusum_neg"] = cn
         g["ewma"] = ewma
-        g["ewma_lim"] = ewma_lim
+        g["ewma_lim"] = L * sigma * np.sqrt(lam / (2 - lam))
 
         out.append(g)
 
-    return pd.concat(out, ignore_index=True)
+    return pd.concat(out, ignore_index=True) if out else df
 
 
-def semaforo_por_caso(df_ctrl: pd.DataFrame, lam: float, L: float) -> list[dict]:
-    """
-    Semáforo agregado por caso usando el último registro por flujo/caso.
-    Nota: Control temporal se calcula por flujo concatenado; aquí sólo agregamos por caso con los datos disponibles.
-    """
+def semaforo_por_caso(df_ctrl):
     if df_ctrl.empty:
         return []
 
-    # Último por caso_id y flujo (según fecha)
     last = (
         df_ctrl.sort_values("fecha_bm")
-              .groupby(["caso_id", "Flujo"], as_index=False)
-              .tail(1)
+               .groupby(["caso_id", "Flujo"], as_index=False)
+               .tail(1)
     )
 
     rows = []
     for caso, g in last.groupby("caso_id", sort=False):
-        n = len(g)
-
-        # CRIT: EWMA supera límite o CUSUM muy alto (proxy)
         crit = int((g["ewma"].abs() > g["ewma_lim"]).sum())
-
-        # WARN: EWMA sobre 70% del límite
         warn = int((g["ewma"].abs() > 0.7 * g["ewma_lim"]).sum())
-
-        if crit > 0:
-            estado = "CRITICO"
-        elif warn / max(n, 1) >= 0.30:
-            estado = "WARNING"
-        else:
-            estado = "OK"
-
+        estado = "CRITICO" if crit > 0 else "WARNING" if warn > 0 else "OK"
         rows.append({
             "caso_id": caso,
             "estado": estado,
-            "n_flujos": n,
+            "n_flujos": int(len(g)),
             "warning": warn,
             "criticos": crit
         })
-
-    # Orden por fecha más reciente del caso (no por id)
-    ult = df_ctrl.groupby("caso_id")["fecha_bm"].max().reset_index().rename(columns={"fecha_bm": "fecha_ult"})
-    out = pd.DataFrame(rows).merge(ult, on="caso_id", how="left").sort_values("fecha_ult", ascending=False)
-    out = out.drop(columns=["fecha_ult"])
-    return out.to_dict("records")
+    return rows
 
 
 # ============================================================
@@ -180,13 +162,13 @@ def semaforo_por_caso(df_ctrl: pd.DataFrame, lam: float, L: float) -> list[dict]
 # ============================================================
 def render_tab_analisis_reconciliacion():
 
-    def graph_card(title: str, graph_id: str, btn_id: str):
+    def graph_card(title, graph_id, btn_full_id):
         return dbc.Card(
             dbc.CardBody([
                 dbc.Row([
-                    dbc.Col(html.H6(title, className="fw-bold mb-0"), md=10),
-                    dbc.Col(dbc.Button("⛶", id=btn_id, size="sm", color="secondary"), md=2, className="text-end"),
-                ], className="mb-2"),
+                    dbc.Col(html.H6(title, className="fw-bold mb-2"), md=10),
+                    dbc.Col(dbc.Button("⛶", id=btn_full_id, size="sm"), md=2, className="text-end"),
+                ], className="g-2"),
                 dcc.Graph(id=graph_id),
             ]),
             className="shadow-sm mb-3"
@@ -195,11 +177,24 @@ def render_tab_analisis_reconciliacion():
     return dbc.Container(
         fluid=True,
         children=[
+            dcc.Store(id="stat-selected-flujo", data=None),
+
             html.H4("📊 Estadística de Reconciliación", className="fw-bold text-primary"),
 
-            # -----------------------------
-            # CONTROLES (globales)
-            # -----------------------------
+            dbc.Row([
+                dbc.Col(
+                    dbc.Button("🧹 Limpiar selección de flujo",
+                               id="btn-clear-flujo",
+                               size="sm",
+                               color="secondary"),
+                    md="auto"
+                ),
+                dbc.Col(
+                    html.Div(id="stat-msg-drill", className="text-muted small mt-2"),
+                    md=True
+                )
+            ], className="mb-2"),
+
             dbc.Card(
                 dbc.CardBody([
                     dbc.Row([
@@ -208,7 +203,7 @@ def render_tab_analisis_reconciliacion():
                             dcc.Dropdown(
                                 id="stat-sel-caso",
                                 multi=True,
-                                placeholder="Seleccione uno o más casos"
+                                placeholder="Seleccione uno o más casos...",
                             )
                         ], md=4),
 
@@ -217,14 +212,14 @@ def render_tab_analisis_reconciliacion():
                             dcc.Dropdown(
                                 id="stat-sel-flujo",
                                 multi=True,
-                                placeholder="Seleccione uno o más flujos"
+                                placeholder="Seleccione uno o más flujos...",
                             )
                         ], md=4),
 
                         dbc.Col([
                             dbc.Label("Variable"),
                             dcc.Dropdown(
-                                id="stat-sel-tipo-variable",
+                                id="stat-sel-tipo",
                                 options=[
                                     {"label": "Masa", "value": "masa"},
                                     {"label": "Ley Cu", "value": "ley"},
@@ -235,9 +230,9 @@ def render_tab_analisis_reconciliacion():
                         ], md=2),
 
                         dbc.Col([
-                            dbc.Label("Rango fechas"),
+                            dbc.Label("Fechas"),
                             dcc.DatePickerRange(
-                                id="stat-date-range",
+                                id="stat-fechas",
                                 display_format="YYYY-MM-DD",
                                 minimum_nights=0
                             )
@@ -247,96 +242,66 @@ def render_tab_analisis_reconciliacion():
                     dbc.Row([
                         dbc.Col([
                             dbc.Label("λ (EWMA)"),
-                            dcc.Input(
-                                id="stat-lambda",
-                                type="number",
-                                value=0.2, min=0.05, max=0.5, step=0.05,
-                                style={"width": "100%"}
-                            )
+                            dcc.Input(id="stat-lambda", type="number",
+                                      min=0.05, max=0.5, step=0.05, value=0.2,
+                                      style={"width": "100%"})
                         ], md=2),
-
                         dbc.Col([
                             dbc.Label("L (límites)"),
-                            dcc.Input(
-                                id="stat-L",
-                                type="number",
-                                value=3.0, min=2.0, max=4.0, step=0.5,
-                                style={"width": "100%"}
-                            )
+                            dcc.Input(id="stat-L", type="number",
+                                      min=2.0, max=4.0, step=0.5, value=3.0,
+                                      style={"width": "100%"})
                         ], md=2),
-
-                        dbc.Col([
-                            html.Div(className="mt-4 text-muted small",
-                                     children="Tip: usa 'TODOS' y baja con scroll para ver todos los flujos.")
-                        ], md=8),
+                        dbc.Col(
+                            html.Div("Tip: click en Boxplot/Barras para drill-down al flujo (Cartilla/CUSUM/EWMA).",
+                                     className="small text-muted mt-4"),
+                            md=8
+                        )
                     ], className="g-2 mt-2"),
                 ]),
                 className="shadow-sm mb-4"
             ),
 
-            # ======================================================
-            # SECCIÓN 1: ERRORES MEDIOS (REINCORPORADO)
-            # ======================================================
-            dbc.Card(
-                dbc.CardBody([
-                    html.H5("1️⃣ Errores medios (% ajuste) y tolerancias", className="fw-bold"),
-                    graph_card("Boxplot de Error (%) por Flujo", "stat-g-box-errores", "btn-full-box"),
-                    graph_card("Promedio Error (%) vs Tolerancia (%) por Flujo", "stat-g-barras-tolerancia", "btn-full-barras"),
-                ]),
-                className="shadow-sm mb-4"
+            html.H5("1️⃣ Errores medios y tolerancias", className="fw-bold"),
+            graph_card("Boxplot Error (%) por Flujo + línea del último caso", "stat-box-errores", "btn-full-box"),
+            graph_card("Error medio (%) vs Tolerancia (%) por Flujo", "stat-bar-tolerancia", "btn-full-barras"),
+
+            html.H5("2️⃣ Control temporal (Cartilla + CUSUM + EWMA)", className="fw-bold mt-3"),
+            graph_card("Cartilla: Medido vs Reconciliado (serie única por flujo)", "stat-cartilla", "btn-full-cartilla"),
+            graph_card("CUSUM por flujo", "stat-cusum", "btn-full-cusum"),
+            graph_card("EWMA por flujo (con límites)", "stat-ewma", "btn-full-ewma"),
+
+            html.H6("🚦 Semáforo agregado por caso", className="fw-bold mt-3"),
+            dash_table.DataTable(
+                id="stat-semaforo",
+                columns=[
+                    {"name": "caso_id", "id": "caso_id"},
+                    {"name": "estado", "id": "estado"},
+                    {"name": "n_flujos", "id": "n_flujos"},
+                    {"name": "warning", "id": "warning"},
+                    {"name": "criticos", "id": "criticos"},
+                ],
+                data=[],
+                page_size=10,
+                style_table={"overflowX": "auto"},
+                style_cell={"fontFamily": "Arial", "fontSize": 12, "padding": "6px"},
+                style_header={"fontWeight": "bold"},
             ),
 
-            # ======================================================
-            # SECCIÓN 2: CONTROL TEMPORAL (lo que ya funciona)
-            # ======================================================
-            dbc.Card(
-                dbc.CardBody([
-                    html.H5("2️⃣ Control temporal (Cartilla + CUSUM + EWMA)", className="fw-bold"),
-                    graph_card("Cartilla: Medido vs Reconciliado (serie única por flujo)", "g-cartilla", "btn-full-cartilla"),
-                    graph_card("CUSUM (facet por flujo)", "g-cusum", "btn-full-cusum"),
-                    graph_card("EWMA (facet por flujo)", "g-ewma", "btn-full-ewma"),
-
-                    html.H6("🚦 Semáforo agregado por caso", className="fw-bold mt-2"),
-                    dash_table.DataTable(
-                        id="tabla-semaforo",
-                        columns=[
-                            {"name": "caso_id", "id": "caso_id"},
-                            {"name": "estado", "id": "estado"},
-                            {"name": "n_flujos", "id": "n_flujos"},
-                            {"name": "warning", "id": "warning"},
-                            {"name": "criticos", "id": "criticos"},
-                        ],
-                        data=[],
-                        page_size=10,
-                        style_table={"overflowX": "auto"},
-                        style_cell={"fontFamily": "Arial", "fontSize": 12, "padding": "6px"},
-                        style_header={"fontWeight": "bold"},
-                        style_data_conditional=[
-                            {"if": {"filter_query": '{estado} = "OK"', "column_id": "estado"},
-                             "color": "white", "backgroundColor": "#2E7D32"},
-                            {"if": {"filter_query": '{estado} = "WARNING"', "column_id": "estado"},
-                             "color": "black", "backgroundColor": "#F9A825"},
-                            {"if": {"filter_query": '{estado} = "CRITICO"', "column_id": "estado"},
-                             "color": "white", "backgroundColor": "#C62828"},
-                        ]
-                    ),
-                ]),
-                className="shadow-sm"
-            ),
-
-            # ======================================================
-            # MODAL FULLSCREEN (pantalla completa)
-            # ======================================================
+            # ---------- FULLSCREEN MODAL ----------
             dbc.Modal(
                 [
-                    dbc.ModalHeader(dbc.ModalTitle(id="modal-title-full")),
-                    dbc.ModalBody(dcc.Graph(id="graph-fullscreen", style={"height": "80vh"})),
+                    dbc.ModalHeader(dbc.ModalTitle(id="stat-modal-title")),
+                    dbc.ModalBody(dcc.Graph(id="stat-modal-graph")),
+                    dbc.ModalFooter(
+                        dbc.Button("Cerrar", id="stat-close-modal", color="secondary")
+                    )
                 ],
-                id="modal-fullscreen",
-                size="xl",
+                id="stat-modal",
                 is_open=False,
-                scrollable=True,
-            ),
+                size="xl",
+                centered=True
+            )
         ]
     )
 
@@ -346,14 +311,15 @@ def render_tab_analisis_reconciliacion():
 # ============================================================
 def register_analisis_reconciliacion_callbacks(app):
 
-    # --------------------------------------------------------
-    # Opciones de casos (con TODOS)
-    # --------------------------------------------------------
+    # ----------------------------
+    # Opciones casos (label=nombre_caso + fecha_ultima, value=caso_id)
+    # + TODOS
+    # ----------------------------
     @app.callback(
         Output("stat-sel-caso", "options"),
-        Input("stat-sel-tipo-variable", "value")
+        Input("stat-sel-tipo", "value")
     )
-    def load_cases(_):
+    def cargar_casos(_):
         df = run_query("""
             SELECT
                 cb.caso_id,
@@ -366,25 +332,28 @@ def register_analisis_reconciliacion_callbacks(app):
             ORDER BY MAX(dbr.fecha_bm) DESC
         """)
 
-        opts = [{"label": "🟢 TODOS LOS CASOS", "value": "__ALL__"}]
-        opts += [{"label": f"{r['nombre_caso']} ({r['fecha_ultima']})", "value": r["caso_id"]} for _, r in df.iterrows()]
+        opts = [{"label": "🟢 TODOS LOS CASOS", "value": ALL_CASES}]
+        for _, r in df.iterrows():
+            opts.append({
+                "label": f"{r['nombre_caso']} ({safe_date_str(r['fecha_ultima'])})",
+                "value": r["caso_id"]
+            })
         return opts
 
-
-    # --------------------------------------------------------
-    # Inicializar rango fechas MIN/MAX real según casos
-    # --------------------------------------------------------
+    # ----------------------------
+    # Inicializar rango fechas según casos (min/max real)
+    # ----------------------------
     @app.callback(
-        [Output("stat-date-range", "min_date_allowed"),
-         Output("stat-date-range", "max_date_allowed"),
-         Output("stat-date-range", "start_date"),
-         Output("stat-date-range", "end_date")],
+        [Output("stat-fechas", "min_date_allowed"),
+         Output("stat-fechas", "max_date_allowed"),
+         Output("stat-fechas", "start_date"),
+         Output("stat-fechas", "end_date")],
         Input("stat-sel-caso", "value"),
     )
     def init_dates(casos):
         casos = normalize_casos(casos)
         if not casos:
-            return [None] * 4
+            return None, None, None, None
 
         ph = ",".join("?" for _ in casos)
         df = run_query(
@@ -398,17 +367,17 @@ def register_analisis_reconciliacion_callbacks(app):
         fi, ff = df.loc[0, "fi"], df.loc[0, "ff"]
         return fi, ff, fi, ff
 
-
-    # --------------------------------------------------------
-    # Opciones flujos (con TODOS)
-    # --------------------------------------------------------
+    # ----------------------------
+    # Opciones flujos según casos + fechas
+    # + TODOS
+    # ----------------------------
     @app.callback(
         Output("stat-sel-flujo", "options"),
         Input("stat-sel-caso", "value"),
-        Input("stat-date-range", "start_date"),
-        Input("stat-date-range", "end_date"),
+        Input("stat-fechas", "start_date"),
+        Input("stat-fechas", "end_date"),
     )
-    def load_flows(casos, fi, ff):
+    def cargar_flujos(casos, fi, ff):
         casos = normalize_casos(casos)
         if not casos or not fi or not ff:
             return []
@@ -425,37 +394,59 @@ def register_analisis_reconciliacion_callbacks(app):
             casos + [fi, ff]
         )
 
-        opts = [{"label": "🟢 TODOS LOS FLUJOS", "value": "__ALL_FLOWS__"}]
+        opts = [{"label": "🟢 TODOS LOS FLUJOS", "value": ALL_FLOWS}]
         opts += [{"label": f, "value": f} for f in df["Flujo"].dropna().tolist()]
         return opts
 
-
-    # --------------------------------------------------------
-    # Sección 1: Boxplot errores medios
-    # --------------------------------------------------------
+    # ----------------------------
+    # Drill-down por click (boxplot o barras) + limpiar
+    # ----------------------------
     @app.callback(
-        Output("stat-g-box-errores", "figure"),
-        Input("stat-sel-caso", "value"),
-        Input("stat-sel-flujo", "value"),
-        Input("stat-sel-tipo-variable", "value"),
-        Input("stat-date-range", "start_date"),
-        Input("stat-date-range", "end_date"),
+        Output("stat-selected-flujo", "data"),
+        Input("stat-box-errores", "clickData"),
+        Input("stat-bar-tolerancia", "clickData"),
+        Input("btn-clear-flujo", "n_clicks"),
+        prevent_initial_call=True
     )
-    def fig_box_errores(casos, flujos, tipo, fi, ff):
-        casos = normalize_casos(casos)
-        if not casos or not flujos or not fi or not ff:
-            return {}
+    def capture_flujo(box_click, bar_click, clear_click):
+        if callback_context.triggered_id == "btn-clear-flujo":
+            return None
+        cd = box_click or bar_click
+        if not cd:
+            return None
+        return cd["points"][0].get("x")
 
+    @app.callback(
+        Output("stat-msg-drill", "children"),
+        Input("stat-selected-flujo", "data"),
+    )
+    def drill_label(flujo):
+        if not flujo:
+            return "Drill-down: sin flujo fijo."
+        return f"Drill-down activo: Flujo = {flujo}. (Usa “Limpiar selección” para volver)."
+
+    # ----------------------------
+    # Query base filtrada
+    # ----------------------------
+    def query_filtered(casos, flujos, fi, ff):
+        casos = normalize_casos(casos)
         flujos = normalize_flujos(flujos, casos, fi, ff)
-        if not flujos:
-            return {}
+        if not casos or not flujos or not fi or not ff:
+            return pd.DataFrame()
 
         ph_c = ",".join("?" for _ in casos)
         ph_f = ",".join("?" for _ in flujos)
 
         df = run_query(
             f"""
-            SELECT caso_id, fecha_bm, Flujo, Error_masa, Error_ley_Cu, Tolerancia, Tolerancia_cu
+            SELECT
+                bm_id,
+                caso_id,
+                fecha_bm,
+                Flujo,
+                Masa_medida, Masa_recon, Tolerancia,
+                Ley_medida_Cu, Ley_recon_Cu, Tolerancia_cu,
+                Error_masa, Error_ley_Cu
             FROM inventar_SpcHidr.Data_balance_rec
             WHERE caso_id IN ({ph_c})
               AND Flujo IN ({ph_f})
@@ -464,6 +455,23 @@ def register_analisis_reconciliacion_callbacks(app):
             """,
             casos + flujos + [fi, ff]
         )
+        return df
+
+    # ----------------------------
+    # FIG 1: Boxplot + línea último caso por fecha (por flujo)
+    # ----------------------------
+    @app.callback(
+        Output("stat-box-errores", "figure"),
+        Input("stat-sel-caso", "value"),
+        Input("stat-sel-flujo", "value"),
+        Input("stat-sel-tipo", "value"),
+        Input("stat-fechas", "start_date"),
+        Input("stat-fechas", "end_date"),
+    )
+    def fig_box(casos, flujos, tipo, fi, ff):
+        df = query_filtered(casos, flujos, fi, ff)
+        if df.empty:
+            return {}
 
         y = "Error_masa" if tipo == "masa" else "Error_ley_Cu"
         df[y] = pd.to_numeric(df[y], errors="coerce")
@@ -473,54 +481,52 @@ def register_analisis_reconciliacion_callbacks(app):
             x="Flujo",
             y=y,
             points="outliers",
-            title="Distribución de Error (%) por flujo (agregado en el rango de fechas)"
+            title="Distribución del Error (%) por Flujo"
         )
-        fig.update_layout(yaxis_title="Error (%)", hovermode="x unified")
+
+        # último caso por fecha dentro de la selección (por flujo)
+        df_last = (
+            df.sort_values("fecha_bm")
+              .groupby("Flujo", as_index=False)
+              .tail(1)
+        ).copy()
+
+        # ordenar flows para trazar línea coherente
+        df_last = df_last.sort_values("Flujo")
+
+        fig.add_scatter(
+            x=df_last["Flujo"],
+            y=df_last[y],
+            mode="lines+markers",
+            name="Último caso (por fecha)",
+            line=dict(color="green", width=1),
+            marker=dict(size=5, color="green")
+        )
+
+        fig.update_layout(hovermode="x unified", yaxis_title="Error (%)")
         return fig
 
-
-    # --------------------------------------------------------
-    # Sección 1: Barras error medio vs tolerancia (por flujo)
-    # --------------------------------------------------------
+    # ----------------------------
+    # FIG 2: Barras error medio vs tolerancia (clickable para drill)
+    # ----------------------------
     @app.callback(
-        Output("stat-g-barras-tolerancia", "figure"),
+        Output("stat-bar-tolerancia", "figure"),
         Input("stat-sel-caso", "value"),
         Input("stat-sel-flujo", "value"),
-        Input("stat-sel-tipo-variable", "value"),
-        Input("stat-date-range", "start_date"),
-        Input("stat-date-range", "end_date"),
+        Input("stat-sel-tipo", "value"),
+        Input("stat-fechas", "start_date"),
+        Input("stat-fechas", "end_date"),
     )
-    def fig_barras_tolerancia(casos, flujos, tipo, fi, ff):
-        casos = normalize_casos(casos)
-        if not casos or not flujos or not fi or not ff:
+    def fig_barras(casos, flujos, tipo, fi, ff):
+        df = query_filtered(casos, flujos, fi, ff)
+        if df.empty:
             return {}
-
-        flujos = normalize_flujos(flujos, casos, fi, ff)
-        if not flujos:
-            return {}
-
-        ph_c = ",".join("?" for _ in casos)
-        ph_f = ",".join("?" for _ in flujos)
-
-        df = run_query(
-            f"""
-            SELECT caso_id, fecha_bm, Flujo, Error_masa, Error_ley_Cu, Tolerancia, Tolerancia_cu
-            FROM inventar_SpcHidr.Data_balance_rec
-            WHERE caso_id IN ({ph_c})
-              AND Flujo IN ({ph_f})
-              AND fecha_bm BETWEEN ? AND ?
-            ORDER BY fecha_bm
-            """,
-            casos + flujos + [fi, ff]
-        )
 
         if tipo == "masa":
-            err_col = "Error_masa"
-            tol_col = "Tolerancia"
+            err_col, tol_col = "Error_masa", "Tolerancia"
             title = "Error medio Masa (%) vs Tolerancia (%)"
         else:
-            err_col = "Error_ley_Cu"
-            tol_col = "Tolerancia_cu"
+            err_col, tol_col = "Error_ley_Cu", "Tolerancia_cu"
             title = "Error medio Ley Cu (%) vs Tolerancia (%)"
 
         df[err_col] = pd.to_numeric(df[err_col], errors="coerce")
@@ -539,80 +545,61 @@ def register_analisis_reconciliacion_callbacks(app):
             color="cumple",
             title=title
         )
-        fig.update_layout(yaxis_title="Error medio (%)", hovermode="x unified")
+        fig.update_layout(hovermode="x unified", yaxis_title="Error medio (%)")
         return fig
 
-
-    # --------------------------------------------------------
-    # Sección 2: Control temporal (cartilla + cusum + ewma + semáforo)
-    # --------------------------------------------------------
+    # ----------------------------
+    # FIG 3/4/5: Cartilla + CUSUM + EWMA + Semáforo
+    # - Drill-down: si hay flujo seleccionado por click, fija ese flujo
+    # ----------------------------
     @app.callback(
         [
-            Output("g-cartilla", "figure"),
-            Output("g-cusum", "figure"),
-            Output("g-ewma", "figure"),
-            Output("tabla-semaforo", "data"),
+            Output("stat-cartilla", "figure"),
+            Output("stat-cusum", "figure"),
+            Output("stat-ewma", "figure"),
+            Output("stat-semaforo", "data"),
         ],
         Input("stat-sel-caso", "value"),
         Input("stat-sel-flujo", "value"),
-        Input("stat-sel-tipo-variable", "value"),
-        Input("stat-date-range", "start_date"),
-        Input("stat-date-range", "end_date"),
+        Input("stat-selected-flujo", "data"),
+        Input("stat-sel-tipo", "value"),
+        Input("stat-fechas", "start_date"),
+        Input("stat-fechas", "end_date"),
         Input("stat-lambda", "value"),
         Input("stat-L", "value"),
     )
-    def update_control_temporal(casos, flujos, tipo, fi, ff, lam, L):
-        casos = normalize_casos(casos)
+    def fig_control(casos, flujos, flujo_click, tipo, fi, ff, lam, L):
+
         if not casos or not flujos or not fi or not ff:
             return {}, {}, {}, []
 
-        flujos = normalize_flujos(flujos, casos, fi, ff)
-        if not flujos:
+        flujos_eff = [flujo_click] if flujo_click else flujos
+        df = query_filtered(casos, flujos_eff, fi, ff)
+        if df.empty:
             return {}, {}, {}, []
 
         lam = float(lam or 0.2)
         L = float(L or 3.0)
 
-        ph_c = ",".join("?" for _ in casos)
-        ph_f = ",".join("?" for _ in flujos)
-
-        df = run_query(
-            f"""
-            SELECT
-                caso_id,
-                fecha_bm,
-                Flujo,
-                Masa_medida, Masa_recon, Tolerancia,
-                Ley_medida_Cu, Ley_recon_Cu, Tolerancia_cu
-            FROM inventar_SpcHidr.Data_balance_rec
-            WHERE caso_id IN ({ph_c})
-              AND Flujo IN ({ph_f})
-              AND fecha_bm BETWEEN ? AND ?
-            ORDER BY fecha_bm
-            """,
-            casos + flujos + [fi, ff]
-        )
-
-        if df.empty:
-            return {}, {}, {}, []
-
-        # CARTILLA (NO series por caso, solo facet por flujo)
         if tipo == "masa":
-            y_med, y_rec = "Masa_medida", "Masa_recon"
-            ylabel = "Masa"
+            y_med, y_rec, ylabel = "Masa_medida", "Masa_recon", "Masa"
         else:
-            y_med, y_rec = "Ley_medida_Cu", "Ley_recon_Cu"
-            ylabel = "Ley Cu"
+            y_med, y_rec, ylabel = "Ley_medida_Cu", "Ley_recon_Cu", "Ley Cu"
 
+        # Cartilla
         fig_cart = px.line(
             df,
             x="fecha_bm",
             y=[y_med, y_rec],
             facet_row="Flujo",
             markers=True,
-            title="Cartilla de Control – Serie temporal por flujo (casos solo filtran)"
+            title="Cartilla – Medido vs Reconciliado (casos solo filtran)"
         )
-        fig_cart.update_layout(height=max(450, 260 * df["Flujo"].nunique()), yaxis_title=ylabel, hovermode="x unified")
+        fig_cart.update_layout(
+            height=max(450, 260 * df["Flujo"].nunique()),
+            yaxis_title=ylabel,
+            hovermode="x unified"
+        )
 
         # Control estadístico
         df_ctrl = control_temporal_por_flujo(df, tipo=tipo, lam=lam, L=L)
@@ -622,79 +609,81 @@ def register_analisis_reconciliacion_callbacks(app):
             x="fecha_bm",
             y=["cusum_pos", "cusum_neg"],
             facet_row="Flujo",
-            title="CUSUM por flujo (serie temporal)"
+            title="CUSUM por flujo"
         )
-        fig_cusum.update_layout(height=max(450, 260 * df_ctrl["Flujo"].nunique()), hovermode="x unified")
+        fig_cusum.update_layout(
+            height=max(450, 260 * df_ctrl["Flujo"].nunique()),
+            hovermode="x unified"
+        )
 
         fig_ewma = px.line(
             df_ctrl,
             x="fecha_bm",
             y="ewma",
             facet_row="Flujo",
-            title="EWMA por flujo (serie temporal)"
+            title="EWMA por flujo"
         )
-        fig_ewma.update_layout(height=max(450, 260 * df_ctrl["Flujo"].nunique()), hovermode="x unified")
+        fig_ewma.update_layout(
+            height=max(450, 260 * df_ctrl["Flujo"].nunique()),
+            hovermode="x unified"
+        )
 
-        # Límites EWMA (±)
+        # Límites EWMA (trazados globalmente; Plotly los replica por faceta)
         fig_ewma.add_scatter(
-            x=df_ctrl["fecha_bm"], y=df_ctrl["ewma_lim"],
-            mode="lines", line=dict(dash="dot", color="red"),
+            x=df_ctrl["fecha_bm"],
+            y=df_ctrl["ewma_lim"],
+            mode="lines",
+            line=dict(dash="dot", color="red"),
             name="+Límite"
         )
         fig_ewma.add_scatter(
-            x=df_ctrl["fecha_bm"], y=-df_ctrl["ewma_lim"],
-            mode="lines", line=dict(dash="dot", color="red"),
+            x=df_ctrl["fecha_bm"],
+            y=-df_ctrl["ewma_lim"],
+            mode="lines",
+            line=dict(dash="dot", color="red"),
             name="-Límite"
         )
 
-        sem = semaforo_por_caso(df_ctrl, lam=lam, L=L)
+        sem = semaforo_por_caso(df_ctrl)
         return fig_cart, fig_cusum, fig_ewma, sem
 
-
-    # --------------------------------------------------------
-    # FULLSCREEN: abre el gráfico clickeado en modal
-    # --------------------------------------------------------
+    # ----------------------------
+    # FULLSCREEN MODAL (por gráfico)
+    # ----------------------------
     @app.callback(
-        [Output("modal-fullscreen", "is_open"),
-         Output("graph-fullscreen", "figure"),
-         Output("modal-title-full", "children")],
-        [
-            Input("btn-full-box", "n_clicks"),
-            Input("btn-full-barras", "n_clicks"),
-            Input("btn-full-cartilla", "n_clicks"),
-            Input("btn-full-cusum", "n_clicks"),
-            Input("btn-full-ewma", "n_clicks"),
-        ],
-        [
-            State("stat-g-box-errores", "figure"),
-            State("stat-g-barras-tolerancia", "figure"),
-            State("g-cartilla", "figure"),
-            State("g-cusum", "figure"),
-            State("g-ewma", "figure"),
-            State("modal-fullscreen", "is_open"),
-        ],
+        [Output("stat-modal", "is_open"),
+         Output("stat-modal-title", "children"),
+         Output("stat-modal-graph", "figure")],
+        Input("btn-full-box", "n_clicks"),
+        Input("btn-full-barras", "n_clicks"),
+        Input("btn-full-cartilla", "n_clicks"),
+        Input("btn-full-cusum", "n_clicks"),
+        Input("btn-full-ewma", "n_clicks"),
+        Input("stat-close-modal", "n_clicks"),
+        State("stat-modal", "is_open"),
+        State("stat-box-errores", "figure"),
+        State("stat-bar-tolerancia", "figure"),
+        State("stat-cartilla", "figure"),
+        State("stat-cusum", "figure"),
+        State("stat-ewma", "figure"),
         prevent_initial_call=True
     )
-    def fullscreen(n1, n2, n3, n4, n5, fig_box, fig_bar, fig_cart, fig_cusum, fig_ewma, is_open):
-        trig = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else None
+    def toggle_fullscreen(n1, n2, n3, n4, n5, close, is_open,
+                          fig_box, fig_bar, fig_cart, fig_cusum, fig_ewma):
+        trig = callback_context.triggered_id
+        if trig == "stat-close-modal":
+            return False, "", {}
 
-        title_map = {
-            "btn-full-box": "Boxplot Error (%) – Pantalla completa",
-            "btn-full-barras": "Error medio vs Tolerancia – Pantalla completa",
-            "btn-full-cartilla": "Cartilla – Pantalla completa",
-            "btn-full-cusum": "CUSUM – Pantalla completa",
-            "btn-full-ewma": "EWMA – Pantalla completa",
+        mapping = {
+            "btn-full-box": ("Boxplot Error (%)", fig_box),
+            "btn-full-barras": ("Barras Error vs Tolerancia", fig_bar),
+            "btn-full-cartilla": ("Cartilla Medido vs Reconciliado", fig_cart),
+            "btn-full-cusum": ("CUSUM por flujo", fig_cusum),
+            "btn-full-ewma": ("EWMA por flujo", fig_ewma),
         }
 
-        fig_map = {
-            "btn-full-box": fig_box,
-            "btn-full-barras": fig_bar,
-            "btn-full-cartilla": fig_cart,
-            "btn-full-cusum": fig_cusum,
-            "btn-full-ewma": fig_ewma,
-        }
+        if trig in mapping:
+            title, fig = mapping[trig]
+            return True, title, fig
 
-        if not trig or trig not in fig_map:
-            return is_open, {}, "Vista Pantalla Completa"
-
-        return True, fig_map[trig], title_map.get(trig, "Vista Pantalla Completa")
+        return is_open, "", {}
