@@ -186,14 +186,30 @@ def register_tab4_callbacks(app):
         conn.close()
 
         # Filtrar torres + preparar tipos
-        torres = torres or ['TM1', 'TM2']
         df = df[df['Torre'].isin(torres)]
         if df.empty:
             opts = []
             return (opts, *_empty_all())
 
         df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
-        df['Representatividad'] = pd.to_numeric(df['Representatividad'], errors='coerce').fillna(0)
+
+        # --- INICIO DEL CAMBIO ---
+        # 1. Limpiamos el texto: Quitamos '%' y convertimos a número.
+        # "Tambor detenido" se convertirá en NaN (Vacío) automáticamente.
+        df['Representatividad'] = pd.to_numeric(
+            df['Representatividad'].astype(str).str.replace('%', '', regex=False), 
+            errors='coerce'
+        )
+
+        # 2. Ajuste de escala: Si el número es mayor a 1 (ej: 35), lo dividimos por 100 (0.35)
+        mask_enteros = df['Representatividad'] > 1
+        df.loc[mask_enteros, 'Representatividad'] = df.loc[mask_enteros, 'Representatividad'] / 100
+        # --- FIN DEL CAMBIO ---
+
+        # 2. Si el Excel mandó "35" (entero) lo pasamos a "0.35"
+        mask_enteros = df['Representatividad'] > 1
+        df.loc[mask_enteros, 'Representatividad'] = df.loc[mask_enteros, 'Representatividad'] / 100
+        # --- CORRECCIÓN FIN ---
 
         # Opciones de elemento (todas numéricas excepto meta columnas)
         meta_cols = ['Fecha', 'Torre', 'Turno', 'Representatividad', 'Apilado']

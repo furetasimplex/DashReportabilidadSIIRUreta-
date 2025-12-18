@@ -2,88 +2,64 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Flowsheet Area Seca - Espaciado N9 Mejorado</title>
+    <title>Flowsheet Area Seca - V6 Ajuste Fino</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             overflow: hidden;
-            background: #fcfcfc;
+            background: #fdfdfd;
         }
         #chart {
             width: 100vw;
             height: 100vh;
         }
         
-        /* --- Controles --- */
         .controls {
-            position: fixed;
-            top: 20px;
-            left: 20px;
+            position: fixed; top: 20px; left: 20px;
             background: rgba(255, 255, 255, 0.95);
-            padding: 10px 15px;
-            border-radius: 6px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 100;
-            border: 1px solid #ccc;
-            display: flex;
-            gap: 15px;
+            padding: 10px 20px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 100; border: 1px solid #ddd;
+            display: flex; gap: 20px; align-items: center;
         }
         .control-group { display: flex; align-items: center; }
-        .controls label { margin-left: 5px; font-size: 13px; font-weight: 600; cursor: pointer; }
-        .controls input { cursor: pointer; }
+        .controls label { margin-left: 8px; font-size: 13px; font-weight: 600; color: #444; cursor: pointer; }
+        .controls input { cursor: pointer; accent-color: #007aff; }
 
-        /* --- Tooltip --- */
         .tooltip {
-            position: absolute;
-            padding: 8px 12px;
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.85);
-            color: white;
-            border-radius: 4px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            z-index: 100;
+            position: absolute; padding: 10px 14px; font-size: 12px;
+            background: #2d3436; color: #fff; border-radius: 6px;
+            pointer-events: none; opacity: 0; transition: opacity 0.2s;
+            z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
-        /* --- Estilos Generales SVG --- */
-        text { font-family: sans-serif; pointer-events: none; }
+        text { font-family: 'Segoe UI', sans-serif; pointer-events: none; user-select: none; }
+        .node-label { font-size: 12px; font-weight: 700; fill: #2d3436; text-anchor: middle; }
+        .node-sublabel { font-size: 10px; fill: #636e72; text-anchor: middle; }
+        .node-value { font-size: 11px; font-weight: 800; fill: #c0392b; text-anchor: middle; } 
         
-        /* Etiquetas de Nodos */
-        .node-label { font-size: 11px; font-weight: bold; fill: #000; text-anchor: middle; }
-        .node-sublabel { font-size: 9px; fill: #555; text-anchor: middle; }
-        .node-value { font-size: 10px; font-weight: 800; fill: #c0392b; text-anchor: middle; }
-        
-        /* Zonas (Cajas punteadas) */
-        .zone-rect { fill: none; stroke-width: 2px; stroke-dasharray: 8,5; }
-        .zone-label { font-size: 14px; font-weight: bold; fill: #333; text-anchor: end; }
+        .zone-rect { fill: none; stroke-width: 1.5px; stroke-dasharray: 6,4; opacity: 0.5; }
+        .zone-label { font-size: 13px; font-weight: 700; text-anchor: end; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
 
-        /* Interacción Nodos */
-        .node rect, .node circle, .node polygon, .node ellipse {
-            stroke-width: 1.5px;
-            transition: all 0.3s;
-            cursor: pointer;
+        .node rect, .node circle, .node polygon {
+            stroke-width: 2px; transition: all 0.2s ease-out; cursor: pointer;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
         }
-        .node:hover rect, .node:hover circle, .node:hover ellipse, .node:hover polygon {
-            stroke: #007aff !important;
-            stroke-width: 3px !important;
-            filter: drop-shadow(0 0 5px rgba(0,122,255,0.4));
+        .node:hover rect, .node:hover circle, .node:hover polygon {
+            stroke: #0984e3 !important; stroke-width: 3px !important;
+            filter: drop-shadow(0 4px 8px rgba(9, 132, 227, 0.3));
         }
 
-        /* Enlaces */
         .link path {
-            fill: none;
-            stroke: #444;
-            stroke-width: 1.5px;
-            transition: stroke-width 0.2s;
+            fill: none; stroke: #636e72; stroke-width: 1.5px;
+            stroke-linejoin: round; stroke-linecap: round; transition: stroke-width 0.2s;
         }
-        .link:hover path { stroke: #007aff; stroke-width: 2.5px; }
+        .link:hover path { stroke: #0984e3; stroke-width: 3px; z-index: 99; }
         
-        .link-label { font-size: 10px; font-weight: bold; fill: #000; text-anchor: middle; paint-order: stroke; stroke: #fcfcfc; stroke-width: 3px; }
-        .link-value { font-size: 9px; font-weight: bold; fill: #0056b3; text-anchor: middle; paint-order: stroke; stroke: #fcfcfc; stroke-width: 3px; }
-
+        .link-label { font-size: 10px; font-weight: 700; fill: #2d3436; text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
+        .link-value { font-size: 10px; font-weight: 600; fill: #0984e3; text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
     </style>
 </head>
 <body>
@@ -95,11 +71,11 @@
         </div>
         <div class="control-group">
             <input type="radio" id="metric-cu" name="metric" value="Cu">
-            <label for="metric-cu">Ley de Cobre (%)</label>
+            <label for="metric-cu">Ley Cu (%)</label>
         </div>
         <div class="control-group">
             <input type="radio" id="metric-mo" name="metric" value="Mo">
-            <label for="metric-mo">Tolerancia (Ton,Ley Cu)</label>
+            <label for="metric-mo">Tolerancia</label>
         </div>
     </div>
 
@@ -108,357 +84,315 @@
 
     <script>
     (function () {
-        // --- ESTADO GLOBAL ---
         window.flowData = {};
         window.nodeData = {};
         window.currentMetric = "TMS";
 
         // =========================================================
-        // 1. DATOS DE NODOS (Con N9 más espaciado)
+        // 1. NODOS
         // =========================================================
         const nodesData = [
-            // --- ZONA AREA SECA (AZUL) ---
-            { id: "mina", label: "Mina", x: 50, y: 150, type: "box-open", w: 80, h: 40 },
-            { id: "stock", label: "Stock", x: 50, y: 300, type: "box-open", w: 80, h: 40 },
+            // EJE IZQUIERDO
+            { id: "mina", label: "Mina", x: 40, y: 180, type: "box-open", w: 80, h: 40 },
+            { id: "stock", label: "Stock", x: 40, y: 340, type: "box-open", w: 80, h: 40 },
             
-            { id: "N1", label: "N1", x: 200, y: 225, type: "circle", r: 20, fill: "#cfe2f3", stroke: "#6fa8dc" },
+            // N1
+            { id: "N1", label: "N1", x: 190, y: 260, type: "circle", r: 20, fill: "#e1f5fe", stroke: "#0288d1" },
             
-            { id: "chancado", label: "Chancado", sublabel: "(1°,2°,3°)", x: 350, y: 205, type: "rect", w: 120, h: 50, fill: "#cfe2f3", stroke: "#6fa8dc" },
+            // Chancado
+            { id: "chancado", label: "Chancado", sublabel: "(1°, 2°, 3°)", x: 330, y: 235, type: "rect", w: 120, h: 50, fill: "#e1f5fe", stroke: "#0288d1" },
             
-            { id: "silo", label: "Silo", x: 550, y: 205, type: "rect", w: 60, h: 50, fill: "#cfe2f3", stroke: "#6fa8dc" },
-            { id: "inv_silo", label: "Inventario", x: 560, y: 100, type: "triangle", w: 40, h: 40, fill: "#ffff88", stroke: "#d6b656" },
-            
-            { id: "N4", label: "N4", x: 750, y: 150, type: "circle", r: 18, fill: "#cfe2f3", stroke: "#6fa8dc" },
-            { id: "N5", label: "N5", x: 750, y: 300, type: "circle", r: 18, fill: "#cfe2f3", stroke: "#6fa8dc" },
-            
-            { id: "srr_top", label: "SRR", sublabel: "CV 002", x: 680, y: 80, type: "circle-small", r: 15, fill: "#cfe2f3", stroke: "#999" },
-            { id: "sal_top", label: "SAL", sublabel: "CV 201", x: 820, y: 80, type: "circle-small", r: 15, fill: "#cfe2f3", stroke: "#999" },
-            { id: "srr_bot", label: "SRR", sublabel: "CV 003", x: 680, y: 400, type: "circle-small", r: 15, fill: "#cfe2f3", stroke: "#999" },
-            { id: "sal_bot", label: "SAL", sublabel: "CV 202", x: 820, y: 400, type: "circle-small", r: 15, fill: "#cfe2f3", stroke: "#999" },
-            
-            { id: "aglomerado", label: "Aglomerado", sublabel: "(Tambor 1, Tambor 2)", x: 1200, y: 200, type: "rect", w: 160, h: 60, fill: "#cfe2f3", stroke: "#6fa8dc" },
+            // Silo
+            { id: "silo", label: "Silo", x: 580, y: 235, type: "rect", w: 70, h: 50, fill: "#e1f5fe", stroke: "#0288d1" },
+            { id: "inv_silo", label: "Inventario", x: 595, y: 160, type: "triangle", w: 40, h: 35, fill: "#fff9c4", stroke: "#fbc02d" },
 
-            // --- ZONA LIXIVIACION (ROJA) ---
-            { id: "lix_sulf", label: "Lix", sublabel: "(Pad Sulf)", x: 850, y: 650, type: "rect", w: 100, h: 60, fill: "#fce5cd", stroke: "#e69138" },
-            { id: "lix_ox", label: "Lix", sublabel: "(Pad Ox)", x: 1050, y: 650, type: "rect", w: 100, h: 60, fill: "#fce5cd", stroke: "#e69138" },
-            
-            { id: "inv_sulf", label: "Inventario", x: 700, y: 660, type: "triangle", w: 30, h: 30, fill: "#ffff88", stroke: "#d6b656" },
-            { id: "inv_ox", label: "Inventario", x: 1300, y: 660, type: "triangle", w: 30, h: 30, fill: "#ffff88", stroke: "#d6b656" },
-            
-            // >> CAMBIO AQUI: N9 bajado de 800 a 860
-            { id: "N9", label: "N9", x: 950, y: 860, type: "circle", r: 20, fill: "#fce5cd", stroke: "#e69138" },
-            
-            // >> CAMBIO AQUI: Botaderos bajado de 900 a 980 y hecho más ancho
-            { id: "botaderos", label: "Hacia botaderos", x: 850, y: 980, type: "dashed-rect", w: 300, h: 30 }
+            // N10
+            { id: "N10", label: "N10", x: 615, y: 410, type: "circle", r: 18, fill: "#fff3e0", stroke: "#f57c00" },
+
+            // N4 (Top)
+            { id: "N4", label: "N4", x: 960, y: 120, type: "circle", r: 22, fill: "#e1f5fe", stroke: "#0288d1" },
+            // Inputs N4
+            { id: "srr_top", label: "SRR", sublabel: "CV 002", x: 850, y: 40, type: "circle-small", r: 16, fill: "#ffffff", stroke: "#78909c" },
+            { id: "sal_top", label: "SAL", sublabel: "CV 201", x: 1070, y: 40, type: "circle-small", r: 16, fill: "#ffffff", stroke: "#78909c" },
+
+            // N5 (Bot)
+            { id: "N5", label: "N5", x: 960, y: 410, type: "circle", r: 22, fill: "#e1f5fe", stroke: "#0288d1" },
+            // Inputs N5
+            { id: "srr_bot", label: "SRR", sublabel: "CV 003", x: 850, y: 490, type: "circle-small", r: 16, fill: "#ffffff", stroke: "#78909c" },
+            { id: "sal_bot", label: "SAL", sublabel: "CV 202", x: 1070, y: 490, type: "circle-small", r: 16, fill: "#ffffff", stroke: "#78909c" },
+
+            // Aglomerado
+            { id: "aglomerado", label: "Aglomerado", sublabel: "(Tambores)", x: 1180, y: 100, type: "rect", w: 150, h: 340, fill: "#e1f5fe", stroke: "#0288d1" },
+
+            // Lixiviación
+            { id: "lix_sulf", label: "Lixiviación", sublabel: "Sulfuros", x: 1060, y: 640, type: "rect", w: 120, h: 70, fill: "#ffe0b2", stroke: "#e65100" },
+            { id: "lix_ox", label: "Lixiviación", sublabel: "Óxidos", x: 1300, y: 640, type: "rect", w: 120, h: 70, fill: "#ffe0b2", stroke: "#e65100" },
+
+            { id: "inv_sulf", label: "Inventario", x: 960, y: 660, type: "triangle", w: 35, h: 35, fill: "#fff9c4", stroke: "#fbc02d" },
+            { id: "inv_ox", label: "Inventario", x: 1480, y: 660, type: "triangle", w: 35, h: 35, fill: "#fff9c4", stroke: "#fbc02d" },
+
+            // Salidas
+            { id: "N9", label: "N9", x: 1240, y: 820, type: "circle", r: 22, fill: "#fff3e0", stroke: "#f57c00" },
+            { id: "botaderos", label: "Hacia Botaderos", x: 1000, y: 920, type: "dashed-rect", w: 480, h: 40 }
         ];
 
         // =========================================================
-        // 2. DATOS DE CONEXIONES
+        // 2. CONEXIONES
         // =========================================================
         const edgesData = [
-            { id: "F2", source: "mina", target: "N1", label: "F2", pathType: "h-v" },
-            { id: "F1", source: "stock", target: "N1", label: "F1", pathType: "h-v" },
+            { id: "F2", source: "mina", target: "N1", label: "F2", pathType: "bracket-top" },
+            { id: "F1", source: "stock", target: "N1", label: "F1", pathType: "bracket-bot" },
             { id: "F3", source: "N1", target: "chancado", label: "F3", pathType: "straight" },
             { id: "F4", source: "chancado", target: "silo", label: "F4", pathType: "straight" },
-            { id: "F5", source: "silo", target: "inv_silo", label: "F5", pathType: "straight" },
-            
-            { id: "F6", source: "silo", target: "N4", label: "F6", pathType: "h-v-h" },
-            { id: "F7", source: "silo", target: "N5", label: "F7", pathType: "h-v-h" },
-            
-            { id: "F8", source: "srr_top", target: "N4", label: "F8", pathType: "v-h" },
-            { id: "F10", source: "sal_top", target: "N4", label: "F10", pathType: "v-h" },
-            
-            { id: "F9", source: "srr_bot", target: "N5", label: "F9", pathType: "v-h" },
-            { id: "F11", source: "sal_bot", target: "N5", label: "F11", pathType: "v-h" },
-            
-            { id: "F12", source: "N4", target: "aglomerado", label: "F12 (CV008)", pathType: "h-v" },
-            { id: "F13", source: "N5", target: "aglomerado", label: "F13 (CV108)", pathType: "h-v" },
-            
-            { id: "F14", source: "aglomerado", target: "lix_sulf", label: "F14", pathType: "v-h-v" },
-            { id: "F15", source: "aglomerado", target: "lix_ox", label: "F15", pathType: "v-h-v" },
+            { id: "F5", source: "silo", target: "inv_silo", label: "F5", pathType: "v-up" },
 
-            { id: "F16", source: "lix_sulf", target: "inv_sulf", label: "F16", pathType: "straight" },
-            { id: "F17", source: "lix_ox", target: "inv_ox", label: "F17", pathType: "straight" },
-            
-            { id: "F18", source: "lix_sulf", target: "N9", label: "F18", pathType: "v-h" },
-            { id: "F19", source: "lix_ox", target: "N9", label: "F19", pathType: "v-h" },
-            
-            { id: "F20", source: "N9", target: "botaderos", label: "F20", pathType: "straight" },
-            
-            // Ajuste visual offset para llegar a la nueva caja ancha de botaderos
-            { id: "F21", source: "lix_sulf", target: "botaderos", label: "F21", pathType: "v-direct-bot", offset: -50 },
-            { id: "F22", source: "lix_ox", target: "botaderos", label: "F22", pathType: "v-direct-bot", offset: 50 }
+            { id: "F25", source: "silo", target: "N10", label: "F25 (CV001)", pathType: "independent-left-entry" },
+            { id: "dist_top", source: "N10", target: "srr_top", label: " ", pathType: "around-mid-top", dashed: true },
+            { id: "dist_bot", source: "N10", target: "srr_bot", label: " ", pathType: "around-mid-bot", dashed: true },
+
+            { id: "F6", source: "silo", target: "N4", label: "F6", pathType: "step-h-v-h-top-extended" },
+            { id: "F7", source: "silo", target: "N5", label: "F7", pathType: "step-h-v-h-bot-extended" },
+
+            { id: "F8", source: "srr_top", target: "N4", label: "F8", pathType: "T-shape" },
+            { id: "F10", source: "sal_top", target: "N4", label: "F10", pathType: "T-shape" },
+            { id: "F9", source: "srr_bot", target: "N5", label: "F9", pathType: "T-shape" },
+            { id: "F11", source: "sal_bot", target: "N5", label: "F11", pathType: "T-shape" },
+
+            { id: "F12", source: "N4", target: "aglomerado", label: "F12 (CV008)", pathType: "straight-anchor-top" },
+            { id: "F13", source: "N5", target: "aglomerado", label: "F13 (CV108)", pathType: "straight-anchor-bot" },
+
+            { id: "F14", source: "aglomerado", target: "lix_sulf", label: "F14", pathType: "fork-sulf" },
+            { id: "F15", source: "aglomerado", target: "lix_ox", label: "F15", pathType: "fork-ox" },
+
+            { id: "F16", source: "lix_sulf", target: "inv_sulf", label: "F16", pathType: "strict-horizontal" },
+            { id: "F17", source: "lix_ox", target: "inv_ox", label: "F17", pathType: "strict-horizontal" },
+
+            { id: "F18", source: "lix_sulf", target: "N9", label: "F18", pathType: "inner-to-n9" },
+            { id: "F19", source: "lix_ox", target: "N9", label: "F19", pathType: "inner-to-n9" },
+            { id: "F20", source: "N9", target: "botaderos", label: "F20", pathType: "center-drop" },
+
+            { id: "F21", source: "lix_sulf", target: "botaderos", label: "F21 (Camiones)", pathType: "outer-left-drop" },
+            { id: "F22", source: "lix_ox", target: "botaderos", label: "F22 (Camiónes)", pathType: "outer-right-drop" }
         ];
-        
-        // >> CAMBIO AQUI: Zona lix altura aumentada a 520 para que quepa N9 y Botaderos
+
+        // Zonas
         const zonesData = [
-            { id: "seca", label: "APILADO / AREA SECA", x: 10, y: 20, w: 1400, h: 480, color: "blue" },
-            { id: "lix", label: "LIXIVIACIÓN", x: 600, y: 530, w: 850, h: 520, color: "red" }
+            { id: "seca", label: "ÁREA SECA / APILADO", x: 20, y: -5, w: 1330, h: 560, color: "#0984e3" },
+            { id: "lix", label: "LIXIVIACIÓN", x: 840, y: 590, w: 720, h: 390, color: "#d63031" }
         ];
 
-        // --- SETUP D3 ---
-        const width = 1500;
-        // >> CAMBIO: Height aumentado a 1100
-        const height = 1100;
-        
-        const svg = d3.select("#chart").append("svg")
-            .attr("viewBox", `0 0 ${width} ${height}`)
-            .attr("preserveAspectRatio", "xMidYMid meet");
-        
+        // RENDER
+        const width = 1700, height = 1100;
+        const svg = d3.select("#chart").append("svg").attr("viewBox", `0 0 ${width} ${height}`).attr("preserveAspectRatio", "xMidYMid meet");
         const g = svg.append("g");
-        
-        const zoom = d3.zoom().scaleExtent([0.5, 3]).on("zoom", e => g.attr("transform", e.transform));
+        const zoom = d3.zoom().scaleExtent([0.4, 2]).on("zoom", e => g.attr("transform", e.transform));
         svg.call(zoom);
+        svg.call(zoom.transform, d3.zoomIdentity.translate(20, 0).scale(0.85));
 
-        // --- FLECHA ---
-        svg.append("defs").append("marker")
-            .attr("id", "arrow")
-            .attr("viewBox", "0 -5 10 10")
-            .attr("refX", 8) 
-            .attr("refY", 0)
-            .attr("markerWidth", 6)
-            .attr("markerHeight", 6)
-            .attr("orient", "auto")
-            .append("path")
-            .attr("d", "M0,-5L10,0L0,5")
-            .attr("fill", "#444");
+        svg.append("defs").append("marker").attr("id", "arrow").attr("viewBox", "0 -5 10 10").attr("refX", 8).attr("refY", 0).attr("markerWidth", 5).attr("markerHeight", 5).attr("orient", "auto").append("path").attr("d", "M0,-5L10,0L0,5").attr("fill", "#636e72");
 
         const nodeMap = new Map(nodesData.map(n => [n.id, n]));
 
-        // --- DIBUJAR ZONAS ---
-        g.selectAll(".zone")
-            .data(zonesData).enter().append("g")
-            .each(function(d) {
-                d3.select(this).append("rect")
-                    .attr("class", "zone-rect")
-                    .attr("x", d.x).attr("y", d.y)
-                    .attr("width", d.w).attr("height", d.h)
-                    .attr("stroke", d.color);
-                d3.select(this).append("text")
-                    .attr("class", "zone-label")
-                    .attr("x", d.x + d.w - 15).attr("y", d.y + 30)
-                    .attr("fill", d.color)
-                    .text(d.label);
-            });
+        g.selectAll(".zone").data(zonesData).enter().append("g").each(function(d) {
+            d3.select(this).append("rect")
+                .attr("class", "zone-rect")
+                .attr("x", d.x).attr("y", d.y)
+                .attr("width", d.w).attr("height", d.h)
+                .attr("stroke", d.color);
+            
+            d3.select(this).append("text")
+                .attr("class", "zone-label")
+                // CAMBIO AQUÍ: Si es 'lix', posición X a la izquierda (d.x + 20). Si no, a la derecha.
+                .attr("x", d.id === "lix" ? d.x + 20 : d.x + d.w - 20)
+                // CAMBIO AQUÍ: Si es 'lix', posición Y abajo (d.y + d.h - 20). Si no, arriba.
+                .attr("y", d.id === "lix" ? d.y + d.h - 20 : d.y + 30)
+                // CAMBIO AQUÍ: Si es 'lix', alineación izquierda ("start"). Si no, derecha ("end").
+                .style("text-anchor", d.id === "lix" ? "start" : "end")
+                .attr("fill", d.color)
+                .text(d.label);
+        });
 
-        // =========================================================
-        // 3. GENERADOR DE RUTAS
-        // =========================================================
+        // PATH GENERATOR
         function getPath(d) {
-            const s = nodeMap.get(d.source);
-            const t = nodeMap.get(d.target);
+            const s = nodeMap.get(d.source); const t = nodeMap.get(d.target);
             if (!s || !t) return "";
+            let sx = s.x + (s.w||0)/2; let sy = s.y + (s.h||0)/2;
+            let tx = t.x + (t.w||0)/2; let ty = t.y + (t.h||0)/2;
+            if(s.type.includes('circle')) { sx = s.x; sy = s.y; }
+            if(t.type.includes('circle')) { tx = t.x; ty = t.y; }
+            let pad = 0;
+            if(t.type.includes('circle')) pad = t.r + 4;
+            else if(t.type === 'rect') pad = t.h/2 + 2; 
+            else if(t.type === 'triangle') pad = 18;
+            const p = d3.path();
 
-            let sx = s.type.includes('circle') ? s.x : s.x + s.w/2;
-            let sy = s.type.includes('circle') ? s.y : s.y + s.h/2;
-            
-            let tx = t.type.includes('circle') ? t.x : t.x + t.w/2;
-            let ty = t.type.includes('circle') ? t.y : t.y + t.h/2;
-            
-            // Padding flecha
-            let pad = 0; 
-            if(t.type === 'circle') pad = t.r + 2;
-            else if(t.type === 'circle-small') pad = t.r + 2;
-            else if(t.type === 'rect') pad = (t.h/2) + 2; 
-            else if(t.type === 'triangle') pad = 20;
-
-            if(d.id === "F5") sy -= s.h/2; 
-
-            const path = d3.path();
-            path.moveTo(sx, sy);
-
-            if (d.pathType === "straight") {
-                const angle = Math.atan2(ty - sy, tx - sx);
-                const shorten = pad;
-                const finalX = tx - Math.cos(angle) * shorten;
-                const finalY = ty - Math.sin(angle) * shorten;
-                path.lineTo(finalX, finalY);
-            
-            } else if (d.pathType === "h-v") {
-                path.lineTo(tx, sy);
-                const dir = ty > sy ? -1 : 1; 
-                path.lineTo(tx, ty + (dir * pad));
-
-            } else if (d.pathType === "v-h") {
-                path.lineTo(sx, ty);
-                const dir = tx > sx ? -1 : 1;
-                path.lineTo(tx + (dir * pad), ty);
-
-            } else if (d.pathType === "h-v-h") {
-                const midX = sx + (tx - sx) / 2;
-                path.lineTo(midX, sy);
-                path.lineTo(midX, ty);
-                const dir = tx > midX ? -1 : 1;
-                path.lineTo(tx + (dir * pad), ty);
-
-            } else if (d.pathType === "v-h-v") {
-                const dropY = 480; 
-                path.lineTo(sx, dropY);
-                path.lineTo(tx, dropY);
-                path.lineTo(tx, ty - pad); 
-
-            } else if (d.pathType === "v-direct-bot") {
-                // Caso especial botaderos (simplemente bajar)
-                // Usamos el offset si queremos que llegue más a la izq o der de la caja
-                path.lineTo(sx, ty - 15); 
+            switch (d.pathType) {
+                case "bracket-top": p.moveTo(sx + 40, sy); p.lineTo(140, sy); p.lineTo(140, ty); p.lineTo(tx - pad, ty); break;
+                case "bracket-bot": p.moveTo(sx + 40, sy); p.lineTo(140, sy); p.lineTo(140, ty); p.lineTo(tx - pad, ty); break;
+                case "independent-left-entry": p.moveTo(tx - 60, ty); p.lineTo(tx - pad, ty); break;
+                case "step-h-v-h-top-extended": p.moveTo(sx, sy); const turnX1 = sx + 130; p.lineTo(turnX1, sy); p.lineTo(turnX1, ty); p.lineTo(tx - pad, ty); break;
+                case "step-h-v-h-bot-extended": p.moveTo(sx, sy); const turnX2 = sx + 130; p.lineTo(turnX2, sy); p.lineTo(turnX2, ty); p.lineTo(tx - pad, ty); break;
+                case "around-mid-top": p.moveTo(sx, sy); const midX = sx + 60; p.lineTo(midX, sy); p.lineTo(midX, ty); p.lineTo(tx - pad, ty); break;
+                case "around-mid-bot": p.moveTo(sx, sy); const midX2 = sx + 60; p.lineTo(midX2, sy); p.lineTo(midX2, ty); p.lineTo(tx - pad, ty); break;
+                case "straight-anchor-top": p.moveTo(sx, sy); p.lineTo(tx, sy); break;
+                case "straight-anchor-bot": p.moveTo(sx, sy); p.lineTo(tx, sy); break;
+                case "T-shape":
+                    p.moveTo(sx, sy);
+                    p.lineTo(tx, sy); // 1. Horizontal hasta el centro (alineado con el nodo grande)
+                    // 2. Vertical hacia el nodo (restando o sumando el padding según si baja o sube)
+                    p.lineTo(tx, ty > sy ? ty - pad : ty + pad); 
+                    break;
+                case "outer-left-drop":
+                    p.moveTo(s.x + 10, s.y + s.h); 
+                    p.lineTo(s.x + 10, ty - 22); 
+                    break;
+                case "outer-right-drop": // Para F22 (Óxidos)
+                    // (s.x + s.w - 20) significa: Desde el borde derecho, entra 20px a la izquierda
+                    p.moveTo(s.x + s.w - 10, s.y + s.h);
+                    p.lineTo(s.x + s.w - 10, ty - 22); // Bajar recto hasta Botaderos
+                    break;
+                case "direct-node": p.moveTo(sx, sy); p.lineTo(sx, ty); p.lineTo(tx > sx ? tx - pad : tx + pad, ty); break;
+                case "center-drop":
+                    p.moveTo(sx, sy); 
+                    p.lineTo(sx, ty - 22); // Llega justo al borde punteado
+                    break;
+                case "inner-to-n9": p.moveTo(sx, sy); p.lineTo(sx, ty); p.lineTo(tx > sx ? tx - pad : tx + pad, ty); break;
+                case "straight": p.moveTo(sx, sy); p.lineTo(tx - pad, ty); break;
+                case "v-up": p.moveTo(sx, sy); p.lineTo(sx, ty + pad); break;
+                case "v-down": p.moveTo(sx, sy); p.lineTo(sx, ty - pad); break;
+                case "fork-sulf": p.moveTo(sx - 35, s.y + s.h); p.lineTo(sx - 35, ty - 50); p.lineTo(tx, ty - 50); p.lineTo(tx, ty - pad); break;
+                case "fork-ox": p.moveTo(sx + 35, s.y + s.h); p.lineTo(sx + 35, ty - 50); p.lineTo(tx, ty - 50); p.lineTo(tx, ty - pad); break;
+                default: p.moveTo(sx, sy); p.lineTo(tx, ty);
             }
-
-            return path.toString();
+            return p.toString();
         }
 
-        // --- DIBUJAR ENLACES ---
-        const linksGroup = g.selectAll(".link")
-            .data(edgesData).enter().append("g").attr("class", "link");
+        const linksGroup = g.selectAll(".link").data(edgesData).enter().append("g").attr("class", "link");
+        linksGroup.append("path").attr("d", d => getPath(d)).attr("marker-end", d => d.dashed ? "" : "url(#arrow)").style("stroke-dasharray", d => d.dashed ? "5,5" : "none").style("stroke", d => d.dashed ? "#b2bec3" : null);
 
-        linksGroup.append("path")
-            .attr("d", d => getPath(d))
-            .attr("marker-end", "url(#arrow)");
-
-        // Posición de etiquetas
-        function getLabelPos(d) {
-            const s = nodeMap.get(d.source);
-            const t = nodeMap.get(d.target);
-            let sx = s.type.includes('circle') ? s.x : s.x + s.w/2;
-            let sy = s.type.includes('circle') ? s.y : s.y + s.h/2;
-            let tx = t.type.includes('circle') ? t.x : t.x + t.w/2;
-            let ty = t.type.includes('circle') ? t.y : t.y + t.h/2;
+        // LABELS - LOGICA MANUAL DE POSICIONAMIENTO
+        function getLinkCenter(d) {
+            const s = nodeMap.get(d.source); const t = nodeMap.get(d.target);
             
-            if(d.id === "F12") return { x: (sx+tx)/2, y: sy - 10 };
-            if(d.id === "F13") return { x: (sx+tx)/2, y: sy - 10 };
-            if(d.id === "F14" || d.id === "F15") return { x: sx + 10, y: (sy+ty)/2 - 40 };
+            // F1 / F2 (Espejo Perfecto)
+            // F2 Y=180 -> Label Y=165 (15px arriba)
+            // F1 Y=340 -> Label Y=355 (15px abajo)
+            if(d.id === "F1") return { x: 165, y: 405 }; 
+            if(d.id === "F2") return { x: 165, y: 165 };
+            
+            // F3 / F4 (Misma altura visual)
+            // Linea central Y=260. Label Y=245.
+            if(d.id === "F3") return { x: 275, y: 245 }; // Centrado visual entre N1 y Chancado
+            if(d.id === "F4") return { x: 520, y: 245 }; // Más a la derecha (Chancado X=330+120=450, Silo X=580. Mid=515)
 
-            return { x: (sx+tx)/2, y: (sy+ty)/2 - 5 };
+            // F8 / F9 (Izquierda de la linea vertical)
+            // N4 x=910. SRR Top x=850. Mid=850 (baja vertical). 
+            // Queremos texto a la izquierda de 850.
+            if(d.id === "F8") return { x: 850, y: (s.y+t.y)/1.7 }; 
+            if(d.id === "F9") return { x: 850, y: (s.y+t.y)/2.07 };
+
+            // F10 / F11 (Derecha de la linea vertical)
+            // N4 x=910. SAL Top x=970.
+            if(d.id === "F10") return { x: 1070, y: (s.y+t.y)/1.7 };
+            if(d.id === "F11") return { x: 1070, y: (s.y+t.y)/2.07 };
+
+            // F12 / F13 (Más centrados y bajados hacia la línea)
+            if(d.id === "F12") return { x: (s.x+t.x)/2 + 28, y: s.y + 50 }; // Casi tocando la linea
+            if(d.id === "F13") return { x: (s.x+t.x)/2 + 28, y: s.y - 35 };
+
+            // Resto de lógica estándar
+            if(d.id === "F5") return { x: t.x + 20, y: t.y - 20 };
+            if(d.id === "F25") return { x: t.x - 100, y: t.y + 12 }; 
+            if(d.id === "F14") return { x: (s.x+25), y: s.y + s.h + 50 };
+            if(d.id === "F15") return { x: (s.x+127), y: s.y + s.h + 50 };
+            if(d.id === "F16") return { x: (s.x+t.x)/2.065, y: (s.y+t.y)/2 +65 };
+            if(d.id === "F17") return { x: (s.x+t.x)/1.856, y: (s.y+t.y)/2 + 65 };
+            if(d.id === "F21") return { x: s.x - 30 - 10, y: (s.y+t.y)/1.92 }; 
+            if(d.id === "F22") return { x: s.x + s.w + 30 + 10, y: (s.y+t.y)/1.92 }; 
+            if(d.pathType.includes("extended")) return { x: s.x + 160, y: (s.y+t.y)/2 }; 
+
+            const sx = s.x + (s.w||0)/2; const tx = t.x + (t.w||0)/2;
+            const sy = s.y + (s.h||0)/2; const ty = t.y + (t.h||0)/2;
+            return { x: (sx+tx)/2 + (d.offset?d.offset/2:0), y: (sy+ty)/2 };
         }
 
-        linksGroup.append("text")
-            .attr("class", "link-label")
-            .attr("x", d => getLabelPos(d).x)
-            .attr("y", d => getLabelPos(d).y)
-            .text(d => d.label);
-            
-        linksGroup.append("text")
-            .attr("class", "link-value")
-            .attr("x", d => getLabelPos(d).x)
-            .attr("y", d => getLabelPos(d).y + 12)
-            .text(""); 
+        linksGroup.append("text").attr("class", "link-label").attr("x", d => getLinkCenter(d).x).attr("y", d => getLinkCenter(d).y - 6).text(d => d.label);
+        linksGroup.append("text").attr("class", "link-value").attr("x", d => getLinkCenter(d).x).attr("y", d => getLinkCenter(d).y + 6).text(""); 
 
-        // --- DIBUJAR NODOS ---
-        const nodesGroup = g.selectAll(".node")
-            .data(nodesData).enter().append("g")
-            .attr("class", "node")
-            .attr("transform", d => `translate(${d.x}, ${d.y})`)
-            .on("mouseover", (e, d) => {
-                d3.select("#tooltip").style("opacity", 1)
-                  .html(`<strong>${d.label}</strong><br>ID: ${d.id}`)
-                  .style("left", (e.pageX + 10) + "px").style("top", (e.pageY - 20) + "px");
-            })
+        const nodesGroup = g.selectAll(".node").data(nodesData).enter().append("g").attr("class", "node").attr("transform", d => `translate(${d.x}, ${d.y})`)
+            .on("mouseover", (e, d) => { d3.select("#tooltip").style("opacity", 1).html(`<strong>${d.label}</strong><br><span style="color:#aaa">ID: ${d.id}</span>`).style("left", (e.pageX + 15) + "px").style("top", (e.pageY - 20) + "px"); })
             .on("mouseout", () => d3.select("#tooltip").style("opacity", 0));
 
         nodesGroup.each(function(d) {
             const el = d3.select(this);
-            
             if (d.type === 'rect') {
-                el.append("rect").attr("width", d.w).attr("height", d.h)
-                  .attr("fill", d.fill).attr("stroke", d.stroke).attr("rx", 4);
-                el.append("text").attr("class", "node-label")
-                  .attr("x", d.w/2).attr("y", d.h/2 + 4).text(d.label);
-                if(d.sublabel) el.append("text").attr("class", "node-sublabel")
-                  .attr("x", d.w/2).attr("y", d.h/2 + 16).text(d.sublabel);
-            
+                el.append("rect").attr("width", d.w).attr("height", d.h).attr("rx", 6).attr("fill", d.fill).attr("stroke", d.stroke);
+                el.append("text").attr("class", "node-label").attr("x", d.w/2).attr("y", d.h/2 + 4).text(d.label);
+                if(d.sublabel) el.append("text").attr("class", "node-sublabel").attr("x", d.w/2).attr("y", d.h/2 + 16).text(d.sublabel);
+            } else if (d.type === 'circle' || d.type === 'circle-small') {
+                el.append("circle").attr("r", d.r).attr("fill", d.fill).attr("stroke", d.stroke);
+                if(d.id.includes('bot') && d.type === 'circle-small') {
+                     el.append("text").attr("class", "node-sublabel").attr("y", d.r + 14).text(d.sublabel);
+                     el.append("text").attr("class", "node-label").attr("y", d.r + 26).text(d.label);
+                } else if(d.type === 'circle-small') {
+                     el.append("text").attr("class", "node-label").attr("y", -d.r - 8).text(d.label);
+                     el.append("text").attr("class", "node-sublabel").attr("y", d.r + 14).text(d.sublabel);
+                } else {
+                     el.append("text").attr("class", "node-label").attr("dy", 4).text(d.label);
+                }
             } else if (d.type === 'box-open') {
-                el.append("path").attr("d", `M0,0 L0,${d.h} L${d.w},${d.h} L${d.w},0`)
-                  .attr("fill", "none").attr("stroke", "#333");
-                el.append("text").attr("x", 5).attr("y", 15).style("font-size","11px").text(d.label);
-
-            } else if (d.type === 'circle') {
-                el.append("circle").attr("r", d.r).attr("fill", d.fill).attr("stroke", d.stroke);
-                el.append("text").attr("class", "node-label").attr("dy", 4).text(d.label);
-
-            } else if (d.type === 'circle-small') {
-                el.append("circle").attr("r", d.r).attr("fill", d.fill).attr("stroke", d.stroke);
-                el.append("text").attr("class", "node-sublabel").attr("dy", -20).text(d.label); 
-                el.append("text").attr("class", "node-sublabel").attr("dy", 20).style("font-size", "8px").text(d.sublabel);
-
+                el.append("path").attr("d", `M0,0 L0,${d.h} L${d.w},${d.h} L${d.w},0`).attr("fill", "none").attr("stroke", "#2d3436");
+                el.append("text").attr("x", d.w/2).attr("y", d.h/2+4).attr("class", "node-label").text(d.label);
             } else if (d.type === 'triangle') {
-                el.append("path").attr("d", `M0,${d.h} L${d.w/2},0 L${d.w},${d.h} Z`)
-                  .attr("fill", d.fill).attr("stroke", d.stroke);
-                el.append("text").attr("class", "node-sublabel")
-                  .attr("x", d.w/2).attr("y", d.h + 12).text(d.label);
-                  
+                el.append("path").attr("d", `M0,${d.h} L${d.w/2},0 L${d.w},${d.h} Z`).attr("fill", d.fill).attr("stroke", d.stroke);
+                el.append("text").attr("class", "node-sublabel").attr("x", d.w/2).attr("y", d.h-37).text(d.label);
             } else if (d.type === 'dashed-rect') {
-                el.append("rect").attr("width", d.w).attr("height", d.h)
-                  .attr("fill", "none").attr("stroke", "#333")
-                  .attr("stroke-dasharray", "4,4");
-                el.append("text").attr("class", "node-label")
-                  .attr("x", d.w/2).attr("y", d.h/2 + 4).text(d.label);
+                el.append("rect").attr("width", d.w).attr("height", d.h).attr("fill", "none").attr("stroke", "#636e72").attr("stroke-dasharray", "4,4");
+                el.append("text").attr("class", "node-label").attr("x", d.w/2).attr("y", d.h/2+4).text(d.label);
             }
-
-            // Valor debajo
-            el.append("text").attr("class", "node-value")
-              .attr("x", (d.w || 0)/2).attr("y", (d.h || d.r*2) + 15)
-              .text("");
+            let valY = (d.h||d.r*2) + (d.type.includes('circle')?22:18);
+            if (d.id.includes('bot')) valY += 12;
+            el.append("text").attr("class", "node-value").attr("x", (d.w||0)/2).attr("y", valY).text("");
         });
 
-        // --- LÓGICA DE DATOS ---
         function formatNumber(num, metric) {
-            if (num === undefined || num === null) return "";
+            if (num == null) return "";
             const n = parseFloat(num);
             if (isNaN(n)) return num;
-            return metric === "TMS" 
-                ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) 
-                : n.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+            return metric === "TMS" ? n.toLocaleString('es-CL', { maximumFractionDigits: 0 }) 
+                                    : n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
         }
 
-        window.updateFlowsheet = function(flowD, nodeD) {
-            window.flowData = flowD || {};
-            window.nodeData = nodeD || {};
-            updateVisuals();
-        };
+        window.updateFlowsheet = function(flowD, nodeD) { window.flowData = flowD || {}; window.nodeData = nodeD || {}; updateVisuals(); };
 
         function updateVisuals() {
             const metric = window.currentMetric;
-            
             d3.selectAll(".node-value").text(d => {
                 const data = window.nodeData[d.id];
                 if(!data || !data[metric]) return "";
                 let val = metric === "TMS" ? data[metric]["Desbalance masa inicial"] : data[metric]["Desbalance fino inicial " + metric];
                 return val ? formatNumber(val, metric) : "";
             });
-
             d3.selectAll(".link-value").text(d => {
-                const flowKey = d.id.replace("F", "");
-                const data = window.flowData[flowKey];
+                const k = d.id.replace("F", "");
+                const data = window.flowData[k];
                 if(!data || !data[metric]) return "";
-                
                 let mKey = metric === "TMS" ? "Masa medida" : `Ley medida ${metric}`;
                 let rKey = metric === "TMS" ? "Masa recon" : `Ley recon ${metric}`;
-                
-                const mVal = data[metric][mKey];
-                const rVal = data[metric][rKey];
-                
-                if(mVal || rVal) return `${formatNumber(mVal, metric)} / ${formatNumber(rVal, metric)}`;
-                return "";
+                const m = data[metric][mKey], r = data[metric][rKey];
+                return (m!=null || r!=null) ? `${formatNumber(m, metric)} / ${formatNumber(r, metric)}` : "";
             });
         }
 
-        function loadFromHash() {
-            if(window.location.hash.length > 1) {
-                try {
-                    const params = new URLSearchParams(window.location.hash.substring(1));
-                    if(params.get("flowData")) window.flowData = JSON.parse(decodeURIComponent(params.get("flowData")));
-                    if(params.get("nodeData")) window.nodeData = JSON.parse(decodeURIComponent(params.get("nodeData")));
-                    updateVisuals();
-                } catch(e) { console.error("Error parsing hash", e); }
-            }
+        d3.selectAll("input[name='metric']").on("change", function() { window.currentMetric = this.value; updateVisuals(); });
+        if(window.location.hash.length > 1) {
+            try {
+                const p = new URLSearchParams(window.location.hash.substring(1));
+                if(p.get("flowData")) window.flowData = JSON.parse(decodeURIComponent(p.get("flowData")));
+                if(p.get("nodeData")) window.nodeData = JSON.parse(decodeURIComponent(p.get("nodeData")));
+                updateVisuals();
+            } catch(e){}
         }
-
-        d3.selectAll("input[name='metric']").on("change", function() {
-            window.currentMetric = this.value;
-            updateVisuals();
-        });
-
-        loadFromHash();
-
     })();
     </script>
 </body>

@@ -130,7 +130,7 @@ def register_callbacks(app):
                 df = df.melt(id_vars="Parcela")
                 df.columns = ["Fecha_drenaje", "Parcela", "Recuperacion_parcela"]
 
-                df["PAD"] = "OXIDO"
+                df["PAD"] = "OXIDOS"
                 df["pad_id"] = 1
                 df["Parcela"] = pd.to_numeric(df["Parcela"], errors="coerce").astype("Int64")
                 df = df.dropna(subset=["Parcela"]).copy()
