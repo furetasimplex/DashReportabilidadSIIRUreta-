@@ -11,6 +11,7 @@ from .utils_dash import get_data_publica_casos
 import dash_ag_grid as dag
 import numpy as np
 import io
+from .utils_dash import calcular_desbalance_nodo_desde_reconciliado
 
 GEKKO_ERROR_MAP = {
     "Solution Not Found": "No se encontró una solución válida. "

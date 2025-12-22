@@ -1,504 +1,804 @@
-from .flujos_balance import ejecutar_balance_flujos, guardar_balance_en_bd
+# ==============================================================================
+# tabs/tab6.py
+# TAB 6 – PRECONTROL DESBALANCE (GRILLA) + HISTÓRICOS (BD)
+# ------------------------------------------------------------------------------
+# Fuente de verdad PRE-reconciliación: grilla activa (recon-data-base.rowData)
+# Comparación histórica: tablas guardadas (ej: inventar_SpcHidr.bm_desbalance_nodo)
+# + Histórico por flujo usando Data_balance_rec + casos_balance
+# ==============================================================================
+
 import pandas as pd
 import numpy as np
-from dash import html, dcc, Input, Output, State, callback, ctx, no_update
+
+from dash import html, dcc
+from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-from dash import  dash_table
-import plotly.graph_objs as go
-import plotly.express as px
-from plotly.graph_objs import Figure
-from db_connection import get_connection,get_engine
-from scipy import stats
-from datetime import date
-import io
-import base64
-import dash_bootstrap_components as dbc
-from dash import Dash
-import dash_ag_grid as dag
-from tabs.utils_recon import balance_core, desbalances
-from tabs.utils_dash import  get_data_publica_casos, parse_contents
-from sqlalchemy import  create_engine, text
-from db_connection import get_connection, get_engine
 
-#ENGINE = create_engine("pyodbc + ODBC 18://sa:24gegepeNA@149.50.136.234:1433/inventar_SpcHidr")
-conn = get_engine()
-dict_style_boton_2 = {
-        'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',
-        'border-radius': '10px',
-        'width': '100%',  # '120px'
-        'fontSize': 10,
-        'height': '40px',
-        'textAlign': 'center'
-    }
-columnsDefs_data_base =  [
-        {'field': 'id_flujo', 'type': 'numericColumn', 'editable': True, 'flex': 1},
-        {'field': 'codigo_flujo', 'type': 'numericColumn', 'editable': True, 'flex': 1},
-        {'field': 'nombre_flujo', 'type': 'numericColumn', 'editable': True, 'flex': 1},
-        {'field': 'Flujo', 'type': 'numericColumn', 'editable': True, 'flex': 1},
-        {'field': 'Cu', 'type': 'numericColumn', 'editable': True, 'flex': 1},
-        {'field': 'FCu', 'type': 'numericColumn', 'editable': True, 'flex': 1},
-        {'field': 'Tolerancia', 'type': 'numericColumn', 'editable': True, 'flex': 1},
-        {'field': 'Tolerancia_cu', 'type': 'numericColumn', 'editable': True, 'flex': 1},
-        ]
-columnsDefs_resultados =  [
-        {'field': 'Codigo'         , 'maxWidth': 100},
-        {'field': 'Flujo'         , 'maxWidth': 450},
-        {'field': 'Masa medida'    , 'maxWidth': 120},
-        {'field': 'Masa recon'   , 'maxWidth': 120},
-        {'field': 'Error masa'  , 'maxWidth': 120},
-        {'field': 'Ley medida Cu' , 'maxWidth': 120},
-        {'field': 'Ley recon Cu'  , 'maxWidth': 120},
-        {'field': 'Error ley Cu'  , 'maxWidth': 120},
-        ]
-columnsDefs_desbalances =  [
-        {'field': 'Area', 'maxWidth': 200, 'editable': False},
-        {'field': 'Desbalance masa inicial', 'maxWidth': 140, 'editable': False},
-        {'field': 'Desbalance masa', 'maxWidth': 140, 'editable': False},
-        {'field': 'Desbalance fino inicial Cu', 'maxWidth': 140, 'editable': False},
-        {'field': 'Desbalance fino Cu', 'maxWidth': 140, 'editable': False},
-        ]
-# === ColumnDefs: Desbalances Históricos ===
-columnsDefs_hist_desb = [
-    {"headerName": "Fecha", "field": "Fecha"},
-    {"headerName": "Área", "field": "Area"},
-    {"headerName": "Desbalance masa", "field": "Desb_masa", "type": "rightAligned"},
-    {"headerName": "Desbalance fino Cu", "field": "Desb_fino_cu", "type": "rightAligned"},
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from sqlalchemy import text
+
+from tabs.tab6_base import render_tab6_base, register_tab6_base_callbacks
+from db_connection import get_engine
+
+# ------------------------------------------------------------------------------
+# AG Grid (si existe en tu proyecto)
+# ------------------------------------------------------------------------------
+try:
+    import dash_ag_grid as dag
+    HAS_AGGRID = True
+except Exception:
+    from dash import dash_table
+    HAS_AGGRID = False
+
+
+# ==============================================================================
+# Engine global (una sola fuente)
+# ==============================================================================
+ENGINE = get_engine()  # SQLAlchemy engine o None
+
+
+# ==============================================================================
+# Helpers DB y utilitarios
+# ==============================================================================
+def _read_sql(engine, sql_text, params=None):
+    """
+    Lectura robusta para SQL Server + pyodbc usando SQLAlchemy.
+    - sql_text: string SQL (puede tener :params)
+    - params: dict params
+    """
+    if engine is None:
+        return pd.DataFrame()
+
+    stmt = text(sql_text)
+    with engine.connect() as cn:
+        return pd.read_sql(stmt, cn, params=params or {})
+
+
+def _safe_float(x, default=0.0):
+    try:
+        v = float(x)
+        if np.isnan(v):
+            return default
+        return v
+    except Exception:
+        return default
+
+
+def _get_caso_id(shared):
+    if not shared:
+        return None
+    return shared.get("caso_id") or shared.get("id_caso") or shared.get("id_caso_activo")
+
+
+def _get_periodo_caso(engine, caso_id):
+    """
+    Obtiene fecha_ini (inicio) y fecha (fin) del caso.
+    """
+    df = _read_sql(
+        engine,
+        """
+        SELECT TOP 1
+            fecha_ini AS fi,
+            fecha     AS ff,
+            modelo    AS modelo
+        FROM inventar_SpcHidr.casos_balance
+        WHERE caso_id = :c
+        ORDER BY fecha DESC
+        """,
+        {"c": caso_id},
+    )
+    if df.empty:
+        return None, None, None
+
+    fi = pd.to_datetime(df["fi"].iloc[0]).date() if pd.notna(df["fi"].iloc[0]) else None
+    ff = pd.to_datetime(df["ff"].iloc[0]).date() if pd.notna(df["ff"].iloc[0]) else None
+    modelo = int(df["modelo"].iloc[0]) if pd.notna(df["modelo"].iloc[0]) else None
+
+    if fi and ff and fi > ff:
+        fi, ff = ff, fi
+
+    return fi, ff, modelo
+
+
+def _get_topologia(engine, caso_id):
+    """
+    Topología del modelo para el caso: id_flujo -> nodo_salida/nodo_entrada (códigos)
+    """
+    df = pd.read_sql(
+        """
+        SELECT
+            fm.Id_flujo,
+            fm.Flujos AS codigo_flujo,
+            ns.codigo_nodo AS nodo_salida,
+            nl.codigo_nodo AS nodo_entrada,
+            ns.nombre_nodo AS nombre_salida,
+            nl.nombre_nodo AS nombre_entrada
+        FROM inventar_SpcHidr.flujo_modelos fm
+        JOIN inventar_SpcHidr.nodos ns ON ns.id_nodo = fm.n_salida
+        JOIN inventar_SpcHidr.nodos nl ON nl.id_nodo = fm.n_llegada
+        WHERE fm.modelo = 3
+          AND fm.activo = 1
+        """,
+        engine
+    )
+    return df
+
+
+# ==============================================================================
+# 1) PRECONTROL: DESBALANCE POR NODO DESDE GRILLA ACTIVA
+# ==============================================================================
+def precontrol_desbalance_nodo_desde_grilla(engine, grid_rows, caso_id):
+    """
+    PRE-reconciliación.
+    - Usa SOLO la grilla activa (rowData) como valores (masa/ley).
+    - Usa BD solo para topología (flujo_modelos + nodos).
+    Retorna DF por nodo con:
+      entradas/salidas (masa, fino Cu), Δ y %.
+    """
+    if not grid_rows:
+        return pd.DataFrame()
+
+    dfg = pd.DataFrame(grid_rows)
+
+    # Requeridos mínimos
+    if "id_flujo" not in dfg.columns:
+        return pd.DataFrame()
+
+    # Normalización columnas esperadas en tu grilla
+    # Masa: en tu grilla se llama "Flujo"
+    # Ley:  "Cu" (en %)
+    dfg["id_flujo"] = pd.to_numeric(dfg["id_flujo"], errors="coerce")
+    dfg["masa"] = pd.to_numeric(dfg.get("Flujo", 0), errors="coerce").fillna(0.0)
+    dfg["cu_pct"] = pd.to_numeric(dfg.get("Cu", 0), errors="coerce").fillna(0.0)
+
+    # fino cu
+    if "FCu" in dfg.columns:
+        dfg["fino_cu"] = pd.to_numeric(dfg["FCu"], errors="coerce")
+        dfg["fino_cu"] = dfg["fino_cu"].fillna(dfg["masa"] * dfg["cu_pct"] / 100.0)
+    else:
+        dfg["fino_cu"] = dfg["masa"] * dfg["cu_pct"] / 100.0
+
+    topo = _get_topologia(engine, caso_id)
+    if topo.empty:
+        return pd.DataFrame()
+
+    df = dfg.merge(topo, left_on="id_flujo", right_on="Id_flujo", how="inner")
+    if df.empty:
+        return pd.DataFrame()
+
+    # Movimientos por nodo
+    entradas = df[["nodo_entrada", "masa", "fino_cu"]].rename(columns={"nodo_entrada": "nodo"})
+    entradas["tipo"] = "ENTRADA"
+
+    salidas = df[["nodo_salida", "masa", "fino_cu"]].rename(columns={"nodo_salida": "nodo"})
+    salidas["tipo"] = "SALIDA"
+
+    mov = pd.concat([entradas, salidas], ignore_index=True)
+
+    agg = (
+        mov.groupby(["nodo", "tipo"], as_index=False)
+        .agg(masa=("masa", "sum"), fino_cu=("fino_cu", "sum"))
+    )
+
+    piv = agg.pivot_table(index="nodo", columns="tipo", values=["masa", "fino_cu"], fill_value=0)
+    piv.columns = [f"{v}_{k}".lower() for v, k in piv.columns]
+    piv = piv.reset_index()
+
+    # Completar columnas si faltan (si nodo solo tiene entrada/salida)
+    for c in ["masa_entrada", "masa_salida", "fino_cu_entrada", "fino_cu_salida"]:
+        if c not in piv.columns:
+            piv[c] = 0.0
+
+    piv["desb_masa"] = piv["masa_entrada"] - piv["masa_salida"]
+    piv["desb_fino_cu"] = piv["fino_cu_entrada"] - piv["fino_cu_salida"]
+
+    piv["desb_masa_pct"] = np.where(
+        piv["masa_entrada"] != 0, 100 * piv["desb_masa"] / piv["masa_entrada"], 0.0
+    )
+    piv["desb_cu_pct"] = np.where(
+        piv["fino_cu_entrada"] != 0, 100 * piv["desb_fino_cu"] / piv["fino_cu_entrada"], 0.0
+    )
+
+    # Redondeos para presentación
+    piv = piv.sort_values("nodo")
+    piv["masa_entrada"] = piv["masa_entrada"].round(3)
+    piv["masa_salida"] = piv["masa_salida"].round(3)
+    piv["desb_masa"] = piv["desb_masa"].round(3)
+    piv["desb_masa_pct"] = piv["desb_masa_pct"].round(3)
+
+    piv["fino_cu_entrada"] = piv["fino_cu_entrada"].round(4)
+    piv["fino_cu_salida"] = piv["fino_cu_salida"].round(4)
+    piv["desb_fino_cu"] = piv["desb_fino_cu"].round(4)
+    piv["desb_cu_pct"] = piv["desb_cu_pct"].round(3)
+
+    return piv
+
+    # -------------------------
+    # Cálculo por nodo
+    # -------------------------
+    rows = []
+
+    for nodo in pd.unique(df[["n_salida", "n_llegada"]].values.ravel()):
+        entradas = df[df["n_llegada"] == nodo]
+        salidas  = df[df["n_salida"] == nodo]
+
+        masa_in  = entradas["Masa_medida"].sum()
+        masa_out = salidas["Masa_medida"].sum()
+
+        fino_in  = (entradas["Masa_medida"] * entradas["Ley_medida_Cu"] / 100).sum()
+        fino_out = (salidas["Masa_medida"] * salidas["Ley_medida_Cu"] / 100).sum()
+
+        rows.append({
+            "Nodo": nodo,
+            "Entrada_masa": masa_in,
+            "Salida_masa": masa_out,
+            "Desbalance_masa": masa_in - masa_out,
+            "Entrada_fino": fino_in,
+            "Salida_fino": fino_out,
+            "Desbalance_fino": fino_in - fino_out
+        })
+
+    return pd.DataFrame(rows)
+
+
+
+def fig_precontrol_nodo(df):
+    if df is None or df.empty:
+        return go.Figure()
+
+    fig = make_subplots(
+        rows=2, cols=1,
+        subplot_titles=[
+            "Entradas vs Salidas por Nodo (Masa)",
+            "Desbalances por Nodo (Δ Masa y Δ Fino Cu)"
+        ],
+        vertical_spacing=0.12
+    )
+
+    fig.add_trace(go.Bar(x=df["nodo"], y=df["masa_entrada"], name="Entrada (masa)"), row=1, col=1)
+    fig.add_trace(go.Bar(x=df["nodo"], y=df["masa_salida"], name="Salida (masa)"), row=1, col=1)
+
+    fig.add_trace(go.Bar(x=df["nodo"], y=df["desb_masa"], name="Δ Masa"), row=2, col=1)
+    fig.add_trace(
+        go.Scatter(x=df["nodo"], y=df["desb_fino_cu"], mode="lines+markers", name="Δ Fino Cu"),
+        row=2, col=1
+    )
+
+    fig.update_layout(
+        template="plotly_white",
+        height=650,
+        barmode="group",
+        legend=dict(orientation="h", y=1.12)
+    )
+    return fig
+
+
+# ==============================================================================
+# 2) HISTÓRICO POR NODO (BOXPLOT) + OVERLAY ACTUAL
+# ==============================================================================
+def query_hist_desb_nodo(engine, fecha_ini, fecha_fin, var="masa_pct"):
+    """
+    Obtiene histórico desde inventar_SpcHidr.bm_desbalance_nodo.
+    """
+    col = {
+        "masa_pct": "desb_masa_pct",
+        "cu_pct": "desb_cu_pct",
+        "masa_abs": "desb_masa_final",
+        "cu_abs": "desb_cu_final",
+    }.get(var, "desb_masa_pct")
+
+    df = _read_sql(
+        engine,
+        f"""
+        SELECT
+            fecha_fin_periodo AS Fecha,
+            codigo_nodo       AS Nodo,
+            CAST({col} AS FLOAT) AS Valor
+        FROM inventar_SpcHidr.bm_desbalance_nodo
+        WHERE fecha_fin_periodo BETWEEN :fi AND :ff
+        """,
+        {"fi": fecha_ini, "ff": fecha_fin},
+    )
+    return df
+
+
+def fig_boxplot_hist_nodo(df_hist, df_actual, var_label):
+    fig = go.Figure()
+
+    if df_hist is not None and not df_hist.empty:
+        for nodo in sorted(df_hist["Nodo"].unique()):
+            s = df_hist.loc[df_hist["Nodo"] == nodo, "Valor"]
+            fig.add_trace(go.Box(y=s, name=str(nodo), boxpoints=False))
+
+    if df_actual is not None and not df_actual.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=df_actual["nodo"],
+                y=df_actual["valor_actual"],
+                mode="markers+lines",
+                name="Actual (grilla)"
+            )
+        )
+
+    fig.update_layout(
+        template="plotly_white",
+        height=520,
+        title=f"Histórico por Nodo (Boxplot) + Valor actual (grilla) – {var_label}",
+        xaxis_title="Nodo",
+        yaxis_title=var_label,
+        legend=dict(orientation="h", y=1.12)
+    )
+    return fig
+
+
+# ==============================================================================
+# 3) HISTÓRICO POR FLUJO (BOXPLOT) + OVERLAY ACTUAL
+# ==============================================================================
+def query_hist_flujo(engine, fecha_ini, fecha_fin, id_flujo, var="masa"):
+    col = {
+        "masa": "Masa_recon",
+        "cu": "Ley_recon_Cu",
+        "fcu": "(Masa_recon*Ley_recon_Cu/100.0)"
+    }.get(var, "Masa_recon")
+
+    df = _read_sql(
+        engine,
+        f"""
+        SELECT
+            cb.fecha AS Fecha,
+            dbr.id_flujo AS id_flujo,
+            CAST({col} AS FLOAT) AS Valor
+        FROM inventar_SpcHidr.Data_balance_rec dbr
+        JOIN inventar_SpcHidr.casos_balance cb
+            ON cb.caso_id = dbr.caso_id
+        WHERE cb.fecha BETWEEN :fi AND :ff
+          AND dbr.id_flujo = :idf
+        """,
+        {"fi": fecha_ini, "ff": fecha_fin, "idf": int(id_flujo)},
+    )
+    return df
+
+
+def fig_boxplot_hist_flujo(df_hist, valor_actual, var_label, flujo_label):
+    fig = go.Figure()
+
+    if df_hist is not None and not df_hist.empty:
+        fig.add_trace(go.Box(y=df_hist["Valor"], name=f"Histórico ({flujo_label})", boxpoints="outliers"))
+
+    if valor_actual is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[f"Actual ({flujo_label})"],
+                y=[valor_actual],
+                mode="markers",
+                name="Actual (grilla)"
+            )
+        )
+
+    fig.update_layout(
+        template="plotly_white",
+        height=420,
+        title=f"Histórico Flujo (Boxplot) + Actual (grilla) – {var_label}",
+        yaxis_title=var_label,
+        legend=dict(orientation="h", y=1.12)
+    )
+    return fig
+
+
+# ==============================================================================
+# UI helpers
+# ==============================================================================
+def _grid_component(id_, columns, rowdata=None, height=260):
+    if HAS_AGGRID:
+        return dag.AgGrid(
+            id=id_,
+            columnDefs=columns,
+            rowData=rowdata or [],
+            defaultColDef={
+                "sortable": True,
+                "filter": True,
+                "resizable": True,
+                "floatingFilter": True
+            },
+            dashGridOptions={
+                "pagination": True,
+                "paginationPageSize": 25
+            },
+            style={"height": f"{height}px", "width": "100%"}
+        )
+    else:
+        return dash_table.DataTable(
+            id=id_,
+            columns=[{"name": c.get("headerName", c["field"]), "id": c["field"]} for c in columns],
+            data=rowdata or [],
+            page_size=25,
+            style_table={"overflowX": "auto", "height": f"{height}px", "overflowY": "auto"},
+            style_cell={"fontSize": 12, "padding": "6px", "whiteSpace": "normal"},
+        )
+
+
+COLS_PRE_NODO = [
+    {"field": "nodo", "headerName": "Nodo"},
+    {"field": "masa_entrada", "headerName": "Masa Entrada"},
+    {"field": "masa_salida", "headerName": "Masa Salida"},
+    {"field": "desb_masa", "headerName": "Δ Masa"},
+    {"field": "desb_masa_pct", "headerName": "% Δ Masa"},
+    {"field": "fino_cu_entrada", "headerName": "Fino Cu Entrada"},
+    {"field": "fino_cu_salida", "headerName": "Fino Cu Salida"},
+    {"field": "desb_fino_cu", "headerName": "Δ Fino Cu"},
+    {"field": "desb_cu_pct", "headerName": "% Δ Fino Cu"},
 ]
-def render_tab6():
-    return html.Div([
-        html.H4("📈 Reconciliador Area Seca", style={"textAlign": "center"}),
 
-        html.Div([], style={
-            'display': 'flex',
-            'flexWrap': 'wrap',
-            'gap': '10px',
-            'paddingBottom': '20px',
-            'alignItems': 'flex-end'
-        }),
+COLS_HIST_NODO = [
+    {"field": "Fecha", "headerName": "Fecha"},
+    {"field": "Nodo", "headerName": "Nodo"},
+    {"field": "Valor", "headerName": "Valor"},
+]
 
-        html.Hr(),
-        
-        # —————————————————————— SECCIÓN 1: CARGA Y SIMULACIÓN ——————————————————————
-        dbc.Card([
-            dbc.CardHeader(
-                html.H6("Sección 1: Carga y Cálculo de Desbalances", className="mb-0"),
-                className="py-2",
-                style={"backgroundColor": "#f8f9fa", "textTransform": "uppercase"}
-            ),
-            dbc.CardBody([
-                dbc.Row([
-                    # Columna Izquierda: Botones
-                    dbc.Col([
-                        html.H6('1. Cargar Datos', className="mb-3 fw-bold"),
-                        dcc.Upload(
-                            id='data-base-upload',
-                            children=dbc.Button(
-                                [html.I(className="bi bi-cloud-arrow-up me-2"), "Cargar Excel"],
-                                color="primary", outline=True, className="w-100 mb-2", size="sm"
-                            ),
-                            className="w-100",
+COLS_HIST_FLUJO = [
+    {"field": "Fecha", "headerName": "Fecha"},
+    {"field": "id_flujo", "headerName": "id_flujo"},
+    {"field": "Valor", "headerName": "Valor"},
+]
+
+
+# ==============================================================================
+# LAYOUT TAB 6
+# ==============================================================================
+layout = html.Div(
+    style={"padding": "10px"},
+    children=[
+        # ----------------------------------------------------------------------
+        # SECCIÓN 0: tu UI base (grilla + botones originales)
+        # ----------------------------------------------------------------------
+        render_tab6_base(),
+
+        # ----------------------------------------------------------------------
+        # SECCIÓN 1: PRECONTROL
+        # ----------------------------------------------------------------------
+        html.Div(
+            style={
+                "border": "1px solid #e5e7eb",
+                "borderRadius": "10px",
+                "padding": "12px",
+                "marginBottom": "12px",
+                "background": "white"
+            },
+            children=[
+                html.H4("1) Precontrol: Desbalances iniciales por Nodo (desde grilla activa)"),
+                html.Div(
+                    style={"display": "flex", "gap": "10px", "alignItems": "center", "flexWrap": "wrap"},
+                    children=[
+                        html.Button("Graficar desbalances iniciales", id="btn-graf-desb-ini", n_clicks=0),
+                        html.Div(id="msg-precontrol", style={"fontSize": "12px", "color": "#374151"})
+                    ]
+                ),
+                html.Div(style={"height": "10px"}),
+                dcc.Graph(id="graf-desbalances-ini", figure=go.Figure()),
+                html.Div(style={"height": "10px"}),
+                html.H5("Resumen numérico por Nodo (Entradas / Salidas / Δ / %)"),
+                _grid_component("tabla-precontrol-nodo", COLS_PRE_NODO, [], height=300)
+            ]
+        ),
+
+        # ----------------------------------------------------------------------
+        # SECCIÓN 2: HISTÓRICO POR NODO
+        # ----------------------------------------------------------------------
+        html.Div(
+            style={
+                "border": "1px solid #e5e7eb",
+                "borderRadius": "10px",
+                "padding": "12px",
+                "marginBottom": "12px",
+                "background": "white"
+            },
+            children=[
+                html.H4("2) Histórico por Nodo: Boxplot (BD) + valor actual (grilla)"),
+                html.Div(
+                    style={"display": "flex", "gap": "10px", "alignItems": "center", "flexWrap": "wrap"},
+                    children=[
+                        dcc.DatePickerRange(
+                            id="hist-fechas",
+                            display_format="YYYY-MM-DD",
+                            minimum_nights=0
                         ),
-                        dbc.Button(
-                            [html.I(className="bi bi-database-down me-2"), "Cargar desde Base de Datos"],
-                            id="btn-cargar-db", n_clicks=0,
-                            color="success", className="w-100", size="sm"
-                        ),
-                        html.Div(id="msg-carga-grid", className="small text-muted mt-2"),
-                    ], md=2),
-
-                    # Columna Derecha: Tabla Editable
-                    dbc.Col([
-                        html.Label("2. Datos medidos", className="fw-semibold"),
-                        dcc.Loading(
-                            dag.AgGrid(
-                                id="recon-data-base",
-                                columnSize="autoSize",
-                                columnDefs=columnsDefs_data_base,
-                                className='ag-theme-balham',
-                                style={"height": "400px", "width": "100%"},
-                                defaultColDef={
-                                    "resizable": True,
-                                    "minWidth": 120,
-                                    "cellStyle": {
-                                        "fontSize": "14px",
-                                        "textAlign": "right"
-                                    },
-                                    "headerClass": "ag-header-center"
-                                },
-                                dashGridOptions={
-                                    "rowHeight": 36,
-                                    "headerHeight": 36,
-                                    "domLayout": "normal"
-                                }
-                            ),
-                            type="default"
-                        )
-                    ], md=10),
-                ], className="mb-4"),
-
-                # Fila inferior: Gráfico de resultados inmediatos
-                dbc.Row([
-                    dbc.Col([
-                        dbc.Card([
-                            dbc.CardHeader("3. Desbalances iniciales"),
-                            dbc.CardBody([
-                                dbc.Button(
-                                    [html.I(className="bi bi-save me-2"), "Calcular desbalances iniciales"],
-                                    id="btn-graf-desb-ini",
-                                    n_clicks=0,
-                                    color="danger", # Color rojo/naranja para destacar la acción
-                                    className="mb-3"
-                                ),
-                                dcc.Loading(
-                                    dcc.Graph(
-                                        id="graf-desbalances-ini",
-                                        style={"height": "500px", "width": "100%"} # Gráfico alto
-                                    ),
-                                    type="default"
-                                )
-                            ])
-                        ])
-                    ], width=12)
-                ])
-            ], className="pt-3 pb-2")
-        ], className="mb-4 shadow-sm border-0"),
-
-        # —————————————————————— SECCIÓN 2: HISTÓRICO (MODIFICADA) ——————————————————————
-        dbc.Card([
-            dbc.CardHeader(
-                html.H6("Sección 2: Desbalances Históricos (Base de Datos)", className="mb-0"),
-                className="py-2",
-                style={"backgroundColor": "#e9ecef", "textTransform": "uppercase"} # Color diferente para distinguir
-            ),
-            dbc.CardBody([
-                # 1. Filtros de Búsqueda
-                dbc.Row([
-                    dbc.Col([
-                        html.Label("Rango de fechas", className="fw-semibold"),
-                        dcc.DatePickerRange(id="hist-fechas", display_format="YYYY-MM-DD", clearable=True)
-                    ], md=4),
-                    dbc.Col([
-                        html.Label("Áreas", className="fw-semibold"),
                         dcc.Dropdown(
-                            id="hist-areas",
-                            options=[{"label": a, "value": a} for a in ["N1","Chancado","Silo","N4","N5","Aglomerado","Apilado Sulfuro","Apilado Óxido","N9","N10"]],
-                            multi=True, placeholder="Todas las áreas"
-                        )
-                    ], md=6),
-                    dbc.Col([
-                        html.Label(" ", className="d-block"),
-                        dbc.Button([html.I(className="bi bi-search me-2"), "Buscar en Historial"],
-                                id="btn-hist-buscar", n_clicks=0, color="dark", className="w-100")
-                    ], md=2),
-                ], className="mb-4 align-items-end"),
+                            id="hist-var",
+                            options=[
+                                {"label": "% Δ Masa", "value": "masa_pct"},
+                                {"label": "% Δ Fino Cu", "value": "cu_pct"},
+                                {"label": "Δ Masa (abs)", "value": "masa_abs"},
+                                {"label": "Δ Fino Cu (abs)", "value": "cu_abs"},
+                            ],
+                            value="masa_pct",
+                            clearable=False,
+                            style={"width": "220px"}
+                        ),
+                        html.Button("Consultar histórico", id="btn-hist-buscar", n_clicks=0),
+                        html.Div(id="msg-hist-nodo", style={"fontSize": "12px", "color": "#374151"})
+                    ]
+                ),
+                html.Div(style={"height": "10px"}),
+                dcc.Graph(id="hist-graf", figure=go.Figure()),
+                html.Div(style={"height": "10px"}),
+                html.H5("Detalle histórico (tabla)"),
+                _grid_component("hist-tabla", COLS_HIST_NODO, [], height=260)
+            ]
+        ),
 
-                # 2. Visualización Gráfica (Fila Completa)
-                dbc.Row([
-                    dbc.Col([
-                        html.H5("Evolución Gráfica", className="text-muted"),
-                        html.Hr(),
-                        dcc.Loading(
-                            dcc.Graph(
-                                id="hist-graf",
-                                config={"displaylogo": False},
-                                style={"height": "450px", "width": "100%"} # Ancho completo
-                            )
-                        )
-                    ], width=12)
-                ], className="mb-5"), # Margen grande abajo
+        # ----------------------------------------------------------------------
+        # SECCIÓN 3: HISTÓRICO POR FLUJO
+        # ----------------------------------------------------------------------
+        html.Div(
+            style={
+                "border": "1px solid #e5e7eb",
+                "borderRadius": "10px",
+                "padding": "12px",
+                "background": "white"
+            },
+            children=[
+                html.H4("3) Histórico por Flujo: Boxplot (BD) + valor actual (grilla)"),
+                html.Div(
+                    style={"display": "flex", "gap": "10px", "alignItems": "center", "flexWrap": "wrap"},
+                    children=[
+                        dcc.DatePickerRange(
+                            id="flow-hist-fechas",
+                            display_format="YYYY-MM-DD",
+                            minimum_nights=0
+                        ),
+                        dcc.Dropdown(
+                            id="flow-hist-var",
+                            options=[
+                                {"label": "Masa (t)", "value": "masa"},
+                                {"label": "Ley Cu (%)", "value": "cu"},
+                                {"label": "Fino Cu (tCu)", "value": "fcu"},
+                            ],
+                            value="masa",
+                            clearable=False,
+                            style={"width": "200px"}
+                        ),
+                        dcc.Dropdown(
+                            id="flow-hist-flujo",
+                            options=[],
+                            placeholder="Seleccionar flujo (id_flujo)",
+                            style={"width": "260px"}
+                        ),
+                        html.Button("Consultar histórico flujo", id="btn-flow-hist-buscar", n_clicks=0),
+                        html.Div(id="msg-hist-flujo", style={"fontSize": "12px", "color": "#374151"})
+                    ]
+                ),
+                html.Div(style={"height": "10px"}),
+                dcc.Graph(id="flow-hist-graf", figure=go.Figure()),
+                html.Div(style={"height": "10px"}),
+                html.H5("Detalle histórico por flujo (tabla)"),
+                _grid_component("flow-hist-tabla", COLS_HIST_FLUJO, [], height=240)
+            ]
+        ),
+    ]
+)
 
-                # 3. Visualización Tabla (Fila Completa Abajo)
-                dbc.Row([
-                    dbc.Col([
-                        html.H5("Detalle Numérico (Tabla)", className="text-muted"),
-                        html.Hr(),
-                        dcc.Loading(
-                            dag.AgGrid(
-                                id="hist-tabla",
-                                columnDefs=columnsDefs_hist_desb,
-                                className='ag-theme-balham',
-                                style={"height": "400px", "width": "100%"}, # Tabla ancha y alta
-                                defaultColDef={"sortable": True, "filter": True, "resizable": True},
-                                dashGridOptions={"rowHeight": 28}
-                            )
-                        )
-                    ], width=12)
-                ])
 
-            ])
-        ], className="mb-5 shadow-sm border-0"),
-    ])
+# ==============================================================================
+# CALLBACKS
+# ==============================================================================
+def register_callbacks(app):
+    # Mantiene TODOS los callbacks y UI previa del tab6_base
+    register_tab6_base_callbacks(app)
 
-def register_tab6_callbacks(app):
-    
-    # ==============================================================================
-    # CALLBACK #1: CARGAR DATOS (La única y correcta versión de cargar_grid)
-    # ==============================================================================
+    # --------------------------------------------------------------------------
+    # Init fechas sugeridas (desde caso)
+    # --------------------------------------------------------------------------
     @app.callback(
-        Output('recon-data', 'data', allow_duplicate=True),
-        Output('msg-carga-grid', 'children'),
-        Input('data-base-upload', 'contents'),
-        Input('data-base-upload', 'filename'),
-        Input('btn-cargar-db', 'n_clicks'),
-        State('active-case', 'data'),
+        Output("hist-fechas", "start_date"),
+        Output("hist-fechas", "end_date"),
+        Output("flow-hist-fechas", "start_date"),
+        Output("flow-hist-fechas", "end_date"),
+        Input("active-case", "data"),
+        prevent_initial_call=False
+    )
+    def init_fechas(shared):
+        caso_id = _get_caso_id(shared)
+        if not caso_id or ENGINE is None:
+            return None, None, None, None
+
+        fi, ff, _modelo = _get_periodo_caso(ENGINE, caso_id)
+        if not ff:
+            return None, None, None, None
+
+        start_hist = (pd.to_datetime(ff) - pd.Timedelta(days=30)).date()
+        return str(start_hist), str(ff), str(start_hist), str(ff)
+
+    # --------------------------------------------------------------------------
+    # Dropdown flujos (según modelo del caso)
+    # --------------------------------------------------------------------------
+    @app.callback(
+        Output("flow-hist-flujo", "options"),
+        Input("active-case", "data"),
+        prevent_initial_call=False
+    )
+    def cargar_flujos(shared):
+        caso_id = _get_caso_id(shared)
+        if not caso_id or ENGINE is None:
+            return []
+
+        _fi, _ff, modelo_id = _get_periodo_caso(ENGINE, caso_id)
+        topo = _get_topologia(ENGINE, modelo_id)
+        if topo.empty:
+            return []
+
+        topo = topo.drop_duplicates(subset=["Id_flujo", "codigo_flujo"]).sort_values("Id_flujo")
+        return [{"label": f"{int(r.Id_flujo)} – {r.codigo_flujo}", "value": int(r.Id_flujo)}
+                for r in topo.itertuples(index=False)]
+
+    # --------------------------------------------------------------------------
+    # PRECONTROL: gráfico + tabla
+    # --------------------------------------------------------------------------
+    @app.callback(
+        Output("graf-desbalances-ini", "figure"),
+        Output("tabla-precontrol-nodo", "rowData" if HAS_AGGRID else "data"),
+        Output("msg-precontrol", "children"),
+        Input("btn-graf-desb-ini", "n_clicks"),
+        State("recon-data-base", "rowData"),
+        State("active-case", "data"),
         prevent_initial_call=True
     )
-    def cargar_grid(contents, filename, n_db, shared):
-        trig = ctx.triggered_id
+    def cb_precontrol(n_clicks, grid_rows, shared):
+        if not n_clicks:
+            raise PreventUpdate
 
-        # ------------------- Excel -------------------
-        if trig == 'data-base-upload' and contents:
-            try:
-                cols = ['id_flujo','codigo_flujo','nombre_flujo','Flujo','Cu','FCu','Tolerancia','Tolerancia_cu']
-                df = pd.read_excel(io.BytesIO(base64.b64decode(contents.split(',')[1])), sheet_name='Datos bases')
-                rows = df[cols].round(4).to_dict('records')
-                msg  = f"✅ Plantilla cargada desde Excel: {filename}"
-                return rows, msg
-            except Exception as e:
-                return [], f"❌ Error cargando Excel: {e}"
+        if ENGINE is None:
+            return go.Figure(), [], "❌ No hay conexión a BD (ENGINE=None). Revisa .env / ENTORNO."
 
-        # ------------------- Base de datos -------------------
-        if trig == 'btn-cargar-db' and n_db:
-            # shared es State('active-case','data')
-            if not (shared and 'caso_id' in shared):
-                return [], "❌ No hay un caso activo. Carga un caso primero."
-            caso_id = shared.get('caso_id')
-            with conn.begin() as eng_conn:
-                df_caso = pd.read_sql(
-                    text("""
-                        SELECT TOP 1 fecha_ini AS fi, fecha AS ff
-                        FROM inventar_SpcHidr.casos_balance
-                        WHERE caso_id = :c AND modelo = 1
-                    """),
-                    eng_conn,
-                    params={"c": caso_id}
-                )
-            print("Consulta SQL ejecutada correctamente.")
-            fi = pd.to_datetime(df_caso['fi'].iat[0]).date()
-            ff = pd.to_datetime(df_caso['ff'].iat[0]).date()
-            if fi > ff:
-                fi, ff = ff, fi
+        caso_id = _get_caso_id(shared)
+        if not caso_id:
+            return go.Figure(), [], "⚠️ No hay caso activo."
 
-            df_val = ejecutar_balance_flujos(str(fi), str(ff))
-            if df_val.empty:
-                return [], "⚠️ El script de balance no devolvió filas."
-            guardar_balance_en_bd(df_val, caso_id, str(fi), str(ff), conn, truncate=True)
+        if not grid_rows:
+            return go.Figure(), [], "⚠️ La grilla no tiene datos cargados."
 
-            try:
-                with conn.begin() as eng_conn:
-                    df_pl = pd.read_sql(
-                        text("""
-                            SELECT id AS id_flujo, codigo_flujo, nombre_flujo, Tolerancia, Tolerancia_cu
-                            FROM inventar_SpcHidr.plantillas_balance
-                            WHERE caso_id = :c
-                        """),
-                        eng_conn,
-                        params={"c": caso_id}
-                    )
-                if df_pl is None or df_pl.empty:
-                    raise ValueError("plantilla vacía")
-            except Exception:
-                orden = [f"F{i}" for i in range(1, 26)]
-                df_pl = pd.DataFrame({
-                    "id_flujo": list(range(1, 26)),
-                    "codigo_flujo": orden,
-                    "nombre_flujo": [f"Flujo {i:02d}" for i in range(1, 26)],
-                    "Tolerancia": [0.5,0.5,0.5,6.6,0.0,7.0,7.0,9.0,9.0,0.0,0.0,4.0,4.0,4.0,4.0,0.0,0.0,5.0,5.0,8.0,5.0,5.0,0.0,0.0,1.0],
-                    "Tolerancia_cu": [4.95,5.4,5.0,5.0,0.0,7.0,7.0,5.0,5.0,0.0,0.0,0.5,0.5,5.8,5.8,0.0,0.0,0.0,0.0,6.0,0.0,0.0,0.0,0.0,1.0]
-                })
+        _fi, _ff, modelo_id = _get_periodo_caso(ENGINE, caso_id)
+        if modelo_id is None:
+            return go.Figure(), [], "⚠️ No se pudo obtener el modelo del caso (casos_balance.modelo)."
 
-            with conn.begin() as eng_conn:
-                df_res = pd.read_sql(
-                    text("""
-                        SELECT codigo_flujo, Tonelaje AS Flujo, Cu, FCu
-                        FROM inventar_SpcHidr.balances_flujos_resultados
-                        WHERE caso_id = :c AND fecha_inicio = :fi AND fecha_fin = :ff
-                    """),
-                    eng_conn,
-                    params={"c": caso_id, "fi": fi, "ff": ff}
-                )
+        df = precontrol_desbalance_nodo_desde_grilla(ENGINE, grid_rows, modelo_id)
+        if df.empty:
+            return go.Figure(), [], "⚠️ No se pudo calcular desbalances (sin topología o sin match id_flujo)."
 
-            df = df_pl.merge(df_res, on="codigo_flujo", how="left")
-            for c in ["Flujo", "Cu"]:
-                if c not in df:
-                    df[c] = 0.0
-            df[["Flujo", "Cu"]] = df[["Flujo", "Cu"]].apply(pd.to_numeric, errors="coerce").fillna(0.0)
-            if "FCu" not in df.columns or df["FCu"].isna().any():
-                df["FCu"] = (df["Flujo"] * df["Cu"] / 100.0).fillna(0.0)
+        fig = fig_precontrol_nodo(df)
+        return fig, df.to_dict("records"), "✅ Precontrol ejecutado correctamente."
 
-            orden = [f"F{i}" for i in range(1, 26)]
-            df["codigo_flujo"] = pd.Categorical(df["codigo_flujo"], categories=orden, ordered=True)
-            df = df.sort_values(["codigo_flujo","id_flujo"]).reset_index(drop=True)
-
-            df["Flujo"] = df["Flujo"].round(3)
-            df["Cu"]    = df["Cu"].round(4)
-            df["FCu"]   = df["FCu"].round(3)
-
-            cols = ["id_flujo","codigo_flujo","nombre_flujo","Flujo","Cu","FCu","Tolerancia","Tolerancia_cu"]
-            for col in cols:
-                if col not in df:
-                    df[col] = 0
-
-            rows = df[cols].to_dict('records')
-            msg  = f"✅ Caso {caso_id}: {fi}→{ff} (guardado y cargado desde BD)"
-            return rows, msg
-
-        # ------------------- Fallback -------------------
-        return no_update, "⚠️ Sin cambios"
-    # ==============================================================================
-    # CALLBACK #1B: GRAFICAR DESBALANCES INICIALES (a partir de la tabla)
-    # ==============================================================================
-    @app.callback(
-        Output('graf-desbalances-ini', 'figure'),
-        Input('btn-graf-desb-ini', 'n_clicks'),
-        State('recon-data-base', 'rowData'),
-        prevent_initial_call=True
-    )
-    def graf_desbalances_iniciales(n_clicks, data_base):
-        import plotly.express as px
-        from plotly.graph_objs import Figure
-        from plotly.subplots import make_subplots
-
-
-        if not n_clicks or not data_base:
-            return Figure()
-
-        try:
-            # 1) Base desde la grilla (misma normalización que en get_recon)
-            dfb = pd.DataFrame(data_base)
-            dfb['id_flujo'] = pd.to_numeric(dfb.get('id_flujo', np.arange(1, len(dfb)+1)), errors='coerce')
-            dfb.sort_values('id_flujo', inplace=True)
-
-            dfb['Flujo'] = pd.to_numeric(dfb.get('Flujo', 0), errors='coerce').fillna(0.0)
-            dfb['Cu']    = pd.to_numeric(dfb.get('Cu', 0),    errors='coerce').fillna(0.0)
-            dfb['Tolerancia']    = pd.to_numeric(dfb.get('Tolerancia', 0),    errors='coerce').fillna(0.0)
-            dfb['Tolerancia_cu'] = pd.to_numeric(dfb.get('Tolerancia_cu', 0), errors='coerce').fillna(0.0)
-
-            mediciones = np.column_stack([
-                dfb['Flujo'].to_numpy(dtype=float),
-                (dfb['Cu'] / 100.0).to_numpy(dtype=float),
-            ])
-            eps = 1e-6
-            error_df = pd.DataFrame({
-                0: (dfb['Tolerancia']    / 100.0).replace(0.0, eps).to_numpy(dtype=float),
-                1: (dfb['Tolerancia_cu'] / 100.0).replace(0.0, eps).to_numpy(dtype=float),
-            })
-
-            # 2) Llamada a balance_core para obtener desbalances iniciales (sin usar los reconciliados)
-            _, des_df, des_ini = desbalances(mediciones, error=error_df, fn="Normal")
-            des_ini = des_df
-            # 3) Formateo y gráfico
-            des_ini = des_ini.rename(columns={0: 'Nodo'})
-            #values_to_select = ['Chancado', 'Silo','N9',"N10"]
-            #des_ini = des_ini.loc[des_ini['Nodo'].isin(values_to_select)]
-
-            # Aseguramos nombres consistentes: masa y fino iniciales
-            # Si tus columnas son 'Desbalance masa' y 'Desbalance fino Cu', se renombra para claridad
-            if 'Desbalance masa inicial' in des_ini.columns:
-                des_ini = des_ini.rename(columns={'Desbalance masa': 'Desbalance masa inicial'})
-            if 'Desbalance fino inicial Cu' in des_ini.columns:
-                des_ini = des_ini.rename(columns={'Desbalance fino Cu': 'Desbalance fino inicial Cu'})
-      
-            
-            fig = make_subplots(rows=2, cols=1)
-            df_long = des_ini.melt(id_vars='Nodo', value_vars='Desbalance masa inicial', value_name='Desbalance [Ton]')
-            fig.add_trace(go.Bar(
-                x=df_long['Nodo'], y=df_long['Desbalance [Ton]'],name="Masa"
-            ), row=1, col=1)
-      
-            df_long = des_ini.melt(id_vars='Nodo', value_vars='Desbalance fino inicial Cu', value_name='Desbalance [Ton]')
-            fig.add_trace(go.Bar(
-                x=df_long['Nodo'], y=df_long['Desbalance [Ton]'],name="Fino"
-            ), row=2, col=1)
-       
-            fig.update_layout(barmode='stack')
-
-            return fig
-
-        except Exception as e:
-            print(f"❌ Error al graficar desbalances iniciales: {e}")
-            return Figure()
-    # ==============================================================================
-    # CALLBACK: Consultar y mostrar Desbalances Históricos
-    # ==============================================================================
+    # --------------------------------------------------------------------------
+    # HISTÓRICO NODO: boxplot + overlay actual
+    # --------------------------------------------------------------------------
     @app.callback(
         Output("hist-graf", "figure"),
-        Output("hist-tabla", "rowData"),
+        Output("hist-tabla", "rowData" if HAS_AGGRID else "data"),
+        Output("msg-hist-nodo", "children"),
         Input("btn-hist-buscar", "n_clicks"),
         State("hist-fechas", "start_date"),
         State("hist-fechas", "end_date"),
-        State("hist-areas", "value"),
+        State("hist-var", "value"),
+        State("recon-data-base", "rowData"),
+        State("active-case", "data"),
         prevent_initial_call=True
     )
-    def cargar_desbalances_historicos(n_clicks, f_ini, f_fin, areas):
-        with conn.begin() as eng_conn:
-            df = pd.read_sql(
-                text("""
-                    SELECT
-                        fecha_fin   AS Fecha,
-                        area        AS Area,
-                        desb_masa   AS Desb_masa,
-                        desb_fino_cu AS Desb_fino_cu
-                    FROM inventar_SpcHidr.historial_desbalances
-                    WHERE fecha_fin BETWEEN :f_ini AND :f_fin
-                """),
-                eng_conn,
-                params={"f_ini": f_ini, "f_fin": f_fin}
-            )
-
-        if df.empty:
-            return Figure(), []
-
-        if areas:
-            df = df[df["Area"].isin(areas)]
-
-        df_fecha = df.groupby("Fecha", as_index=False)[["Desb_masa", "Desb_fino_cu"]].sum()
-        df_long = df_fecha.melt(
-            id_vars="Fecha",
-            value_vars=["Desb_masa", "Desb_fino_cu"],
-            var_name="Magnitud",
-            value_name="Valor"
-        )
-
-        fig = px.line(
-            df_long,
-            x="Fecha",
-            y="Valor",
-            color="Magnitud",
-            title="Desbalances históricos (suma por fecha)"
-        )
-
-        fig.update_layout(template="plotly_white")
-
-        return fig, df.to_dict("records")
-    
-    @app.callback(
-    Output('recon-data', 'data', allow_duplicate=True),
-    Input('recon-data-base', 'cellValueChanged'), # <- ÚNICO INPUT
-    State('recon-data-base', 'rowData'),
-    prevent_initial_call=True
-    )
-    def guardar_ediciones_en_memoria(celda_editada, todos_los_datos): # <- SOLO DOS ARGUMENTOS
-        """
-        Este callback se activa después de editar una celda.
-        Toma todos los datos de la tabla y los guarda en la memoria.
-        """
-        # El primer argumento 'celda_editada' no lo usamos, pero es necesario para que el Input funcione.
-        # El segundo argumento 'todos_los_datos' es el que nos interesa.
-        return todos_los_datos
-
-    # CALLBACK B: Rellena la tabla con los datos que hay en la memoria
-    @app.callback(
-        Output('recon-data-base', 'rowData'),
-        Input('recon-data', 'data')
-    )
-    def actualizar_tabla_desde_memoria(datos_en_memoria):
-        """
-        Este callback se asegura de que la tabla visible (recon-data-base)
-        siempre muestre lo que está guardado en la memoria ('recon-data').
-        Si navegas a otra pestaña y vuelves, este callback restaura tus datos editados.
-        """
-        if datos_en_memoria is None:
-            # Evita que la tabla se borre innecesariamente en la carga inicial
+    def cb_hist_nodo(n, start_date, end_date, var, grid_rows, shared):
+        if not n:
             raise PreventUpdate
-        return datos_en_memoria
+
+        if ENGINE is None:
+            return go.Figure(), [], "❌ No hay conexión a BD (ENGINE=None)."
+
+        caso_id = _get_caso_id(shared)
+        if not caso_id:
+            return go.Figure(), [], "⚠️ No hay caso activo."
+
+        if not start_date or not end_date:
+            return go.Figure(), [], "⚠️ Selecciona rango de fechas."
+
+        _fi, _ff, modelo_id = _get_periodo_caso(ENGINE, caso_id)
+        if modelo_id is None:
+            return go.Figure(), [], "⚠️ No se pudo obtener el modelo del caso."
+
+        # 1) histórico BD
+        df_hist = query_hist_desb_nodo(ENGINE, start_date, end_date, var=var)
+
+        # 2) actual desde grilla (precontrol)
+        df_pre = precontrol_desbalance_nodo_desde_grilla(ENGINE, grid_rows or [], modelo_id)
+
+        if df_pre.empty:
+            df_actual = pd.DataFrame(columns=["nodo", "valor_actual"])
+        else:
+            col_actual = {
+                "masa_pct": "desb_masa_pct",
+                "cu_pct": "desb_cu_pct",
+                "masa_abs": "desb_masa",
+                "cu_abs": "desb_fino_cu",
+            }.get(var, "desb_masa_pct")
+            df_actual = df_pre[["nodo", col_actual]].rename(columns={col_actual: "valor_actual"})
+
+        label = {
+            "masa_pct": "% Δ Masa",
+            "cu_pct": "% Δ Fino Cu",
+            "masa_abs": "Δ Masa",
+            "cu_abs": "Δ Fino Cu",
+        }.get(var, "% Δ Masa")
+
+        fig = fig_boxplot_hist_nodo(df_hist, df_actual, label)
+
+        rows = df_hist.sort_values(["Nodo", "Fecha"]).to_dict("records") if not df_hist.empty else []
+        msg = f"✅ Histórico nodo: {len(rows)} registros ({start_date} → {end_date})."
+        if df_hist.empty:
+            msg += " (sin datos en bm_desbalance_nodo para ese periodo)"
+        return fig, rows, msg
+
+    # --------------------------------------------------------------------------
+    # HISTÓRICO FLUJO: boxplot + overlay actual
+    # --------------------------------------------------------------------------
+    @app.callback(
+        Output("flow-hist-graf", "figure"),
+        Output("flow-hist-tabla", "rowData" if HAS_AGGRID else "data"),
+        Output("msg-hist-flujo", "children"),
+        Input("btn-flow-hist-buscar", "n_clicks"),
+        State("flow-hist-fechas", "start_date"),
+        State("flow-hist-fechas", "end_date"),
+        State("flow-hist-var", "value"),
+        State("flow-hist-flujo", "value"),
+        State("recon-data-base", "rowData"),
+        prevent_initial_call=True
+    )
+    def cb_hist_flujo(n, start_date, end_date, var, id_flujo, grid_rows):
+        if not n:
+            raise PreventUpdate
+
+        if ENGINE is None:
+            return go.Figure(), [], "❌ No hay conexión a BD (ENGINE=None)."
+
+        if not start_date or not end_date:
+            return go.Figure(), [], "⚠️ Selecciona rango de fechas."
+        if not id_flujo:
+            return go.Figure(), [], "⚠️ Selecciona un flujo."
+
+        df_hist = query_hist_flujo(ENGINE, start_date, end_date, int(id_flujo), var=var)
+
+        # valor actual desde grilla
+        df = pd.DataFrame(grid_rows or [])
+        valor_actual = None
+        if not df.empty and "id_flujo" in df.columns:
+            df["id_flujo"] = pd.to_numeric(df["id_flujo"], errors="coerce")
+            row = df[df["id_flujo"] == int(id_flujo)]
+            if not row.empty:
+                masa = _safe_float(row.iloc[0].get("Flujo", 0.0))
+                cu = _safe_float(row.iloc[0].get("Cu", 0.0))
+                if var == "masa":
+                    valor_actual = masa
+                elif var == "cu":
+                    valor_actual = cu
+                else:
+                    valor_actual = masa * cu / 100.0
+
+        var_label = {"masa": "Masa (t)", "cu": "Ley Cu (%)", "fcu": "Fino Cu (tCu)"}[var]
+        flujo_label = f"id_flujo {id_flujo}"
+
+        fig = fig_boxplot_hist_flujo(df_hist, valor_actual, var_label, flujo_label)
+
+        rows = df_hist.sort_values("Fecha").to_dict("records") if not df_hist.empty else []
+        msg = f"✅ Histórico flujo: {len(rows)} registros ({start_date} → {end_date})."
+        if df_hist.empty:
+            msg += " (sin datos históricos para ese flujo/periodo)"
+        if valor_actual is None:
+            msg += " | ⚠️ No se encontró valor actual en grilla para ese flujo."
+        return fig, rows, msg
+
+
+# ==============================================================================
+# API esperada por tab_recon_container
+# ==============================================================================
+def render_tab6():
+    return layout
+
+
+def register_tab6_callbacks(app):
+    register_callbacks(app)

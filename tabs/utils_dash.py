@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import os
 from dotenv import load_dotenv
 from dash import Dash
-from db_connection import get_connection
+from db_connection import get_connection, get_engine
 from datetime import date
 import math
 import traceback
@@ -218,6 +218,56 @@ def get_data_save_casos(dat_casos, final, maxcas):
         cursor.close()
         db.close()
 
+def calcular_desbalance_nodo_desde_reconciliado(engine, df_rec):
+    """
+    Calcula desbalances por nodo usando datos reconciliados
+    (reutilizable para grabación y reportabilidad)
+    """
+    topo = pd.read_sql(
+        """
+        SELECT Id_flujo, n_salida, n_llegada
+        FROM inventar_SpcHidr.flujo_modelos
+        WHERE activo = 1
+        """,
+        engine
+    )
+
+    df = df_rec.merge(
+        topo,
+        left_on="id_flujo",
+        right_on="Id_flujo",
+        how="inner"
+    )
+
+    if df.empty:
+        return pd.DataFrame()
+
+    rows = []
+    nodos = pd.unique(df[["n_salida", "n_llegada"]].values.ravel())
+
+    for nodo in nodos:
+        ent = df[df["n_llegada"] == nodo]
+        sal = df[df["n_salida"] == nodo]
+
+        masa_in  = ent["Masa_recon"].sum()
+        masa_out = sal["Masa_recon"].sum()
+
+        fino_in  = (ent["Masa_recon"] * ent["Ley_recon_Cu"] / 100).sum()
+        fino_out = (sal["Masa_recon"] * sal["Ley_recon_Cu"] / 100).sum()
+
+        rows.append({
+            "codigo_nodo": nodo,
+            "masa_entrada": masa_in,
+            "masa_salida": masa_out,
+            "desb_masa_abs": masa_in - masa_out,
+            "desb_masa_pct": (masa_in - masa_out) / masa_in * 100 if masa_in else None,
+            "fino_entrada_cu": fino_in,
+            "fino_salida_cu": fino_out,
+            "desb_fino_cu_abs": fino_in - fino_out,
+            "desb_fino_cu_pct": (fino_in - fino_out) / fino_in * 100 if fino_in else None,
+        })
+
+    return pd.DataFrame(rows)
 
 # ---------- util de saneo ----------
 def _to_native(v):
@@ -315,6 +365,72 @@ def get_data_publica_casos(med_cas, rec_caso, shared):
             cur.execute(insert_sql, row)
         
         cnx.commit()
+
+            # ==========================================================
+        # NUEVO BLOQUE: DESBALANCE POR NODO
+        # ==========================================================
+
+        engine = get_engine()
+
+        df_rec_calc = df_out.copy()
+
+        df_desb = calcular_desbalance_nodo_desde_reconciliado(engine, df_rec_calc)
+
+        if not df_desb.empty:
+            df_desb["caso_id"] = caso_id
+            df_desb["fecha_ini_periodo"] = pd.to_datetime(
+                shared.get("fecha_inicio", fecha_bm)
+            ).date()
+            df_desb["fecha_fin_periodo"] = fecha_bm
+            df_desb["fecha_registro"] = date.today()
+
+            cnx2 = get_connection()
+            cur2 = cnx2.cursor()
+            try:
+                # Limpieza previa del caso
+                cur2.execute(
+                    "DELETE FROM inventar_SpcHidr.bm_desbalance_nodo WHERE caso_id = ?",
+                    (caso_id,)
+                )
+
+                insert_sql = """
+                INSERT INTO inventar_SpcHidr.bm_desbalance_nodo
+                (caso_id, codigo_nodo, fecha_ini_periodo, fecha_fin_periodo,
+                masa_entrada, masa_salida, desb_masa_abs, desb_masa_pct,
+                fino_entrada_cu, fino_salida_cu, desb_fino_cu_abs, desb_fino_cu_pct,
+                fecha_registro)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
+
+                for _, r in df_desb.iterrows():
+                    cur2.execute(
+                        insert_sql,
+                        (
+                            caso_id,
+                            r["codigo_nodo"],
+                            df_desb["fecha_ini_periodo"].iloc[0],
+                            df_desb["fecha_fin_periodo"].iloc[0],
+                            r["masa_entrada"],
+                            r["masa_salida"],
+                            r["desb_masa_abs"],
+                            r["desb_masa_pct"],
+                            r["fino_entrada_cu"],
+                            r["fino_salida_cu"],
+                            r["desb_fino_cu_abs"],
+                            r["desb_fino_cu_pct"],
+                            r["fecha_registro"],
+                        )
+                    )
+
+                cnx2.commit()
+
+            except Exception as e:
+                cnx2.rollback()
+                raise e
+            finally:
+                cur2.close()
+                cnx2.close()
+
         return len(rows)
     except Exception as e:
         cnx.rollback()
