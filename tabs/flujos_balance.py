@@ -22,12 +22,12 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
     port = 3306
     database = "inventar_SpcHidr"
      """
-    try:
+    """  try:
         engine = create_engine(f"mssql+pytds://sa:24gegepeNA@149.50.136.234/inventar_SpcHidr")
     except Exception as e:
         print(f"Error de conexión a la base de datos: {e}")
-        return pd.DataFrame()
-
+        return pd.DataFrame() """
+    engine = get_engine()
     # --- Diccionario de queries estándar (excepto F18) ---
     queries = {
         "F1": f"""SELECT SUM(Ton) AS Tonelaje, (SUM(Ton * CuTG00 / 100) / SUM(Ton)) * 100 AS Ley_Cu FROM inventar_SpcHidr.mov_cam WHERE fecha BETWEEN '{fecha_inicio}' AND '{fecha_fin}' AND Origen = 'Stock' and (Fase <> 'SRR') AND Destino = 'CH01';""",

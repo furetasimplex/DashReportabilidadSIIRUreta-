@@ -14,7 +14,7 @@ from tabs.tab_analisis_reconciliacion import (
 layout = dbc.Card(
     [
         dcc.Store(id="active-case", data={}),
-        dcc.Store(id="recon-data", data=None, storage_type="memory"),
+        #dcc.Store(id="recon-data", data=None, storage_type="memory"),
         dbc.CardHeader(
             html.H4(id="header-recon-title", className="mb-0 text-primary fw-bold")
         ),
@@ -111,3 +111,4 @@ def register_callbacks(app):
         fi = active_case.get("fecha_inicio", "")
         ff = active_case.get("fecha_fin", "")
         return f"📈 Reconciliador Área Seca — Caso activo: {caso_id} ({fi} → {ff})"
+

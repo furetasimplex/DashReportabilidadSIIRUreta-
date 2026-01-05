@@ -52,7 +52,7 @@ def get_data_agua_casos_hidro(inicio, final, crea_caso):
             sql = f"""
             SELECT caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso
             FROM {schema_prefix}casos_balance
-            WHERE fecha = '{final}' AND modelo = 1;
+            WHERE fecha = '{final}' AND modelo = 3;
             """
             print("🔍 Ejecutando SELECT:")
             print(sql)
@@ -135,7 +135,7 @@ def get_fig_bal_casos_hidro(maxid,agg_tab2):
                     {SSschema}flujo_caso_coord
                 WHERE
                     flujo_caso_coord.caso = '''+ str(maxid) +''' AND
-                    flujo_caso_coord.modelo = 1'''
+                    flujo_caso_coord.modelo = 3'''
     print(data_sql)
     cursor = db.cursor()
     try:

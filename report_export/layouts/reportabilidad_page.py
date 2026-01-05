@@ -65,7 +65,7 @@ def layout():
             dbc.CardBody([
                 html.Div(id="report-historial"),
                 dbc.ButtonGroup([
-                    dbc.Button("📄 Exportar a Excel", id="report-btn-exportar", color="success"),
+                    dbc.Button("📄 Exportar a Excel3", id="report-btn-exportar", color="success"),
                     dbc.Button("🖨️ Generar PDF", id="report-btn-pdf", color="primary", disabled=True)
                 ], className="mt-2"),
                 dcc.Download(id="report-download-xlsx"),

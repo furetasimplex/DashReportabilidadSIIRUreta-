@@ -1,6 +1,4 @@
 # Auto-generated on 2025-10-27 18:21:09. Edit as needed.
-
-
 import io
 import pandas as pd
 from openpyxl import load_workbook

@@ -179,10 +179,10 @@ def register_tab4_callbacks(app):
             WHERE Fecha
             BETWEEN '{start_date}' AND '{end_date}'
         """
-        print(query)
-        print(conn)
+        #print(query)
+        #print(conn)
         df = pd.read_sql(query, conn)
-        print(df)
+        #print(df)
         conn.close()
 
         # Filtrar torres + preparar tipos

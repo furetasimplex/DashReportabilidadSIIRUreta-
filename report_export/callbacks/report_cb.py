@@ -10,7 +10,7 @@ TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
 @callback(
     Output("rep_descarga_xlsx", "data"),
     Output("rep_status", "children"),
-    Input("rep_btn_exportar", "n_clicks"),
+    Input("report-btn-exportar", "n_clicks"),
     State("report-fecha-final", "date"),
     prevent_initial_call=True
 )

@@ -84,7 +84,7 @@ def get_data_agua_casos(inicio, final, crea_caso):
             sql_select = f"""
                 SELECT TOP 1 caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso
                 FROM inventar_SpcHidr.casos_balance
-                WHERE modelo = 1 AND fecha_ini = '{inicio}' AND fecha = '{final}'
+                WHERE modelo = 3 AND fecha_ini = '{inicio}' AND fecha = '{final}'
                 ORDER BY caso_id DESC;
             """
             print(f"--- DEBUG: Ejecutando SQL SELECT para buscar caso existente:\n{sql_select}")
@@ -107,7 +107,7 @@ def get_data_agua_casos(inicio, final, crea_caso):
 def get_agua_his_casos (final):
     ddf_casos = pd.DataFrame()  # 👈 evita devolver None
     db=get_connection()
-    sql2 = ("SELECT caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso FROM inventar_SpcHidr.casos_balance WHERE modelo = 1 ORDER BY fecha DESC")
+    sql2 = ("SELECT caso_id, fecha, comentarios, modelo, fecha_ini, nombre_caso FROM inventar_SpcHidr.casos_balance WHERE modelo = 3 ORDER BY fecha DESC")
     print(sql2)
     cursor = db.cursor()
     print("🟢 Cursor creado correctamente")

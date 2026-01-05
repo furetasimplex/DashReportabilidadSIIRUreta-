@@ -24,7 +24,7 @@ def layout():
         html.Hr(),
         dbc.Row([
             dbc.Col([
-                dbc.Button("Generar y descargar Excel", id="rep_btn_exportar", n_clicks=0, color="primary"),
+                dbc.Button("Generar y descargar Excel 2", id="rep_btn_exportar", n_clicks=0, color="primary"),
                 dcc.Download(id="rep_descarga_xlsx"),
                 html.Div(id="rep_status", className="mt-3 text-muted")
             ], md=6)

@@ -45,10 +45,10 @@ def fetch_report_data(end_date: date) -> pd.DataFrame:
     sql_sa = f"""
     SELECT *
     FROM {TABLE_FQN}
-    WHERE [Fecha] BETWEEN {start_date} AND {end_date}
+    WHERE [Fecha] BETWEEN :start AND :end
     ORDER BY [Fecha] ASC
     """
-    print(sql_sa )
+
     try:
         # Caso 1: conexión DBAPI (pyodbc, etc.) → tiene cursor()
         if hasattr(conn_or_engine, "cursor"):
@@ -67,7 +67,7 @@ def fetch_report_data(end_date: date) -> pd.DataFrame:
                     conn,
                     params={"start": start_date, "end": end_date},
                 )
-       
+
     except Exception as e:
         raise RuntimeError(f"Error al conectar/leer SQL Server en fetch_report_data: {e}") from e
 
@@ -87,7 +87,7 @@ def fetch_report_data(end_date: date) -> pd.DataFrame:
             df["es_preliminar"] = df[prelim].astype(str).str.lower().isin(
                 ["1", "true", "sí", "si", "preliminar", "preliminary", "pre"]
             )
-    #print(df)
+
     # Dejamos Fecha y es_preliminar al inicio
     cols = list(df.columns)
     ordered = []
@@ -96,6 +96,5 @@ def fetch_report_data(end_date: date) -> pd.DataFrame:
             ordered.append(c)
             cols.remove(c)
     ordered.extend(cols)
-    print(df[ordered])
 
-    return df
+    return df[ordered]
