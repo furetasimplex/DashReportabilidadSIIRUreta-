@@ -93,7 +93,7 @@
         // =========================================================
         const nodesData = [
             // EJE IZQUIERDO
-            { id: "mina", label: "Mina", x: 40, y: 180, type: "box-open", w: 80, h: 40 },
+            { id: "mina", label: "Mina", x: 40, y: 140, type: "box-open", w: 80, h: 40 },
             { id: "stock", label: "Stock", x: 40, y: 340, type: "box-open", w: 80, h: 40 },
             
             // N1
@@ -128,12 +128,14 @@
             { id: "lix_sulf", label: "Lixiviación", sublabel: "Sulfuros", x: 1060, y: 640, type: "rect", w: 120, h: 70, fill: "#ffe0b2", stroke: "#e65100" },
             { id: "lix_ox", label: "Lixiviación", sublabel: "Óxidos", x: 1300, y: 640, type: "rect", w: 120, h: 70, fill: "#ffe0b2", stroke: "#e65100" },
 
-            { id: "inv_sulf", label: "Inventario", x: 960, y: 660, type: "triangle", w: 35, h: 35, fill: "#fff9c4", stroke: "#fbc02d" },
-            { id: "inv_ox", label: "Inventario", x: 1480, y: 660, type: "triangle", w: 35, h: 35, fill: "#fff9c4", stroke: "#fbc02d" },
+            { id: "inv_sulf", label: "Inventario", x: 910, y: 658, type: "triangle", w: 35, h: 35, fill: "#fff9c4", stroke: "#fbc02d" },
+            { id: "inv_ox", label: "Inventario", x: 1530, y: 658, type: "triangle", w: 35, h: 35, fill: "#fff9c4", stroke: "#fbc02d" },
 
             // Salidas
             { id: "N9", label: "N9", x: 1240, y: 820, type: "circle", r: 22, fill: "#fff3e0", stroke: "#f57c00" },
-            { id: "botaderos", label: "Hacia Botaderos", x: 1000, y: 920, type: "dashed-rect", w: 480, h: 40 }
+            { id: "botaderos", label: "Hacia Botaderos", x: 1000, y: 920, type: "dashed-rect", w: 480, h: 40 },
+            { id: "dest_fino", label: "Cobre fino", sublabel: "recuperado", x: 780, y: 760, type: "label-only", w: 0, h: 0 }
+            
         ];
 
         // =========================================================
@@ -164,21 +166,23 @@
             { id: "F14", source: "aglomerado", target: "lix_sulf", label: "F14", pathType: "fork-sulf" },
             { id: "F15", source: "aglomerado", target: "lix_ox", label: "F15", pathType: "fork-ox" },
 
-            { id: "F16", source: "lix_sulf", target: "inv_sulf", label: "F16", pathType: "strict-horizontal" },
-            { id: "F17", source: "lix_ox", target: "inv_ox", label: "F17", pathType: "strict-horizontal" },
+            { id: "F16", source: "lix_sulf", target: "inv_sulf", label: "F16", pathType: "L-left-top" },
+            { id: "F17", source: "lix_ox", target: "inv_ox", label: "F17", pathType: "L-right-top" },
 
             { id: "F18", source: "lix_sulf", target: "N9", label: "F18", pathType: "inner-to-n9" },
             { id: "F19", source: "lix_ox", target: "N9", label: "F19", pathType: "inner-to-n9" },
             { id: "F20", source: "N9", target: "botaderos", label: "F20", pathType: "center-drop" },
 
             { id: "F21", source: "lix_sulf", target: "botaderos", label: "F21 (Camiones)", pathType: "outer-left-drop" },
-            { id: "F22", source: "lix_ox", target: "botaderos", label: "F22 (Camiónes)", pathType: "outer-right-drop" }
+            { id: "F22", source: "lix_ox", target: "botaderos", label: "F22 (Camiónes)", pathType: "outer-right-drop" },
+            { id: "F23", source: "lix_sulf", target: "dest_fino", label: "F23", pathType: "bottom-drop-left" },
+            { id: "F24", source: "lix_ox", target: "dest_fino", label: "F24", pathType: "L-bot-under" }
         ];
 
         // Zonas
         const zonesData = [
             { id: "seca", label: "ÁREA SECA / APILADO", x: 20, y: -5, w: 1330, h: 560, color: "#0984e3" },
-            { id: "lix", label: "LIXIVIACIÓN", x: 840, y: 590, w: 720, h: 390, color: "#d63031" }
+            { id: "lix", label: "LIXIVIACIÓN", x: 680, y: 590, w: 920, h: 390, color: "#d63031" }
         ];
 
         // RENDER
@@ -260,6 +264,65 @@
                 case "straight": p.moveTo(sx, sy); p.lineTo(tx - pad, ty); break;
                 case "v-up": p.moveTo(sx, sy); p.lineTo(sx, ty + pad); break;
                 case "v-down": p.moveTo(sx, sy); p.lineTo(sx, ty - pad); break;
+                case "L-left-top": // F16: Sale por arriba (y+20) hacia el triángulo
+                    p.moveTo(s.x, s.y + 35); 
+                    p.lineTo(t.x + 30, s.y + 35); // Conecta al centro del triángulo
+                    break;
+
+                case "bottom-drop-left": 
+                    // Coordenada Y horizontal del flujo
+                    let yF23 = s.y + s.h + 40;
+                    
+                    // 1. Salir del fondo (desplazado a la derecha, x+100)
+                    p.moveTo(s.x + 100, s.y + s.h); 
+                    p.lineTo(s.x + 100, yF23); // Bajar
+
+                    // --- SALTO 1: Sobre F18 (Centro de Sulfuros) ---
+                    // F18 baja por el centro: s.x + 60.
+                    // Nos detenemos 8px antes (s.x + 60 + 8) porque venimos de derecha a izquierda
+                    let obs1 = s.x + 60; 
+                    p.lineTo(obs1 + 8, yF23);
+                    p.quadraticCurveTo(obs1, yF23 - 12, obs1 - 8, yF23);
+
+                    // --- SALTO 2: Sobre F21 (Camión Sulfuros) ---
+                    // F21 baja por la izquierda: s.x + 10.
+                    let obs2 = s.x + 10;
+                    p.lineTo(obs2 + 8, yF23);
+                    p.quadraticCurveTo(obs2, yF23 - 12, obs2 - 8, yF23);
+
+                    // 3. Finalizar camino a la izquierda
+                    p.lineTo(t.x + 40, yF23);      
+                    p.lineTo(t.x + 25, t.y - 10); // Subir
+                    break;
+                // --- SALIDAS LIXIVIACIÓN ÓXIDOS (Derecha) ---
+                case "L-right-top": // F17: Sale por la derecha arriba (y+20)
+                    p.moveTo(s.x + s.w, s.y + 35);
+                    p.lineTo(t.x + 6, s.y + 35);
+                    break;
+
+                // --- F24: LA VUELTA LARGA ---
+                case "L-bot-under": 
+                    // Coordenada Y horizontal del flujo (más abajo que F23)
+                    let yF24 = s.y + s.h + 60;
+
+                    // 1. Salir del fondo de Óxidos
+                    p.moveTo(s.x + 25, s.y + s.h); 
+                    p.lineTo(s.x + 25, yF24); // Bajar
+                    let obsF18 = s.x - 180;
+                    p.lineTo(obsF18 + 8, yF24);
+                    p.quadraticCurveTo(obsF18, yF24 - 12, obsF18 - 8, yF24);
+
+                    // --- SALTO 2: Sobre F21 (Camión Sulfuros) ---
+                    // Pos F21 = 1060 + 10 = 1070.
+                    // Relativo a 's' (1300): 1070 = s.x - 230
+                    let obsF21 = s.x - 230;
+                    p.lineTo(obsF21 + 8, yF24);
+                    p.quadraticCurveTo(obsF21, yF24 - 12, obsF21 - 8, yF24);
+
+                    // 3. Finalizar camino a la izquierda
+                    p.lineTo(t.x+ 30, yF24);      
+                    p.lineTo(t.x + 25, t.y + 10); // Subir
+                    break;
                 case "fork-sulf": p.moveTo(sx - 35, s.y + s.h); p.lineTo(sx - 35, ty - 50); p.lineTo(tx, ty - 50); p.lineTo(tx, ty - pad); break;
                 case "fork-ox": p.moveTo(sx + 35, s.y + s.h); p.lineTo(sx + 35, ty - 50); p.lineTo(tx, ty - 50); p.lineTo(tx, ty - pad); break;
                 default: p.moveTo(sx, sy); p.lineTo(tx, ty);
@@ -268,7 +331,22 @@
         }
 
         const linksGroup = g.selectAll(".link").data(edgesData).enter().append("g").attr("class", "link");
-        linksGroup.append("path").attr("d", d => getPath(d)).attr("marker-end", d => d.dashed ? "" : "url(#arrow)").style("stroke-dasharray", d => d.dashed ? "5,5" : "none").style("stroke", d => d.dashed ? "#b2bec3" : null);
+
+        // 1. EL "HALO" (Borde grueso del color del fondo para simular el salto/corte)
+        linksGroup.append("path")
+            .attr("d", d => getPath(d))
+            .attr("fill", "none")
+            .attr("stroke", "#fdfdfd") // IMPORTANTE: Mismo color que tu background CSS
+            .attr("stroke-width", "10px") // Grosor del "borrador"
+            // Solo aplicamos este efecto a las tuberías horizontales que cruzan (F18, F19, F23, F24)
+            .style("opacity", d => ["F23", "F24", "F18", "F19"].includes(d.id) ? 1 : 0);
+
+        // 2. LA LÍNEA VISIBLE (Dibujo normal)
+        linksGroup.append("path")
+            .attr("d", d => getPath(d))
+            .attr("marker-end", d => d.dashed ? "" : "url(#arrow)")
+            .style("stroke-dasharray", d => d.dashed ? "5,5" : "none")
+            .style("stroke", d => d.dashed ? "#b2bec3" : null);
 
         // LABELS - LOGICA MANUAL DE POSICIONAMIENTO
         function getLinkCenter(d) {
@@ -278,7 +356,7 @@
             // F2 Y=180 -> Label Y=165 (15px arriba)
             // F1 Y=340 -> Label Y=355 (15px abajo)
             if(d.id === "F1") return { x: 165, y: 405 }; 
-            if(d.id === "F2") return { x: 165, y: 165 };
+            if(d.id === "F2") return { x: 165, y: 135 };
             
             // F3 / F4 (Misma altura visual)
             // Linea central Y=260. Label Y=245.
@@ -289,12 +367,12 @@
             // N4 x=910. SRR Top x=850. Mid=850 (baja vertical). 
             // Queremos texto a la izquierda de 850.
             if(d.id === "F8") return { x: 850, y: (s.y+t.y)/1.7 }; 
-            if(d.id === "F9") return { x: 850, y: (s.y+t.y)/2.07 };
+            if(d.id === "F9") return { x: 850, y: (s.y+t.y)/1.98 };
 
             // F10 / F11 (Derecha de la linea vertical)
             // N4 x=910. SAL Top x=970.
             if(d.id === "F10") return { x: 1070, y: (s.y+t.y)/1.7 };
-            if(d.id === "F11") return { x: 1070, y: (s.y+t.y)/2.07 };
+            if(d.id === "F11") return { x: 1070, y: (s.y+t.y)/1.98 };
 
             // F12 / F13 (Más centrados y bajados hacia la línea)
             if(d.id === "F12") return { x: (s.x+t.x)/2 + 28, y: s.y + 50 }; // Casi tocando la linea
@@ -305,10 +383,14 @@
             if(d.id === "F25") return { x: t.x - 100, y: t.y + 12 }; 
             if(d.id === "F14") return { x: (s.x+25), y: s.y + s.h + 50 };
             if(d.id === "F15") return { x: (s.x+127), y: s.y + s.h + 50 };
-            if(d.id === "F16") return { x: (s.x+t.x)/2.065, y: (s.y+t.y)/2 +65 };
-            if(d.id === "F17") return { x: (s.x+t.x)/1.856, y: (s.y+t.y)/2 + 65 };
+            if(d.id === "F16") return { x: s.x- 60, y: s.y + 25 };
+            if(d.id === "F17") return { x: s.x + s.w + 55, y: s.y + 25 };
             if(d.id === "F21") return { x: s.x - 30 - 10, y: (s.y+t.y)/1.92 }; 
             if(d.id === "F22") return { x: s.x + s.w + 30 + 10, y: (s.y+t.y)/1.92 }; 
+            if(d.id === "F23") return { x: 870, y: s.y + s.h + 77 };
+            if(d.id === "F24") return { x: 870, y: s.y + s.h + 28 };
+            if(d.id === "F18") return { x: s.x + s.w/2 + 46, y: s.y + s.h + 97 }; 
+            if(d.id === "F19") return { x: s.x + s.w/2 - 50, y: s.y + s.h + 97 };
             if(d.pathType.includes("extended")) return { x: s.x + 160, y: (s.y+t.y)/2 }; 
 
             const sx = s.x + (s.w||0)/2; const tx = t.x + (t.w||0)/2;
@@ -349,10 +431,14 @@
             } else if (d.type === 'dashed-rect') {
                 el.append("rect").attr("width", d.w).attr("height", d.h).attr("fill", "none").attr("stroke", "#636e72").attr("stroke-dasharray", "4,4");
                 el.append("text").attr("class", "node-label").attr("x", d.w/2).attr("y", d.h/2+4).text(d.label);
-            }
+            } else if (d.type === 'label-only') {
+                // Solo dibuja el texto, alineado a la derecha de la coordenada x
+                el.append("text").attr("class", "node-label").attr("text-anchor", "end").attr("x", -10).attr("y", 0).text(d.label);
+                el.append("text").attr("class", "node-sublabel").attr("text-anchor", "end").attr("x", -10).attr("y", 12).text(d.sublabel);
             let valY = (d.h||d.r*2) + (d.type.includes('circle')?22:18);
             if (d.id.includes('bot')) valY += 12;
             el.append("text").attr("class", "node-value").attr("x", (d.w||0)/2).attr("y", valY).text("");
+            }
         });
 
         function formatNumber(num, metric) {

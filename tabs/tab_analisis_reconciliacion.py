@@ -437,21 +437,26 @@ def register_analisis_reconciliacion_callbacks(app):
         ph_c = ",".join("?" for _ in casos)
         ph_f = ",".join("?" for _ in flujos)
 
+        # --- CAMBIO PRINCIPAL AQUÍ ---
+        # 1. Agregamos el LEFT JOIN con Diccionario_Flujos
+        # 2. Usamos COALESCE(t2.Nombre, t1.Flujo) para que, si no hay nombre, muestre "Flujo XX"
         df = run_query(
             f"""
             SELECT
-                bm_id,
-                caso_id,
-                fecha_bm,
-                Flujo,
-                Masa_medida, Masa_recon, Tolerancia,
-                Ley_medida_Cu, Ley_recon_Cu, Tolerancia_cu,
-                Error_masa, Error_ley_Cu
-            FROM inventar_SpcHidr.Data_balance_rec
-            WHERE caso_id IN ({ph_c})
-              AND Flujo IN ({ph_f})
-              AND fecha_bm BETWEEN ? AND ?
-            ORDER BY fecha_bm
+                t1.bm_id,
+                t1.caso_id,
+                t1.fecha_bm,
+                t1.Flujo,
+                COALESCE(t2.Nombre, t1.Flujo) AS Nombre_Flujo, 
+                t1.Masa_medida, t1.Masa_recon, t1.Tolerancia,
+                t1.Ley_medida_Cu, t1.Ley_recon_Cu, t1.Tolerancia_cu,
+                t1.Error_masa, t1.Error_ley_Cu
+            FROM inventar_SpcHidr.Data_balance_rec t1
+            LEFT JOIN inventar_SpcHidr.Diccionario_Flujos t2 ON t1.Flujo = t2.Flujo
+            WHERE t1.caso_id IN ({ph_c})
+                AND t1.Flujo IN ({ph_f})
+                AND t1.fecha_bm BETWEEN ? AND ?
+            ORDER BY t1.fecha_bm
             """,
             casos + flujos + [fi, ff]
         )
@@ -461,13 +466,13 @@ def register_analisis_reconciliacion_callbacks(app):
     # FIG 1: Boxplot + línea último caso por fecha (por flujo)
     # ----------------------------
     @app.callback(
-        Output("stat-box-errores", "figure"),
-        Input("stat-sel-caso", "value"),
-        Input("stat-sel-flujo", "value"),
-        Input("stat-sel-tipo", "value"),
-        Input("stat-fechas", "start_date"),
-        Input("stat-fechas", "end_date"),
-    )
+    Output("stat-box-errores", "figure"),
+    Input("stat-sel-caso", "value"),
+    Input("stat-sel-flujo", "value"),
+    Input("stat-sel-tipo", "value"),
+    Input("stat-fechas", "start_date"),
+    Input("stat-fechas", "end_date"),
+)
     def fig_box(casos, flujos, tipo, fi, ff):
         df = query_filtered(casos, flujos, fi, ff)
         if df.empty:
@@ -476,26 +481,29 @@ def register_analisis_reconciliacion_callbacks(app):
         y = "Error_masa" if tipo == "masa" else "Error_ley_Cu"
         df[y] = pd.to_numeric(df[y], errors="coerce")
 
+        # --- CAMBIO AQUÍ: x="Nombre_Flujo" en lugar de "Flujo" ---
         fig = px.box(
             df,
-            x="Flujo",
+            x="Nombre_Flujo", 
             y=y,
             points="outliers",
             title="Distribución del Error (%) por Flujo"
         )
 
-        # último caso por fecha dentro de la selección (por flujo)
+        # último caso por fecha dentro de la selección
+        # Agrupamos por Flujo y Nombre_Flujo para mantener la correspondencia
         df_last = (
             df.sort_values("fecha_bm")
-              .groupby("Flujo", as_index=False)
-              .tail(1)
+                .groupby(["Flujo", "Nombre_Flujo"], as_index=False)
+                .tail(1)
         ).copy()
 
-        # ordenar flows para trazar línea coherente
-        df_last = df_last.sort_values("Flujo")
+        # Ordenar para trazar línea coherente (puedes ordenar por Flujo ID o por Nombre alfabético)
+        df_last = df_last.sort_values("Flujo") 
 
+        # --- CAMBIO AQUÍ: x=df_last["Nombre_Flujo"] ---
         fig.add_scatter(
-            x=df_last["Flujo"],
+            x=df_last["Nombre_Flujo"],
             y=df_last[y],
             mode="lines+markers",
             name="Último caso (por fecha)",
@@ -503,7 +511,7 @@ def register_analisis_reconciliacion_callbacks(app):
             marker=dict(size=5, color="green")
         )
 
-        fig.update_layout(hovermode="x unified", yaxis_title="Error (%)")
+        fig.update_layout(hovermode="x unified", yaxis_title="Error (%)", xaxis_title="Flujo")
         return fig
 
     # ----------------------------
@@ -522,41 +530,46 @@ def register_analisis_reconciliacion_callbacks(app):
         if df.empty:
             return {}
 
+        # --- PARTE QUE FALTABA (Restaurada) ---
         if tipo == "masa":
             err_col, tol_col = "Error_masa", "Tolerancia"
             title = "Error medio Masa (%) vs Tolerancia (%)"
         else:
             err_col, tol_col = "Error_ley_Cu", "Tolerancia_cu"
             title = "Error medio Ley Cu (%) vs Tolerancia (%)"
+        # --------------------------------------
 
         df[err_col] = pd.to_numeric(df[err_col], errors="coerce")
         df[tol_col] = pd.to_numeric(df[tol_col], errors="coerce")
 
+        # Agrupar por Nombre_Flujo también
         agg = (
-            df.groupby("Flujo", as_index=False)
+            df.groupby(["Flujo", "Nombre_Flujo"], as_index=False)
               .agg(err_mean=(err_col, "mean"), tol_mean=(tol_col, "mean"))
         )
         agg["cumple"] = agg["err_mean"].abs() <= agg["tol_mean"]
+        
+        # Ordenar por código de flujo para mantener orden lógico
+        agg = agg.sort_values("Flujo")
 
         fig = px.bar(
             agg,
-            x="Flujo",
+            x="Nombre_Flujo", # Usar el nombre descriptivo
             y="err_mean",
             color="cumple",
             title=title
         )
-        fig.update_layout(hovermode="x unified", yaxis_title="Error medio (%)")
+        fig.update_layout(hovermode="x unified", yaxis_title="Error medio (%)", xaxis_title="Flujo")
         return fig
 
     # ----------------------------
     # FIG 3/4/5: Cartilla + CUSUM + EWMA + Semáforo
     # - Drill-down: si hay flujo seleccionado por click, fija ese flujo
     # ----------------------------
-    @app.callback(
+    """ @app.callback(
         [
             Output("stat-cartilla", "figure"),
             Output("stat-cusum", "figure"),
-            Output("stat-ewma", "figure"),
             Output("stat-semaforo", "data"),
         ],
         Input("stat-sel-caso", "value"),
@@ -574,6 +587,8 @@ def register_analisis_reconciliacion_callbacks(app):
             return {}, {}, {}, []
 
         flujos_eff = [flujo_click] if flujo_click else flujos
+        
+        # 1. Obtenemos DF con nombres
         df = query_filtered(casos, flujos_eff, fi, ff)
         if df.empty:
             return {}, {}, {}, []
@@ -586,71 +601,52 @@ def register_analisis_reconciliacion_callbacks(app):
         else:
             y_med, y_rec, ylabel = "Ley_medida_Cu", "Ley_recon_Cu", "Ley Cu"
 
-        # Cartilla
+        # 2. Procesamos control estadístico
+        df_ctrl = control_temporal_por_flujo(df, tipo=tipo, lam=lam, L=L)
+
+        # 3. RECUPERAR NOMBRE_FLUJO SI SE PERDIÓ
+        if "Nombre_Flujo" not in df_ctrl.columns:
+             # Creamos un diccionario Flujo -> Nombre desde el df original
+             mapeo = df[["Flujo", "Nombre_Flujo"]].drop_duplicates().set_index("Flujo")["Nombre_Flujo"]
+             # Lo mapeamos de vuelta al df procesado
+             df_ctrl["Nombre_Flujo"] = df_ctrl["Flujo"].map(mapeo)
+
+        # --- CARTILLA ---
         fig_cart = px.line(
-            df,
+            df_ctrl,
             x="fecha_bm",
             y=[y_med, y_rec],
-            facet_row="Flujo",
+            facet_row="Nombre_Flujo", # Usar Nombre
             markers=True,
-            title="Cartilla – Medido vs Reconciliado (casos solo filtran)"
+            title="Cartilla – Medido vs Reconciliado"
         )
         fig_cart.update_layout(
-            height=max(450, 260 * df["Flujo"].nunique()),
+            height=max(450, 260 * df_ctrl["Nombre_Flujo"].nunique()),
             yaxis_title=ylabel,
             hovermode="x unified"
         )
 
-        # Control estadístico
-        df_ctrl = control_temporal_por_flujo(df, tipo=tipo, lam=lam, L=L)
-
+        # --- CUSUM ---
         fig_cusum = px.line(
             df_ctrl,
             x="fecha_bm",
             y=["cusum_pos", "cusum_neg"],
-            facet_row="Flujo",
+            facet_row="Nombre_Flujo", # Usar Nombre
             title="CUSUM por flujo"
         )
         fig_cusum.update_layout(
-            height=max(450, 260 * df_ctrl["Flujo"].nunique()),
+            height=max(450, 260 * df_ctrl["Nombre_Flujo"].nunique()),
             hovermode="x unified"
         )
 
-        fig_ewma = px.line(
-            df_ctrl,
-            x="fecha_bm",
-            y="ewma",
-            facet_row="Flujo",
-            title="EWMA por flujo"
-        )
-        fig_ewma.update_layout(
-            height=max(450, 260 * df_ctrl["Flujo"].nunique()),
-            hovermode="x unified"
-        )
-
-        # Límites EWMA (trazados globalmente; Plotly los replica por faceta)
-        fig_ewma.add_scatter(
-            x=df_ctrl["fecha_bm"],
-            y=df_ctrl["ewma_lim"],
-            mode="lines",
-            line=dict(dash="dot", color="red"),
-            name="+Límite"
-        )
-        fig_ewma.add_scatter(
-            x=df_ctrl["fecha_bm"],
-            y=-df_ctrl["ewma_lim"],
-            mode="lines",
-            line=dict(dash="dot", color="red"),
-            name="-Límite"
-        )
+        
 
         sem = semaforo_por_caso(df_ctrl)
-        return fig_cart, fig_cusum, fig_ewma, sem
-
+        return fig_cart, fig_cusum, sem """
     # ----------------------------
     # FULLSCREEN MODAL (por gráfico)
     # ----------------------------
-    @app.callback(
+    """ @app.callback(
         [Output("stat-modal", "is_open"),
          Output("stat-modal-title", "children"),
          Output("stat-modal-graph", "figure")],
@@ -658,18 +654,17 @@ def register_analisis_reconciliacion_callbacks(app):
         Input("btn-full-barras", "n_clicks"),
         Input("btn-full-cartilla", "n_clicks"),
         Input("btn-full-cusum", "n_clicks"),
-        Input("btn-full-ewma", "n_clicks"),
         Input("stat-close-modal", "n_clicks"),
         State("stat-modal", "is_open"),
         State("stat-box-errores", "figure"),
         State("stat-bar-tolerancia", "figure"),
         State("stat-cartilla", "figure"),
         State("stat-cusum", "figure"),
-        State("stat-ewma", "figure"),
+        
         prevent_initial_call=True
     )
     def toggle_fullscreen(n1, n2, n3, n4, n5, close, is_open,
-                          fig_box, fig_bar, fig_cart, fig_cusum, fig_ewma):
+                          fig_box, fig_bar, fig_cart, fig_cusum):
         trig = callback_context.triggered_id
         if trig == "stat-close-modal":
             return False, "", {}
@@ -679,7 +674,6 @@ def register_analisis_reconciliacion_callbacks(app):
             "btn-full-barras": ("Barras Error vs Tolerancia", fig_bar),
             "btn-full-cartilla": ("Cartilla Medido vs Reconciliado", fig_cart),
             "btn-full-cusum": ("CUSUM por flujo", fig_cusum),
-            "btn-full-ewma": ("EWMA por flujo", fig_ewma),
         }
 
         if trig in mapping:
@@ -687,3 +681,4 @@ def register_analisis_reconciliacion_callbacks(app):
             return True, title, fig
 
         return is_open, "", {}
+ """
