@@ -11,7 +11,6 @@ from .utils_dash import get_data_publica_casos
 import dash_ag_grid as dag
 import numpy as np
 import io
-from .utils_dash import calcular_desbalance_nodo_desde_reconciliado
 
 GEKKO_ERROR_MAP = {
     "Solution Not Found": "No se encontró una solución válida. "
@@ -78,7 +77,7 @@ except Exception:
     ]
     columnsDefs_desbalances = [
         {"headerName": "Área", "field": "Area"},
-        {"headerName": "Desbalance masa_Ini", "field": "Desbalance masa_Ini", "type": "rightAligned"},
+        {"headerName": "Desbalance masa_Ini", "field": "Desbalance masa inicial", "type": "rightAligned"},
         {"headerName": "Desbalance masa (Recon)", "field": "Desbalance masa", "type": "rightAligned"},
         {"headerName": "Desbalance fino Cu (Recon)", "field": "Desbalance fino Cu", "type": "rightAligned"},
     ]

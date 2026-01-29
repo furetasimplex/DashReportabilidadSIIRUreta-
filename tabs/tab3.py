@@ -35,8 +35,6 @@ def load_data(fecha_ini, fecha_fin, pad):
             modulos_turnos.Consumo_H, 
             modulos_turnos.[Adición_H], 
             modulos_turnos.[Altura Módulo], 
-            modulos_turnos.Caolinita, 
-            modulos_turnos.Cuarzo, 
             modulos_turnos.M34, 
             modulos_turnos.M10, 
             modulos_turnos.M100, 

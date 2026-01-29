@@ -240,8 +240,9 @@ def balance_core(mediciones,error,fn="Normal",u=1,cf=1,cw=1,expk=1,cp=1):
     masa_df["Desbalance masa"] = b_masa
     masa_df["Desbalance fino inicial Cu"] = b_fino_ini_Cu
     masa_df["Desbalance fino Cu"] = b_fino_Cu
-    masa_ini = pd.DataFrame(resultados)
-    #print(f"resul:{masa_ini}")
+    masa_ini = pd.DataFrame(nodos_names)
+    print("MASA DF 67")
+    print(masa_df)
     return resultados, masa_df, masa_ini
 
 

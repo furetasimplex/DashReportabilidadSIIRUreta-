@@ -256,7 +256,7 @@ def calcular_desbalance_nodo_desde_reconciliado(engine, df_rec):
         fino_out = (sal["Masa_recon"] * sal["Ley_recon_Cu"] / 100).sum()
 
         rows.append({
-            "codigo_nodo": nodo,
+            "nombre_nodo": nodo,
             "masa_entrada": masa_in,
             "masa_salida": masa_out,
             "desb_masa_abs": masa_in - masa_out,
@@ -395,7 +395,7 @@ def get_data_publica_casos(med_cas, rec_caso, shared):
 
                 insert_sql = """
                 INSERT INTO inventar_SpcHidr.bm_desbalance_nodo
-                (caso_id, codigo_nodo, fecha_ini_periodo, fecha_fin_periodo,
+                (caso_id, nombre_nodo, fecha_ini_periodo, fecha_fin_periodo,
                 masa_entrada, masa_salida, desb_masa_abs, desb_masa_pct,
                 fino_entrada_cu, fino_salida_cu, desb_fino_cu_abs, desb_fino_cu_pct,
                 fecha_registro)
@@ -407,7 +407,7 @@ def get_data_publica_casos(med_cas, rec_caso, shared):
                         insert_sql,
                         (
                             caso_id,
-                            r["codigo_nodo"],
+                            r["nombre_nodo"],
                             df_desb["fecha_ini_periodo"].iloc[0],
                             df_desb["fecha_fin_periodo"].iloc[0],
                             r["masa_entrada"],

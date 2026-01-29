@@ -38,7 +38,23 @@ except Exception:
 # ==============================================================================
 ENGINE = get_engine()  # SQLAlchemy engine o None
 
-
+columnsDefs_resultados =  [
+        {'field': 'Codigo'         , 'maxWidth': 100},
+        {'field': 'Flujo'         , 'maxWidth': 450},
+        {'field': 'Masa medida'    , 'maxWidth': 120},
+        {'field': 'Masa recon'   , 'maxWidth': 120},
+        {'field': 'Error masa'  , 'maxWidth': 120},
+        {'field': 'Ley medida Cu' , 'maxWidth': 120},
+        {'field': 'Ley recon Cu'  , 'maxWidth': 120},
+        {'field': 'Error ley Cu'  , 'maxWidth': 120},
+        ]
+columnsDefs_desbalances =  [
+        {'field': 'Area', 'maxWidth': 200, 'editable': False},
+        {'field': 'Desbalance masa inicial', 'maxWidth': 140, 'editable': False},
+        {'field': 'Desbalance masa', 'maxWidth': 140, 'editable': False},
+        {'field': 'Desbalance fino inicial Cu', 'maxWidth': 140, 'editable': False},
+        {'field': 'Desbalance fino Cu', 'maxWidth': 140, 'editable': False},
+        ]
 # ==============================================================================
 # Helpers DB y utilitarios
 # ==============================================================================
@@ -169,10 +185,10 @@ def precontrol_desbalance_nodo_desde_grilla(engine, grid_rows, caso_id):
         return pd.DataFrame()
 
     # Movimientos por nodo
-    entradas = df[["nodo_entrada", "masa", "fino_cu"]].rename(columns={"nodo_entrada": "nodo"})
+    entradas = df[["nombre_entrada", "masa", "fino_cu"]].rename(columns={"nombre_entrada": "nodo"})
     entradas["tipo"] = "ENTRADA"
 
-    salidas = df[["nodo_salida", "masa", "fino_cu"]].rename(columns={"nodo_salida": "nodo"})
+    salidas = df[["nombre_salida", "masa", "fino_cu"]].rename(columns={"nombre_salida": "nodo"})
     salidas["tipo"] = "SALIDA"
 
     mov = pd.concat([entradas, salidas], ignore_index=True)
@@ -294,7 +310,7 @@ def query_hist_desb_nodo(engine, fecha_ini, fecha_fin, var="masa_pct"):
         f"""
         SELECT
             fecha_fin_periodo AS Fecha,
-            codigo_nodo       AS Nodo,
+            nombre_nodo       AS Nodo,
             CAST({col} AS FLOAT) AS Valor
         FROM inventar_SpcHidr.bm_desbalance_nodo
         WHERE fecha_fin_periodo BETWEEN :fi AND :ff
