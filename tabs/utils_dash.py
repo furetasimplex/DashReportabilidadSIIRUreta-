@@ -22,6 +22,9 @@ from datetime import date
 import math
 import traceback
 import pyodbc
+import decimal
+import math
+import re
 
 load_dotenv()
 
@@ -271,19 +274,77 @@ def calcular_desbalance_nodo_desde_reconciliado(engine, df_rec):
 
 # ---------- util de saneo ----------
 def _to_native(v):
+    # None directo
     if v is None:
         return None
-    if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
-        return None
+
+    # Pandas NA / NaN / Inf
+    try:
+        if pd.isna(v):
+            return None
+    except Exception:
+        pass
+    # numpy floats/ints
     if isinstance(v, (np.floating,)):
         f = float(v)
         return None if (math.isnan(f) or math.isinf(f)) else f
     if isinstance(v, (np.integer,)):
         return int(v)
-    if pd.isna(v):
-        return None
+
+    # float/int Python
+    if isinstance(v, (float, int)):
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return None
+        return float(v) if isinstance(v, float) else int(v)
+
+    # Decimal -> float
+    if isinstance(v, decimal.Decimal):
+        try:
+            return float(v)
+        except Exception:
+            return None
+
+    # Timestamp -> date
     if isinstance(v, pd.Timestamp):
         return v.date()
+
+    # Strings: intenta convertir robustamente (coma/punto, miles, espacios)
+    if isinstance(v, str):
+        s = v.strip()
+        if s == "" or s.lower() in {"none", "nan", "nd", "null"}:
+            return None
+
+        # Normaliza separadores:
+        # - si viene estilo "1.234,56" -> "1234.56"
+        # - si viene estilo "1,234.56" -> "1234.56"
+        # - si viene "1234,56" -> "1234.56"
+        s = s.replace(" ", "")
+
+        # Caso con ambos separadores: decide por el último como decimal
+        if "," in s and "." in s:
+            if s.rfind(",") > s.rfind("."):
+                # "1.234,56"
+                s = s.replace(".", "")
+                s = s.replace(",", ".")
+            else:
+                # "1,234.56"
+                s = s.replace(",", "")
+        else:
+            # Solo coma -> decimal
+            if "," in s:
+                s = s.replace(".", "")  # por si usan '.' como miles
+                s = s.replace(",", ".")
+            # Solo punto -> ok
+
+        # Quita cualquier caracter no numérico permitido
+        s = re.sub(r"[^0-9\.\-+eE]", "", s)
+
+        try:
+            return float(s)
+        except Exception:
+            return None
+
+    # fallback: devuélvelo tal cual (para texto real)
     return v
 
 def _norm(s):
@@ -339,8 +400,13 @@ def get_data_publica_casos(med_cas, rec_caso, shared):
     num_cols_int = ['id_flujo','Tolerancia_cu','caso_id']
     for c in num_cols_float: df_out[c] = pd.to_numeric(df_out[c], errors='coerce')
     for c in num_cols_int: df_out[c] = pd.to_numeric(df_out[c], errors='coerce')
-    df_out['fecha_bm'] = pd.to_datetime(df_out['fecha_bm'], errors='coerce').dt.date
+    # Blindaje extra: garantizar float/None en columnas críticas
+    for c in ["FCu", "Cu", "Masa_medida", "Masa_recon", "Ley_medida_Cu", "Ley_recon_Cu", "Error_ley_Cu", "Error_masa", "Tolerancia"]:
+        if c in df_out.columns:
+            df_out[c] = df_out[c].apply(lambda x: None if pd.isna(x) else float(x))
 
+    df_out['fecha_bm'] = pd.to_datetime(df_out['fecha_bm'], errors='coerce').dt.date
+    df_out["FCu"] = df_out["FCu"].fillna(0.0)
     rows = [tuple(_to_native(v) for v in row) for row in df_out.itertuples(index=False, name=None)]
     if not rows:
         return 0
@@ -359,7 +425,17 @@ def get_data_publica_casos(med_cas, rec_caso, shared):
              id_flujo, Tolerancia_cu, caso_id, fecha_bm)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        
+        # DEBUG: inspeccionar parámetro 11 (FCu) antes de insertar
+        for i, row in enumerate(rows):
+            v_fcu = row[10]  # parámetro #11 (FCu)
+            if v_fcu is None:
+                print("⚠️ PARAM11 (FCu) ES NULL -> fila", i, "row:", row)
+                break
+            if not isinstance(v_fcu, (int, float)):
+                print("❌ PARAM11 (FCu) NO NUMÉRICO -> fila", i, "valor:", v_fcu, "tipo:", type(v_fcu))
+                print("Fila completa:", row)
+                break
+
         # Usamos el bucle 'for' que es el método más seguro
         for row in rows:
             cur.execute(insert_sql, row)

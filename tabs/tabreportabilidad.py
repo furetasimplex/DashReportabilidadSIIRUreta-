@@ -315,21 +315,63 @@ def register_callbacks_reporte(app):
     @app.callback(
     Output('btn-pub-msg_caso', 'children'),
     Input('btn-publica-casos', 'n_clicks'),
-    State('recon-data', 'data'),         # <-- 1. AÑADIMOS ESTE STATE
+    State('recon-data', 'data'),
     State('recon-resultados', 'rowData'),
     State('active-case', 'data'),
     prevent_initial_call=True
-    )
-    def get_publica_casos(n_clicks, med_cas, rec_caso, shared): # <-- 2. AÑADIMOS EL ARGUMENTO
+)
+    def get_publica_casos(n_clicks, med_cas, rec_caso, shared):
         if not n_clicks:
             return no_update
         if not rec_caso:
             return "⚠️ No hay datos reconciliados para publicar."
+        if not med_cas:
+            return "⚠️ No hay datos base (recon-data) para publicar."
 
         try:
-            # 3. LLAMAMOS A LA FUNCIÓN CON LOS TRES ARGUMENTOS
-            nrows = get_data_publica_casos(med_cas, rec_caso, shared) 
+            # =========================
+            # 1) LIMPIEZA DE rec_caso
+            # =========================
+            df_pub = pd.DataFrame(rec_caso)
+
+            # Normaliza TODAS las columnas numéricas (no solo Cu) -> evita strings raros
+            for col in df_pub.columns:
+                # solo intenta normalizar si hay valores tipo string o mixtos
+                if df_pub[col].dtype == "object":
+                    s = df_pub[col].astype(str).str.replace(",", ".", regex=False).str.strip()
+                    df_pub[col] = pd.to_numeric(s, errors="ignore")
+
+            # Asegurar Cu específicamente como float (si existe)
+            if "Cu" in df_pub.columns:
+                df_pub["Cu"] = pd.to_numeric(df_pub["Cu"], errors="coerce")
+
+            # Inf -> NaN, luego NaN -> None (NULL ODBC)
+            df_pub.replace([np.inf, -np.inf], np.nan, inplace=True)
+            df_pub = df_pub.where(df_pub.notna(), None)
+
+            rec_caso_limpio = df_pub.to_dict("records")
+
+            # =========================
+            # 2) LIMPIEZA DE med_cas  (CRÍTICO: HOY NO LO HACES)
+            # =========================
+            df_med = pd.DataFrame(med_cas)
+
+            for col in df_med.columns:
+                if df_med[col].dtype == "object":
+                    s = df_med[col].astype(str).str.replace(",", ".", regex=False).str.strip()
+                    df_med[col] = pd.to_numeric(s, errors="ignore")
+
+            df_med.replace([np.inf, -np.inf], np.nan, inplace=True)
+            df_med = df_med.where(df_med.notna(), None)
+
+            med_cas_limpio = df_med.to_dict("records")
+
+            # =========================
+            # 3) PUBLICACIÓN
+            # =========================
+            nrows = get_data_publica_casos(med_cas_limpio, rec_caso_limpio, shared)
             return f"✅ Publicado correctamente ({nrows} filas)."
+
         except Exception as e:
             return f"❌ Error al publicar: {e}"
 
