@@ -221,7 +221,7 @@ def register_tab6_base_callbacks(app):
                         FCu,
                         Tolerancia,
                         Tolerancia_cu
-                    FROM inventar_SpcHidr.Data_balance_rec
+                    FROM inventar_SpcHidr.Data_balance_rec 
                     WHERE caso_id = :c
                     ORDER BY id_flujo
                 """),
@@ -277,7 +277,7 @@ def register_tab6_base_callbacks(app):
                     text("""
                         SELECT TOP 1 fecha_ini AS fi, fecha AS ff
                         FROM inventar_SpcHidr.casos_balance
-                        WHERE caso_id = :c AND modelo = 3
+                        WHERE caso_id = :c AND modelo = 3 
                     """),
                     eng_conn,
                     params={"c": caso_id}

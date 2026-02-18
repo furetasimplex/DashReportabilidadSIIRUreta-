@@ -313,13 +313,13 @@ def register_callbacks_reporte(app):
     # CALLBACK #3: PUBLICAR DATOS
     # ==============================================================================
     @app.callback(
-    Output('btn-pub-msg_caso', 'children'),
-    Input('btn-publica-casos', 'n_clicks'),
-    State('recon-data', 'data'),
-    State('recon-resultados', 'rowData'),
-    State('active-case', 'data'),
-    prevent_initial_call=True
-)
+        Output('btn-pub-msg_caso', 'children'),
+        Input('btn-publica-casos', 'n_clicks'),
+        State('recon-data', 'data'),
+        State('recon-resultados', 'rowData'),
+        State('active-case', 'data'),
+        prevent_initial_call=True
+    )
     def get_publica_casos(n_clicks, med_cas, rec_caso, shared):
         if not n_clicks:
             return no_update
@@ -328,52 +328,63 @@ def register_callbacks_reporte(app):
         if not med_cas:
             return "⚠️ No hay datos base (recon-data) para publicar."
 
+        # --- Función auxiliar con PRINTS para detectar el error ---
+        def limpiar_y_diagnosticar(lista_diccionarios, nombre_dataset):
+            if not lista_diccionarios:
+                return []
+            
+            print(f"\n--- 🔍 REVISANDO DATASET: {nombre_dataset} ---")
+            df = pd.DataFrame(lista_diccionarios)
+
+            # 1. DIAGNÓSTICO: Buscar columnas con ndarrays
+            for col in df.columns:
+                # Verificamos si algún elemento de la columna es tipo ndarray
+                # (Usamos .head(1) para no saturar la consola, pero revisamos la serie)
+                try:
+                    ejemplo = df[col].iloc[0]
+                    es_array = isinstance(ejemplo, np.ndarray) or type(ejemplo).__name__ == 'ndarray'
+                    
+                    if es_array:
+                        print(f"🔴 ¡CULPABLE ENCONTRADO! Columna: '{col}'")
+                        print(f"   Valor típico: {ejemplo}")
+                        print(f"   Tipo detectado: {type(ejemplo)}")
+                except Exception:
+                    pass
+
+            # 2. CORRECCIÓN (Aplanar arrays)
+            # Esto convierte array([1.23]) -> 1.23
+            for col in df.columns:
+                df[col] = df[col].apply(lambda x: x.item() if hasattr(x, 'item') and (isinstance(x, np.ndarray) or hasattr(x, 'size')) else x)
+
+            # 3. Limpieza estándar (NaN -> None)
+            for col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='ignore')
+
+            # Reemplazar infinitos y NaN por None para SQL
+            df = df.astype(object)
+            df = df.where(pd.notnull(df), None)
+
+            return df.to_dict("records")
+
         try:
-            # =========================
-            # 1) LIMPIEZA DE rec_caso
-            # =========================
-            df_pub = pd.DataFrame(rec_caso)
+            # 1) Diagnosticar y Limpiar Resultados (rec_caso)
+            print(">>> Iniciando limpieza de Resultados Reconciliados...")
+            rec_caso_limpio = limpiar_y_diagnosticar(rec_caso, "RESULTADOS")
 
-            # Normaliza TODAS las columnas numéricas (no solo Cu) -> evita strings raros
-            for col in df_pub.columns:
-                # solo intenta normalizar si hay valores tipo string o mixtos
-                if df_pub[col].dtype == "object":
-                    s = df_pub[col].astype(str).str.replace(",", ".", regex=False).str.strip()
-                    df_pub[col] = pd.to_numeric(s, errors="ignore")
+            # 2) Diagnosticar y Limpiar Mediciones (med_cas)
+            print(">>> Iniciando limpieza de Mediciones Originales...")
+            med_cas_limpio = limpiar_y_diagnosticar(med_cas, "MEDICIONES")
 
-            # Asegurar Cu específicamente como float (si existe)
-            if "Cu" in df_pub.columns:
-                df_pub["Cu"] = pd.to_numeric(df_pub["Cu"], errors="coerce")
-
-            # Inf -> NaN, luego NaN -> None (NULL ODBC)
-            df_pub.replace([np.inf, -np.inf], np.nan, inplace=True)
-            df_pub = df_pub.where(df_pub.notna(), None)
-
-            rec_caso_limpio = df_pub.to_dict("records")
-
-            # =========================
-            # 2) LIMPIEZA DE med_cas  (CRÍTICO: HOY NO LO HACES)
-            # =========================
-            df_med = pd.DataFrame(med_cas)
-
-            for col in df_med.columns:
-                if df_med[col].dtype == "object":
-                    s = df_med[col].astype(str).str.replace(",", ".", regex=False).str.strip()
-                    df_med[col] = pd.to_numeric(s, errors="ignore")
-
-            df_med.replace([np.inf, -np.inf], np.nan, inplace=True)
-            df_med = df_med.where(df_med.notna(), None)
-
-            med_cas_limpio = df_med.to_dict("records")
-
-            # =========================
             # 3) PUBLICACIÓN
-            # =========================
+            print(">>> Enviando datos limpios a SQL...")
             nrows = get_data_publica_casos(med_cas_limpio, rec_caso_limpio, shared)
             return f"✅ Publicado correctamente ({nrows} filas)."
 
         except Exception as e:
-            return f"❌ Error al publicar: {e}"
+            import traceback
+            print("\n❌❌ ERROR FATAL EN PUBLICACIÓN ❌❌")
+            traceback.print_exc() # Esto imprime la traza completa en tu terminal
+            return f"❌ Error al publicar: {str(e)}"
 
     # ==============================================================================
     # CALLBACK #4: DESCARGAR

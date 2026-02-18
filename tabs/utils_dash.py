@@ -353,71 +353,117 @@ def _norm(s):
     return str(s).strip().lower()
 
 def get_data_publica_casos(med_cas, rec_caso, shared):
-    if not rec_caso: raise ValueError("No hay datos reconciliados (rec_caso).")
-    if not isinstance(shared, dict) or shared.get("caso_id") is None: raise ValueError("Falta 'caso_id' en 'shared'.")
+    """
+    Versión robusta: Usa índices para cruzar datos y evita errores de 'ndarray' y 'fillna'.
+    Integra la carga de Data_balance_rec y bm_desbalance_nodo en una sola transacción lógica.
+    """
+    if not rec_caso: 
+        raise ValueError("No hay datos reconciliados (rec_caso).")
+    if not isinstance(shared, dict) or shared.get("caso_id") is None: 
+        raise ValueError("Falta 'caso_id' en 'shared'.")
 
-    # --- Lógica de preparación de DataFrames (sin cambios) ---
     caso_id = int(shared["caso_id"])
     fecha_bm = pd.to_datetime(shared.get("fecha_fin", date.today())).date()
-    df_rec = pd.DataFrame(rec_caso); df_med = pd.DataFrame(med_cas or [])
-    rename_rec = {'Masa medida':'Masa_medida', 'Masa recon':'Masa_recon', 'Error masa':'Error_masa', 'Ley medida Cu':'Ley_medida_Cu', 'Ley recon Cu':'Ley_recon_Cu', 'Error ley Cu':'Error_ley_Cu'}
-    df_rec.rename(columns=rename_rec, inplace=True)
-    if 'Codigo' in df_rec.columns: df_rec['Codigo'] = df_rec['Codigo'].astype(str).str.strip()
-    if 'Flujo' in df_rec.columns: df_rec['Flujo'] = df_rec['Flujo'].astype(str).str.strip()
-    keep_med = ['id_flujo', 'codigo_flujo', 'nombre_flujo', 'Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu']
-    for k in keep_med:
-        if k not in df_med.columns: df_med[k] = None
-    df_med['codigo_flujo'] = df_med['codigo_flujo'].astype(str).str.strip()
-    df_med['nombre_flujo'] = df_med['nombre_flujo'].astype(str).str.strip()
-    df_out = df_rec.merge(df_med[keep_med], left_on='Codigo', right_on='codigo_flujo', how='left', suffixes=('', '_med'))
-    mask_missing = df_out['id_flujo'].isna()
-    if mask_missing.any():
-        aux_rec = df_out.loc[mask_missing, ['Flujo']].copy(); aux_rec['Flujo_norm'] = aux_rec['Flujo'].map(_norm)
-        aux_med = df_med[['nombre_flujo', 'id_flujo', 'Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu']].copy(); aux_med['Flujo_norm'] = aux_med['nombre_flujo'].map(_norm)
-        aux_join = aux_rec.merge(aux_med.drop_duplicates('Flujo_norm'), on='Flujo_norm', how='left', suffixes=('', '_nm'))
-        df_out.loc[mask_missing, 'id_flujo'] = aux_join['id_flujo'].values
-        for col in ['Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu']:
-            if col in df_out.columns and col in aux_join.columns: df_out.loc[mask_missing, col] = df_out.loc[mask_missing, col].fillna(aux_join[col].values)
-    if 'Codigo' not in df_out.columns or df_out['Codigo'].isna().all():
-        if 'codigo_flujo' in df_out.columns: df_out['Codigo'] = df_out['codigo_flujo']
-    df_out['Masa_Medida2'] = df_out.get('Masa_medida')
 
-    # --- CAMBIO CLAVE: REORDENAR LAS COLUMNAS PARA QUE COINCIDAN CON LA BD ---
-    # Este es el orden físico de tu tabla Data_balance_rec (sin bms_id)
-    cols_db_orden_real = [
+    # 1. Convertir a DataFrames
+    df_rec = pd.DataFrame(rec_caso)
+    df_med = pd.DataFrame(med_cas or [])
+
+    # 2. Normalización de Nombres de Columnas
+    rename_map = {
+        'Masa medida': 'Masa_medida', 
+        'Masa recon': 'Masa_recon', 
+        'Error masa': 'Error_masa', 
+        'Ley medida Cu': 'Ley_medida_Cu', 
+        'Ley recon Cu': 'Ley_recon_Cu', 
+        'Error ley Cu': 'Error_ley_Cu',
+        'Codigo': 'codigo_flujo', 
+        'Flujo': 'nombre_flujo'
+    }
+    df_rec.rename(columns=rename_map, inplace=True)
+    
+    if 'Codigo' in df_med.columns:
+        df_med.rename(columns={'Codigo': 'codigo_flujo'}, inplace=True)
+
+    # 3. Limpieza de IDs y Códigos
+    df_rec['id_flujo'] = pd.to_numeric(df_rec.get('id_flujo'), errors='coerce')
+    df_med['id_flujo'] = pd.to_numeric(df_med.get('id_flujo'), errors='coerce')
+
+    if 'codigo_flujo' in df_rec.columns:
+        df_rec['codigo_flujo'] = df_rec['codigo_flujo'].astype(str).str.strip()
+    if 'codigo_flujo' in df_med.columns:
+        df_med['codigo_flujo'] = df_med['codigo_flujo'].astype(str).str.strip()
+
+    # 4. ESTRATEGIA DE CRUCE (MERGE) ROBUSTA
+    cols_datos = ['Masa_medida', 'Masa_recon', 'Error_masa', 
+                  'Ley_medida_Cu', 'Ley_recon_Cu', 'Error_ley_Cu']
+    
+    # Cruzamos usando el ID como índice
+    rec_con_id = df_rec.dropna(subset=['id_flujo']).copy()
+    rec_con_id['id_flujo'] = rec_con_id['id_flujo'].astype(int)
+    
+    df_master = df_med.copy()
+    if 'id_flujo' not in df_master.columns:
+        df_master['id_flujo'] = np.nan
+    
+    # Cruce por ID
+    df_master.set_index('id_flujo', inplace=True)
+    rec_con_id.set_index('id_flujo', inplace=True)
+    df_master.update(rec_con_id[cols_datos])
+    df_master.reset_index(inplace=True)
+
+    # 5. Relleno de metadatos y preparación final
+    df_out = df_master.copy()
+    df_out['Flujo'] = df_out['nombre_flujo']
+    df_out['Codigo'] = df_out['codigo_flujo']
+    df_out['Masa_Medida2'] = df_out['Masa_medida'] 
+
+    cols_db = [
         'Flujo', 'Masa_medida', 'Masa_recon', 'Ley_medida_Cu', 'Ley_recon_Cu', 'Error_ley_Cu',
         'Error_masa', 'Codigo', 'Masa_Medida2', 'Cu', 'FCu', 'Tolerancia',
         'id_flujo', 'Tolerancia_cu', 'caso_id', 'fecha_bm'
     ]
+    
     df_out['caso_id'] = caso_id
     df_out['fecha_bm'] = fecha_bm
-    for c in cols_db_orden_real:
-        if c not in df_out.columns: df_out[c] = None
-    df_out = df_out[cols_db_orden_real] # Forzamos el DataFrame a tener el orden correcto
 
-    # --- Lógica de tipos y limpieza (sin cambios) ---
-    num_cols_float = ['Masa_medida','Masa_recon','Ley_medida_Cu','Ley_recon_Cu','Error_ley_Cu', 'Error_masa', 'Masa_Medida2','Cu','FCu','Tolerancia']
-    num_cols_int = ['id_flujo','Tolerancia_cu','caso_id']
-    for c in num_cols_float: df_out[c] = pd.to_numeric(df_out[c], errors='coerce')
-    for c in num_cols_int: df_out[c] = pd.to_numeric(df_out[c], errors='coerce')
-    # Blindaje extra: garantizar float/None en columnas críticas
-    for c in ["FCu", "Cu", "Masa_medida", "Masa_recon", "Ley_medida_Cu", "Ley_recon_Cu", "Error_ley_Cu", "Error_masa", "Tolerancia"]:
-        if c in df_out.columns:
-            df_out[c] = df_out[c].apply(lambda x: None if pd.isna(x) else float(x))
+    for c in cols_db:
+        if c not in df_out.columns:
+            df_out[c] = None
 
-    df_out['fecha_bm'] = pd.to_datetime(df_out['fecha_bm'], errors='coerce').dt.date
-    df_out["FCu"] = df_out["FCu"].fillna(0.0)
-    rows = [tuple(_to_native(v) for v in row) for row in df_out.itertuples(index=False, name=None)]
+    df_out = df_out[cols_db]
+
+    # 6. LIMPIEZA PROFUNDA (EVITA ERROR NDARRAY)
+    def clean_val(x):
+        if isinstance(x, np.ndarray):
+            return x.item() if x.size == 1 else None 
+        if pd.isna(x):
+            return None
+        return x
+
+    numeric_cols = ['Masa_medida', 'Masa_recon', 'Ley_medida_Cu', 'Ley_recon_Cu', 
+                    'Error_ley_Cu', 'Error_masa', 'Cu', 'FCu', 'Tolerancia', 'Tolerancia_cu']
+    
+    for col in numeric_cols:
+        df_out[col] = pd.to_numeric(df_out[col], errors='coerce')
+        df_out[col] = df_out[col].apply(clean_val)
+
+    # ID a entero y filtro de basura
+    df_out['id_flujo'] = pd.to_numeric(df_out['id_flujo'], errors='coerce').fillna(0).astype(int)
+    df_out = df_out[df_out['id_flujo'] > 0]
+
+    rows = [tuple(row) for row in df_out.itertuples(index=False, name=None)]
+
     if not rows:
         return 0
 
-    # --- Lógica de Base de Datos Final y Alineada ---
+    # 7. INSERCIÓN EN BD
     cnx = get_connection()
     cur = cnx.cursor()
     try:
+        # --- PARTE A: Data_balance_rec ---
         cur.execute("DELETE FROM inventar_SpcHidr.Data_balance_rec WHERE caso_id = ?", (caso_id,))
         
-        # El INSERT ahora tiene las columnas en el orden correcto
         insert_sql = """
             INSERT INTO inventar_SpcHidr.Data_balance_rec
             (Flujo, Masa_medida, Masa_recon, Ley_medida_Cu, Ley_recon_Cu, Error_ley_Cu,
@@ -425,51 +471,27 @@ def get_data_publica_casos(med_cas, rec_caso, shared):
              id_flujo, Tolerancia_cu, caso_id, fecha_bm)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        # DEBUG: inspeccionar parámetro 11 (FCu) antes de insertar
-        for i, row in enumerate(rows):
-            v_fcu = row[10]  # parámetro #11 (FCu)
-            if v_fcu is None:
-                print("⚠️ PARAM11 (FCu) ES NULL -> fila", i, "row:", row)
-                break
-            if not isinstance(v_fcu, (int, float)):
-                print("❌ PARAM11 (FCu) NO NUMÉRICO -> fila", i, "valor:", v_fcu, "tipo:", type(v_fcu))
-                print("Fila completa:", row)
-                break
-
-        # Usamos el bucle 'for' que es el método más seguro
-        for row in rows:
-            cur.execute(insert_sql, row)
-        
+        cur.executemany(insert_sql, rows)
         cnx.commit()
 
-            # ==========================================================
-        # NUEVO BLOQUE: DESBALANCE POR NODO
-        # ==========================================================
-
+        # --- PARTE B: bm_desbalance_nodo ---
+        # Calculamos los nodos usando los datos limpios que acabamos de preparar
         engine = get_engine()
-
-        df_rec_calc = df_out.copy()
-
-        df_desb = calcular_desbalance_nodo_desde_reconciliado(engine, df_rec_calc)
+        df_calc = df_out.copy()
+        
+        df_desb = calcular_desbalance_nodo_desde_reconciliado(engine, df_calc)
 
         if not df_desb.empty:
-            df_desb["caso_id"] = caso_id
-            df_desb["fecha_ini_periodo"] = pd.to_datetime(
-                shared.get("fecha_inicio", fecha_bm)
-            ).date()
-            df_desb["fecha_fin_periodo"] = fecha_bm
-            df_desb["fecha_registro"] = date.today()
-
             cnx2 = get_connection()
             cur2 = cnx2.cursor()
             try:
-                # Limpieza previa del caso
-                cur2.execute(
-                    "DELETE FROM inventar_SpcHidr.bm_desbalance_nodo WHERE caso_id = ?",
-                    (caso_id,)
-                )
+                fi_p = pd.to_datetime(shared.get("fecha_inicio", fecha_bm)).date()
+                ff_p = fecha_bm
+                f_reg = date.today()
 
-                insert_sql = """
+                cur2.execute("DELETE FROM inventar_SpcHidr.bm_desbalance_nodo WHERE caso_id = ?", (caso_id,))
+
+                insert_node_sql = """
                 INSERT INTO inventar_SpcHidr.bm_desbalance_nodo
                 (caso_id, nombre_nodo, fecha_ini_periodo, fecha_fin_periodo,
                 masa_entrada, masa_salida, desb_masa_abs, desb_masa_pct,
@@ -477,48 +499,34 @@ def get_data_publica_casos(med_cas, rec_caso, shared):
                 fecha_registro)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
-
+                
+                node_rows = []
                 for _, r in df_desb.iterrows():
-                    cur2.execute(
-                        insert_sql,
-                        (
-                            caso_id,
-                            r["nombre_nodo"],
-                            df_desb["fecha_ini_periodo"].iloc[0],
-                            df_desb["fecha_fin_periodo"].iloc[0],
-                            r["masa_entrada"],
-                            r["masa_salida"],
-                            r["desb_masa_abs"],
-                            r["desb_masa_pct"],
-                            r["fino_entrada_cu"],
-                            r["fino_salida_cu"],
-                            r["desb_fino_cu_abs"],
-                            r["desb_fino_cu_pct"],
-                            r["fecha_registro"],
-                        )
-                    )
-
+                    node_rows.append((
+                        caso_id, r["nombre_nodo"], fi_p, ff_p,
+                        r["masa_entrada"], r["masa_salida"], r["desb_masa_abs"], r["desb_masa_pct"],
+                        r["fino_entrada_cu"], r["fino_salida_cu"], r["desb_fino_cu_abs"], r["desb_fino_cu_pct"],
+                        f_reg
+                    ))
+                
+                cur2.executemany(insert_node_sql, node_rows)
                 cnx2.commit()
-
-            except Exception as e:
-                cnx2.rollback()
-                raise e
+            except Exception as e_node:
+                print(f"⚠️ Error guardando nodos: {e_node}")
             finally:
                 cur2.close()
                 cnx2.close()
 
         return len(rows)
+
     except Exception as e:
         cnx.rollback()
+        print("❌ Error Fatal en Publicación:", e)
+        traceback.print_exc()
         raise e
     finally:
         cur.close()
         cnx.close()
-
-# ******************************************************************************     
-
-
-
 
 def parse_contents(contents, filename):
     """

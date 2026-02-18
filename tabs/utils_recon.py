@@ -7,6 +7,12 @@ from openpyxl import load_workbook
 
 def balance_core(mediciones,error,fn="Normal",u=1,cf=1,cw=1,expk=1,cp=1):
 
+    limit_flujos = 25
+    if mediciones.shape[0] > limit_flujos:
+        print(f"⚠️ Recortando mediciones de {mediciones.shape[0]} a {limit_flujos} flujos.")
+        mediciones = mediciones[:limit_flujos, :]
+        error = error.iloc[:limit_flujos, :]
+
     #mediciones[:,1] = mediciones[:,1]/100
     deltas = [5,16,17]
     deltas = [i-1 for i in deltas]

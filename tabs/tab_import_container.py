@@ -11,6 +11,8 @@ import tabs.tab_importar_leyes as tab_leyes_granulo
 import tabs.tab_importar_recuperaciones as tab_recuperacion
 import tabs.tab_importar_reclamo_camiones as tab_reclamos
 import tabs.tab_importar_representatividad as tab_representatividad
+import tabs.tab_importar_NIR as tab_nir_pdf
+import tabs.tab_importar_pesos_torre as tab_pesos_torre
 
 
 dash.register_page(__name__, path="/importar_datos", name="Importar Datos")
@@ -44,6 +46,7 @@ def register_callbacks(app):
     tab_recuperacion.register_callbacks(app)
     tab_reclamos.register_callbacks(app)
     tab_representatividad.register_callbacks(app)
+    tab_nir_pdf.register_callbacks(app)
 
     # CALLBACK PARA FILTRAR SUB-PESTAÑAS
     @app.callback(
@@ -72,6 +75,8 @@ def register_callbacks(app):
                 children=[
                     # Aquí agregamos el nuevo tab
                     dbc.Tab(label='Representatividad Torres', tab_id='tab-representatividad'),
+                    dbc.Tab(label='NIR (PDF)', tab_id='tab-nir-pdf'),
+                    dbc.Tab(label='Pesos Torre (Complementarios)', tab_id='tab-pesos-torre'),
                     # Puedes dejar el placeholder si quieres agregar más cosas luego
                     # dbc.Tab(label='Futura Importación', tab_id='tab-otra-data'),
                 ],
@@ -90,6 +95,9 @@ def register_callbacks(app):
         elif subtab == 'tab-importar-recuperacion': return tab_recuperacion.layout
         elif subtab == 'tab-reclamos': return tab_reclamos.layout
         elif subtab == 'tab-representatividad': return tab_representatividad.layout
-        elif subtab == 'tab-nueva-data':
-            return html.Div("Aquí puedes integrar tu nuevo módulo de importación.")
-        return html.Div("Seleccione una opción")
+        elif subtab == 'tab-nir-pdf': return tab_nir_pdf.layout
+        
+        # Conexión correcta
+        elif subtab == 'tab-pesos-torre': return tab_pesos_torre.layout
+        
+        return html.Div("Seleccione una opción válida")

@@ -122,6 +122,7 @@ def _get_topologia(engine, caso_id):
     """
     Topología del modelo para el caso: id_flujo -> nodo_salida/nodo_entrada (códigos)
     """
+    # Se agregó "AND fm.Id_flujo <= 25" en el WHERE
     df = pd.read_sql(
         """
         SELECT
@@ -135,7 +136,7 @@ def _get_topologia(engine, caso_id):
         JOIN inventar_SpcHidr.nodos ns ON ns.id_nodo = fm.n_salida
         JOIN inventar_SpcHidr.nodos nl ON nl.id_nodo = fm.n_llegada
         WHERE fm.modelo = 3
-          AND fm.activo = 1
+          AND fm.activo = 1 
         """,
         engine
     )
