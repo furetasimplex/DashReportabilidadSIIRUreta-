@@ -310,7 +310,7 @@ def procesar_excel_multih(file_content, filename, dias_seleccionados):
                 reg["Fecha"] = reg.get("Fecha_Toma_Muestra") or reg.get("Fecha_Recepcion") or reg.get("Fecha_Informe") or fecha_header
                 reg["Fecha_Carga"] = datetime.datetime.now()
 
-                if es_registro_valido_granulometria(reg) and reg["Fecha"] is not None:
+                if reg["Fecha"] is not None:
                     registros.append(reg)
 
         except Exception as e:
