@@ -146,24 +146,24 @@ def get_engine():
             print(f"❌ Error engine MySQL prod: {e}")
             return None
 
-    if ENTORNO == 3:  # SQL Server (mantengo tu pytds)
+    if ENTORNO == 3:  # SQL Server (Windows / ODBC)
         SQLSERVER_HOST = os.getenv("SQLSERVER_HOST")
         SQLSERVER_DB = os.getenv("SQLSERVER_DB")
         SQLSERVER_USER = os.getenv("SQLSERVER_USER")
-        SQLSERVER_PASSWORD = os.getenv("SQLSERVER_PASSWORD", "")
-        SQLSERVER_PASSWORD = SQLSERVER_PASSWORD.replace("@", "%40")
-        SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "SQL Server")
-        sqldriver = f"?driver={SQLSERVER_DRIVER.replace(' ', '+')}&Encrypt=no&TrustServerCertificate=yes"
+        SQLSERVER_PASSWORD = quote_plus(os.getenv("SQLSERVER_PASSWORD", ""))
+        SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 17 for SQL Server")
+
+        # Ejemplo final:
+        # mssql+pyodbc://sa:pass@149.50.136.234/inventar_SpcHidr
+        #   ?driver=ODBC+Driver+17+for+SQL+Server&Encrypt=no&TrustServerCertificate=yes
+        driver_param = SQLSERVER_DRIVER.replace(" ", "+")
+        params = f"driver={driver_param}&Encrypt=no&TrustServerCertificate=yes"
 
         try:
-            conn_str = (
-                f"mssql+pytds://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}"
-                f"@{SQLSERVER_HOST}/{SQLSERVER_DB}"
-            )
-            if SQLSERVER_DRIVER != "SQL Server":
-                conn_str += sqldriver
+            conn_str = f"mssql+pyodbc://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}@{SQLSERVER_HOST}/{SQLSERVER_DB}?{params}"
+            print("\n🧩 [DEBUG] URL SQLAlchemy (ENTORNO 3)")
             print(conn_str)
-            _engine = create_engine(conn_str)
+            _engine = create_engine(conn_str, pool_pre_ping=True, pool_recycle=1800)
             return _engine
         except Exception as e:
             print(f"❌ Error engine SQL Server (E3): {e}")

@@ -1,14 +1,30 @@
 # Auto-generated on 2025-10-27 18:21:09. Edit as needed.
 
-
+import base64
+import os
 import pandas as pd
 import plotly.express as px
 from dash import Input, Output, State, callback, no_update, dcc, html
 import dash_bootstrap_components as dbc
 
-from report_export.report_export import fetch_report_data
-from report_export.export_to_excel import export_dataframe_with_template
+from report_export.report_export import fetch_report_data, fetch_datos_conciliados_report
+from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
+
 TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
+# Plantilla "Datos conciliados" para Producción Diaria (datos desde D16, columnas D–AS)
+_REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
+
+def _find_plantilla_propuesta():
+    """Resuelve la ruta de la plantilla VF listando el directorio (evita problemas con 'á' en Windows)."""
+    try:
+        for name in os.listdir(_REPORT_EXPORT_DIR):
+            if not name.startswith("~$") and name.endswith(".xlsx"):
+                if "Propuesta_Identidad" in name and "DatosConcialiados" in name and "VF" in name:
+                    return os.path.join(_REPORT_EXPORT_DIR, name)
+    except OSError:
+        pass
+    return os.path.join(_REPORT_EXPORT_DIR, "Propuesta_Identidad_Gráfica_DatosConcialiados VF.xlsx")
 
 def _style_table(df: pd.DataFrame) -> dbc.Table:
     return dbc.Table.from_dataframe(df, striped=True, bordered=True, hover=True, className="mt-3")
@@ -105,21 +121,31 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
 def exportar_excel(n_clicks, tipo, f_ini, f_fin):
     if not f_ini or not f_fin:
         return no_update, "⚠️ Debe seleccionar rango de fechas."
-    fin = pd.to_datetime(f_fin).date()
+    ini_d = pd.to_datetime(f_ini).date()
+    fin_d = pd.to_datetime(f_fin).date()
 
     try:
-        df = fetch_report_data(end_date=fin)
-        ini_d = pd.to_datetime(f_ini).date()
-        fin_d = pd.to_datetime(f_fin).date()
-        df = df[(pd.to_datetime(df["Fecha"]).dt.date >= ini_d) &
-                (pd.to_datetime(df["Fecha"]).dt.date <= fin_d)].copy()
+        if tipo == "prod":
+            # Producción Diaria: consulta exacta por rango de fechas y plantilla Datos conciliados (D16–AS)
+            template_path = _find_plantilla_propuesta()
+            if not os.path.isfile(template_path):
+                return no_update, f"❌ No se encuentra la plantilla en {_REPORT_EXPORT_DIR}"
+            df = fetch_datos_conciliados_report(start_date=ini_d, end_date=fin_d)
+            if df.empty:
+                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+            xbytes = export_datos_conciliados_to_template(df, template_path)
+        else:
+            df = fetch_report_data(end_date=fin_d)
+            df = df[(pd.to_datetime(df["Fecha"]).dt.date >= ini_d) &
+                    (pd.to_datetime(df["Fecha"]).dt.date <= fin_d)].copy()
+            if df.empty:
+                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+            xbytes = export_dataframe_with_template(df, TEMPLATE_XLSX_PATH)
 
-        if df.empty:
-            return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
-
-        xbytes = export_dataframe_with_template(df, TEMPLATE_XLSX_PATH)
         filename = f"Reporte_{tipo}_{pd.to_datetime(f_ini).strftime('%Y%m%d')}_{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
         status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
-        return dict(content=xbytes, filename=filename, type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), status
+        # dcc.Download requiere contenido serializable: usar Base64 para binarios
+        encoded = base64.b64encode(xbytes).decode("utf-8")
+        return dict(content=encoded, filename=filename, base64=True), status
     except Exception as e:
         return no_update, f"❌ Error al exportar: {e}"

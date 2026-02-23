@@ -1,8 +1,38 @@
 # Auto-generated on 2025-10-27 18:21:09. Edit as needed.
+import copy as copy_module
 import io
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, Border, Side
+# Rango plantilla Datos conciliados: datos desde C16, 42 columnas (C hasta AR)
+PLANTILLA_DATOS_START_ROW = 16
+PLANTILLA_DATOS_START_COL = 3   # C
+PLANTILLA_DATOS_NUM_COLS = 42   # C a AR
+PLANTILLA_DATOS_CLEAR_ROWS = 2000  # filas a limpiar para no dejar datos viejos
+
+# Filas de la plantilla usadas como referencia de estilo (alternancia de color)
+PLANTILLA_ESTILO_ROW_A = 16
+PLANTILLA_ESTILO_ROW_B = 17
+
+# Bordes del marco: columna B = línea entre A y B, columna AS = línea entre AS y AT
+PLANTILLA_BORDE_IZQ_COL = 2   # B
+PLANTILLA_BORDE_DER_COL = 45  # AS (columna 45)
+# Fila de la plantilla con el estilo de "cierre" (línea bajo la tabla)
+PLANTILLA_FILA_CIERRE = 17
+
+
+def _copy_cell_style(dest_cell, src_cell):
+    """Copia relleno, borde, fuente y alineación de src_cell a dest_cell."""
+    if src_cell.fill:
+        dest_cell.fill = src_cell.fill.copy()
+    if src_cell.border:
+        dest_cell.border = src_cell.border.copy()
+    if src_cell.font:
+        dest_cell.font = src_cell.font.copy()
+    if src_cell.alignment:
+        dest_cell.alignment = src_cell.alignment.copy()
+    if src_cell.number_format is not None:
+        dest_cell.number_format = src_cell.number_format
 
 def _match_template_headers(ws):
     headers = []
@@ -56,6 +86,74 @@ def export_dataframe_with_template(df: pd.DataFrame, template_path: str) -> byte
             _write_dataframe(ws, display_df, start_row=20, start_col=3)
     else:
         _write_dataframe(ws, display_df, start_row=20, start_col=3)
+
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
+
+def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -> bytes:
+    """
+    Escribe los datos del reporte 'Datos conciliados' en la plantilla Excel.
+    - Datos desde celda C16, una fila por registro.
+    - Columnas C a AR (42 columnas). Se sobreescribe cualquier dato existente.
+    - Se copia el estilo (relleno, borde, fuente) de las filas 16 y 17 a todas
+      las filas de datos para que la tabla crezca sin romper la estructura.
+    """
+    wb = load_workbook(template_path)
+    ws = wb.active
+    start_row = PLANTILLA_DATOS_START_ROW
+    start_col = PLANTILLA_DATOS_START_COL
+    num_cols = min(PLANTILLA_DATOS_NUM_COLS, len(df.columns))
+
+    # Limpiar solo valores en la zona de datos (se mantiene estilo al reescribir)
+    for r in range(start_row, start_row + PLANTILLA_DATOS_CLEAR_ROWS):
+        for c in range(start_col, start_col + PLANTILLA_DATOS_NUM_COLS):
+            ws.cell(row=r, column=c, value=None)
+
+    # Escribir datos fila a fila y copiar estilo de filas 16/17 (alternancia)
+    cols = list(df.columns)[:num_cols]
+    for i, (_, row) in enumerate(df.iterrows()):
+        excel_row = start_row + i
+        # Alternar estilo entre fila 16 y 17 para mantener el rayado de la tabla
+        ref_row = PLANTILLA_ESTILO_ROW_B if (i % 2) else PLANTILLA_ESTILO_ROW_A
+        for j, col in enumerate(cols):
+            val = row[col]
+            if pd.isna(val):
+                val = None
+            elif col == "Fecha" and hasattr(val, "strftime"):
+                val = val.strftime("%d-%m-%Y") if hasattr(val, "strftime") else val
+            col_idx = start_col + j
+            cell = ws.cell(row=excel_row, column=col_idx, value=val)
+            src = ws.cell(row=ref_row, column=col_idx)
+            _copy_cell_style(cell, src)
+
+    last_row = start_row + len(df) - 1
+    ref_style_row = PLANTILLA_ESTILO_ROW_A
+
+    # Extender línea izquierda (entre A y B) y derecha (entre AS y AT) hasta la última fila de datos
+    for r in range(start_row, last_row + 1):
+        _copy_cell_style(ws.cell(row=r, column=PLANTILLA_BORDE_IZQ_COL), ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_IZQ_COL))
+        _copy_cell_style(ws.cell(row=r, column=PLANTILLA_BORDE_DER_COL), ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_DER_COL))
+
+    # Fila de cierre bajo la tabla: copiar estilo y forzar borde superior para cerrar el recuadro
+    ref_cell = ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_IZQ_COL)
+    b = ref_cell.border
+    top_side = copy_module.copy(b.bottom) if b and b.bottom else Side(style="medium")
+    for c in range(PLANTILLA_BORDE_IZQ_COL, PLANTILLA_BORDE_DER_COL + 1):
+        cell = ws.cell(row=last_row + 1, column=c)
+        _copy_cell_style(cell, ws.cell(row=PLANTILLA_FILA_CIERRE, column=c))
+        bc = cell.border
+        cell.border = Border(
+            left=copy_module.copy(bc.left) if bc and bc.left else None,
+            right=copy_module.copy(bc.right) if bc and bc.right else None,
+            top=top_side,
+            bottom=copy_module.copy(bc.bottom) if bc and bc.bottom else None,
+            diagonal=copy_module.copy(bc.diagonal) if bc and bc.diagonal else None,
+            diagonal_direction=bc.diagonal_direction if bc else None,
+            vertical=copy_module.copy(bc.vertical) if bc and bc.vertical else None,
+            horizontal=copy_module.copy(bc.horizontal) if bc and bc.horizontal else None,
+        )
 
     out = io.BytesIO()
     wb.save(out)

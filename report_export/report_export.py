@@ -8,6 +8,22 @@ except Exception as e:
 
 # Nombre completo de la tabla (ajusta si cambia)
 TABLE_FQN = "[inventar_SpcHidr].[Datos_conciliados_of]"
+TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[inventar_SpcHidr].[Datos_conciliados_of]"
+
+# Columnas exactas para el reporte "Producción Diaria" / plantilla Datos conciliados
+COLUMNAS_DATOS_CONCILIADOS = [
+    "Fecha", "Chancado_TMS_Real", "Humedad_Turno_A", "Humedad_Turno_B", "Humedad_promedio_dia",
+    "Sal_turno_A", "Sal_Turno_B", "Sal_promedio_dia",
+    "Apilado_TMH_turno_A", "Apilado_TMH_turno_B", "Apilado_TMH_promedio_dia",
+    "Apilado_TMS_Real", "Apilado_TMS_Plan", "Campana_apilado", "Modulo_apilado", "Avance_apilado",
+    "Ley_CuT_Real", "Ley_CuT_Plan", "Cobre_fino_Apilado_Real", "Cobre_fino_Apilado_Plan",
+    "TMS_Rotopala_1_Real", "TMS_Rotopala_1_Plan", "Campana_reclamo_oxidos", "Modulo_reclamo_oxidos", "Avance_reclamo_oxidos",
+    "TMS_Rotopala_2_Real", "TMS_Rotopala_2_Plan", "Campana_reclamo_sulfuros", "modulo_reclamo_sulfuros", "Avance_reclamo_sulfuros",
+    "Camiones_TMS_Reclamo_Oxidos", "Camiones_TMS_Reclamo_Sulfuros", "Movido", "Extraido",
+    "Camiones_TMS_total", "Camiones_TMS_plan", "Campana_reclamo_camiones", "Modulo_reclamo_camiones",
+    "Total_Ripios_Incluye_Camiones_Real", "Total_Ripios_Incluye_Camiones_Plan",
+    "Produccion_Catodos_Real", "Produccion_Catodos_Plan",
+]
 
 
 def first_day_of_month(d: date) -> date:
@@ -98,3 +114,49 @@ def fetch_report_data(end_date: date) -> pd.DataFrame:
     ordered.extend(cols)
 
     return df[ordered]
+
+
+def fetch_datos_conciliados_report(start_date: date, end_date: date) -> pd.DataFrame:
+    """
+    Consulta exacta para el reporte de Producción Diaria / plantilla Datos conciliados.
+    Respeta el rango de fechas seleccionado (fecha inicio y fecha final).
+    """
+    conn_or_engine = get_connection()
+    if conn_or_engine is None:
+        raise RuntimeError("get_connection() devolvió None: revisar conexión a la base de datos.")
+
+    cols = ", ".join(f"[{c}]" for c in COLUMNAS_DATOS_CONCILIADOS)
+    sql_dbapi = f"""
+    SELECT {cols}
+    FROM {TABLE_DATOS_CONCILIADOS}
+    WHERE [Fecha] BETWEEN ? AND ?
+    ORDER BY [Fecha] ASC
+    """
+    sql_sa = f"""
+    SELECT {cols}
+    FROM {TABLE_DATOS_CONCILIADOS}
+    WHERE [Fecha] BETWEEN :start AND :end
+    ORDER BY [Fecha] ASC
+    """
+
+    try:
+        if hasattr(conn_or_engine, "cursor"):
+            df = pd.read_sql(
+                sql_dbapi,
+                conn_or_engine,
+                params=(start_date, end_date),
+            )
+        else:
+            from sqlalchemy import text
+            with conn_or_engine.connect() as conn:
+                df = pd.read_sql(
+                    text(sql_sa),
+                    conn,
+                    params={"start": start_date, "end": end_date},
+                )
+    except Exception as e:
+        raise RuntimeError(f"Error al leer Datos_conciliados_of: {e}") from e
+
+    # Asegurar orden de columnas
+    df = df[[c for c in COLUMNAS_DATOS_CONCILIADOS if c in df.columns]]
+    return df
