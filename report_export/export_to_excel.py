@@ -3,7 +3,7 @@ import copy as copy_module
 import io
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.styles import Alignment, Border, Side
+from openpyxl.styles import Alignment, Border, PatternFill, Side
 # Rango plantilla Datos conciliados: datos desde C16, 43 columnas (C hasta AS)
 PLANTILLA_DATOS_START_ROW = 16
 PLANTILLA_DATOS_START_COL = 3   # C
@@ -112,8 +112,12 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
     start_col = PLANTILLA_DATOS_START_COL
     num_cols = min(PLANTILLA_DATOS_NUM_COLS, len(df.columns))
 
-    # Limpiar solo valores en la zona de datos (se mantiene estilo al reescribir)
+    last_row = start_row + len(df) - 1
+    closing_row = last_row + 2
+    # Limpiar solo valores en la zona de datos; no tocar la fila del borde grueso ni la de arriba
     for r in range(start_row, start_row + PLANTILLA_DATOS_CLEAR_ROWS):
+        if r >= closing_row - 1 and r <= closing_row:
+            continue
         for c in range(start_col, start_col + PLANTILLA_DATOS_NUM_COLS):
             ws.cell(row=r, column=c, value=None)
 
@@ -147,53 +151,70 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
             src = ws.cell(row=ref_row, column=col_idx)
             _copy_cell_style(cell, src)
 
-    last_row = start_row + len(df) - 1
-    # Fila de cierre final será dos filas debajo de la última con datos
-    closing_row = last_row + 2
     ref_style_row = PLANTILLA_ESTILO_ROW_A
 
-    # Extender línea izquierda (entre A y B) y derechas (entre AS–AT y AT–AU)
-    # hasta la fila de cierre (incluye la fila en blanco intermedia)
+    # Extender bordes gruesos izquierdo (B) y derechos (AS, AT) hasta dos filas debajo de los datos (closing_row)
     for r in range(start_row, closing_row + 1):
         _copy_cell_style(ws.cell(row=r, column=PLANTILLA_BORDE_IZQ_COL), ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_IZQ_COL))
         _copy_cell_style(ws.cell(row=r, column=PLANTILLA_BORDE_DER_COL), ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_DER_COL))
         _copy_cell_style(ws.cell(row=r, column=PLANTILLA_BORDE_DER2_COL), ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_DER2_COL))
 
-    # Fila de cierre bajo la tabla: copiar estilo y forzar borde superior para cerrar el recuadro
-    ref_cell = ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_IZQ_COL)
-    b = ref_cell.border
-    # Borde superior con el mismo estilo que los bordes verticales (B/AS)
-    source_side = None
-    if b:
-        # Preferir el lado izquierdo; si no existe, usar derecho
-        source_side = b.left or b.right or b.bottom
-    top_side = Side(
-        style=(getattr(source_side, "style", None) or "thick"),
-        color=getattr(source_side, "color", None),
-    )
-    # Desde B hasta AT (una columna más allá de AS)
-    for c in range(PLANTILLA_BORDE_IZQ_COL, PLANTILLA_BORDE_DER_COL + 2):
-        cell = ws.cell(row=closing_row, column=c)
-        _copy_cell_style(cell, ws.cell(row=PLANTILLA_FILA_CIERRE, column=c))
-        bc = cell.border
-        cell.border = Border(
-            left=copy_module.copy(bc.left) if bc and bc.left else None,
+    # Borde normal izquierdo en C y derecho en AS solo hasta la última fila con datos
+    borde_normal = Side(style="thin", color="000000")
+    for r in range(start_row, last_row +1):
+        cell_c = ws.cell(row=r, column=start_col)
+        bc = cell_c.border
+        cell_c.border = Border(
+            left=borde_normal,
             right=copy_module.copy(bc.right) if bc and bc.right else None,
-            top=top_side,
+            top=copy_module.copy(bc.top) if bc and bc.top else None,
             bottom=copy_module.copy(bc.bottom) if bc and bc.bottom else None,
             diagonal=copy_module.copy(bc.diagonal) if bc and bc.diagonal else None,
             diagonal_direction=bc.diagonal_direction if bc else None,
             vertical=copy_module.copy(bc.vertical) if bc and bc.vertical else None,
             horizontal=copy_module.copy(bc.horizontal) if bc and bc.horizontal else None,
         )
+        cell_as = ws.cell(row=r, column=PLANTILLA_BORDE_DER_COL)
+        bas = cell_as.border
+        cell_as.border = Border(
+            left=copy_module.copy(bas.left) if bas and bas.left else None,
+            right=borde_normal,
+            top=copy_module.copy(bas.top) if bas and bas.top else None,
+            bottom=copy_module.copy(bas.bottom) if bas and bas.bottom else None,
+            diagonal=copy_module.copy(bas.diagonal) if bas and bas.diagonal else None,
+            diagonal_direction=bas.diagonal_direction if bas else None,
+            vertical=copy_module.copy(bas.vertical) if bas and bas.vertical else None,
+            horizontal=copy_module.copy(bas.horizontal) if bas and bas.horizontal else None,
+        )
 
-    # Limpiar solo el interior (C a AS) en las filas arriba y debajo del borde grueso.
-    # No tocar B ni AT para no quitar los bordes laterales del recuadro (A–B y AT–AU).
+    # Crear borde grueso de cierre explícito (sin copiar F1): de B a AT en closing_row
+    borde_grueso = Side(style="medium", color="000000")
+    relleno_blanco = PatternFill(fill_type="solid", fgColor="FFFFFF")
+    for c in range(PLANTILLA_BORDE_IZQ_COL, PLANTILLA_BORDE_DER2_COL + 1):
+        cell = ws.cell(row=closing_row, column=c)
+        cell.value = None
+        cell.fill = relleno_blanco
+        left_side = borde_grueso if c == PLANTILLA_BORDE_IZQ_COL else None
+        right_side = borde_grueso if c == PLANTILLA_BORDE_DER2_COL else None
+        cell.border = Border(
+            left=left_side,
+            right=right_side,
+            top=None,
+            bottom=borde_grueso,
+            diagonal=None,
+            diagonal_direction=None,
+            vertical=None,
+            horizontal=None,
+        )
+
+    # Limpiar solo debajo del borde grueso (C a AS); no limpiar arriba. No tocar B ni AT.
     sin_borde = Border(left=None, right=None, top=None, bottom=None)
-    for fila in (closing_row - 1, closing_row + 1):
+    relleno_blanco = PatternFill(fill_type="solid", fgColor="FFFFFF")
+    for fila in range(closing_row + 1, closing_row + 201):
         for c in range(start_col, PLANTILLA_BORDE_DER_COL + 1):
             cell = ws.cell(row=fila, column=c)
             cell.border = sin_borde
+            cell.fill = relleno_blanco
             cell.value = None
 
     # Cerrar la última fila con datos con un borde inferior visible (negro, fino), desde C hasta AS
@@ -211,6 +232,20 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
             vertical=copy_module.copy(bc.vertical) if bc and bc.vertical else None,
             horizontal=copy_module.copy(bc.horizontal) if bc and bc.horizontal else None,
         )
+
+    # Cerrar esquina inferior derecha: celda (last_row, AS) con borde derecho e inferior
+    cell_esquina = ws.cell(row=last_row, column=PLANTILLA_BORDE_DER_COL)
+    be = cell_esquina.border
+    cell_esquina.border = Border(
+        left=copy_module.copy(be.left) if be and be.left else None,
+        right=borde_normal,
+        top=copy_module.copy(be.top) if be and be.top else None,
+        bottom=borde_inferior_normal,
+        diagonal=copy_module.copy(be.diagonal) if be and be.diagonal else None,
+        diagonal_direction=be.diagonal_direction if be else None,
+        vertical=copy_module.copy(be.vertical) if be and be.vertical else None,
+        horizontal=copy_module.copy(be.horizontal) if be and be.horizontal else None,
+    )
 
     out = io.BytesIO()
     wb.save(out)
