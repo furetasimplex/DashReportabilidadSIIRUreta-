@@ -23,6 +23,9 @@ PLANTILLA_BORDE_DER2_COL = 46  # AT (borde entre AT y AU)
 # Fila de la plantilla con el estilo de "cierre" (línea bajo la tabla)
 PLANTILLA_FILA_CIERRE = 17
 
+# Columnas Avance: en Excel, si valor > 1 se escribe valor/100; si está entre 0 y 1 se deja igual
+COLUMNAS_AVANCE_DIVIDE_100 = ("Avance_apilado", "Avance_reclamo_oxidos", "Avance_reclamo_sulfuros")
+
 
 def _copy_cell_style(dest_cell, src_cell):
     """Copia relleno, borde, fuente y alineación de src_cell a dest_cell."""
@@ -128,6 +131,12 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
                     val = "*"
                 elif val in (1, 1.0, "1"):
                     val = None
+            elif col in COLUMNAS_AVANCE_DIVIDE_100 and not pd.isna(val):
+                try:
+                    v = float(val)
+                    val = (v / 100.0) if v > 1 else v
+                except (TypeError, ValueError):
+                    pass
             elif pd.isna(val):
                 val = None
             elif col == "Fecha" and hasattr(val, "strftime"):
