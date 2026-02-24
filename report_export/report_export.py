@@ -22,7 +22,7 @@ COLUMNAS_DATOS_CONCILIADOS = [
     "Camiones_TMS_Reclamo_Oxidos", "Camiones_TMS_Reclamo_Sulfuros", "Movido", "Extraido",
     "Camiones_TMS_total", "Camiones_TMS_plan", "Campana_reclamo_camiones", "Modulo_reclamo_camiones",
     "Total_Ripios_Incluye_Camiones_Real", "Total_Ripios_Incluye_Camiones_Plan",
-    "Produccion_Catodos_Real", "Produccion_Catodos_Plan",
+    "Produccion_Catodos_Real", "Produccion_Catodos_Plan","Estado"
 ]
 
 

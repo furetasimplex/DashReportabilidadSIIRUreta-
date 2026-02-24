@@ -4,19 +4,22 @@ import io
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Side
-# Rango plantilla Datos conciliados: datos desde C16, 42 columnas (C hasta AR)
+# Rango plantilla Datos conciliados: datos desde C16, 43 columnas (C hasta AS)
 PLANTILLA_DATOS_START_ROW = 16
 PLANTILLA_DATOS_START_COL = 3   # C
-PLANTILLA_DATOS_NUM_COLS = 42   # C a AR
+PLANTILLA_DATOS_NUM_COLS = 43   # C a AS (se añadió columna 'Estado')
 PLANTILLA_DATOS_CLEAR_ROWS = 2000  # filas a limpiar para no dejar datos viejos
 
 # Filas de la plantilla usadas como referencia de estilo (alternancia de color)
 PLANTILLA_ESTILO_ROW_A = 16
 PLANTILLA_ESTILO_ROW_B = 17
 
-# Bordes del marco: columna B = línea entre A y B, columna AS = línea entre AS y AT
+# Bordes del marco: columna B = línea entre A y B,
+# columna AS = línea entre la última columna de datos ('Estado') y AT,
+# y columna AT = línea entre AT y AU
 PLANTILLA_BORDE_IZQ_COL = 2   # B
-PLANTILLA_BORDE_DER_COL = 45  # AS (columna 45)
+PLANTILLA_BORDE_DER_COL = 45   # AS (columna justo a la derecha de 'Estado')
+PLANTILLA_BORDE_DER2_COL = 46  # AT (borde entre AT y AU)
 # Fila de la plantilla con el estilo de "cierre" (línea bajo la tabla)
 PLANTILLA_FILA_CIERRE = 17
 
@@ -119,29 +122,49 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
         ref_row = PLANTILLA_ESTILO_ROW_B if (i % 2) else PLANTILLA_ESTILO_ROW_A
         for j, col in enumerate(cols):
             val = row[col]
-            if pd.isna(val):
+            # Columna de estado: 1 -> vacío, 0 o NULL -> "*"
+            if col == "Estado":
+                if pd.isna(val) or val in (0, 0.0, "0", "0.0"):
+                    val = "*"
+                elif val in (1, 1.0, "1"):
+                    val = None
+            elif pd.isna(val):
                 val = None
             elif col == "Fecha" and hasattr(val, "strftime"):
                 val = val.strftime("%d-%m-%Y") if hasattr(val, "strftime") else val
             col_idx = start_col + j
             cell = ws.cell(row=excel_row, column=col_idx, value=val)
+            # Todas las columnas (incluida Estado) usan el formato de la plantilla en esa columna
             src = ws.cell(row=ref_row, column=col_idx)
             _copy_cell_style(cell, src)
 
     last_row = start_row + len(df) - 1
+    # Fila de cierre final será dos filas debajo de la última con datos
+    closing_row = last_row + 2
     ref_style_row = PLANTILLA_ESTILO_ROW_A
 
-    # Extender línea izquierda (entre A y B) y derecha (entre AS y AT) hasta la última fila de datos
-    for r in range(start_row, last_row + 1):
+    # Extender línea izquierda (entre A y B) y derechas (entre AS–AT y AT–AU)
+    # hasta la fila de cierre (incluye la fila en blanco intermedia)
+    for r in range(start_row, closing_row + 1):
         _copy_cell_style(ws.cell(row=r, column=PLANTILLA_BORDE_IZQ_COL), ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_IZQ_COL))
         _copy_cell_style(ws.cell(row=r, column=PLANTILLA_BORDE_DER_COL), ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_DER_COL))
+        _copy_cell_style(ws.cell(row=r, column=PLANTILLA_BORDE_DER2_COL), ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_DER2_COL))
 
     # Fila de cierre bajo la tabla: copiar estilo y forzar borde superior para cerrar el recuadro
     ref_cell = ws.cell(row=ref_style_row, column=PLANTILLA_BORDE_IZQ_COL)
     b = ref_cell.border
-    top_side = copy_module.copy(b.bottom) if b and b.bottom else Side(style="medium")
-    for c in range(PLANTILLA_BORDE_IZQ_COL, PLANTILLA_BORDE_DER_COL + 1):
-        cell = ws.cell(row=last_row + 1, column=c)
+    # Borde superior con el mismo estilo que los bordes verticales (B/AS)
+    source_side = None
+    if b:
+        # Preferir el lado izquierdo; si no existe, usar derecho
+        source_side = b.left or b.right or b.bottom
+    top_side = Side(
+        style=(getattr(source_side, "style", None) or "thick"),
+        color=getattr(source_side, "color", None),
+    )
+    # Desde B hasta AT (una columna más allá de AS)
+    for c in range(PLANTILLA_BORDE_IZQ_COL, PLANTILLA_BORDE_DER_COL + 2):
+        cell = ws.cell(row=closing_row, column=c)
         _copy_cell_style(cell, ws.cell(row=PLANTILLA_FILA_CIERRE, column=c))
         bc = cell.border
         cell.border = Border(
@@ -149,6 +172,31 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
             right=copy_module.copy(bc.right) if bc and bc.right else None,
             top=top_side,
             bottom=copy_module.copy(bc.bottom) if bc and bc.bottom else None,
+            diagonal=copy_module.copy(bc.diagonal) if bc and bc.diagonal else None,
+            diagonal_direction=bc.diagonal_direction if bc else None,
+            vertical=copy_module.copy(bc.vertical) if bc and bc.vertical else None,
+            horizontal=copy_module.copy(bc.horizontal) if bc and bc.horizontal else None,
+        )
+
+    # Limpiar solo el interior (C a AS) en las filas arriba y debajo del borde grueso.
+    # No tocar B ni AT para no quitar los bordes laterales del recuadro (A–B y AT–AU).
+    sin_borde = Border(left=None, right=None, top=None, bottom=None)
+    for fila in (closing_row - 1, closing_row + 1):
+        for c in range(start_col, PLANTILLA_BORDE_DER_COL + 1):
+            cell = ws.cell(row=fila, column=c)
+            cell.border = sin_borde
+            cell.value = None
+
+    # Cerrar la última fila con datos con un borde inferior visible (negro, fino), desde C hasta AS
+    borde_inferior_normal = Side(style="thin", color="000000")
+    for c in range(start_col, PLANTILLA_BORDE_DER_COL + 1):
+        cell = ws.cell(row=last_row, column=c)
+        bc = cell.border
+        cell.border = Border(
+            left=copy_module.copy(bc.left) if bc and bc.left else None,
+            right=copy_module.copy(bc.right) if bc and bc.right else None,
+            top=copy_module.copy(bc.top) if bc and bc.top else None,
+            bottom=borde_inferior_normal,
             diagonal=copy_module.copy(bc.diagonal) if bc and bc.diagonal else None,
             diagonal_direction=bc.diagonal_direction if bc else None,
             vertical=copy_module.copy(bc.vertical) if bc and bc.vertical else None,
