@@ -44,6 +44,7 @@ def layout():
                                 {"label": "Balance Semanal", "value": "balance"},
                                 {"label": "Conciliación Mensual", "value": "conciliacion"},
                                 {"label": "Datos medidos", "value": "Datos medidos"},
+                                {"label": "Representatividad Torres", "value": "representatividad_torres"},
                             ],
                             value="prod",
                             placeholder="Seleccione tipo..."

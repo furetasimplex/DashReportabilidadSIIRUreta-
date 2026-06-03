@@ -9,7 +9,8 @@ try:
         procesar_bitacora_completa,
         guardar_bitacora_bd,
         procesar_pesos_reales_torre,
-        guardar_pesos_reales_bd
+        guardar_pesos_reales_bd,
+        refrescar_representatividad_torres
     )
 except ImportError:
     sys.path.append(".")
@@ -17,7 +18,8 @@ except ImportError:
         procesar_bitacora_completa,
         guardar_bitacora_bd,
         procesar_pesos_reales_torre,
-        guardar_pesos_reales_bd
+        guardar_pesos_reales_bd,
+        refrescar_representatividad_torres
     )
 layout = html.Div([
     dbc.Card([
@@ -88,7 +90,6 @@ def cargar_bitacora(contents, filename, fecha_manual_str):
     try:
         # 1) Procesar bitácora
         df_final, msg = procesar_bitacora_completa(decoded, filename, fecha_manual)
-        df_final, msg = procesar_bitacora_completa(decoded, filename, fecha_manual)
 
         if df_final is None:
             return dbc.Alert([
@@ -138,7 +139,30 @@ def cargar_bitacora(contents, filename, fecha_manual_str):
         else:
             exito_pesos, msg_pesos_db = guardar_pesos_reales_bd(df_pesos)
 
-        color = "success" if exito and exito_pesos else "warning"
+        # 4) Refrescar cache de representatividad
+        exito_refresco = False
+        msg_refresco = "No se refrescó representatividad."
+
+        if exito and exito_pesos:
+            try:
+                fecha_inicio = df_final["fecha_turno"].min()
+                fecha_fin = df_final["fecha_turno"].max()
+
+                refrescar_representatividad_torres(
+                    fecha_inicio=fecha_inicio,
+                    fecha_fin=fecha_fin
+                )
+
+                exito_refresco = True
+                msg_refresco = (
+                    f"Representatividad refrescada desde {fecha_inicio} "
+                    f"hasta {fecha_fin}."
+                )
+
+            except Exception as e:
+                msg_refresco = f"No se pudo refrescar representatividad: {e}"
+
+        color = "success" if exito and exito_pesos and exito_refresco else "warning"
 
         return dbc.Alert([
             html.H5("Resultado de Carga", className="alert-heading"),
@@ -147,6 +171,8 @@ def cargar_bitacora(contents, filename, fecha_manual_str):
             html.Hr(),
             html.P(f"Pesos reales - Detección: {msg_pesos}"),
             html.P(f"Pesos reales - Base de Datos: {msg_pesos_db}"),
+            html.Hr(),
+            html.P(f"Representatividad: {msg_refresco}"),
             html.Small(f"Archivo: {filename}")
         ], color=color)
 

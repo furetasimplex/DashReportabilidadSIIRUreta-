@@ -20,24 +20,61 @@ RE_HORA = re.compile(r"(\d{1,2})[:\.](\d{2})")
 
 def convertir_fecha_excel(valor, fecha_manual=None):
     """
-    Convierte una fecha desde Excel serial, datetime, date o string.
+    Convierte una fecha desde Excel serial, datetime, date, string
+    o día del mes.
+
+    Si valor es 1..31 y existe fecha_manual/fecha_ref,
+    se interpreta como día del mes del archivo.
     """
     if pd.isna(valor):
         return None
+
+    fecha_ref = None
+    if fecha_manual is not None:
+        fecha_ref = fecha_manual.date() if hasattr(fecha_manual, "date") else fecha_manual
 
     if isinstance(valor, (dt.datetime, dt.date)):
         return pd.to_datetime(valor).date()
 
     if isinstance(valor, (int, float)):
+        dia = int(valor)
+
+        # Si es un día del mes, usar mes/año del archivo.
+        if 1 <= dia <= 31 and fecha_ref is not None:
+            try:
+                return dt.date(fecha_ref.year, fecha_ref.month, dia)
+            except ValueError:
+                return None
+
+        # Si es serial real de Excel, convertir normalmente.
         return pd.to_datetime(valor, unit="D", origin="1899-12-30").date()
 
     try:
-        return pd.to_datetime(valor).date()
-    except Exception:
-        if fecha_manual is not None:
-            return fecha_manual.date() if hasattr(fecha_manual, "date") else fecha_manual
-        return None
+        fecha = pd.to_datetime(valor).date()
 
+        # Si pandas lo mandó a año antiguo y tenemos mes/año de referencia,
+        # probablemente era solo un día.
+        if fecha.year < 1950 and fecha_ref is not None:
+            s = str(valor).strip().split(".")[0]
+            if s.isdigit():
+                dia = int(s)
+                if 1 <= dia <= 31:
+                    return dt.date(fecha_ref.year, fecha_ref.month, dia)
+
+        return fecha
+
+    except Exception:
+        if fecha_ref is not None:
+            s = str(valor).strip().split(".")[0]
+            if s.isdigit():
+                dia = int(s)
+                if 1 <= dia <= 31:
+                    try:
+                        return dt.date(fecha_ref.year, fecha_ref.month, dia)
+                    except ValueError:
+                        return None
+
+        return None
 
 def extraer_hora(texto):
     """
@@ -167,16 +204,6 @@ def construir_ts_por_turno(fecha_base: dt.date, turno: str, hora: dt.time) -> dt
 def procesar_bitacora_completa(decoded, filename, fecha_manual=None):
     """
     Procesa dinámicamente la hoja 'Pesos y Novedades' del Excel Peso Torre.
-
-    Lógica:
-    - Detecta las fechas en columna B.
-    - Cada fecha define un bloque hasta la siguiente fecha.
-    - Dentro del bloque busca comentarios por torre y horario de toma de muestra.
-    - Si existe "TOMA DE MUESTRA A LAS HH:MM", usa esa hora real.
-    - Si no existe hora explícita, usa horario estándar:
-        Turno A -> 20:00 del mismo día
-        Turno B -> 08:00 del día siguiente
-    - Conserva días detenidos o sin muestra explícita para que no desaparezcan del reporte.
     """
     try:
         df = pd.read_excel(
@@ -187,38 +214,39 @@ def procesar_bitacora_completa(decoded, filename, fecha_manual=None):
     except Exception as e:
         return None, f"No se pudo leer la hoja 'Pesos y Novedades': {e}"
 
+    fecha_ref = fecha_manual if fecha_manual else extraer_fecha_desde_nombre(filename)
+    anio_ref, mes_ref = fecha_ref.year, fecha_ref.month
+
     registros = []
 
-    # En el archivo, los datos empiezan aproximadamente en la fila Excel 7.
-    # En pandas eso corresponde al índice 6.
     fila_inicio = 6
 
-    # Columnas de novedades:
-    # U = índice 20 = Turno A
-    # V = índice 21 = Turno B
     config_turnos = {
         "A": 20,
         "B": 21
     }
-
-    # ------------------------------------------------------------------
-    # 1) Detectar dinámicamente todas las filas que contienen fecha
-    # ------------------------------------------------------------------
     filas_fecha = []
 
     for idx in range(fila_inicio, len(df)):
         fecha_raw = df.iat[idx, 1] if df.shape[1] > 1 else None
-        fecha = convertir_fecha_excel(fecha_raw, fecha_manual)
+        fecha = convertir_fecha_excel(fecha_raw, fecha_ref)
 
-        if fecha is not None:
-            filas_fecha.append((idx, fecha))
+        if fecha is None:
+            continue
 
+        # Procesar solo fechas del mes/año detectado en el archivo.
+        # Evita que un archivo de mayo cargue días de junio si el Excel trae filas extra.
+        if fecha.year != anio_ref or fecha.month != mes_ref:
+            continue
+
+        filas_fecha.append((idx, fecha))
+            
     if not filas_fecha:
         return None, (
             "No se encontraron fechas válidas en la hoja 'Pesos y Novedades'. "
             "Verifica que las fechas estén en la columna B."
         )
-
+            
     # ------------------------------------------------------------------
     # 2) Funciones internas auxiliares
     # ------------------------------------------------------------------
@@ -552,9 +580,9 @@ def procesar_pesos_reales_torre(contenido, filename, fecha_manual=None):
         if pd.isna(fecha_raw):
             continue
 
-        try:
-            fecha = pd.to_datetime(fecha_raw).date()
-        except Exception:
+        fecha = convertir_fecha_excel(fecha_raw, fecha_ref)
+
+        if fecha is None:
             continue
 
         # Procesar solo el mes/año del archivo.
@@ -685,3 +713,26 @@ def guardar_pesos_reales_bd(df):
     
     except Exception as e:
         return False, f"Error al guardar pesos reales en BD: {e}"
+
+def refrescar_representatividad_torres(fecha_inicio, fecha_fin):
+    """
+    Refresca la tabla cache de representatividad de torres
+    para el rango cargado desde Peso Torre.
+    """
+
+    engine = get_engine()
+
+    if engine is None:
+        raise RuntimeError("No se pudo obtener conexión a la base de datos.")
+
+    sql = text("""
+        EXEC inventar_SpcHidr.sp_refrescar_representatividad_torres
+            @fecha_inicio = :fecha_inicio,
+            @fecha_fin = :fecha_fin
+    """)
+
+    with engine.begin() as conn:
+        conn.execute(sql, {
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin
+        })

@@ -40,6 +40,7 @@ def layout():
                                 {"label": "Producción Diaria", "value": "prod"},
                                 {"label": "Balance Semanal", "value": "balance"},
                                 {"label": "Conciliación Mensual", "value": "conciliacion"},
+                                {"label": "Representatividad Torres", "value": "representatividad_torres"},
                             ],
                             value="prod",
                             placeholder="Seleccione tipo..."

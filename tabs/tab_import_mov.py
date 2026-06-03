@@ -62,10 +62,62 @@ def register_callbacks(app):
             xls = pd.ExcelFile(excel_data)
             if "Base_Datos" not in xls.sheet_names:
                 return "Error: el archivo no contiene la hoja 'Base_Datos'."
+            
             df = pd.read_excel(xls, sheet_name="Base_Datos")
             df.columns = df.columns.str.strip()
 
-            print("Columnas iniciales:", df.columns.tolist())
+                        # --- Normalizar nombres de columnas del BD_CIO al esquema SQL mov_cam ---
+            def normalizar_columna(col):
+                col_original = str(col).strip()
+                col_norm = (
+                    col_original
+                    .replace("á", "a")
+                    .replace("é", "e")
+                    .replace("í", "i")
+                    .replace("ó", "o")
+                    .replace("ú", "u")
+                    .replace("Á", "A")
+                    .replace("É", "E")
+                    .replace("Í", "I")
+                    .replace("Ó", "O")
+                    .replace("Ú", "U")
+                    .replace("\xa0", " ")
+                    .strip()
+                )
+
+                # Columna Sólido
+                if col_norm in ["Solido Conciliacion", "Solido"]:
+                    return "Solido"
+
+                # Columna Polígono CIO
+                if col_norm in [
+                    "Poligono CIO",
+                    "Poligono_CIO",
+                    "Poligono-CIO",
+                    "Poligono CIO Conciliacion",
+                    "Poligono Conciliacion",
+                ]:
+                    return "Poligono_CIO"
+
+                # Malla -100#
+                if col_norm == "#100G07":
+                    return "100G07"
+
+                if col_norm == "POND#100G07":
+                    return "POND100G07"
+
+                # Carbonato, en SQL es C03G02 con cero
+                if col_norm == "CO3G02":
+                    return "C03G02"
+
+                if col_norm == "PONDCO3G02":
+                    return "PONDC03G02"
+
+                return col_original
+
+            df.columns = [normalizar_columna(c) for c in df.columns]
+
+            print("Columnas normalizadas:", df.columns.tolist())
 
             # --- Filtrado básico ---
             if "Año" not in df.columns:

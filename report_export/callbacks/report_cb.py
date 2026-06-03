@@ -1,8 +1,13 @@
 
 import pandas as pd
-from dash import Input, Output, State, callback, no_update
+from dash import Input, Output, State, callback, no_update, dcc, html, dash_table
 from report_export.report_export import fetch_report_data
-from report_export.export_to_excel import export_dataframe_with_template
+from report_export.report_export import (
+    fetch_report_data,
+    fetch_datos_conciliados_report,
+    fetch_representatividad_torres_report
+)
+from dash.dash_table.Format import Format, Scheme
 
 # Ajusta la ruta a tu template:
 TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"

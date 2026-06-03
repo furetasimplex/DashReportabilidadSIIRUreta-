@@ -160,3 +160,47 @@ def fetch_datos_conciliados_report(start_date: date, end_date: date) -> pd.DataF
     # Asegurar orden de columnas
     df = df[[c for c in COLUMNAS_DATOS_CONCILIADOS if c in df.columns]]
     return df
+
+def fetch_representatividad_torres_report(start_date: date, end_date: date) -> pd.DataFrame:
+    """
+    Consulta el reporte rápido de representatividad de torres desde procedimiento almacenado.
+    Lee desde la tabla física representatividad_torres_resultado mediante:
+    inventar_SpcHidr.sp_reporte_representatividad_torres
+    """
+    conn_or_engine = get_connection()
+
+    if conn_or_engine is None:
+        raise RuntimeError("get_connection() devolvió None: revisar conexión a la base de datos.")
+
+    sql_dbapi = """
+    EXEC inventar_SpcHidr.sp_reporte_representatividad_torres
+        @fecha_inicio = ?,
+        @fecha_fin = ?
+    """
+
+    sql_sa = """
+    EXEC inventar_SpcHidr.sp_reporte_representatividad_torres
+        @fecha_inicio = :start,
+        @fecha_fin = :end
+    """
+
+    try:
+        if hasattr(conn_or_engine, "cursor"):
+            df = pd.read_sql(
+                sql_dbapi,
+                conn_or_engine,
+                params=(start_date, end_date),
+            )
+        else:
+            from sqlalchemy import text
+            with conn_or_engine.connect() as conn:
+                df = pd.read_sql(
+                    text(sql_sa),
+                    conn,
+                    params={"start": start_date, "end": end_date},
+                )
+
+    except Exception as e:
+        raise RuntimeError(f"Error al leer representatividad de torres: {e}") from e
+
+    return df
