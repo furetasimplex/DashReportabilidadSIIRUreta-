@@ -41,6 +41,7 @@ def layout():
                                 {"label": "Balance Semanal", "value": "balance"},
                                 {"label": "Conciliación Mensual", "value": "conciliacion"},
                                 {"label": "Representatividad Torres", "value": "representatividad_torres"},
+                                {"label": "Análisis de las Torres de Muestreo por Turno", "value": "reporte_turno"},
                             ],
                             value="prod",
                             placeholder="Seleccione tipo..."
@@ -56,8 +57,14 @@ def layout():
         dbc.Card([
             dbc.CardHeader("Visualización del Reporte"),
             dbc.CardBody([
-                html.Div(id="report-grafico", className="mb-3"),
-                html.Div(id="report-tabla")
+                dcc.Loading(
+                    id="loading-report-visualizacion",
+                    type="circle",
+                    children=html.Div([
+                        html.Div(id="report-grafico", className="mb-3"),
+                        html.Div(id="report-tabla")
+                    ])
+                )
             ])
         ], className="mb-4 shadow-sm"),
 
@@ -66,7 +73,7 @@ def layout():
             dbc.CardBody([
                 html.Div(id="report-historial"),
                 dbc.ButtonGroup([
-                    dbc.Button("📄 Exportar a Excel3", id="report-btn-exportar", color="success"),
+                    dbc.Button("📄 Exportar a Excel", id="report-btn-exportar", color="success"),
                     dbc.Button("🖨️ Generar PDF", id="report-btn-pdf", color="primary", disabled=True)
                 ], className="mt-2"),
                 dcc.Download(id="report-download-xlsx"),

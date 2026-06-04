@@ -12,7 +12,10 @@ import dash_bootstrap_components as dbc
 from report_export.report_export import (
     fetch_report_data,
     fetch_datos_conciliados_report,
-    fetch_representatividad_torres_report
+    fetch_representatividad_torres_report,
+    fetch_reporte_turno_report,
+    fetch_reporte_turno_cache,
+    export_reporte_turno_estilo_leyes_finos
 )
 from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
 
@@ -320,6 +323,495 @@ def _export_representatividad_torres_to_excel(df: pd.DataFrame) -> bytes:
     output = io.BytesIO()
     wb.save(output)
     return output.getvalue()
+def _export_dataframe_simple_to_excel(df: pd.DataFrame, sheet_name: str = "Reporte") -> bytes:
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+    output.seek(0)
+    return output.getvalue()
+
+def _preparar_reporte_turno_df(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Ordena las columnas del reporte por turno en el mismo orden visual del formato BHP
+    y reemplaza valores vacíos:
+      - columnas numéricas: NULL/NaN -> 0
+      - columnas de texto: NULL/NaN -> "-"
+    Además redondea valores numéricos para visualización y exportación.
+    """
+    df = df.copy()
+
+    if "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(df["Fecha"]).dt.strftime("%d-%m-%Y")
+
+    columnas_ordenadas = [
+        "Fecha",
+        "Campania",
+        "Material",
+        "Modulo",
+        "Avance",
+        "Turno",
+
+        "Apilado_TMS_Real",
+        "Apilado_TMS_Plan_Mensual",
+
+        "STOCK",
+        "MINA",
+        "SRR",
+
+        "CuT_Real",
+        "CuT_Plan_Mensual",
+        "CuT_Plan_Semanal",
+
+        "CuS_Real",
+        "CuS_Plan_Mensual",
+        "CuS_Plan_Semanal",
+
+        "Solubilidad_Real",
+        "Solubilidad_Plan_Mensual",
+        "Solubilidad_Plan_Semanal",
+
+        "CO3_Real",
+        "CO3_Plan_Mensual",
+        "CO3_Plan_Semanal",
+
+        "CuFe_Real",
+        "CuFe_Plan_Mensual",
+        "CuFe_Plan_Semanal",
+
+        "FeT_Real",
+        "FeS_Real",
+        "ConsH_Real",
+
+        "Malla_Menos_1_2_Real",
+        "Malla_Menos_1_2_Plan_Semanal",
+
+        "Malla_Menos_100_Real",
+        "Malla_Menos_100_Plan_Mensual",
+        "Malla_Menos_100_Plan_Semanal",
+
+        "CaolBeta_Real",
+        "CaolBeta_Plan_Mensual",
+        "CaolBeta_Plan_Semanal",
+
+        "Dosis_Acido_Ideal_TM",
+        "Dosis_Acido_Programa_Semanal",
+
+        "Muestra_Quimica",
+        "Muestra_Fisica",
+    ]
+
+    columnas_ordenadas = [c for c in columnas_ordenadas if c in df.columns]
+    df = df[columnas_ordenadas]
+
+    columnas_texto = [
+        "Fecha",
+        "Turno",
+        "Campania",
+        "Material",
+        "Modulo",
+        "Muestra_Quimica",
+        "Muestra_Fisica",
+        "Malla_Menos_1_2_Plan_Semanal",  # puede venir como "<75%"
+    ]
+
+    columnas_texto = [c for c in columnas_texto if c in df.columns]
+    columnas_numericas = [c for c in df.columns if c not in columnas_texto]
+
+    for col in columnas_numericas:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+    cols_0_dec = [
+        "Apilado_TMS_Real",
+        "Apilado_TMS_Plan_Mensual",
+    ]
+
+    cols_2_dec = [
+        "Avance",
+        "STOCK",
+        "MINA",
+        "SRR",
+
+        "CuT_Real",
+        "CuT_Plan_Mensual",
+        "CuT_Plan_Semanal",
+
+        "CuS_Real",
+        "CuS_Plan_Mensual",
+        "CuS_Plan_Semanal",
+
+        "Solubilidad_Real",
+        "Solubilidad_Plan_Mensual",
+        "Solubilidad_Plan_Semanal",
+
+        "CO3_Real",
+        "CO3_Plan_Mensual",
+        "CO3_Plan_Semanal",
+
+        "CuFe_Real",
+        "CuFe_Plan_Mensual",
+        "CuFe_Plan_Semanal",
+
+        "FeT_Real",
+        "FeS_Real",
+        "ConsH_Real",
+
+        "Malla_Menos_1_2_Real",
+        "Malla_Menos_100_Real",
+        "Malla_Menos_100_Plan_Mensual",
+        "Malla_Menos_100_Plan_Semanal",
+
+        "CaolBeta_Real",
+        "CaolBeta_Plan_Mensual",
+        "CaolBeta_Plan_Semanal",
+
+        "Dosis_Acido_Ideal_TM",
+        "Dosis_Acido_Programa_Semanal",
+    ]
+
+    for col in cols_0_dec:
+        if col in df.columns:
+            df[col] = df[col].round(0)
+
+    for col in cols_2_dec:
+        if col in df.columns:
+            df[col] = df[col].round(2)
+
+    for col in columnas_texto:
+        df[col] = df[col].fillna("-")
+
+    return df
+
+
+def _tabla_reporte_turno(df: pd.DataFrame):
+    df = _preparar_reporte_turno_df(df)
+
+    # Encabezados agrupados tipo BHP
+    column_headers = {
+    "Fecha": ["", "Fecha"],
+    "Campania": ["", "Campaña"],
+    "Material": ["", "Material"],
+    "Modulo": ["", "Módulo"],
+    "Avance": ["", "Avance"],
+    "Turno": ["", "Turno"],
+
+    "Apilado_TMS_Real": ["Apilado TMS", "Real"],
+    "Apilado_TMS_Plan_Mensual": ["Apilado TMS", "Plan"],
+
+    "STOCK": ["Distribución origen", "STOCK"],
+    "MINA": ["Distribución origen", "MINA"],
+    "SRR": ["Distribución origen", "SRR"],
+
+    "CuT_Real": ["Análisis Químicos", "CuT Real"],
+    "CuT_Plan_Mensual": ["Análisis Químicos", "CuT Programa"],
+    "CuT_Plan_Semanal": ["Análisis Químicos", "CuT Plan"],
+
+    "CuS_Real": ["Análisis Químicos", "CuS Real"],
+    "CuS_Plan_Mensual": ["Análisis Químicos", "CuS Programa"],
+    "CuS_Plan_Semanal": ["Análisis Químicos", "CuS Plan"],
+
+    "Solubilidad_Real": ["Análisis Químicos", "Solubilidad Real"],
+    "Solubilidad_Plan_Mensual": ["Análisis Químicos", "Solubilidad Programa"],
+    "Solubilidad_Plan_Semanal": ["Análisis Químicos", "Solubilidad Plan"],
+
+    "CO3_Real": ["Análisis Químicos", "CO3 Real"],
+    "CO3_Plan_Mensual": ["Análisis Químicos", "CO3 Programa"],
+    "CO3_Plan_Semanal": ["Análisis Químicos", "CO3 Plan"],
+
+    "CuFe_Real": ["Análisis Químicos", "CuFe Real"],
+    "CuFe_Plan_Mensual": ["Análisis Químicos", "CuFe Programa"],
+    "CuFe_Plan_Semanal": ["Análisis Químicos", "CuFe Plan"],
+
+    "FeT_Real": ["Análisis Químicos", "FeT Real"],
+    "FeS_Real": ["Análisis Químicos", "FeS Real"],
+
+    "ConsH_Real": ["Análisis Químicos", "Consumo ácido kg/t"],
+
+    "Malla_Menos_1_2_Real": ["Granulometrías", "-1/2 Real"],
+    "Malla_Menos_1_2_Plan_Semanal": ["Granulometrías", "-1/2 Plan"],
+
+    "Malla_Menos_100_Real": ["Granulometrías", "-100# Real"],
+    "Malla_Menos_100_Plan_Mensual": ["Granulometrías", "-100# Programa"],
+    "Malla_Menos_100_Plan_Semanal": ["Granulometrías", "-100# Plan"],
+
+    "CaolBeta_Real": ["NIR", "CaolBeta Real"],
+    "CaolBeta_Plan_Mensual": ["NIR", "CaolBeta Programa"],
+    "CaolBeta_Plan_Semanal": ["NIR", "CaolBeta Plan"],
+
+    "Dosis_Acido_Ideal_TM": ["Dosis de ácido", "Ideal TM"],
+    "Dosis_Acido_Programa_Semanal": ["Dosis de ácido", "Programa semanal"],
+
+    "Muestra_Quimica": ["Fuentes de información", "Muestra química"],
+    "Muestra_Fisica": ["Fuentes de información", "Muestra física"],
+ }
+
+    columnas_texto = [
+    "Fecha",
+    "Turno",
+    "Campania",
+    "Material",
+    "Modulo",
+    "Muestra_Quimica",
+    "Muestra_Fisica",
+    "Malla_Menos_1_2_Plan_Semanal",
+ ]
+    columnas_numericas = [c for c in df.columns if c not in columnas_texto]
+
+    return dash_table.DataTable(
+        id="tabla-reporte-turno",
+        columns=[
+            {
+                "name": column_headers.get(c, ["", c]),
+                "id": c,
+                "type": "numeric" if c in columnas_numericas else "text",
+            }
+            for c in df.columns
+        ],
+        data=df.to_dict("records"),
+        merge_duplicate_headers=True,
+        page_size=20,
+        sort_action="native",
+        filter_action="none",
+        fixed_rows={"headers": True},
+        style_table={
+            "overflowX": "auto",
+            "overflowY": "auto",
+            "maxHeight": "650px",
+            "width": "100%",
+            "maxWidth": "100%",
+            "border": "1px solid #d0d0d0",
+        },
+        style_cell={
+            "textAlign": "center",
+            "fontFamily": "Arial",
+            "fontSize": "11px",
+            "padding": "5px",
+            "minWidth": "90px",
+            "width": "105px",
+            "maxWidth": "140px",
+            "whiteSpace": "normal",
+            "height": "auto",
+            "border": "1px solid #d9d9d9",
+        },
+        style_header={
+            "backgroundColor": "#9DC3E6",
+            "fontWeight": "bold",
+            "color": "#1f4e79",
+            "textAlign": "center",
+            "border": "1px solid #7f9db9",
+        },
+        style_data_conditional=[
+            {"if": {"row_index": "odd"}, "backgroundColor": "#f7f3ef"},
+            {"if": {"column_id": "Fecha"}, "backgroundColor": "#d9eaf7", "fontWeight": "bold"},
+            {"if": {"column_id": "Turno"}, "backgroundColor": "#f2f2f2", "fontWeight": "bold"},
+        ],
+    )
+
+
+
+def _export_reporte_turno_formateado(df: pd.DataFrame) -> bytes:
+    """
+    Exporta el reporte por turno con formato tipo BHP:
+    encabezados agrupados, mismo orden de columnas de la visualización y reemplazo de vacíos por cero.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    df = _preparar_reporte_turno_df(df)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Analisis Turno"
+
+    # Estilos
+    azul = PatternFill("solid", fgColor="9DC3E6")
+    celeste = PatternFill("solid", fgColor="D9EAF7")
+    gris = PatternFill("solid", fgColor="F2F2F2")
+    beige = PatternFill("solid", fgColor="F7F3EF")
+    blanco = PatternFill("solid", fgColor="FFFFFF")
+
+    font_bhp = Font(bold=True, size=28, color="E97132")
+    font_titulo = Font(bold=True, size=14, color="1F4E79")
+    font_header = Font(bold=True, color="1F4E79")
+    font_normal = Font(color="404040")
+
+    thin = Side(style="thin", color="B8B8B8")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    max_col = len(df.columns)
+    last_col = get_column_letter(max_col)
+
+    # Encabezado superior
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
+    ws["A1"] = "BHP"
+    ws["A1"].font = font_bhp
+    ws["A1"].alignment = Alignment(horizontal="left", vertical="center")
+
+    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=max_col)
+    ws["A3"] = "Análisis de las Torres de Muestreo por Turno"
+    ws["A3"].font = font_titulo
+    ws["A3"].alignment = center
+
+    ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=max_col)
+    ws["A4"] = "Superintendencia de Medición y Reconciliación - Gerencia de Planificación de la Producción"
+    ws["A4"].font = Font(size=10, color="404040")
+    ws["A4"].alignment = center
+
+    row_group = 7
+    row_header = 8
+    row_data = 9
+
+    # Nombres visibles
+    headers = {
+        "Fecha": "Fecha",
+        "Campania": "Campaña",
+        "Material": "Material",
+        "Modulo": "Módulo",
+        "Avance": "Avance",
+        "Turno": "Turno",
+
+        "Apilado_TMS_Real": "Real",
+        "Apilado_TMS_Plan_Mensual": "Plan",
+
+        "STOCK": "STOCK",
+        "MINA": "MINA",
+        "SRR": "SRR",
+
+        "CuT_Real": "Real",
+        "CuT_Plan_Mensual": "Programa",
+        "CuT_Plan_Semanal": "Plan",
+
+        "CuS_Real": "Real",
+        "CuS_Plan_Mensual": "Programa",
+        "CuS_Plan_Semanal": "Plan",
+
+        "Solubilidad_Real": "Real",
+        "Solubilidad_Plan_Mensual": "Programa",
+        "Solubilidad_Plan_Semanal": "Plan",
+
+        "CO3_Real": "Real",
+        "CO3_Plan_Mensual": "Programa",
+        "CO3_Plan_Semanal": "Plan",
+
+        "CuFe_Real": "Real",
+        "CuFe_Plan_Mensual": "Programa",
+        "CuFe_Plan_Semanal": "Plan",
+
+        "FeT_Real": "Real",
+        "FeS_Real": "Real",
+        "ConsH_Real": "Consumo ácido kg/t",
+
+        "Malla_Menos_1_2_Real": "Real",
+        "Malla_Menos_1_2_Plan_Semanal": "Plan",
+
+        "Malla_Menos_100_Real": "Real",
+        "Malla_Menos_100_Plan_Mensual": "Programa",
+        "Malla_Menos_100_Plan_Semanal": "Plan",
+
+        "CaolBeta_Real": "Real",
+        "CaolBeta_Plan_Mensual": "Programa",
+        "CaolBeta_Plan_Semanal": "Plan",
+
+        "Dosis_Acido_Ideal_TM": "Ideal TM",
+        "Dosis_Acido_Programa_Semanal": "Programa semanal",
+
+        "Muestra_Quimica": "Muestra química",
+        "Muestra_Fisica": "Muestra física",
+    }
+
+    for idx, col in enumerate(df.columns, start=1):
+        cell = ws.cell(row=row_header, column=idx)
+        cell.value = headers.get(col, col)
+        cell.fill = celeste
+        cell.font = font_header
+        cell.alignment = center
+        cell.border = border
+
+    # Grupos por rangos según el orden de columnas
+    def col_pos(col_name):
+        try:
+            return list(df.columns).index(col_name) + 1
+        except ValueError:
+            return None
+
+    grupos = []
+
+    # General: Fecha a Turno
+    if col_pos("Fecha") and col_pos("Turno"):
+        grupos.append(("", col_pos("Fecha"), col_pos("Turno")))
+
+    if col_pos("Apilado_TMS_Real") and col_pos("Apilado_TMS_Plan_Mensual"):
+        grupos.append(("Apilado TMS", col_pos("Apilado_TMS_Real"), col_pos("Apilado_TMS_Plan_Mensual")))
+
+    if col_pos("STOCK") and col_pos("SRR"):
+        grupos.append(("Distribución origen", col_pos("STOCK"), col_pos("SRR")))
+
+    if col_pos("CuT_Real") and col_pos("ConsH_Real"):
+        grupos.append(("Análisis Químicos", col_pos("CuT_Real"), col_pos("ConsH_Real")))
+
+    if col_pos("Malla_Menos_1_2_Real") and col_pos("Malla_Menos_100_Plan_Semanal"):
+        grupos.append(("Granulometrías", col_pos("Malla_Menos_1_2_Real"), col_pos("Malla_Menos_100_Plan_Semanal")))
+
+    if col_pos("CaolBeta_Real") and col_pos("CaolBeta_Plan_Semanal"):
+        grupos.append(("NIR", col_pos("CaolBeta_Real"), col_pos("CaolBeta_Plan_Semanal")))
+
+    if col_pos("Dosis_Acido_Ideal_TM") and col_pos("Dosis_Acido_Programa_Semanal"):
+        grupos.append(("Dosis de ácido", col_pos("Dosis_Acido_Ideal_TM"), col_pos("Dosis_Acido_Programa_Semanal")))
+
+    if col_pos("Muestra_Quimica") and col_pos("Muestra_Fisica"):
+        grupos.append(("Fuentes de información", col_pos("Muestra_Quimica"), col_pos("Muestra_Fisica")))
+
+    for titulo, c_ini, c_fin in grupos:
+        if c_ini is None or c_fin is None:
+            continue
+        ws.merge_cells(start_row=row_group, start_column=c_ini, end_row=row_group, end_column=c_fin)
+        cell = ws.cell(row=row_group, column=c_ini)
+        cell.value = titulo
+        cell.fill = azul if titulo else blanco
+        cell.font = font_header
+        cell.alignment = center
+        cell.border = border
+        for c in range(c_ini, c_fin + 1):
+            ws.cell(row=row_group, column=c).fill = azul if titulo else blanco
+            ws.cell(row=row_group, column=c).border = border
+
+    # Datos
+    for r_idx, (_, row) in enumerate(df.iterrows(), start=row_data):
+        for c_idx, col in enumerate(df.columns, start=1):
+            cell = ws.cell(row=r_idx, column=c_idx)
+            cell.value = row[col]
+            cell.font = font_normal
+            cell.alignment = center
+            cell.border = border
+
+            if (r_idx - row_data) % 2 == 1:
+                cell.fill = beige
+
+            if col == "Fecha":
+                cell.fill = celeste
+            elif col in ["Campania", "Material", "Modulo", "Avance", "Turno"]:
+                cell.fill = gris
+
+            if isinstance(cell.value, float):
+                cell.number_format = "0.00"
+
+    # Anchos y filtros
+    for c_idx, col in enumerate(df.columns, start=1):
+        col_letter = get_column_letter(c_idx)
+        ws.column_dimensions[col_letter].width = 15
+
+    ws.freeze_panes = "G9"
+    ws.auto_filter.ref = f"A8:{last_col}{ws.max_row}"
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output.getvalue()
+
+
 @callback(
     Output("report-grafico", "children"),
     Output("report-tabla", "children"),
@@ -330,8 +822,12 @@ def _export_representatividad_torres_to_excel(df: pd.DataFrame) -> bytes:
     State("report-fecha-final", "date"),
     prevent_initial_call=True
 )
-
 def generar_reporte(n_clicks, tipo, f_ini, f_fin):
+    print("DEBUG GENERAR REPORTE")
+    print("n_clicks:", n_clicks)
+    print("tipo:", tipo)
+    print("fecha inicio:", f_ini)
+    print("fecha fin:", f_fin)
     if not f_ini or not f_fin:
         return (
             no_update,
@@ -341,6 +837,8 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
 
     ini = pd.to_datetime(f_ini).date()
     fin = pd.to_datetime(f_fin).date()
+    # El SP usa fecha final exclusiva: Fecha >= inicio AND Fecha < fin
+    fin_sql_exclusivo = (pd.to_datetime(f_fin) + pd.Timedelta(days=1)).date()
 
     # ------------------------------------------------------------
     # REPORTE REPRESENTATIVIDAD TORRES
@@ -409,6 +907,69 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
         return html.Div(), tabla, historial
 
     # ------------------------------------------------------------
+    # REPORTE POR TURNO
+    # ------------------------------------------------------------
+    if tipo == "reporte_turno":
+        print("ENTRÓ A REPORTE TURNO")
+        print("fecha fin SQL exclusiva:", fin_sql_exclusivo)
+        try:
+            df_turno = fetch_reporte_turno_cache(
+                start_date=ini,
+                end_date=fin_sql_exclusivo
+            )
+            print("Columnas reporte turno:", df_turno.columns.tolist())
+            print("Filas reporte turno:", len(df_turno))
+        except Exception as e:
+            return (
+                dbc.Alert(
+                    f"Error al consultar reporte por turno: {e}",
+                    color="danger"
+                ),
+                no_update,
+                no_update
+            )
+
+        if df_turno.empty:
+            return (
+                dbc.Alert("Sin datos para el reporte por turno en el rango seleccionado.", color="info"),
+                no_update,
+                no_update
+            )
+
+        tabla = html.Div([
+            html.H5("Análisis de las Torres de Muestreo por Turno", className="mb-2"),
+            html.P(
+                "Vista preliminar del reporte. Puede desplazarse horizontalmente para revisar todas las variables.",
+                className="text-muted mb-3"
+            ),
+            _tabla_reporte_turno(df_turno)
+        ])
+
+        historial = dbc.Table(
+            [
+                html.Thead(
+                    html.Tr([
+                        html.Th("Fecha"),
+                        html.Th("Tipo"),
+                        html.Th("Usuario")
+                    ]),
+                    style={"backgroundColor": "#FEEBC8"}
+                ),
+                html.Tbody([
+                    html.Tr([
+                        html.Td(pd.Timestamp.now().strftime("%d-%m-%Y")),
+                       html.Td("Análisis de las Torres de Muestreo por Turno"),
+                        html.Td("usuario_actual")
+                    ]),
+                ])
+            ],
+            bordered=True,
+            hover=True
+        )
+
+        return html.Div(), tabla, historial
+
+    # ------------------------------------------------------------
     # REPORTES ANTIGUOS
     # ------------------------------------------------------------
     fecha_hasta = f_fin
@@ -425,8 +986,13 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
             if c in df.columns:
                 ycol = c
                 break
+
         if ycol is None:
-            return dbc.Alert("No se encuentra la columna 'Produccion_Catodos_Real' en la tabla.", color="danger"), no_update, no_update
+            return (
+                dbc.Alert("No se encuentra la columna 'Produccion_Catodos_Real' en la tabla.", color="danger"),
+                no_update,
+                no_update
+            )
 
         plot_df = df.sort_values("Fecha")
         fig = px.line(plot_df, x="Fecha", y=ycol, markers=True, title="Producción Diaria (Cátodos)")
@@ -437,6 +1003,7 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
 
     elif tipo == "balance":
         ycol = "Produccion_Catodos_Real" if "Produccion_Catodos_Real" in df.columns else None
+
         if ycol:
             df["Semana"] = pd.to_datetime(df["Fecha"]).dt.isocalendar().week
             agg = df.groupby("Semana", as_index=False)[ycol].mean()
@@ -444,11 +1011,13 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
             grafico = dcc.Graph(figure=fig)
         else:
             grafico = dbc.Alert("Balance: no se encontró columna Produccion_Catodos_Real.", color="warning")
+
         table_df = df.sort_values("Fecha", ascending=False).head(10)
         tabla = _style_table(table_df)
 
     else:
         ycol = "Produccion_Catodos_Real" if "Produccion_Catodos_Real" in df.columns else None
+
         if ycol:
             df["Mes"] = pd.to_datetime(df["Fecha"]).dt.to_period("M").astype(str)
             agg = df.groupby("Mes", as_index=False)[ycol].sum()
@@ -456,20 +1025,40 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
             grafico = dcc.Graph(figure=fig)
         else:
             grafico = dbc.Alert("Conciliación: no se encontró columna Produccion_Catodos_Real.", color="warning")
+
         table_df = df.sort_values("Fecha", ascending=False).head(10)
         tabla = _style_table(table_df)
 
+    nombres_tipo = {
+        "prod": "Producción Diaria",
+        "balance": "Balance Semanal",
+        "conciliacion": "Conciliación Mensual",
+    }
+
     historial = dbc.Table(
         [
-            html.Thead(html.Tr([html.Th("Fecha"), html.Th("Tipo"), html.Th("Usuario")]),
-                    style={"backgroundColor": "#FEEBC8"}),
+            html.Thead(
+                html.Tr([
+                    html.Th("Fecha"),
+                    html.Th("Tipo"),
+                    html.Th("Usuario")
+                ]),
+                style={"backgroundColor": "#FEEBC8"}
+            ),
             html.Tbody([
-                html.Tr([html.Td(pd.Timestamp.now().strftime("%d-%m-%Y")), html.Td({"prod":"Producción Diaria","balance":"Balance Semanal","conciliacion":"Conciliación Mensual"}[tipo]), html.Td("usuario_actual")]),
+                html.Tr([
+                    html.Td(pd.Timestamp.now().strftime("%d-%m-%Y")),
+                    html.Td(nombres_tipo.get(tipo, tipo)),
+                    html.Td("usuario_actual")
+                ]),
             ])
-        ], bordered=True, hover=True
+        ],
+        bordered=True,
+        hover=True
     )
 
     return grafico, tabla, historial
+
 
 @callback(
     Output("report-download-xlsx", "data"),
@@ -483,10 +1072,16 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
 def exportar_excel(n_clicks, tipo, f_ini, f_fin):
     if not f_ini or not f_fin:
         return no_update, "⚠️ Debe seleccionar rango de fechas."
+
     ini_d = pd.to_datetime(f_ini).date()
     fin_d = pd.to_datetime(f_fin).date()
+    # El SP usa fecha final exclusiva: Fecha >= inicio AND Fecha < fin
+    fin_sql_exclusivo = (pd.to_datetime(f_fin) + pd.Timedelta(days=1)).date()
 
     try:
+        # ------------------------------------------------------------
+        # REPORTE REPRESENTATIVIDAD TORRES
+        # ------------------------------------------------------------
         if tipo == "representatividad_torres":
             df = fetch_representatividad_torres_report(
                 start_date=ini_d,
@@ -507,28 +1102,91 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
             status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
             encoded = base64.b64encode(xbytes).decode("utf-8")
 
-            return dict(content=encoded, filename=filename, base64=True), status        
+            return dict(content=encoded, filename=filename, base64=True), status
+
+        # ------------------------------------------------------------
+        # REPORTE POR TURNO
+        # ------------------------------------------------------------
+        if tipo == "reporte_turno":
+            df = fetch_reporte_turno_cache(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo
+            )
+
+            if df.empty:
+                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+
+            output = io.BytesIO()
+            export_reporte_turno_estilo_leyes_finos(df, output)
+            output.seek(0)
+            xbytes = output.getvalue()
+
+            filename = (
+                f"Analisis_Torres_Muestreo_por_Turno_"
+                f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
+                f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
+            )
+
+            status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
+            encoded = base64.b64encode(xbytes).decode("utf-8")
+
+            return dict(content=encoded, filename=filename, base64=True), status
+
+        # ------------------------------------------------------------
+        # PRODUCCIÓN DIARIA / DATOS CONCILIADOS
+        # ------------------------------------------------------------
         if tipo == "prod":
-            # Producción Diaria: consulta exacta por rango de fechas y plantilla Datos conciliados (D16–AS)
             template_path = _find_plantilla_propuesta()
+
             if not os.path.isfile(template_path):
                 return no_update, f"❌ No se encuentra la plantilla en {_REPORT_EXPORT_DIR}"
-            df = fetch_datos_conciliados_report(start_date=ini_d, end_date=fin_d)
-            if df.empty:
-                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
-            xbytes = export_datos_conciliados_to_template(df, template_path)
-        else:
-            df = fetch_report_data(end_date=fin_d)
-            df = df[(pd.to_datetime(df["Fecha"]).dt.date >= ini_d) &
-                    (pd.to_datetime(df["Fecha"]).dt.date <= fin_d)].copy()
-            if df.empty:
-                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
-            xbytes = export_dataframe_with_template(df, TEMPLATE_XLSX_PATH)
 
-        filename = f"Reporte_{tipo}_{pd.to_datetime(f_ini).strftime('%Y%m%d')}_{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
+            df = fetch_datos_conciliados_report(
+                start_date=ini_d,
+                end_date=fin_d
+            )
+
+            if df.empty:
+                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+
+            xbytes = export_datos_conciliados_to_template(df, template_path)
+
+            filename = (
+                f"Reporte_prod_"
+                f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
+                f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
+            )
+
+            status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
+            encoded = base64.b64encode(xbytes).decode("utf-8")
+
+            return dict(content=encoded, filename=filename, base64=True), status
+
+        # ------------------------------------------------------------
+        # BALANCE / CONCILIACIÓN U OTROS REPORTES ANTIGUOS
+        # ------------------------------------------------------------
+        df = fetch_report_data(end_date=fin_d)
+
+        df = df[
+            (pd.to_datetime(df["Fecha"]).dt.date >= ini_d) &
+            (pd.to_datetime(df["Fecha"]).dt.date <= fin_d)
+        ].copy()
+
+        if df.empty:
+            return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+
+        xbytes = export_dataframe_with_template(df, TEMPLATE_XLSX_PATH)
+
+        filename = (
+            f"Reporte_{tipo}_"
+            f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
+            f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
+        )
+
         status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
-        # dcc.Download requiere contenido serializable: usar Base64 para binarios
         encoded = base64.b64encode(xbytes).decode("utf-8")
+
         return dict(content=encoded, filename=filename, base64=True), status
+
     except Exception as e:
         return no_update, f"❌ Error al exportar: {e}"
