@@ -15,7 +15,8 @@ from report_export.report_export import (
     fetch_representatividad_torres_report,
     fetch_reporte_turno_report,
     fetch_reporte_turno_cache,
-    export_reporte_turno_estilo_leyes_finos
+    fetch_generador_reporte_diario,
+    export_reporte_turno_estilo_leyes_finos,
 )
 from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
 
@@ -35,13 +36,65 @@ def _find_plantilla_propuesta():
         pass
     return os.path.join(_REPORT_EXPORT_DIR, "Propuesta_Identidad_Gráfica_DatosConcialiados VF.xlsx")
 
-def _style_table(df: pd.DataFrame) -> dbc.Table:
-    return dbc.Table.from_dataframe(
-        df,
-        striped=True,
-        bordered=True,
-        hover=True,
-        className="mt-3"
+def _style_table(df: pd.DataFrame) -> dash_table.DataTable:
+    df = df.copy()
+    columnas_numericas = [
+        col for col in df.columns
+        if pd.api.types.is_numeric_dtype(df[col])
+    ]
+
+    for col in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            df[col] = pd.to_datetime(df[col]).dt.strftime("%d-%m-%Y")
+
+    df = df.astype(object).where(pd.notna(df), None)
+
+    return dash_table.DataTable(
+        id="tabla-reporte-general",
+        columns=[
+            {
+                "name": col,
+                "id": col,
+                "type": "numeric" if col in columnas_numericas else "text",
+            }
+            for col in df.columns
+        ],
+        data=df.to_dict("records"),
+        page_size=20,
+        sort_action="native",
+        filter_action="none",
+        fixed_rows={"headers": True},
+        style_table={
+            "overflowX": "auto",
+            "overflowY": "auto",
+            "maxHeight": "650px",
+            "width": "100%",
+            "maxWidth": "100%",
+            "border": "1px solid #d0d0d0",
+        },
+        style_cell={
+            "textAlign": "center",
+            "fontFamily": "Arial",
+            "fontSize": "11px",
+            "padding": "5px",
+            "minWidth": "90px",
+            "width": "105px",
+            "maxWidth": "140px",
+            "whiteSpace": "normal",
+            "height": "auto",
+            "border": "1px solid #d9d9d9",
+        },
+        style_header={
+            "backgroundColor": "#9DC3E6",
+            "fontWeight": "bold",
+            "color": "#1f4e79",
+            "textAlign": "center",
+            "border": "1px solid #7f9db9",
+        },
+        style_data_conditional=[
+            {"if": {"row_index": "odd"}, "backgroundColor": "#f7f3ef"},
+            {"if": {"column_id": "Fecha"}, "backgroundColor": "#d9eaf7", "fontWeight": "bold"},
+        ],
     )
 def _tabla_representatividad_torres(df: pd.DataFrame):
     df = df.copy()
@@ -344,7 +397,21 @@ def _preparar_reporte_turno_df(df: pd.DataFrame) -> pd.DataFrame:
 
     if "Fecha" in df.columns:
         df["Fecha"] = pd.to_datetime(df["Fecha"]).dt.strftime("%d-%m-%Y")
-
+    if "Material" in df.columns:
+        df["Material"] = (
+            df["Material"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+            .replace({
+                "SULFUROS": "Sulfuro",
+                "SULFURO": "Sulfuro",
+                "OXIDOS": "Óxido",
+                "OXIDO": "Óxido",
+                "ÓXIDOS": "Óxido",
+                "ÓXIDO": "Óxido",
+            })
+        )
     columnas_ordenadas = [
         "Fecha",
         "Campania",
@@ -361,24 +428,24 @@ def _preparar_reporte_turno_df(df: pd.DataFrame) -> pd.DataFrame:
         "SRR",
 
         "CuT_Real",
-        "CuT_Plan_Mensual",
         "CuT_Plan_Semanal",
+        "CuT_Plan_Mensual",
 
         "CuS_Real",
-        "CuS_Plan_Mensual",
         "CuS_Plan_Semanal",
+        "CuS_Plan_Mensual",
 
         "Solubilidad_Real",
-        "Solubilidad_Plan_Mensual",
         "Solubilidad_Plan_Semanal",
+        "Solubilidad_Plan_Mensual",
 
         "CO3_Real",
-        "CO3_Plan_Mensual",
         "CO3_Plan_Semanal",
+        "CO3_Plan_Mensual",
 
         "CuFe_Real",
-        "CuFe_Plan_Mensual",
         "CuFe_Plan_Semanal",
+        "CuFe_Plan_Mensual",
 
         "FeT_Real",
         "FeS_Real",
@@ -388,18 +455,18 @@ def _preparar_reporte_turno_df(df: pd.DataFrame) -> pd.DataFrame:
         "Malla_Menos_1_2_Plan_Semanal",
 
         "Malla_Menos_100_Real",
-        "Malla_Menos_100_Plan_Mensual",
         "Malla_Menos_100_Plan_Semanal",
+        "Malla_Menos_100_Plan_Mensual",
 
         "CaolBeta_Real",
-        "CaolBeta_Plan_Mensual",
         "CaolBeta_Plan_Semanal",
+        "CaolBeta_Plan_Mensual",
 
         "Dosis_Acido_Ideal_TM",
         "Dosis_Acido_Programa_Semanal",
 
-        "Muestra_Quimica",
-        "Muestra_Fisica",
+        "Fuente_Info_Quimica",
+        "Fuente_Info_Fisica",
     ]
 
     columnas_ordenadas = [c for c in columnas_ordenadas if c in df.columns]
@@ -411,8 +478,8 @@ def _preparar_reporte_turno_df(df: pd.DataFrame) -> pd.DataFrame:
         "Campania",
         "Material",
         "Modulo",
-        "Muestra_Quimica",
-        "Muestra_Fisica",
+        "Fuente_Info_Quimica",
+        "Fuente_Info_Fisica",
         "Malla_Menos_1_2_Plan_Semanal",  # puede venir como "<75%"
     ]
 
@@ -421,6 +488,32 @@ def _preparar_reporte_turno_df(df: pd.DataFrame) -> pd.DataFrame:
 
     for col in columnas_numericas:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+    # Avance viene desde SQL/cache en escala 0-1.
+    # Para visualización se muestra en escala 0-100.
+    if "Avance" in df.columns:
+        df["Avance"] = pd.to_numeric(df["Avance"], errors="coerce") * 100
+
+    # STOCK, MINA y SRR ya vienen desde SQL/cache en escala 0-100.
+    # No multiplicar ni dividir.
+    for col in ["STOCK", "MINA", "SRR"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Solubilidad es razón CuS/CuT, no porcentaje.
+    # No multiplicar por 100.
+    for col in ["Solubilidad_Real", "Solubilidad_Plan_Semanal", "Solubilidad_Plan_Mensual"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Limpiar objetivo granulométrico.
+    if "Malla_Menos_1_2_Plan_Semanal" in df.columns:
+        df["Malla_Menos_1_2_Plan_Semanal"] = (
+            df["Malla_Menos_1_2_Plan_Semanal"]
+            .astype(str)
+            .str.replace("%", "", regex=False)
+            .replace({"nan": "", "None": "", "NULL": ""})
+        )
 
     cols_0_dec = [
         "Apilado_TMS_Real",
@@ -434,24 +527,24 @@ def _preparar_reporte_turno_df(df: pd.DataFrame) -> pd.DataFrame:
         "SRR",
 
         "CuT_Real",
-        "CuT_Plan_Mensual",
         "CuT_Plan_Semanal",
+        "CuT_Plan_Mensual",
 
         "CuS_Real",
-        "CuS_Plan_Mensual",
         "CuS_Plan_Semanal",
+        "CuS_Plan_Mensual",
 
         "Solubilidad_Real",
-        "Solubilidad_Plan_Mensual",
         "Solubilidad_Plan_Semanal",
+        "Solubilidad_Plan_Mensual",
 
         "CO3_Real",
-        "CO3_Plan_Mensual",
         "CO3_Plan_Semanal",
+        "CO3_Plan_Mensual",
 
         "CuFe_Real",
-        "CuFe_Plan_Mensual",
         "CuFe_Plan_Semanal",
+        "CuFe_Plan_Mensual",
 
         "FeT_Real",
         "FeS_Real",
@@ -459,12 +552,12 @@ def _preparar_reporte_turno_df(df: pd.DataFrame) -> pd.DataFrame:
 
         "Malla_Menos_1_2_Real",
         "Malla_Menos_100_Real",
-        "Malla_Menos_100_Plan_Mensual",
         "Malla_Menos_100_Plan_Semanal",
+        "Malla_Menos_100_Plan_Mensual",
 
         "CaolBeta_Real",
-        "CaolBeta_Plan_Mensual",
         "CaolBeta_Plan_Semanal",
+        "CaolBeta_Plan_Mensual",
 
         "Dosis_Acido_Ideal_TM",
         "Dosis_Acido_Programa_Semanal",
@@ -493,57 +586,57 @@ def _tabla_reporte_turno(df: pd.DataFrame):
     "Campania": ["", "Campaña"],
     "Material": ["", "Material"],
     "Modulo": ["", "Módulo"],
-    "Avance": ["", "Avance"],
+    "Avance": ["", "Avance (%)"],
     "Turno": ["", "Turno"],
 
     "Apilado_TMS_Real": ["Apilado TMS", "Real"],
     "Apilado_TMS_Plan_Mensual": ["Apilado TMS", "Plan"],
 
-    "STOCK": ["Distribución origen", "STOCK"],
-    "MINA": ["Distribución origen", "MINA"],
-    "SRR": ["Distribución origen", "SRR"],
+    "STOCK": ["Distribución origen", "Stock (%)"],
+    "MINA": ["Distribución origen", "Mina (%)"],
+    "SRR": ["Distribución origen", "SRR (%)"],
 
-    "CuT_Real": ["Análisis Químicos", "CuT Real"],
-    "CuT_Plan_Mensual": ["Análisis Químicos", "CuT Programa"],
-    "CuT_Plan_Semanal": ["Análisis Químicos", "CuT Plan"],
+    "CuT_Real": ["Análisis Químicos", "CuT Real (%)"],
+    "CuT_Plan_Semanal": ["Análisis Químicos", "CuT Programa (%)"],
+    "CuT_Plan_Mensual": ["Análisis Químicos", "CuT Plan (%)"],
 
-    "CuS_Real": ["Análisis Químicos", "CuS Real"],
-    "CuS_Plan_Mensual": ["Análisis Químicos", "CuS Programa"],
-    "CuS_Plan_Semanal": ["Análisis Químicos", "CuS Plan"],
+    "CuS_Real": ["Análisis Químicos", "CuS Real (%)"],
+    "CuS_Plan_Semanal": ["Análisis Químicos", "CuS Programa (%)"],
+    "CuS_Plan_Mensual": ["Análisis Químicos", "CuS Plan (%)"],
 
     "Solubilidad_Real": ["Análisis Químicos", "Solubilidad Real"],
-    "Solubilidad_Plan_Mensual": ["Análisis Químicos", "Solubilidad Programa"],
-    "Solubilidad_Plan_Semanal": ["Análisis Químicos", "Solubilidad Plan"],
+    "Solubilidad_Plan_Semanal": ["Análisis Químicos", "Solubilidad Programa"],
+    "Solubilidad_Plan_Mensual": ["Análisis Químicos", "Solubilidad Plan"],
 
-    "CO3_Real": ["Análisis Químicos", "CO3 Real"],
-    "CO3_Plan_Mensual": ["Análisis Químicos", "CO3 Programa"],
-    "CO3_Plan_Semanal": ["Análisis Químicos", "CO3 Plan"],
+    "CO3_Real": ["Análisis Químicos", "CO3 Real (%)"],
+    "CO3_Plan_Semanal": ["Análisis Químicos", "CO3 Programa (%)"],
+    "CO3_Plan_Mensual": ["Análisis Químicos", "CO3 Plan (%)"],
 
-    "CuFe_Real": ["Análisis Químicos", "CuFe Real"],
-    "CuFe_Plan_Mensual": ["Análisis Químicos", "CuFe Programa"],
-    "CuFe_Plan_Semanal": ["Análisis Químicos", "CuFe Plan"],
+    "CuFe_Real": ["Análisis Químicos", "CuFe Real (%)"],
+    "CuFe_Plan_Semanal": ["Análisis Químicos", "CuFe Programa (%)"],
+    "CuFe_Plan_Mensual": ["Análisis Químicos", "CuFe Plan (%)"],
 
-    "FeT_Real": ["Análisis Químicos", "FeT Real"],
-    "FeS_Real": ["Análisis Químicos", "FeS Real"],
+    "FeT_Real": ["Análisis Químicos", "FeT Real (%)"],
+    "FeS_Real": ["Análisis Químicos", "FeS Real (%)"],
 
-    "ConsH_Real": ["Análisis Químicos", "Consumo ácido kg/t"],
+    "ConsH_Real": ["Análisis Químicos", "Consumo de Ácido (kg/ton)"],
 
-    "Malla_Menos_1_2_Real": ["Granulometrías", "-1/2 Real"],
-    "Malla_Menos_1_2_Plan_Semanal": ["Granulometrías", "-1/2 Plan"],
+    "Malla_Menos_1_2_Real": ["Granulometrías", "-1/2 Real (%)"],
+    "Malla_Menos_1_2_Plan_Semanal": ["Granulometrías", "-1/2 Plan (%)"],
 
-    "Malla_Menos_100_Real": ["Granulometrías", "-100# Real"],
-    "Malla_Menos_100_Plan_Mensual": ["Granulometrías", "-100# Programa"],
-    "Malla_Menos_100_Plan_Semanal": ["Granulometrías", "-100# Plan"],
+    "Malla_Menos_100_Real": ["Granulometrías", "-100#Ty Real (%)"],
+    "Malla_Menos_100_Plan_Semanal": ["Granulometrías", "-100#Ty Programa (%)"],
+    "Malla_Menos_100_Plan_Mensual": ["Granulometrías", "-100#Ty Plan (%)"],
 
-    "CaolBeta_Real": ["NIR", "CaolBeta Real"],
-    "CaolBeta_Plan_Mensual": ["NIR", "CaolBeta Programa"],
-    "CaolBeta_Plan_Semanal": ["NIR", "CaolBeta Plan"],
+    "CaolBeta_Real": ["NIR", "CaolBeta Real (%)"],
+    "CaolBeta_Plan_Semanal": ["NIR", "CaolBeta Programa (%)"],
+    "CaolBeta_Plan_Mensual": ["NIR", "CaolBeta Plan (%)"],
 
-    "Dosis_Acido_Ideal_TM": ["Dosis de ácido", "Ideal TM"],
-    "Dosis_Acido_Programa_Semanal": ["Dosis de ácido", "Programa semanal"],
+    "Dosis_Acido_Ideal_TM": ["Dosis de ácido (kg/ton)", "Ideal TM"],
+    "Dosis_Acido_Programa_Semanal": ["Dosis de ácido (kg/ton)", "Programa"],
 
-    "Muestra_Quimica": ["Fuentes de información", "Muestra química"],
-    "Muestra_Fisica": ["Fuentes de información", "Muestra física"],
+    "Fuente_Info_Quimica": ["Fuentes de información", "Muestra química"],
+    "Fuente_Info_Fisica": ["Fuentes de información", "Muestra física"],
  }
 
     columnas_texto = [
@@ -552,8 +645,8 @@ def _tabla_reporte_turno(df: pd.DataFrame):
     "Campania",
     "Material",
     "Modulo",
-    "Muestra_Quimica",
-    "Muestra_Fisica",
+    "Fuente_Info_Quimica",
+    "Fuente_Info_Fisica",
     "Malla_Menos_1_2_Plan_Semanal",
  ]
     columnas_numericas = [c for c in df.columns if c not in columnas_texto]
@@ -605,6 +698,27 @@ def _tabla_reporte_turno(df: pd.DataFrame):
             {"if": {"row_index": "odd"}, "backgroundColor": "#f7f3ef"},
             {"if": {"column_id": "Fecha"}, "backgroundColor": "#d9eaf7", "fontWeight": "bold"},
             {"if": {"column_id": "Turno"}, "backgroundColor": "#f2f2f2", "fontWeight": "bold"},
+        ],
+        style_cell_conditional=[
+            {
+                "if": {"column_id": "ConsH_Real"},
+                "minWidth": "150px",
+                "width": "160px",
+                "maxWidth": "180px",
+            },
+            {
+                "if": {"column_id": "Dosis_Acido_Ideal_TM"},
+                "minWidth": "130px",
+                "width": "140px",
+                "maxWidth": "160px",
+            },
+            {
+                "if": {"column_id": "Dosis_Acido_Programa_Semanal"},
+                "minWidth": "130px",
+                "width": "140px",
+                "maxWidth": "160px",
+            },
+
         ],
     )
 
@@ -676,8 +790,8 @@ def _export_reporte_turno_formateado(df: pd.DataFrame) -> bytes:
         "Apilado_TMS_Real": "Real",
         "Apilado_TMS_Plan_Mensual": "Plan",
 
-        "STOCK": "STOCK",
-        "MINA": "MINA",
+        "STOCK": "Stock",
+        "MINA": "Mina",
         "SRR": "SRR",
 
         "CuT_Real": "Real",
@@ -718,8 +832,8 @@ def _export_reporte_turno_formateado(df: pd.DataFrame) -> bytes:
         "Dosis_Acido_Ideal_TM": "Ideal TM",
         "Dosis_Acido_Programa_Semanal": "Programa semanal",
 
-        "Muestra_Quimica": "Muestra química",
-        "Muestra_Fisica": "Muestra física",
+        "Fuente_Info_Quimica": "Muestra química",
+        "Fuente_Info_Fisica": "Muestra física",
     }
 
     for idx, col in enumerate(df.columns, start=1):
@@ -761,8 +875,8 @@ def _export_reporte_turno_formateado(df: pd.DataFrame) -> bytes:
     if col_pos("Dosis_Acido_Ideal_TM") and col_pos("Dosis_Acido_Programa_Semanal"):
         grupos.append(("Dosis de ácido", col_pos("Dosis_Acido_Ideal_TM"), col_pos("Dosis_Acido_Programa_Semanal")))
 
-    if col_pos("Muestra_Quimica") and col_pos("Muestra_Fisica"):
-        grupos.append(("Fuentes de información", col_pos("Muestra_Quimica"), col_pos("Muestra_Fisica")))
+    if col_pos("Fuente_Info_Quimica") and col_pos("Fuente_Info_Fisica"):
+        grupos.append(("Fuentes de información", col_pos("Fuente_Info_Quimica"), col_pos("Fuente_Info_Fisica")))
 
     for titulo, c_ini, c_fin in grupos:
         if c_ini is None or c_fin is None:
@@ -1057,7 +1171,7 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
         hover=True
     )
 
-    return grafico, tabla, historial
+    return None,tabla, historial #para devolver grafico cambiar "none" por "grafico".
 
 
 @callback(
@@ -1105,32 +1219,60 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
             return dict(content=encoded, filename=filename, base64=True), status
 
         # ------------------------------------------------------------
-        # REPORTE POR TURNO
+        # REPORTE POR TURNO + GENERADOR REPORTE
         # ------------------------------------------------------------
         if tipo == "reporte_turno":
-            df = fetch_reporte_turno_cache(
+            df_turno = fetch_reporte_turno_cache(
                 start_date=ini_d,
-                end_date=fin_sql_exclusivo
+                end_date=fin_sql_exclusivo,
             )
 
-            if df.empty:
-                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+            if df_turno.empty:
+                return (
+                    no_update,
+                    "ℹ️ Sin datos del Reporte por Turno para el rango seleccionado.",
+                )
+
+            # Segunda capa: una fila diaria consolidada.
+            # Se exporta en el mismo archivo y no reemplaza la hoja por turno.
+            df_generador = fetch_generador_reporte_diario(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo,
+            )
 
             output = io.BytesIO()
-            export_reporte_turno_estilo_leyes_finos(df, output)
+
+            export_reporte_turno_estilo_leyes_finos(
+                df=df_turno,
+                output=output,
+                df_generador=df_generador,
+            )
+
             output.seek(0)
             xbytes = output.getvalue()
 
             filename = (
-                f"Analisis_Torres_Muestreo_por_Turno_"
+                f"Analisis_Torres_de_Muestreo"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
             )
 
-            status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
+            status = (
+                f"✔️ Exportado: {filename} — "
+                f"Reporte por Turno: {len(df_turno)} registros — "
+                f"Generador Reporte: {len(df_generador)} registros"
+            )
+
             encoded = base64.b64encode(xbytes).decode("utf-8")
 
-            return dict(content=encoded, filename=filename, base64=True), status
+            return (
+                dict(
+                    content=encoded,
+                    filename=filename,
+                    base64=True,
+                ),
+                status,
+            )
 
         # ------------------------------------------------------------
         # PRODUCCIÓN DIARIA / DATOS CONCILIADOS
