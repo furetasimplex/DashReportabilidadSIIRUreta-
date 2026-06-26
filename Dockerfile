@@ -25,6 +25,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 🔹 Exponer el puerto que Render espera
 EXPOSE 10000
 
-# 🔹 Comando de ejecución
-# (Gunicorn con 2 workers, enlazado al puerto 10000, y cargando la app Flask principal)
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:10000", "main:app"]
+# 🔹 Comando de ejecución (puerto desde variable de entorno PORT)
+CMD ["sh", "-c", "gunicorn -w 2 -b 0.0.0.0:${PORT:-10000} wsgi:application"]

@@ -33,4 +33,7 @@ def protect_dash():
         return redirect("/auth/login_page")
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8065)
+    import os
+
+    port = int(os.getenv("PORT", "8065"))
+    app.run(debug=True, port=port)
