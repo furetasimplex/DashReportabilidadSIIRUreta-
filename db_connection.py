@@ -151,7 +151,7 @@ def get_engine():
         SQLSERVER_DB = os.getenv("SQLSERVER_DB")
         SQLSERVER_USER = os.getenv("SQLSERVER_USER")
         SQLSERVER_PASSWORD = quote_plus(os.getenv("SQLSERVER_PASSWORD", ""))
-        SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 17 for SQL Server")
+        SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 18 for SQL Server")
 
         # Ejemplo final:
         # mssql+pyodbc://sa:pass@149.50.136.234/inventar_SpcHidr
