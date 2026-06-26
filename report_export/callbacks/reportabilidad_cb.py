@@ -5,7 +5,7 @@ import os
 import io
 import pandas as pd
 import plotly.express as px
-from dash import Input, Output, State, callback, no_update, dcc, html, dash_table
+from dash import Input, Output, State, callback, clientside_callback, no_update, dcc, html, dash_table, ALL, ctx
 from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 
@@ -19,10 +19,86 @@ from report_export.report_export import (
     export_reporte_turno_estilo_leyes_finos,
 )
 from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
+from report_export.pdf_generator import (
+    generar_pdf_representatividad_torres,
+    generar_pdf_reporte_turno,
+    generar_pdf_datos_conciliados,
+)
 
 TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
-# Plantilla "Datos conciliados" para Producción Diaria (datos desde D16, columnas D–AS)
 _REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
+# ── Clientside callback: show "generating" bar immediately on any button click ──
+clientside_callback(
+    """
+    function(gen_clicks, export_clicks, pdf_clicks) {
+        const ctx = dash_clientside.callback_context;
+        if (!ctx || !ctx.triggered || ctx.triggered.length === 0) {
+            return '';
+        }
+        const t = ctx.triggered[0];
+        if (!t.value || t.value === 0) return '';
+
+        const isPdf = t.prop_id.toLowerCase().includes('pdf');
+        const isExport = t.prop_id.toLowerCase().includes('export');
+
+        let label = 'Generando reporte';
+        if (isPdf) label = 'Generando PDF';
+        else if (isExport) label = 'Generando Excel';
+
+        return {
+            props: {
+                children: [
+                    {
+                        type: 'span',
+                        props: {
+                            className: 'spinner-border spinner-border-sm me-2',
+                            role: 'status'
+                        }
+                    },
+                    label + ', por favor espere…'
+                ],
+                className: 'rp-progress-bar'
+            },
+            type: 'div',
+            namespace: 'dash_html_components'
+        };
+    }
+    """,
+    Output("report-progress", "children"),
+    Input({"type": "report-gen-btn", "tipo": ALL}, "n_clicks"),
+    Input({"type": "report-export-btn", "tipo": ALL}, "n_clicks"),
+    Input({"type": "report-pdf-btn", "tipo": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+
+
+@callback(
+    Output("report-fecha-inicio", "date"),
+    Output("report-fecha-warning", "children"),
+    Output("report-status", "children", allow_duplicate=True),
+    Input("report-fecha-inicio", "date"),
+    Input("report-fecha-final", "date"),
+    prevent_initial_call=True,
+)
+def validar_rango_fechas(fecha_ini, fecha_fin):
+    if not fecha_ini or not fecha_fin:
+        return no_update, no_update, html.Div()
+
+    ini = pd.to_datetime(fecha_ini)
+    fin = pd.to_datetime(fecha_fin)
+
+    if ini >= fin:
+        corregida = fin - pd.Timedelta(days=7)
+        warning = dbc.Alert(
+            "Fecha inicio ajustada a una semana antes de Fecha final.",
+            color="warning",
+            className="py-1 px-2 mb-0 small",
+            dismissable=True,
+        )
+        return corregida.strftime("%Y-%m-%d"), warning, html.Div()
+
+    return no_update, html.Div(), html.Div()
 
 
 def _find_plantilla_propuesta():
@@ -930,23 +1006,25 @@ def _export_reporte_turno_formateado(df: pd.DataFrame) -> bytes:
     Output("report-grafico", "children"),
     Output("report-tabla", "children"),
     Output("report-historial", "children"),
-    Input("report-btn-generar", "n_clicks"),
-    Input("report-tipo-reporte", "value"),
+    Input({"type": "report-gen-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
     prevent_initial_call=True
 )
-def generar_reporte(n_clicks, tipo, f_ini, f_fin):
-    print("DEBUG GENERAR REPORTE")
-    print("n_clicks:", n_clicks)
-    print("tipo:", tipo)
-    print("fecha inicio:", f_ini)
-    print("fecha fin:", f_fin)
+def generar_reporte(n_clicks_list, f_ini, f_fin):
+    triggered = ctx.triggered_id
+    if not triggered or not isinstance(triggered, dict):
+        return no_update, no_update, no_update
+    if not any(n for n in n_clicks_list if n):
+        return no_update, no_update, no_update
+
+    tipo = triggered["tipo"]
+
     if not f_ini or not f_fin:
         return (
-            no_update,
-            no_update,
-            dbc.Alert("⚠️ Debe seleccionar rango de fechas.", color="warning")
+            dbc.Alert("⚠️ Debe seleccionar rango de fechas.", color="warning"),
+            html.Div(),
+            html.Div(),
         )
 
     ini = pd.to_datetime(f_ini).date()
@@ -965,22 +1043,16 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
             )
         except Exception as e:
             return (
-                dbc.Alert(
-                    f"Error al consultar representatividad de torres: {e}",
-                    color="danger"
-                ),
-                no_update,
-                no_update
+                dbc.Alert(f"Error al consultar representatividad de torres: {e}", color="danger"),
+                html.Div(),
+                html.Div(),
             )
 
         if df_rep.empty:
             return (
-                dbc.Alert(
-                    "Sin datos de representatividad para el rango seleccionado.",
-                    color="info"
-                ),
-                no_update,
-                no_update
+                dbc.Alert("Sin datos de representatividad para el rango seleccionado.", color="info"),
+                html.Div(),
+                html.Div(),
             )
 
         titulo = html.Div([
@@ -1035,19 +1107,16 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
             print("Filas reporte turno:", len(df_turno))
         except Exception as e:
             return (
-                dbc.Alert(
-                    f"Error al consultar reporte por turno: {e}",
-                    color="danger"
-                ),
-                no_update,
-                no_update
+                dbc.Alert(f"Error al consultar reporte por turno: {e}", color="danger"),
+                html.Div(),
+                html.Div(),
             )
 
         if df_turno.empty:
             return (
                 dbc.Alert("Sin datos para el reporte por turno en el rango seleccionado.", color="info"),
-                no_update,
-                no_update
+                html.Div(),
+                html.Div(),
             )
 
         tabla = html.Div([
@@ -1092,7 +1161,11 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
     df = fetch_report_data(end_date=end_date)
 
     if df.empty:
-        return dbc.Alert("Sin datos en el rango seleccionado.", color="info"), no_update, no_update
+        return (
+            dbc.Alert("Sin datos en el rango seleccionado.", color="info"),
+            html.Div(),
+            html.Div(),
+        )
 
     if tipo == "prod":
         ycol = None
@@ -1104,8 +1177,8 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
         if ycol is None:
             return (
                 dbc.Alert("No se encuentra la columna 'Produccion_Catodos_Real' en la tabla.", color="danger"),
-                no_update,
-                no_update
+                html.Div(),
+                html.Div(),
             )
 
         plot_df = df.sort_values("Fecha")
@@ -1171,21 +1244,30 @@ def generar_reporte(n_clicks, tipo, f_ini, f_fin):
         hover=True
     )
 
-    return None,tabla, historial #para devolver grafico cambiar "none" por "grafico".
+    return html.Div(), tabla, historial
 
 
 @callback(
     Output("report-download-xlsx", "data"),
-    Output("report-status", "children"),
-    Input("report-btn-exportar", "n_clicks"),
-    State("report-tipo-reporte", "value"),
+    Output("report-status", "children", allow_duplicate=True),
+    Output("report-progress", "children", allow_duplicate=True),
+    Input({"type": "report-export-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
     prevent_initial_call=True
 )
-def exportar_excel(n_clicks, tipo, f_ini, f_fin):
+def exportar_excel(n_clicks_list, f_ini, f_fin):
+    triggered = ctx.triggered_id
+    if not triggered or not isinstance(triggered, dict):
+        return no_update, no_update, no_update
+    if not any(n for n in n_clicks_list if n):
+        return no_update, no_update, no_update
+
+    tipo = triggered["tipo"]
+    _done = html.Div()
+
     if not f_ini or not f_fin:
-        return no_update, "⚠️ Debe seleccionar rango de fechas."
+        return no_update, "⚠️ Debe seleccionar rango de fechas.", _done
 
     ini_d = pd.to_datetime(f_ini).date()
     fin_d = pd.to_datetime(f_fin).date()
@@ -1203,7 +1285,7 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
             )
 
             if df.empty:
-                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado.", _done
 
             xbytes = _export_representatividad_torres_to_excel(df)
 
@@ -1216,7 +1298,7 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
             status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
             encoded = base64.b64encode(xbytes).decode("utf-8")
 
-            return dict(content=encoded, filename=filename, base64=True), status
+            return dict(content=encoded, filename=filename, base64=True), status, _done
 
         # ------------------------------------------------------------
         # REPORTE POR TURNO + GENERADOR REPORTE
@@ -1231,10 +1313,9 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
                 return (
                     no_update,
                     "ℹ️ Sin datos del Reporte por Turno para el rango seleccionado.",
+                    _done,
                 )
 
-            # Segunda capa: una fila diaria consolidada.
-            # Se exporta en el mismo archivo y no reemplaza la hoja por turno.
             df_generador = fetch_generador_reporte_diario(
                 start_date=ini_d,
                 end_date=fin_sql_exclusivo,
@@ -1265,14 +1346,7 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
 
             encoded = base64.b64encode(xbytes).decode("utf-8")
 
-            return (
-                dict(
-                    content=encoded,
-                    filename=filename,
-                    base64=True,
-                ),
-                status,
-            )
+            return dict(content=encoded, filename=filename, base64=True), status, _done
 
         # ------------------------------------------------------------
         # PRODUCCIÓN DIARIA / DATOS CONCILIADOS
@@ -1281,7 +1355,7 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
             template_path = _find_plantilla_propuesta()
 
             if not os.path.isfile(template_path):
-                return no_update, f"❌ No se encuentra la plantilla en {_REPORT_EXPORT_DIR}"
+                return no_update, f"❌ No se encuentra la plantilla en {_REPORT_EXPORT_DIR}", _done
 
             df = fetch_datos_conciliados_report(
                 start_date=ini_d,
@@ -1289,7 +1363,7 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
             )
 
             if df.empty:
-                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado.", _done
 
             xbytes = export_datos_conciliados_to_template(df, template_path)
 
@@ -1302,7 +1376,7 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
             status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
             encoded = base64.b64encode(xbytes).decode("utf-8")
 
-            return dict(content=encoded, filename=filename, base64=True), status
+            return dict(content=encoded, filename=filename, base64=True), status, _done
 
         # ------------------------------------------------------------
         # BALANCE / CONCILIACIÓN U OTROS REPORTES ANTIGUOS
@@ -1315,7 +1389,7 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
         ].copy()
 
         if df.empty:
-            return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado."
+            return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado.", _done
 
         xbytes = export_dataframe_with_template(df, TEMPLATE_XLSX_PATH)
 
@@ -1328,7 +1402,117 @@ def exportar_excel(n_clicks, tipo, f_ini, f_fin):
         status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
         encoded = base64.b64encode(xbytes).decode("utf-8")
 
-        return dict(content=encoded, filename=filename, base64=True), status
+        return dict(content=encoded, filename=filename, base64=True), status, _done
 
     except Exception as e:
-        return no_update, f"❌ Error al exportar: {e}"
+        return no_update, f"❌ Error al exportar: {e}", html.Div()
+
+
+# Clear the progress bar once report-grafico updates (covers the generar_reporte callback)
+@callback(
+    Output("report-progress", "children", allow_duplicate=True),
+    Input("report-grafico", "children"),
+    prevent_initial_call=True,
+)
+def _clear_progress_on_viz(_):
+    return html.Div()
+
+
+@callback(
+    Output("report-download-pdf", "data"),
+    Output("report-status", "children", allow_duplicate=True),
+    Output("report-progress", "children", allow_duplicate=True),
+    Input({"type": "report-pdf-btn", "tipo": ALL}, "n_clicks"),
+    State("report-fecha-inicio", "date"),
+    State("report-fecha-final", "date"),
+    prevent_initial_call=True,
+)
+def generar_pdf(n_clicks_list, f_ini, f_fin):
+    triggered = ctx.triggered_id
+    if not triggered or not isinstance(triggered, dict):
+        return no_update, no_update, no_update
+    if not any(n for n in n_clicks_list if n):
+        return no_update, no_update, no_update
+
+    tipo = triggered["tipo"]
+    _done = html.Div()  # clears the progress bar
+
+    if not f_ini or not f_fin:
+        return no_update, "⚠️ Debe seleccionar rango de fechas.", _done
+
+    ini_d = pd.to_datetime(f_ini).date()
+    fin_d = pd.to_datetime(f_fin).date()
+    fin_sql_exclusivo = (pd.to_datetime(f_fin) + pd.Timedelta(days=1)).date()
+
+    try:
+        # ── REPRESENTATIVIDAD TORRES ──────────────────────────────────
+        if tipo == "representatividad_torres":
+            df = fetch_representatividad_torres_report(start_date=ini_d, end_date=fin_d)
+            if df.empty:
+                return no_update, "ℹ️ Sin datos para generar PDF.", _done
+
+            pdf_bytes = generar_pdf_representatividad_torres(df, f_ini, f_fin)
+            filename = (
+                f"Representatividad_Torres_"
+                f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
+                f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
+            )
+            encoded = base64.b64encode(pdf_bytes).decode("utf-8")
+            status = f"✔️ PDF generado: {filename} — {len(df)} registros"
+            return dict(content=encoded, filename=filename, base64=True), status, _done
+
+        # ── REPORTE POR TURNO ─────────────────────────────────────────
+        if tipo == "reporte_turno":
+            df = fetch_reporte_turno_cache(start_date=ini_d, end_date=fin_sql_exclusivo)
+            if df.empty:
+                return no_update, "ℹ️ Sin datos para generar PDF.", _done
+
+            pdf_bytes = generar_pdf_reporte_turno(df, f_ini, f_fin)
+            filename = (
+                f"Analisis_Torres_Turno_"
+                f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
+                f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
+            )
+            encoded = base64.b64encode(pdf_bytes).decode("utf-8")
+            status = f"✔️ PDF generado: {filename} — {len(df)} registros"
+            return dict(content=encoded, filename=filename, base64=True), status, _done
+
+        # ── PRODUCCIÓN DIARIA / DATOS CONCILIADOS ─────────────────────
+        if tipo == "prod":
+            df = fetch_datos_conciliados_report(start_date=ini_d, end_date=fin_d)
+            if df.empty:
+                return no_update, "ℹ️ Sin datos para generar PDF.", _done
+
+            pdf_bytes = generar_pdf_datos_conciliados(df, f_ini, f_fin)
+            filename = (
+                f"Produccion_Diaria_"
+                f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
+                f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
+            )
+            encoded = base64.b64encode(pdf_bytes).decode("utf-8")
+            status = f"✔️ PDF generado: {filename} — {len(df)} registros"
+            return dict(content=encoded, filename=filename, base64=True), status, _done
+
+        # ── OTHER REPORT TYPES (balance / conciliación) ───────────────
+        end_date = fin_d
+        df = fetch_report_data(end_date=end_date)
+        df = df[
+            (pd.to_datetime(df["Fecha"]).dt.date >= ini_d) &
+            (pd.to_datetime(df["Fecha"]).dt.date <= fin_d)
+        ].copy()
+
+        if df.empty:
+            return no_update, "ℹ️ Sin datos para generar PDF.", _done
+
+        pdf_bytes = generar_pdf_datos_conciliados(df, f_ini, f_fin)
+        filename = (
+            f"Reporte_{tipo}_"
+            f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
+            f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
+        )
+        encoded = base64.b64encode(pdf_bytes).decode("utf-8")
+        status = f"✔️ PDF generado: {filename} — {len(df)} registros"
+        return dict(content=encoded, filename=filename, base64=True), status, _done
+
+    except Exception as e:
+        return no_update, f"❌ Error al generar PDF: {e}", _done

@@ -3,35 +3,29 @@ import dash
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 import base64, os
-from dash import callback_context
-import flask
-from flask import app
+from datetime import datetime
 
-# === Importa tus tabs ===
-from tabs.tab1 import render_tab1, register_tab1_callbacks
-from tabs.tab2 import render_tab2, register_tab2_callbacks
-from tabs.tab3 import render_tab3, register_tab3_callbacks
-from tabs.tab4 import render_tab4, register_tab4_callbacks
-from tabs.tabReconHidro import tab_recon_container_hidro
-from tabs.tab_ripios import render_tab
-from tabs import sulfuro as tab_sulfuro
-from tabs import oxido as tab_oxido
-from tabs import tabreportabilidad
-from tabs.tabReconHidro import tabreportabilidad_hidro
-#from tabs.aguaApp.tab_agua import render_layout_agua
-#from tabs.aguaApp.callbacks_agua import register_appagua_callbacks
-from tabs import tab_recon_container, tab_import_container
 from tabs import tab_report
-
-from tabs.tabReconHidro.tab_recon_hidro import render_recon_hidro
-
-# en tu main (si centralizas imports)
 import report_export.callbacks.reportabilidad_cb
-# (opcional) si usarás también el export mensual
 import report_export.callbacks.report_cb
+
 # === Utilidades ===
 project_folder = os.path.dirname(os.path.realpath(__file__))
 assets_folder = os.path.join(project_folder, 'assets')
+
+_MONTHS_ES = {
+    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+}
+_DAYS_ES = {
+    0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves",
+    4: "Viernes", 5: "Sábado", 6: "Domingo"
+}
+
+def _fmt_date():
+    now = datetime.now()
+    return f"{_DAYS_ES[now.weekday()]}, {now.day} De {_MONTHS_ES[now.month]} De {now.year}"
 
 def local_img_to_html(path, img_name):
     image_filename = os.path.join(path, img_name)
@@ -39,309 +33,145 @@ def local_img_to_html(path, img_name):
         encoded = base64.b64encode(f.read()).decode("UTF-8")
     return f"data:image/png;base64,{encoded}"
 
-"""             
-dbc.Col(html.Img(src=local_img_to_html(assets_folder, 'logo.png'),
-            style={'height': '36px'}), width="auto"),
-"""
-#global_username = flask.session.get("username", "Invitado")  # Variable global para almacenar el usuario
-def render_header():
-    return dbc.Row(
-        [
-            dbc.Col(html.Img(src=local_img_to_html(assets_folder, 'spenceBhpLogo.png'),
-                             style={'height': '70px'}), width="auto"),
-            dbc.Col(html.Div("Sistema Estadístico Balance Metalúrgico",
-                             className="fs-3 fw-bold"), width="auto"),
-        ],
-        className="align-items-center g-4 py-2"
+
+def render_sidebar():
+    return html.Div(
+        className="siir-sidebar",
+        children=[
+            # Brand
+            html.Div([
+                html.I(className="bi bi-grid-3x3 siir-brand-icon"),
+                html.Div([
+                    html.Div("Sistema SIIR", className="siir-brand-title"),
+                    html.Div("Reconciliación y SAP", className="siir-brand-subtitle"),
+                ]),
+            ], className="siir-sidebar-brand"),
+
+            html.Hr(className="siir-divider"),
+
+            html.Div("ÁREAS DE TRABAJO", className="siir-section-label"),
+
+            dbc.Nav([
+                dbc.NavLink([
+                    html.I(className="bi bi-file-earmark-text me-2"),
+                    "Reportabilidad",
+                ], href="#", id="nav-reportabilidad", className="siir-nav-link"),
+            ], vertical=True, pills=False),
+        ]
     )
+
+
+def render_main_header():
+    return html.Div([
+        # Breadcrumb
+        html.Div([
+            html.Span("SIIR", className="siir-bc-item"),
+            html.Span(" / ", className="siir-bc-sep"),
+            html.Span("CONCENTRADORA", className="siir-bc-item"),
+            html.Span(" / ", className="siir-bc-sep"),
+            html.Span("REPORTES", className="siir-bc-active"),
+        ], className="siir-breadcrumb"),
+
+        # Title + date row
+        html.Div([
+            # Left: title + welcome
+            html.Div([
+                html.H1([
+                    html.Span("S", className="siir-accent"), "istema ",
+                    html.Span("I", className="siir-accent"), "ntegrado de ",
+                    html.Span("I", className="siir-accent"), "nformación y ",
+                    html.Span("R", className="siir-accent"), "econciliación",
+                ], className="siir-main-title"),
+                html.Div([
+                    html.Span("● ", className="siir-online-dot"),
+                    "Bienvenido de vuelta,  ",
+                    html.Span("", id="siir-username", className="fw-semibold"),
+                ], className="siir-welcome"),
+            ]),
+            # Right: date + logout
+            html.Div([
+                html.Div([
+                    html.Div("FECHA DEL SISTEMA", className="siir-date-label"),
+                    html.Div(_fmt_date(), className="siir-date-value"),
+                ], className="siir-date-block"),
+                dbc.DropdownMenu(
+                    label=html.I(className="bi bi-person-circle fs-5"),
+                    children=[
+                        dbc.DropdownMenuItem("Cerrar sesión", id="logout-link", n_clicks=0),
+                    ],
+                    nav=True,
+                    align_end=True,
+                    className="ms-3",
+                ),
+            ], className="d-flex align-items-center"),
+        ], className="siir-header-row"),
+
+        html.Hr(className="siir-header-divider"),
+        dcc.Location(id="page-url", refresh=True),
+    ], className="siir-page-header")
+
 
 def render_footer():
-    return dbc.Container(
-        dbc.Row(
-            [
-                # Logo a la izquierda
-                dbc.Col(
-                    html.Img(
-                        src=local_img_to_html(assets_folder, "logo.png"),
-                        style={"height": "60px", "objectFit": "contain"},
-                    ),
-                    width="auto",
-                ),
+    return html.Div([
+        html.Span("2025 Control Estadístico Hidrometalúrgico ", className="fw-semibold"),
+        html.Span("· Desarrollado por ", className="siir-footer-muted"),
+        html.Span("Simplex Ingeniería", className="siir-footer-brand"),
+    ], className="siir-footer")
 
-                # Texto centrado
-                dbc.Col(
-                    html.Div(
-                        [
-                            html.Span("2025 Control Estadístico Hidrometalúrgico ", className="fw-semibold"),
-                            html.Span("· Desarrollado por ", className="text-secondary"),
-                            html.Span("Simplex Ingeniería", className="text-primary fw-semibold"),
-                        ],
-                        className="text-center small",
-                    ),
-                    className="d-flex align-items-center justify-content-center",
-                ),
-
-                dbc.Col(
-                    html.Div(
-                        [
-                            html.A(
-                                html.I(className="bi bi-envelope-fill"),
-                                href="mailto:contacto@simplexingenieria.cl",
-                                className="text-primary mx-2",
-                            ),
-                        ],
-                        className="d-flex justify-content-center align-items-center",
-                    ),
-                    width="auto",
-                ),
-            ],
-            className="align-items-center justify-content-between py-2",
-        ),
-        fluid=True,
-        className="footer-container bg-white border-top shadow-sm mt-4 py-2 rounded-3",
-    )
 
 subtabs = html.Div(
     id="subtabs-container",
-    className="tab-anim",#ANIMACION DE TRANSICION
+    className="tab-anim",
     children=[
-        
-        # ============ MINA =============
-        html.Div(id="subtabs-mina", children=render_tab1()),
-
-        # ============ AREA SECA ============
-        html.Div(id="subtabs-seca", children=
-            dcc.Tabs(
-                id="subtabs-seca-tabs",
-                value="tab2",
-                children=[
-                    dcc.Tab(label="Conciliación Operacional", value="tab2", children=render_tab2()),
-                    dcc.Tab(label="Control Apilado", value="tab3", children=render_tab3()),
-                    dcc.Tab(label="Torres de Muestreo", value="tab4", children=render_tab4()),
-                ],
-            )
-        ),
-
-        # ============ AREA HUMEDA =============
-        html.Div(id="subtabs-humeda", children=
-            dcc.Tabs(
-                id="subtabs-humeda-tabs",
-                value="tab5",
-                children=[
-                    dcc.Tab(label="Recuperación", value="tab5",children=render_tab()),
-                    dcc.Tab(label="Control de Riego", value="tab8",disabled=True,
-                            children=html.Div("Control de riego no implementado aún.")),
-                    dcc.Tab(label="Producción Catódica", value="tab9",disabled=True,
-                            children=html.Div("Producción catódica no implementada aún.")),
-                ],
-            )
-        ),
-
-        # ============ ADMIN =============
-        html.Div(id="subtabs-admin", children=
-            dcc.Tabs(
-                id="subtabs-admin-tabs",
-                value="tab7",
-                children=[
-                    dcc.Tab(label="Importar data base", value="tab7", children=tab_import_container.layout),
-                    dcc.Tab(label="Reconciliador Area Seca", value="recon", children=tab_recon_container.layout),
-                    #dcc.Tab(label="Reconciliador Hidrometalúrgico", value="recon_hidro",disabled=True,
-                    #children=tab_recon_container_hidro.layout),
-                ],
-            )
-        ),
-
-        # ============ REPORTABILIDAD ============
         html.Div(id="subtabs-report", children=tab_report.layout()),
     ]
 )
 
 
-navbar = dbc.Navbar(
-    dbc.Container(
-        [
-            dbc.Nav(
-                [
-                    dbc.NavLink("📊 Resumen Estadístico Mina", href="#", id="nav-mina", className="text-primary fw-semibold mx-2"),
-                    dbc.NavLink("⚙️ Control Área Seca", href="#", id="nav-seca", className="text-primary fw-semibold mx-2"),
-                    dbc.NavLink("💧 Control Área Húmeda", href="#", id="nav-humeda", className="text-primary fw-semibold mx-2"),
-                    dbc.NavLink("📦 Administración y Reconciliación", href="#", id="nav-admin", className="text-primary fw-semibold mx-2"),
-                    dbc.NavLink("📝 Reportabilidad", href="#", id="nav-reportabilidad", className="text-primary fw-semibold mx-2"),
-                ],
-                pills=True,
-                justified=True,
-                className="rounded-3 p-1 bg-white",
-            ),
-            dbc.NavbarToggler(id="navbar-toggler"),
-            dbc.Collapse(
-                dbc.Nav(
-                    [
-                        dbc.DropdownMenu(
-                            label=html.Span(
-                                [
-                                    html.I(className="bi bi-person-circle me-2"),  # ícono Bootstrap
-                                    html.Span("Bienvenido"),
-                                ],
-                                className="align-items-center",
-                            ),
-                            children=[
-                                #dbc.DropdownMenuItem("Perfil", href="#"),
-                                #dbc.DropdownMenuItem(divider=True),
-                                dbc.DropdownMenuItem(
-                                "Cerrar sesión",
-                                id="logout-link",
-                                n_clicks=0,
-                                )
-                            ],
-                            nav=True,
-                            align_end=True,
-                            className="",
-                        ),
-                    ],
-                    className="ms-auto",  # alinea a la derecha
-                    navbar=True,
-                ),
-                id="navbar-collapse",
-                navbar=True,
-            ),
-            dcc.Location(id="page-url", refresh=True),
-        ],
-        fluid=True,
-    ),
-    color="",
-    dark=False,
-    class_name="border-0 shadow-sm rounded-3 mb-3 py-1 px-3",
-)
-
-
 def create_layout(app):
-    # Registrar callbacks previos (igual que antes)
-    register_tab1_callbacks(app)
-    register_tab2_callbacks(app)
-    register_tab3_callbacks(app)
-    register_tab4_callbacks(app)
-    tab_recon_container.register_callbacks(app)
-    tab_recon_container_hidro.register_callbacks(app)
-    tab_import_container.register_callbacks(app)
-    #register_appagua_callbacks(app)
-    tab_sulfuro.register_callbacks(app)
-    tab_oxido.register_callbacks(app)#
-    tabreportabilidad.register_callbacks_reporte(app)
-    tabreportabilidad_hidro.register_callbacks_reporte(app)
-    #tab_report.register_callbacks(app)
-
-    return dbc.Container(
-        [
-            render_header(),
-            navbar,
+    return html.Div([
+        render_sidebar(),
+        html.Div([
+            render_main_header(),
             subtabs,
-            html.Div(id="tab-content", className="mt-3"),
             render_footer(),
-
-        ],
-        fluid=True,
-        className="py-3",
-    )
+        ], className="siir-main"),
+    ], className="siir-wrapper")
 
 
 def register_callbacks(app):
     @app.callback(
-        Output("subtabs-mina", "style"),
-        Output("subtabs-seca", "style"),
-        Output("subtabs-humeda", "style"),
-        Output("subtabs-admin", "style"),
         Output("subtabs-report", "style"),
-
-        Input("nav-mina", "n_clicks"),
-        Input("nav-seca", "n_clicks"),
-        Input("nav-humeda", "n_clicks"),
-        Input("nav-admin", "n_clicks"),
         Input("nav-reportabilidad", "n_clicks"),
         prevent_initial_call=False,
     )
-    def toggle_subtabs(mina, seca, humeda, admin, rep):
-        ctx = dash.callback_context
+    def toggle_subtabs(rep):
+        return {"display": "block"}
 
-        visible = {"display": "block"}
-        hidden = {"display": "none"}
+    @app.callback(
+        Output("siir-username", "children"),
+        Input("page-url", "pathname"),
+    )
+    def update_username(pathname):
+        try:
+            import flask as _flask
+            return _flask.session.get("username", "Invitado")
+        except Exception:
+            return "Invitado"
 
-        # Caso inicial sin interacción
-        if not ctx.triggered:
-            return visible, hidden, hidden, hidden, hidden
-
-        clicked = ctx.triggered[0]["prop_id"].split(".")[0]
-
-        return (
-            visible if clicked == "nav-mina" else hidden,
-            visible if clicked == "nav-seca" else hidden,
-            visible if clicked == "nav-humeda" else hidden,
-            visible if clicked == "nav-admin" else hidden,
-            visible if clicked == "nav-reportabilidad" else hidden,
-        )
-
-    # === Cerrar sesión ===
     clientside_callback(
         """
         function(n) {
             if (n) {
-                // Llamar al endpoint Flask para cerrar sesión
                 fetch('/auth/logout', {method: 'GET'})
                 .then(() => {
-                    // Luego recargar completamente la página
                     window.location.href = '/auth/login_page';
                 });
             }
             return '';
         }
         """,
-        Output("logout-link", "children"),  # salida dummy, no importa
+        Output("logout-link", "children"),
         Input("logout-link", "n_clicks"),
         prevent_initial_call=True
-)
-    
-    """ 
-    ANTIGUO CALLBACK DINAMICO DE SUBTABS
-    @app.callback(
-        Output("tab-content", "children"),
-
-        # Inputs de todos los grupos de subtabs
-        Input("subtabs-seca-tabs", "value"),
-        Input("subtabs-humeda-tabs", "value"),
-        Input("subtabs-admin-tabs", "value"),
-
-        prevent_initial_call=False,
     )
-    def render_subtab_content(tab2, tab_hum, tab_admin):
-        ctx = dash.callback_context
-        if not ctx.triggered:
-            return render_tab2()  # inicial
-
-        active = ctx.triggered[0]["prop_id"].split(".")[0]
-
-        # === Area Seca ===
-        if active == "subtabs-seca-tabs":
-            if tab2 == "tab2":
-                return render_tab2()
-            elif tab2 == "tab3":
-               return render_tab3()
-            elif tab2 == "tab4":
-               return render_tab4()
-
-        # === Área Húmeda ===
-        if active == "subtabs-humeda-tabs":
-            if tab_hum == "tab5":
-                return render_tab()
-            elif tab_hum == "tab8":
-                return html.Div("Control de riego no implementado aún.")
-            elif tab_hum == "tab9":
-                return html.Div("Producción catódica no implementada aún.")
-
-        # === Admin ===
-        if active == "subtabs-admin-tabs":
-            if tab_admin == "tab7":
-                return tab_import_container.layout
-            elif tab_admin == "recon":
-                return tab_recon_container.layout
-
-        return html.Div("Seleccione una pestaña.")
- """

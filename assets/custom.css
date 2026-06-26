@@ -1,33 +1,169 @@
-/* Ajustes finos para AgGrid y Upload */
+/* AgGrid font size */
 .ag-theme-balham { --ag-font-size: 12px; }
-#btn-recon-msg, #btn-pub-msg_caso { white-space: pre-line; }
 
-/* dcc.Upload ocupa el ancho del botón hijo */
+/* ================================================================
+   REPORT CARDS
+   ================================================================ */
+.rp-card {
+  border: 1px solid var(--siir-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  background: var(--siir-white);
+  transition: box-shadow 0.18s;
+}
+
+.rp-card:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}
+
+.rp-card-icon-wrap {
+  background: var(--siir-orange-light);
+  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rp-card-icon {
+  font-size: 1.3rem;
+  color: var(--siir-orange);
+}
+
+.rp-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--siir-dark);
+}
+
+.rp-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.rp-card-desc {
+  font-size: 0.8rem;
+  color: var(--siir-muted);
+  line-height: 1.5;
+  min-height: 2.8rem;
+  margin-bottom: 16px;
+}
+
+.rp-btn-gen {
+  background-color: var(--siir-orange) !important;
+  border-color: var(--siir-orange) !important;
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 0.82rem;
+  border-radius: 6px;
+}
+
+.rp-btn-gen:hover {
+  background-color: var(--siir-orange-hover) !important;
+  border-color: var(--siir-orange-hover) !important;
+}
+
+.rp-btn-export {
+  border: 1.5px solid #198754 !important;
+  color: #198754 !important;
+  background: transparent !important;
+  font-weight: 600;
+  font-size: 0.82rem;
+  border-radius: 6px;
+}
+
+.rp-btn-export:hover {
+  background: #198754 !important;
+  color: #fff !important;
+}
+
+.rp-btn-pdf {
+  border: 1.5px solid #b91c1c !important;
+  color: #b91c1c !important;
+  background: transparent !important;
+  font-weight: 600;
+  font-size: 0.82rem;
+  border-radius: 6px;
+}
+
+.rp-btn-pdf:hover {
+  background: #b91c1c !important;
+  color: #fff !important;
+}
+
+/* ── generating progress bar ── */
+.rp-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff8f0;
+  border: 1px solid var(--siir-orange);
+  border-left: 4px solid var(--siir-orange);
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--siir-orange);
+}
+
+.rp-progress-bar .spinner-border {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-width: 0.15em;
+}
+
+/* ================================================================
+   REPORT SUBTABS
+   ================================================================ */
+.rp-tabs .tab-content { padding-top: 0; }
+
+.rp-tab {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--siir-muted) !important;
+  padding: 8px 20px !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  background: transparent !important;
+}
+
+.rp-tab--selected {
+  color: var(--siir-orange) !important;
+  border-bottom: 2px solid var(--siir-orange) !important;
+  background: transparent !important;
+}
+
+/* dcc.Upload fills button width */
 .dccUpload { width: 100%; }
 
-/* Tabs: más “almohada” */
-.react-tabs__tab { padding: 0.6rem 1rem !important; }
-.react-tabs__tab--selected { font-weight: 600; }
+/* Preserve pre-line messages */
+#btn-recon-msg,
+#btn-pub-msg_caso { white-space: pre-line; }
 
+/* ================================================================
+   TAB ENTER ANIMATION
+   ================================================================ */
 .tab-anim > div[style*="display: none"] {
-    opacity: 0 !important;
-    transform: translateY(20px) !important;
-    filter: blur(4px) !important;
+  opacity: 0 !important;
+  transform: translateY(20px) !important;
+  filter: blur(4px) !important;
 }
 
 .tab-anim > div[style*="display: block"] {
-    animation: tabEnter 0.45s ease-out forwards;
+  animation: tabEnter 0.4s ease-out forwards;
 }
 
 @keyframes tabEnter {
-    0% {
-        opacity: 0;
-        transform: translateY(20px);
-        filter: blur(4px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-        filter: blur(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }

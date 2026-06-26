@@ -1,244 +1,374 @@
-/* ======================================================
-   🎨 DASHBOARD HIDRO THEME — Versión Refinada
-   Paleta Pantone Naranja + Ajuste de contraste y Tabs
-   ====================================================== */
+/* ================================================================
+   SIIR DASHBOARD — Design System
+   Palette: orange #E86D1F · white sidebar · light gray body
+   Font: Inter → Segoe UI fallback
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* === Paleta base (naranjos suavizados) === */
-  --color-orange-1: #ED6A1C; /* Primary - menos saturado */
-  --color-orange-2: #F88C46; /* Hover / Accent */
-  --color-orange-3: #FBC35A; /* Secondary - cálido */
-  --color-orange-4: #FCE2AD; /* Fondo claro */
+  --siir-orange:        #E86D1F;
+  --siir-orange-hover:  #D05C10;
+  --siir-orange-light:  #FFF0E6;
+  --siir-dark:          #1A1A2E;
+  --siir-text:          #2D2D2D;
+  --siir-muted:         #8A8A9A;
+  --siir-border:        #E5E7EB;
+  --siir-bg:            #F5F6FA;
+  --siir-white:         #FFFFFF;
+  --siir-green:         #22C55E;
+  --siir-sidebar-w:     230px;
+  --siir-radius:        8px;
+  --siir-radius-card:   10px;
+  --siir-transition:    0.18s ease;
 
-  /* === Bootstrap overrides === */
-  --bs-primary: var(--color-orange-1);
-  --bs-secondary: var(--color-orange-3);
-  --bs-success: #2ECC71;
-  --bs-danger: #E74C3C;
-  --bs-warning: var(--color-orange-4);
-  --bs-info: #3498DB;
-  --bs-light: #FAFAFA;
-  --bs-dark: #2E2E2E;
-
-  /* === Fondo general y texto === */
-  --bs-body-bg: #FFF8F2;
-  --bs-body-color: #3B3B3B; /* texto más suave que negro absoluto */
-  --color-border: #E5E5E5;
-  --color-muted: #A6A6A6;
-
-  /* === Extras === */
-  --radius-base: 8px;
-  --radius-card: 12px;
-  --transition-fast: 0.2s ease-in-out;
+  /* Bootstrap overrides */
+  --bs-primary:         var(--siir-orange);
+  --bs-body-bg:         var(--siir-bg);
+  --bs-body-color:      var(--siir-text);
+  --bs-border-color:    var(--siir-border);
+  --bs-success:         #22C55E;
+  --bs-danger:          #EF4444;
+  --bs-warning:         #F59E0B;
+  --bs-info:            #3B82F6;
 }
 
-/* ==============================
-   🌐 BODY & TEXTO
-   ============================== */
+/* ================================================================
+   GLOBAL
+   ================================================================ */
+* { box-sizing: border-box; }
+
 body {
-  background-color: var(--bs-body-bg);
-  color: var(--bs-body-color);
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 15px;
-  letter-spacing: 0.2px;
+  background-color: var(--siir-bg);
+  color: var(--siir-text);
+  font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  margin: 0;
+  padding: 0;
+  letter-spacing: 0.1px;
 }
 
-/* ==============================
-   🔘 BOTONES
-   ============================== */
+a { color: var(--siir-orange); text-decoration: none; }
+a:hover { color: var(--siir-orange-hover); text-decoration: none; }
+
+/* ================================================================
+   WRAPPER — flex row: sidebar + main
+   ================================================================ */
+.siir-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ================================================================
+   SIDEBAR
+   ================================================================ */
+.siir-sidebar {
+  width: var(--siir-sidebar-w);
+  min-height: 100vh;
+  background: var(--siir-white);
+  border-right: 1px solid var(--siir-border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.siir-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 16px 16px;
+}
+
+.siir-brand-icon {
+  font-size: 1.5rem;
+  color: var(--siir-orange);
+  flex-shrink: 0;
+}
+
+.siir-brand-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--siir-orange);
+  line-height: 1.3;
+}
+
+.siir-brand-subtitle {
+  font-size: 0.68rem;
+  color: var(--siir-muted);
+  line-height: 1.3;
+}
+
+.siir-divider {
+  border: none;
+  border-top: 1px solid var(--siir-border);
+  margin: 0 0 12px;
+}
+
+.siir-section-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--siir-muted);
+  text-transform: uppercase;
+  padding: 0 16px 8px;
+}
+
+/* Nav links inside sidebar */
+.siir-nav-link {
+  display: flex !important;
+  align-items: center;
+  padding: 9px 16px !important;
+  font-size: 0.84rem !important;
+  font-weight: 500 !important;
+  color: var(--siir-text) !important;
+  border-radius: 0 !important;
+  border-left: 3px solid transparent;
+  transition: all var(--siir-transition);
+  white-space: nowrap;
+}
+
+.siir-nav-link:hover {
+  background: var(--siir-orange-light) !important;
+  color: var(--siir-orange) !important;
+  border-left-color: var(--siir-orange);
+}
+
+.siir-nav-link.active,
+.siir-nav-link.active:focus {
+  background: var(--siir-orange-light) !important;
+  color: var(--siir-orange) !important;
+  border-left: 3px solid var(--siir-orange) !important;
+  font-weight: 600 !important;
+}
+
+/* ================================================================
+   MAIN CONTENT AREA
+   ================================================================ */
+.siir-main {
+  flex: 1;
+  padding: 24px 32px;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+/* ================================================================
+   PAGE HEADER (breadcrumb + title + date)
+   ================================================================ */
+.siir-page-header {
+  margin-bottom: 8px;
+}
+
+.siir-breadcrumb {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.siir-bc-item  { color: var(--siir-muted); }
+.siir-bc-sep   { color: var(--siir-muted); margin: 0 2px; }
+.siir-bc-active { color: var(--siir-orange); }
+
+.siir-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.siir-main-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--siir-dark);
+  margin: 0 0 5px;
+  line-height: 1.3;
+}
+
+.siir-accent { color: var(--siir-orange); }
+
+.siir-welcome {
+  font-size: 0.82rem;
+  color: var(--siir-muted);
+}
+
+.siir-online-dot {
+  color: var(--siir-green);
+  font-size: 0.55rem;
+  vertical-align: middle;
+}
+
+/* Date block — right-aligned, orange border on right */
+.siir-date-block {
+  text-align: right;
+  border-right: 3px solid var(--siir-orange);
+  padding-right: 12px;
+}
+
+.siir-date-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--siir-muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.siir-date-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--siir-dark);
+}
+
+.siir-header-divider {
+  border: none;
+  border-top: 1px solid var(--siir-border);
+  margin: 14px 0 20px;
+}
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+.siir-footer {
+  margin-top: 48px;
+  padding: 16px 0;
+  border-top: 1px solid var(--siir-border);
+  font-size: 0.8rem;
+  color: var(--siir-muted);
+  text-align: center;
+}
+
+.siir-footer-muted  { color: var(--siir-muted); }
+.siir-footer-brand  { color: var(--siir-orange); font-weight: 600; }
+
+/* ================================================================
+   CARDS
+   ================================================================ */
+.card {
+  border: 1px solid var(--siir-border);
+  border-radius: var(--siir-radius-card);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  background: var(--siir-white);
+}
+
+.card-header {
+  background: var(--siir-white);
+  border-bottom: 1px solid var(--siir-border);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--siir-dark);
+  border-radius: var(--siir-radius-card) var(--siir-radius-card) 0 0 !important;
+  padding: 12px 16px;
+}
+
+/* ================================================================
+   BUTTONS
+   ================================================================ */
 .btn {
   font-weight: 500;
-  border-radius: var(--radius-base);
-  transition: all var(--transition-fast);
+  border-radius: var(--siir-radius);
+  font-size: 0.84rem;
+  transition: all var(--siir-transition);
 }
 
 .btn-primary {
-  background-color: var(--bs-primary);
-  border-color: var(--bs-primary);
+  background: var(--siir-orange);
+  border-color: var(--siir-orange);
   color: #fff;
 }
-.btn-primary:hover {
-  background-color: var(--color-orange-2);
-  border-color: var(--color-orange-2);
-}
-
-.btn-secondary {
-  background-color: var(--bs-secondary);
-  border-color: var(--bs-secondary);
-  color: #2E2E2E;
-}
-.btn-secondary:hover {
-  background-color: var(--color-orange-2);
+.btn-primary:hover,
+.btn-primary:focus {
+  background: var(--siir-orange-hover);
+  border-color: var(--siir-orange-hover);
   color: #fff;
 }
 
-/* ==============================
-   ⚠️ ALERTS
-   ============================== */
+.btn-outline-primary {
+  border-color: var(--siir-orange);
+  color: var(--siir-orange);
+}
+.btn-outline-primary:hover {
+  background: var(--siir-orange);
+  color: #fff;
+}
+
+/* ================================================================
+   ALERTS
+   ================================================================ */
 .alert {
-  border-radius: var(--radius-base);
-  font-weight: 500;
+  border-radius: var(--siir-radius);
   border: none;
-  padding: 0.9em 1.2em;
+  font-size: 0.84rem;
+  padding: 10px 14px;
 }
 .alert-primary {
-  background-color: rgba(237, 106, 28, 0.12);
-  color: #A94418;
-  border-left: 4px solid var(--bs-primary);
-}
-.alert-secondary {
-  background-color: rgba(251, 195, 90, 0.15);
-  color: #7C5E1F;
-  border-left: 4px solid var(--bs-secondary);
+  background: var(--siir-orange-light);
+  color: #8B3A0E;
+  border-left: 4px solid var(--siir-orange);
 }
 
-/* ==============================
-   🧱 CARDS
-   ============================== */
-.card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  background-color: #fff;
-}
-.card-header {
-  background-color: var(--color-orange-4);
-  font-weight: 600;
-  color: #403020;
-  border-top-left-radius: var(--radius-card);
-  border-top-right-radius: var(--radius-card);
-}
-
-/* ==============================
-   🧭 NAVBAR
-   ============================== */
-.navbar {
-  background-color: var(--bs-primary);
-}
-.navbar a {
-  color: #fff !important;
-}
-.navbar a:hover {
-  color: var(--color-orange-4) !important;
-}
-
-/* ==============================
-   🏷️ TEXT & LINKS
-   ============================== */
-.text-primary { color: var(--bs-primary) !important; }
-.text-secondary { color: var(--bs-secondary) !important; }
-.text-muted { color: var(--color-muted) !important; }
-
-a {
-  color: var(--bs-primary);
-  text-decoration: none;
-}
-a:hover {
-  color: var(--color-orange-2);
-  text-decoration: underline;
-}
-
-/* ==============================
-   🧩 TABS (dbc.Tabs / dbc.Tab)
-   ============================== */
+/* ================================================================
+   TABS (dcc.Tabs / dbc.Tabs)
+   ================================================================ */
 .nav-tabs {
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 2px solid var(--siir-border);
 }
 
 .nav-tabs .nav-link {
+  color: var(--siir-muted);
+  font-weight: 600;
+  font-size: 0.82rem;
   border: none;
-  color: var(--color-muted);
-  font-weight: 700;
-  padding: 0.6em 1em;
-  border-radius: var(--radius-base) var(--radius-base) 0 0;
-  transition: all var(--transition-fast);
+  border-radius: var(--siir-radius) var(--siir-radius) 0 0;
+  padding: 7px 14px;
+  transition: all var(--siir-transition);
 }
 
 .nav-tabs .nav-link:hover {
-  color: var(--bs-primary);
-  background-color: rgba(237, 106, 28, 0.08);
+  color: var(--siir-orange);
+  background: var(--siir-orange-light);
 }
 
 .nav-tabs .nav-link.active {
-  color: #fff;
-  background-color: var(--bs-primary);
-  border: 2px solid var(--bs-primary);
-  border-bottom: 2px solid var(--bs-primary);
-  border-radius: var(--radius-base) var(--radius-base) 0 0;
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+  color: var(--siir-orange);
+  background: var(--siir-white);
+  border-bottom: 2px solid var(--siir-orange);
+  font-weight: 700;
 }
 
-/* ==============================
-   🌈 BADGES
-   ============================== */
+/* ================================================================
+   TEXT UTILITIES
+   ================================================================ */
+.text-primary   { color: var(--siir-orange) !important; }
+.text-muted     { color: var(--siir-muted) !important; }
+
+/* ================================================================
+   BADGES
+   ================================================================ */
 .badge {
   font-weight: 600;
-  border-radius: 6px;
-  padding: 0.35em 0.6em;
-}
-.badge-primary { background-color: var(--bs-primary); color: #fff; }
-.badge-secondary { background-color: var(--bs-secondary); color: #2E2E2E; }
-
-/* ==============================
-   🧠 UTILIDADES
-   ============================== */
-.shadow-sm { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); }
-.rounded-base { border-radius: var(--radius-base); }
-.rounded-card { border-radius: var(--radius-card); }
-
-
-/* ==============================
-   ✨ NAVBAR CLARO (COHERENTE CON APP)
-   ============================== */
-.navbar {
-  background-color: var(--bs-light) !important;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  border-radius: 5px;
+  font-size: 0.72rem;
 }
 
-.navbar .nav-link {
-  color: var(--bs-primary) !important;
-  font-weight: 600;
-  font-size: 0.95rem;
-  border-radius: var(--radius-base);
-  transition: all var(--transition-fast);
+/* ================================================================
+   DROPDOWN MENUS
+   ================================================================ */
+.dropdown-item:active,
+.dropdown-item.active {
+  background-color: var(--siir-orange);
+  color: #fff;
 }
 
-.navbar .nav-link:hover {
-  background-color: rgba(237, 106, 28, 0.1);
-  color: var(--bs-primary) !important;
-}
-
-.navbar .nav-link.active {
-  background-color: var(--bs-primary) !important;
-  color: white !important;
-  box-shadow: 0 0 6px rgba(0,0,0,0.1);
-}
-
-
-/* ==============================
-   FOOTER
-   ============================== */
-.footer-container {
-  background-color: var(--bs-light);
-  border-top: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.03);
-  font-size: 0.9rem;
-  color: var(--bs-body-color);
-}
-
-.footer-container a {
-  color: var(--bs-primary);
-  transition: all var(--transition-fast);
-}
-
-.footer-container a:hover {
-  color: var(--color-orange-2);
-  text-decoration: none;
-}
-
-.footer-container img {
-  filter: brightness(0.95);
-}
+/* ================================================================
+   SCROLLBAR (webkit)
+   ================================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--siir-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--siir-muted); }
