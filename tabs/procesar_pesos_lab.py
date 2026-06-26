@@ -352,6 +352,13 @@ def procesar_bitacora_completa(decoded, filename, fecha_manual=None):
             )
 
         return None
+    # Última hora explícita válida encontrada para cada turno.
+    # Cuando no aparece una hora nueva, se conserva la última
+    # hora informada para ese mismo turno.
+    ultima_hora_valida = {
+        "A": None,
+        "B": None
+    }
 
     # ------------------------------------------------------------------
     # 3) Procesar cada bloque fecha -> siguiente fecha
@@ -363,26 +370,55 @@ def procesar_bitacora_completa(decoded, filename, fecha_manual=None):
             row_fin = len(df)
 
         for turno, col_novedad in config_turnos.items():
-            textos = textos_columna_bloque(row_ini, row_fin, col_novedad)
+            textos = textos_columna_bloque(
+                row_ini,
+                row_fin,
+                col_novedad
+            )
 
             # Hora real si existe "TOMA DE MUESTRA A LAS..."
             hora_muestra = buscar_hora_muestra(textos)
 
             if hora_muestra is not None:
+                # La hora explícita del archivo siempre tiene prioridad.
                 ts_toma_muestra = construir_ts_por_turno(
                     fecha_base=fecha_calendario,
                     turno=turno,
                     hora=hora_muestra
                 )
-            else:
-                # Si no hay hora explícita, no dejamos perder el día:
-                # usamos horario estándar del turno.
-                ts_toma_muestra = ts_estandar(fecha_calendario, turno)
 
-            comentarios_torre, comentarios_generales = separar_comentarios(textos)
+                ultima_hora_valida[turno] = hora_muestra
+
+                origen_hora = "EXPLICITA"
+                prioridad_hora = 2
+
+            elif ultima_hora_valida[turno] is not None:
+                # Si no existe una nueva hora, conservar la última válida.
+                hora_arrastrada = ultima_hora_valida[turno]
+
+                ts_toma_muestra = construir_ts_por_turno(
+                    fecha_base=fecha_calendario,
+                    turno=turno,
+                    hora=hora_arrastrada
+                )
+
+                origen_hora = "ARRASTRADA"
+                prioridad_hora = 1
+
+            else:
+                # Solo puede ocurrir antes de encontrar la primera hora
+                # válida del mes para ese turno.
+                ts_toma_muestra = None
+
+                origen_hora = "SIN_HORA"
+                prioridad_hora = 0
+
+            comentarios_torre, comentarios_generales = (
+                separar_comentarios(textos)
+            )
 
             # Siempre generamos T1, T2 y T3 para conservar el día,
-            # incluso si el bloque no trae comentario específico para una torre.
+            # incluso si el bloque no trae comentario específico.
             for torre in [1, 2, 3]:
                 comentario = comentario_final_para_torre(
                     comentarios_torre=comentarios_torre,
@@ -397,7 +433,12 @@ def procesar_bitacora_completa(decoded, filename, fecha_manual=None):
                     "turno": turno,
                     "ts_toma_muestra": ts_toma_muestra,
                     "comentario": comentario,
-                    "nombre_archivo": filename
+                    "nombre_archivo": filename,
+
+                    # Campos internos para resolver fechas repetidas
+                    "origen_hora": origen_hora,
+                    "_prioridad_hora": prioridad_hora,
+                    "_orden_bloque": row_ini
                 })
 
     if not registros:
@@ -431,22 +472,67 @@ def procesar_bitacora_completa(decoded, filename, fecha_manual=None):
 
     # ------------------------------------------------------------
     # Evitar duplicados por fecha_turno + torre + turno
-    # Algunos días del Excel pueden tener bloques irregulares o fechas repetidas.
-    # La tabla SQL tiene índice único para fecha_turno, torre y turno.
+    # Algunos días del Excel pueden tener bloques irregulares
+    # o fechas repetidas.
     # ------------------------------------------------------------
+    def consolidar_comentarios(serie):
+        valores = []
+
+        for valor in serie:
+            if pd.isna(valor):
+                continue
+
+            texto = str(valor).strip()
+
+            if texto in ("", "nan", "None"):
+                continue
+
+            if texto not in valores:
+                valores.append(texto)
+
+        # Si existe un comentario real, no conservar SIN REGISTRO
+        comentarios_reales = [
+            texto
+            for texto in valores
+            if texto.upper() != "SIN REGISTRO"
+        ]
+
+        if comentarios_reales:
+            return " | ".join(comentarios_reales)
+
+        return "SIN REGISTRO"
+
+    # Priorizar:
+    # 1. Hora explícita sobre hora estándar.
+    # 2. Si hay dos registros del mismo tipo, usar el último bloque.
+    df_out = df_out.sort_values(
+        [
+            "fecha_turno",
+            "torre",
+            "turno",
+            "_prioridad_hora",
+            "_orden_bloque"
+        ],
+        ascending=[
+            True,
+            True,
+            True,
+            False,
+            False
+        ]
+    )
+
     df_out = (
         df_out
-        .groupby(["fecha_turno", "torre", "turno"], as_index=False)
+        .groupby(
+            ["fecha_turno", "torre", "turno"],
+            as_index=False
+        )
         .agg({
             "fecha_calendario": "first",
             "ts_toma_muestra": "first",
-            "comentario": lambda x: " | ".join(
-                dict.fromkeys(
-                    str(v).strip()
-                    for v in x
-                    if pd.notna(v) and str(v).strip() not in ["", "nan", "None"]
-                )
-            ),
+            "origen_hora": "first",
+            "comentario": consolidar_comentarios,
             "nombre_archivo": "first"
         })
     )
@@ -467,7 +553,10 @@ def procesar_bitacora_completa(decoded, filename, fecha_manual=None):
         ["fecha_calendario", "turno", "torre"]
     ).reset_index(drop=True)
 
-    return df_out, f"Bitácora procesada correctamente: {len(df_out)} registros generados."
+    return (
+        df_out,
+        f"Bitácora procesada correctamente: {len(df_out)} registros generados."
+    )    
 
 def guardar_bitacora_bd(df):
     """
