@@ -13,6 +13,7 @@ from report_export.report_export import (
     fetch_report_data,
     fetch_datos_conciliados_report,
     fetch_representatividad_torres_report,
+    fetch_bd_ton_report,
     fetch_reporte_turno_report,
     fetch_reporte_turno_cache,
     fetch_generador_reporte_diario,
@@ -27,7 +28,15 @@ from report_export.pdf_generator import (
 
 TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
 _REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+_EXPORTS_DIR = os.path.normpath(
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "..",
+        "exports",
+    )
+)
 
+os.makedirs(_EXPORTS_DIR, exist_ok=True)
 # ── Clientside callback: show "generating" bar immediately on any button click ──
 clientside_callback(
     """
@@ -318,7 +327,1643 @@ def _tabla_representatividad_torres(df: pd.DataFrame):
         sort_action="native",
         filter_action="native",
     )
-def _export_representatividad_torres_to_excel(df: pd.DataFrame) -> bytes:
+def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
+    """
+    Agrega la hoja BD Ton al libro de Representatividad Torres,
+    conservando el orden entregado por v_bd_ton_oficial.
+    """
+    from openpyxl.styles import (
+        Font,
+        Alignment,
+        PatternFill,
+        Border,
+        Side,
+    )
+    from openpyxl.utils import get_column_letter
+
+    df = df_bd_ton.copy()
+    ws = wb.create_sheet(title="BD Ton")
+
+    if "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(
+            df["Fecha"],
+            errors="coerce",
+        )
+
+    fill_header = PatternFill("solid", fgColor="D9E3EA")
+    fill_fecha = PatternFill("solid", fgColor="FFF2CC")
+    fill_alt = PatternFill("solid", fgColor="EEF3F6")
+
+    font_header = Font(bold=True, color="1F4E79")
+    font_normal = Font(color="404040")
+
+    thin = Side(style="thin", color="B8B8B8")
+    border = Border(
+        left=thin,
+        right=thin,
+        top=thin,
+        bottom=thin,
+    )
+
+    center = Alignment(
+        horizontal="center",
+        vertical="center",
+        wrap_text=True,
+    )
+
+    # Encabezados
+    for col_idx, nombre in enumerate(df.columns, start=1):
+        cell = ws.cell(
+            row=1,
+            column=col_idx,
+            value=str(nombre),
+        )
+        cell.fill = fill_header
+        cell.font = font_header
+        cell.alignment = center
+        cell.border = border
+
+    # Datos
+    for row_idx, valores in enumerate(
+        df.itertuples(index=False, name=None),
+        start=2,
+    ):
+        for col_idx, valor in enumerate(valores, start=1):
+            nombre_columna = str(df.columns[col_idx - 1])
+
+            if pd.isna(valor):
+                valor_excel = None
+            elif isinstance(valor, pd.Timestamp):
+                valor_excel = valor.to_pydatetime()
+            elif hasattr(valor, "item"):
+                valor_excel = valor.item()
+            else:
+                valor_excel = valor
+
+            cell = ws.cell(
+                row=row_idx,
+                column=col_idx,
+                value=valor_excel,
+            )
+
+            cell.font = font_normal
+            cell.alignment = center
+            cell.border = border
+
+            if (row_idx - 2) % 2 == 1:
+                cell.fill = fill_alt
+
+            if nombre_columna == "Fecha":
+                cell.number_format = "dd-mm-yyyy"
+                cell.fill = fill_fecha
+                cell.font = Font(
+                    bold=True,
+                    color="404040",
+                )
+
+            elif nombre_columna.startswith("Apilado TMH"):
+                cell.number_format = "#,##0.0"
+
+            elif nombre_columna.startswith("Rep."):
+                cell.number_format = "0.000"
+
+            elif (
+                nombre_columna.startswith("Muestra representativa")
+                or nombre_columna.startswith("FISICO")
+            ):
+                cell.number_format = "0"
+
+    # Anchos
+    for col_idx, nombre in enumerate(df.columns, start=1):
+        nombre = str(nombre)
+        letra = get_column_letter(col_idx)
+
+        if nombre == "Fecha":
+            ancho = 14
+        elif nombre.startswith("Apilado TMH"):
+            ancho = 23
+        elif nombre.startswith("Rep."):
+            ancho = 19
+        else:
+            ancho = 29
+
+        ws.column_dimensions[letra].width = ancho
+
+    ws.row_dimensions[1].height = 42
+    ws.freeze_panes = "A2"
+    ws.sheet_view.showGridLines = False
+
+    if len(df.columns) > 0:
+        ultima_columna = get_column_letter(len(df.columns))
+        ultima_fila = max(ws.max_row, 1)
+        ws.auto_filter.ref = (
+            f"A1:{ultima_columna}{ultima_fila}"
+        )
+
+_MESES_ABR_TORRES = {
+    1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr",
+    5: "May", 6: "Jun", 7: "Jul", 8: "Ago",
+    9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic",
+}
+
+_MESES_NOMBRE_TORRES = {
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril",
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre",
+}
+
+
+def _normalizar_turno_torres(valor) -> str:
+    texto = str(valor or "").strip().upper().replace(" ", "")
+
+    if texto in {"A", "TA", "TURNOA"}:
+        return "TA"
+    if texto in {"B", "TB", "TURNOB"}:
+        return "TB"
+
+    return texto
+
+
+def _normalizar_material_torres(valor) -> str:
+    texto = str(valor or "").strip().upper()
+
+    if "SULF" in texto:
+        return "Sulfuro"
+    if "OX" in texto or "ÓX" in texto:
+        return "Óxido"
+
+    return "Sin clasificar"
+
+def _preparar_material_por_turno(
+    df_turno: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Obtiene, para cada Fecha + Turno:
+
+    - El material predominante según Apilado_TMS_Real.
+    - El Apilado_TMS_Real total oficial del turno.
+    - El estado de actividad oficial del turno.
+
+    El turno se considera activo únicamente cuando el apilado oficial
+    acumulado es mayor que cero.
+    """
+    columnas_salida = [
+        "Fecha",
+        "Turno",
+        "Pad",
+        "Apilado_TMS_Real_Turno",
+        "Turno_Activo_Oficial",
+    ]
+
+    if df_turno is None or df_turno.empty:
+        return pd.DataFrame(columns=columnas_salida)
+
+    requeridas = {
+        "Fecha",
+        "Turno",
+        "Material",
+        "Apilado_TMS_Real",
+    }
+
+    if not requeridas.issubset(df_turno.columns):
+        return pd.DataFrame(columns=columnas_salida)
+
+    df = df_turno.copy()
+
+    df["Fecha"] = pd.to_datetime(
+        df["Fecha"],
+        errors="coerce",
+    ).dt.normalize()
+
+    df["Turno"] = df["Turno"].apply(
+        _normalizar_turno_torres
+    )
+
+    df["Pad"] = df["Material"].apply(
+        _normalizar_material_torres
+    )
+
+    df["Tonelaje"] = pd.to_numeric(
+        df["Apilado_TMS_Real"],
+        errors="coerce",
+    ).fillna(0.0)
+
+    df = df[
+        df["Fecha"].notna()
+        & df["Turno"].isin(["TA", "TB"])
+    ].copy()
+
+    if df.empty:
+        return pd.DataFrame(columns=columnas_salida)
+
+    # Tonelaje acumulado por material dentro de cada turno.
+    tonelaje_material = (
+        df.groupby(
+            ["Fecha", "Turno", "Pad"],
+            as_index=False,
+            dropna=False,
+        )["Tonelaje"]
+        .sum()
+    )
+
+    # Seleccionar el material con mayor tonelaje en cada turno.
+    material_predominante = (
+        tonelaje_material.sort_values(
+            ["Fecha", "Turno", "Tonelaje", "Pad"],
+            ascending=[True, True, False, True],
+        )
+        .drop_duplicates(["Fecha", "Turno"])
+        [["Fecha", "Turno", "Pad"]]
+    )
+
+    # Tonelaje oficial total del turno, sumando módulos/materiales.
+    apilado_turno = (
+        df.groupby(
+            ["Fecha", "Turno"],
+            as_index=False,
+        )["Tonelaje"]
+        .sum()
+        .rename(
+            columns={
+                "Tonelaje": "Apilado_TMS_Real_Turno"
+            }
+        )
+    )
+
+    resultado = material_predominante.merge(
+        apilado_turno,
+        on=["Fecha", "Turno"],
+        how="left",
+        validate="one_to_one",
+    )
+
+    resultado["Apilado_TMS_Real_Turno"] = (
+        pd.to_numeric(
+            resultado["Apilado_TMS_Real_Turno"],
+            errors="coerce",
+        )
+        .fillna(0.0)
+    )
+
+    resultado["Turno_Activo_Oficial"] = (
+        resultado["Apilado_TMS_Real_Turno"] > 0
+    )
+
+    return (
+        resultado[columnas_salida]
+        .sort_values(["Fecha", "Turno"])
+        .reset_index(drop=True)
+    )
+
+def _numero_semana_mensual(
+    fecha: pd.Timestamp,
+    primera_fecha: pd.Timestamp,
+) -> int:
+    """Replica WEEKNUM(fecha, 2) con semanas iniciadas en lunes."""
+    fecha = pd.Timestamp(fecha).normalize()
+    primera_fecha = pd.Timestamp(primera_fecha).normalize()
+
+    lunes_fecha = fecha - pd.Timedelta(days=fecha.weekday())
+    lunes_inicial = primera_fecha - pd.Timedelta(
+        days=primera_fecha.weekday()
+    )
+
+    return int((lunes_fecha - lunes_inicial).days // 7) + 1
+
+
+def _numero_torres(valor) -> float:
+    numero = pd.to_numeric(valor, errors="coerce")
+    return 0.0 if pd.isna(numero) else float(numero)
+
+
+def _flag_representatividad_torres(
+    activo: bool,
+    valor_flag,
+    valor_representatividad,
+) -> int | None:
+    if not activo:
+        return None
+
+    flag = pd.to_numeric(valor_flag, errors="coerce")
+    if pd.notna(flag):
+        return 1 if float(flag) >= 1 else 0
+
+    representatividad = pd.to_numeric(
+        valor_representatividad,
+        errors="coerce",
+    )
+    if pd.notna(representatividad):
+        return 1 if float(representatividad) >= 0.75 else 0
+
+    # El turno posee apilado oficial, pero no existe un indicador
+    # trazable de representatividad. Se clasifica provisionalmente
+    # como no representativo. El campo Comentarios permanece vacío.
+    return 0
+
+
+def _preparar_detalle_mensual_torres(
+    df_bd_ton: pd.DataFrame,
+    tipo: str,
+    df_material_turno: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """
+    Construye el detalle Fecha + Turno de las hojas mensuales.
+
+    La BD Ton aporta tonelajes e indicadores de cada torre.
+    El Reporte por Turno aporta el material y determina si el turno
+    es evaluable, mediante Apilado_TMS_Real_Turno > 0.
+    """
+    tipo_normalizado = str(tipo).strip().lower()
+
+    if tipo_normalizado == "quimico":
+        config = {
+            "tm1_flag": "Muestra representativa TM1 {turno}",
+            "tm2_flag": "Muestra representativa TM2 {turno}",
+            "tm1_rep": "Rep. TM1 {turno} Qui.",
+            "tm2_rep": "Rep. TM2 {turno} Qui.",
+        }
+    elif tipo_normalizado == "fisico":
+        config = {
+            "tm1_flag": "FISICO TM1 {turno}",
+            "tm2_flag": "FISICO TM2 {turno}",
+            "tm1_rep": "Rep. TM1 {turno} Fis.",
+            "tm2_rep": "Rep. TM2 {turno} Fis.",
+        }
+    else:
+        raise ValueError(f"Tipo de hoja no soportado: {tipo}")
+
+    df = df_bd_ton.copy()
+    if "Fecha" not in df.columns or df.empty:
+        return pd.DataFrame()
+
+    df["Fecha"] = pd.to_datetime(
+        df["Fecha"],
+        errors="coerce",
+    ).dt.normalize()
+
+    df = (
+        df[df["Fecha"].notna()]
+        .sort_values("Fecha")
+        .reset_index(drop=True)
+    )
+
+    if df.empty:
+        return pd.DataFrame()
+
+    primera_fecha = df["Fecha"].min()
+
+    mapa_material = {}
+    mapa_actividad = {}
+    mapa_apilado_oficial = {}
+
+    if df_material_turno is not None and not df_material_turno.empty:
+        for _, fila_material in df_material_turno.iterrows():
+            fecha_material = pd.to_datetime(
+                fila_material.get("Fecha"),
+                errors="coerce",
+            )
+            turno_material = _normalizar_turno_torres(
+                fila_material.get("Turno")
+            )
+
+            if pd.isna(fecha_material):
+                continue
+            if turno_material not in {"TA", "TB"}:
+                continue
+
+            clave = (
+                fecha_material.normalize(),
+                turno_material,
+            )
+
+            mapa_material[clave] = _normalizar_material_torres(
+                fila_material.get("Pad")
+            )
+
+            apilado_oficial = pd.to_numeric(
+                fila_material.get("Apilado_TMS_Real_Turno"),
+                errors="coerce",
+            )
+            if pd.isna(apilado_oficial):
+                apilado_oficial = 0.0
+
+            apilado_oficial = float(apilado_oficial)
+            mapa_apilado_oficial[clave] = apilado_oficial
+
+            actividad_fuente = fila_material.get(
+                "Turno_Activo_Oficial"
+            )
+            if pd.isna(actividad_fuente):
+                mapa_actividad[clave] = apilado_oficial > 0
+            else:
+                mapa_actividad[clave] = bool(actividad_fuente)
+
+    registros = []
+
+    for _, fila in df.iterrows():
+        fecha = fila["Fecha"]
+        semana_num = _numero_semana_mensual(
+            fecha,
+            primera_fecha,
+        )
+
+        for turno in ["TA", "TB"]:
+            clave_turno = (fecha, turno)
+
+            turno_activo_oficial = bool(
+                mapa_actividad.get(clave_turno, False)
+            )
+
+            tm1_tmh = _numero_torres(
+                fila.get(f"Apilado TMH CV-08 {turno}")
+            )
+            tm2_tmh = _numero_torres(
+                fila.get(f"Apilado TMH CV-108 {turno}")
+            )
+
+            # La evaluabilidad de ambas torres depende exclusivamente
+            # del apilado oficial del turno, no del tonelaje residual
+            # observado en las ventanas de cada torre.
+            tm1_activo = turno_activo_oficial
+            tm2_activo = turno_activo_oficial
+
+            tm1_flag_fuente = fila.get(
+                config["tm1_flag"].format(turno=turno)
+            )
+            tm2_flag_fuente = fila.get(
+                config["tm2_flag"].format(turno=turno)
+            )
+            tm1_rep_fuente = fila.get(
+                config["tm1_rep"].format(turno=turno)
+            )
+            tm2_rep_fuente = fila.get(
+                config["tm2_rep"].format(turno=turno)
+            )
+
+            tm1_flag = _flag_representatividad_torres(
+                tm1_activo,
+                tm1_flag_fuente,
+                tm1_rep_fuente,
+            )
+            tm2_flag = _flag_representatividad_torres(
+                tm2_activo,
+                tm2_flag_fuente,
+                tm2_rep_fuente,
+            )
+
+            if tm1_flag == 1 or tm2_flag == 1:
+                representatividad_turno = 1
+            elif not turno_activo_oficial:
+                representatividad_turno = None
+            else:
+                representatividad_turno = 0
+
+            registros.append({
+                "Semana_Num": semana_num,
+                "Semana": f"Semana {semana_num}",
+                "Fecha": fecha,
+                "Pad": mapa_material.get(
+                    clave_turno,
+                    "Sin clasificar",
+                ),
+                "Turno": turno,
+                "Apilado_Oficial_Turno": mapa_apilado_oficial.get(
+                    clave_turno,
+                    0.0,
+                ),
+                "TMH_CV08": tm1_tmh if tm1_activo else None,
+                "TM1_Activo": int(tm1_activo),
+                "Rep_TM1": tm1_flag,
+                "Comentario_TM1": None,
+                "TMH_CV108": tm2_tmh if tm2_activo else None,
+                "TM2_Activo": int(tm2_activo),
+                "Rep_TM2": tm2_flag,
+                "Comentario_TM2": None,
+                "Rep_Turno": representatividad_turno,
+            })
+
+    return pd.DataFrame(registros)
+
+
+def _calcular_resumen_mensual_torres(
+    detalle: pd.DataFrame,
+) -> dict:
+    """
+    Calcula resultados semanales y MTD según RN-046.
+
+    TM1 y TM2:
+    - Denominador: turnos oficialmente evaluables.
+    - Numerador: turnos representativos de la torre.
+
+    Combinado:
+    - Denominador: turnos oficialmente evaluables.
+    - Numerador: turnos donde TM1 o TM2 fue representativa.
+
+    El MTD se calcula como cociente de totales acumulados y no como
+    promedio de porcentajes semanales.
+    """
+    resumen = {"TM1": [], "TM2": [], "COMBINADO": []}
+
+    def _fila_resumen(df_semana, etiqueta):
+        tm1_activos = int(df_semana["TM1_Activo"].sum())
+        tm2_activos = int(df_semana["TM2_Activo"].sum())
+
+        tm1_rep = int((df_semana["Rep_TM1"] == 1).sum())
+        tm2_rep = int((df_semana["Rep_TM2"] == 1).sum())
+
+        turnos_activos = int(
+            (
+                (df_semana["TM1_Activo"] == 1)
+                | (df_semana["TM2_Activo"] == 1)
+            ).sum()
+        )
+        turnos_representativos = int(
+            (df_semana["Rep_Turno"] == 1).sum()
+        )
+
+        valores = {
+            "TM1": (tm1_activos, tm1_rep),
+            "TM2": (tm2_activos, tm2_rep),
+            "COMBINADO": (
+                turnos_activos,
+                turnos_representativos,
+            ),
+        }
+
+        for clave, (activos, representativos) in valores.items():
+            no_representativos = max(
+                activos - representativos,
+                0,
+            )
+            pct_rep = (
+                representativos / activos
+                if activos
+                else 0.0
+            )
+            pct_no_rep = (
+                no_representativos / activos
+                if activos
+                else 0.0
+            )
+            total = (
+                pct_rep + pct_no_rep
+                if activos
+                else 0.0
+            )
+
+            resumen[clave].append({
+                "Periodo": etiqueta,
+                "Turnos_Activos": activos,
+                "Representativos": representativos,
+                "No_Representativos": no_representativos,
+                "Pct_Representativos": pct_rep,
+                "Pct_No_Representativos": pct_no_rep,
+                "Total": total,
+            })
+
+    for semana in range(1, 7):
+        _fila_resumen(
+            detalle[detalle["Semana_Num"] == semana],
+            f"Semana {semana}",
+        )
+
+    _fila_resumen(detalle, "MTD")
+    return resumen
+
+
+def _calcular_tonelaje_por_material_torres(
+    detalle: pd.DataFrame,
+) -> list[dict]:
+    resultados = []
+
+    for material in ["Óxido", "Sulfuro"]:
+        df_material = detalle[detalle["Pad"] == material]
+
+        con_torre = float(
+            df_material.loc[df_material["Rep_TM1"] == 1, "TMH_CV08"].sum()
+            + df_material.loc[df_material["Rep_TM2"] == 1, "TMH_CV108"].sum()
+        )
+        sin_torre = float(
+            df_material.loc[
+                (df_material["TM1_Activo"] == 1)
+                & (df_material["Rep_TM1"] != 1),
+                "TMH_CV08",
+            ].sum()
+            + df_material.loc[
+                (df_material["TM2_Activo"] == 1)
+                & (df_material["Rep_TM2"] != 1),
+                "TMH_CV108",
+            ].sum()
+        )
+
+        total = con_torre + sin_torre
+        resultados.extend([
+            {
+                "Pad": material,
+                "Estado": "Con Torre",
+                "Tonelaje": con_torre,
+                "Distribucion": con_torre / total if total else 0.0,
+            },
+            {
+                "Pad": material,
+                "Estado": "Sin Torre",
+                "Tonelaje": sin_torre,
+                "Distribucion": sin_torre / total if total else 0.0,
+            },
+        ])
+
+    return resultados
+
+
+def _agregar_hoja_mensual_torres(
+    wb,
+    df_bd_ton_mes: pd.DataFrame,
+    tipo: str,
+    df_material_turno_mes: pd.DataFrame | None = None,
+) -> str | None:
+    """
+    Agrega una hoja mensual Químico/Físico al libro.
+
+    Los resultados se escriben como valores calculados en Python para
+    evitar GETPIVOTDATA, tablas dinámicas y fórmulas manuales frágiles.
+    """
+    from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.chart.data_source import NumData, NumVal
+    from openpyxl.chart.label import DataLabelList
+    from openpyxl.chart.layout import Layout, ManualLayout
+    from openpyxl.chart.legend import LegendEntry
+    from openpyxl.chart.series import SeriesLabel
+    from openpyxl.chart.text import RichText
+    from openpyxl.drawing.spreadsheet_drawing import (
+        AnchorMarker,
+        TwoCellAnchor,
+    )
+    from openpyxl.drawing.text import (
+        CharacterProperties,
+        Paragraph,
+        ParagraphProperties,
+        RichTextProperties,
+    )
+    from openpyxl.styles import (
+        Alignment,
+        Border,
+        Font,
+        PatternFill,
+        Side,
+    )
+    from openpyxl.utils import get_column_letter
+
+    detalle = _preparar_detalle_mensual_torres(
+        df_bd_ton=df_bd_ton_mes,
+        tipo=tipo,
+        df_material_turno=df_material_turno_mes,
+    )
+
+    if detalle.empty:
+        return None
+
+    fecha_base = pd.to_datetime(detalle["Fecha"].min())
+    nombre_hoja = (
+        f"01_{_MESES_ABR_TORRES[fecha_base.month]}_"
+        f"{str(fecha_base.year)[-2:]} {tipo}"
+    )
+    nombre_hoja = nombre_hoja[:31]
+
+    if nombre_hoja in wb.sheetnames:
+        del wb[nombre_hoja]
+
+    ws = wb.create_sheet(title=nombre_hoja)
+    ws.sheet_view.showGridLines = False
+
+    resumen = _calcular_resumen_mensual_torres(detalle)
+    tonelaje_material = _calcular_tonelaje_por_material_torres(detalle)
+
+    # Paleta y tipografías replicadas desde el reporte histórico.
+    azul_header = PatternFill("solid", fgColor="D7E1E7")
+    azul_grupo = PatternFill("solid", fgColor="D7E1E7")
+    azul_alt = PatternFill("solid", fgColor="D7E1E7")
+    amarillo = PatternFill("solid", fgColor="FFF2CC")
+    verde = PatternFill("solid", fgColor="E2F0D9")
+    rojo = PatternFill("solid", fgColor="FCE4D6")
+    gris = PatternFill("solid", fgColor="F2F2F2")
+
+    font_header = Font(
+        name="Arial",
+        bold=True,
+        color="476475",
+        size=10,
+    )
+    font_resumen_header = Font(
+        name="Arial",
+        bold=False,
+        color="476475",
+        size=10,
+    )
+    font_titulo = Font(
+        name="Arial",
+        bold=True,
+        color="476475",
+        size=12,
+    )
+    font_normal = Font(
+        name="Arial",
+        color="476475",
+        size=10,
+    )
+    font_nota = Font(
+        name="Arial",
+        color="666666",
+        italic=True,
+        size=9,
+    )
+
+    thin = Side(style="thin", color="595959")
+    medium = Side(style="medium", color="404040")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    border_grupo = Border(
+        left=medium,
+        right=medium,
+        top=medium,
+        bottom=medium,
+    )
+
+    def _aplicar_bordes_tabla(
+        fila_ini: int,
+        col_ini: int,
+        fila_fin: int,
+        col_fin: int,
+        borde_exterior=medium,
+        borde_interior=thin,
+    ) -> None:
+        """Aplica grilla interna y contorno reforzado, incluso en rangos combinados."""
+        for fila in range(fila_ini, fila_fin + 1):
+            for col in range(col_ini, col_fin + 1):
+                ws.cell(fila, col).border = Border(
+                    left=(borde_exterior if col == col_ini else borde_interior),
+                    right=(borde_exterior if col == col_fin else borde_interior),
+                    top=(borde_exterior if fila == fila_ini else borde_interior),
+                    bottom=(borde_exterior if fila == fila_fin else borde_interior),
+                )
+
+    def _aplicar_subrayado(
+        fila: int,
+        col_ini: int,
+        col_fin: int,
+        lado=thin,
+    ) -> None:
+        """Replica la línea inferior de los títulos de sección del reporte oficial."""
+        for col in range(col_ini, col_fin + 1):
+            celda = ws.cell(fila, col)
+            celda.border = Border(bottom=lado)
+
+    center = Alignment(
+        horizontal="center",
+        vertical="center",
+        wrap_text=True,
+    )
+    left = Alignment(
+        horizontal="left",
+        vertical="center",
+        wrap_text=True,
+    )
+    left_no_wrap = Alignment(
+        horizontal="left",
+        vertical="center",
+        wrap_text=False,
+    )
+
+    tipo_titulo = "Química" if tipo.lower() == "quimico" else "Física"
+    mes_texto = f"{_MESES_NOMBRE_TORRES[fecha_base.month]}, {fecha_base.year}"
+
+    ws.merge_cells("C5:M7")
+    ws["C5"] = (
+        "Muestras representativas de torres de muestreo - "
+        f"Muestra {tipo_titulo} - {mes_texto}"
+    )
+    ws["C5"].font = font_titulo
+    ws["C5"].alignment = center
+
+    ws.merge_cells("K2:M4")
+    ws["K2"] = (
+        "Superintendencia de Medición y Reconciliación\n"
+        "Gerencia de Planificación de la Producción"
+    )
+    ws["K2"].font = Font(
+        name="Arial",
+        bold=True,
+        color="476475",
+        size=10,
+    )
+    ws["K2"].alignment = center
+
+    # ------------------------------------------------------------
+    # 1. Tonelaje por material y condición de representatividad
+    # ------------------------------------------------------------
+    ws.merge_cells("C9:F9")
+    ws["C9"] = (
+        "1.- Mineral apilado y caracterizado con información "
+        f"{tipo_titulo.lower()} de torres de muestreo."
+    )
+    ws["C9"].font = font_header
+    ws["C9"].alignment = left_no_wrap
+    _aplicar_subrayado(9, 3, 6)
+
+    # Misma estructura visual del reporte de referencia:
+    # "Pad" y un encabezado agrupado para las tres columnas de mineral.
+    ws["C10"] = "Pad"
+    ws.merge_cells("D10:F10")
+    ws["D10"] = "Mineral Apilado (ton)"
+
+    for celda in ["C10", "D10"]:
+        ws[celda].font = font_header
+        ws[celda].alignment = center
+        ws[celda].border = border
+
+    for idx, fila in enumerate(tonelaje_material, start=11):
+        ws.cell(idx, 3, fila["Pad"])
+        ws.cell(idx, 4, fila["Estado"])
+        ws.cell(idx, 5, fila["Tonelaje"])
+        ws.cell(idx, 6, fila["Distribucion"])
+
+        for col in range(3, 7):
+            cell = ws.cell(idx, col)
+            cell.font = font_normal
+            cell.alignment = center
+            cell.border = border
+
+        ws.cell(idx, 5).number_format = "#,##0.0"
+        ws.cell(idx, 6).number_format = "0.0%"
+
+    ws.merge_cells("C11:C12")
+    ws.merge_cells("C13:C14")
+    ws["C11"].alignment = center
+    ws["C13"].alignment = center
+
+    # Contorno y grilla del bloque superior, como en la hoja oficial.
+    _aplicar_bordes_tabla(10, 3, 14, 6, borde_exterior=thin)
+
+    # ------------------------------------------------------------
+    # Resúmenes semanales y MTD
+    # ------------------------------------------------------------
+    # Serie auxiliar de target. Se escriben siete valores para mantener
+    # correspondencia exacta con las seis semanas y el MTD. Esta igualdad
+    # de longitudes mejora la compatibilidad del gráfico entre Excel y
+    # otros renderizadores sin alterar el target oficial de 85%.
+    ws["Q1"] = "Target"
+    ws["Q1"].font = font_header
+    ws["Q1"].fill = azul_header
+    ws["Q1"].alignment = center
+    ws["Q1"].border = border
+    for fila_target_aux in range(2, 9):
+        ws.cell(fila_target_aux, 17, 0.85)
+        ws.cell(fila_target_aux, 17).number_format = "0%"
+        ws.cell(fila_target_aux, 17).alignment = center
+        ws.cell(fila_target_aux, 17).border = border
+    # Ocultar visualmente la tabla auxiliar del target sin eliminar
+    # los valores utilizados por los gráficos.
+    for fila_aux in range(1, 9):
+        celda_aux = ws.cell(fila_aux, 17)
+
+        celda_aux.number_format = ";;;"
+        celda_aux.font = Font(
+            name="Arial",
+            color="FFFFFF",
+            size=1,
+        )
+        celda_aux.fill = PatternFill(
+            fill_type=None,
+        )
+        celda_aux.border = Border()
+
+    secciones = [
+        (
+            "TM1",
+            16,
+            "2.- Torre de muestreo #1: Distribución porcentual de muestras representativas y no representativas.",
+            "Torre #1",
+        ),
+        (
+            "TM2",
+            27,
+            "3.- Torre de muestreo #2: Distribución porcentual de muestras representativas y no representativas.",
+            "Torre #2",
+        ),
+        (
+            "COMBINADO",
+            38,
+            "4.- Sistema TM1 y TM2: Distribución porcentual de muestras representativas y no representativas.",
+            "Torre #1 y #2",
+        ),
+    ]
+
+    for clave, fila_inicio, titulo_seccion, titulo_grafico in secciones:
+        ws.merge_cells(
+            start_row=fila_inicio,
+            start_column=3,
+            end_row=fila_inicio,
+            end_column=6,
+        )
+        ws.cell(fila_inicio, 3, titulo_seccion)
+        ws.cell(fila_inicio, 3).font = font_header
+        ws.cell(fila_inicio, 3).alignment = left_no_wrap
+        _aplicar_subrayado(fila_inicio, 3, 6)
+
+        encabezados_por_seccion = {
+            "TM1": [
+                f"{_MESES_NOMBRE_TORRES[fecha_base.month]} {fecha_base.year}",
+                "Muestras representativas TM1",
+                "Muestras no representativas TM1",
+                "Total TM1",
+            ],
+            "TM2": [
+                f"{_MESES_NOMBRE_TORRES[fecha_base.month]} {fecha_base.year}",
+                "Muestras representativas TM2",
+                "Muestras no representativas TM2",
+                "Total TM2",
+            ],
+            "COMBINADO": [
+                f"{_MESES_NOMBRE_TORRES[fecha_base.month]} {fecha_base.year}",
+                "Muestras representativas TM1+TM2",
+                "Muestras no representativas TM1+TM2",
+                "Total TM1+TM2",
+            ],
+        }
+        encabezados = encabezados_por_seccion[clave]
+        for col, valor in enumerate(encabezados, start=3):
+            cell = ws.cell(fila_inicio + 1, col, valor)
+            cell.font = font_resumen_header
+            cell.alignment = center
+            cell.border = border
+
+        for offset, fila_resumen in enumerate(resumen[clave], start=2):
+            fila_excel = fila_inicio + offset
+            ws.cell(fila_excel, 3, fila_resumen["Periodo"])
+            ws.cell(
+                fila_excel,
+                4,
+                fila_resumen["Pct_Representativos"],
+            )
+            ws.cell(
+                fila_excel,
+                5,
+                fila_resumen["Pct_No_Representativos"],
+            )
+            ws.cell(fila_excel, 6, fila_resumen["Total"])
+
+            for col in range(3, 7):
+                cell = ws.cell(fila_excel, col)
+                cell.font = font_normal
+                cell.alignment = center
+                cell.border = border
+
+            for col in range(4, 7):
+                ws.cell(fila_excel, col).number_format = "0.0%"
+
+            if fila_resumen["Periodo"] == "MTD":
+                for col in range(3, 7):
+                    ws.cell(fila_excel, col).font = Font(
+                        name="Arial",
+                        color="476475",
+                        size=10,
+                    )
+
+        fila_target = fila_inicio + 9
+        ws.merge_cells(
+            start_row=fila_target,
+            start_column=4,
+            end_row=fila_target,
+            end_column=6,
+        )
+        ws.cell(
+            fila_target,
+            4,
+            "Target de muestras representativas: 85%",
+        )
+        ws.cell(fila_target, 4).font = Font(
+            name="Arial",
+            bold=True,
+            color="476475",
+            size=10,
+        )
+        ws.cell(fila_target, 4).alignment = left_no_wrap
+
+        # Grilla visible y contorno reforzado de la tabla semanal.
+        _aplicar_bordes_tabla(
+            fila_inicio + 1,
+            3,
+            fila_inicio + 8,
+            6,
+            borde_exterior=thin,
+            borde_interior=thin,
+        )
+        # La fila MTD queda separada visualmente, como en el reporte base.
+        for col in range(3, 7):
+            celda_mtd = ws.cell(fila_inicio + 8, col)
+            celda_mtd.border = Border(
+                left=(thin if col == 3 else thin),
+                right=(thin if col == 6 else thin),
+                top=medium,
+                bottom=medium,
+            )
+
+        # Gráfico equivalente al reporte oficial:
+        # columnas 100% apiladas, etiquetas porcentuales y línea target 85%.
+        chart = BarChart()
+        chart.style = 2
+        chart.type = "col"
+        chart.grouping = "percentStacked"
+        chart.overlap = 100
+        chart.gapWidth = 150
+        chart.varyColors = False
+        chart.title = titulo_grafico
+        # El título no debe superponerse con la leyenda. En el reporte
+        # oficial ambos elementos reservan su propio espacio vertical.
+        chart.title.overlay = False
+        chart.roundedCorners = False
+        chart.height = 7.24
+        chart.width = 18.40
+        chart.y_axis.title = "Muestras representativas"
+        chart.y_axis.scaling.min = 0
+        chart.y_axis.scaling.max = 1
+        chart.y_axis.numFmt = "0%"
+        chart.y_axis.axPos = "l"
+        chart.y_axis.tickLblPos = "nextTo"
+        chart.y_axis.majorTickMark = "none"
+        chart.y_axis.minorTickMark = "none"
+        chart.y_axis.crossBetween = "between"
+        chart.x_axis.axPos = "b"
+        chart.x_axis.tickLblPos = "nextTo"
+        chart.x_axis.majorTickMark = "none"
+        chart.x_axis.minorTickMark = "none"
+        chart.legend.position = "t"
+        chart.legend.overlay = False
+
+        data = Reference(
+            ws,
+            min_col=4,
+            max_col=5,
+            min_row=fila_inicio + 1,
+            max_row=fila_inicio + 8,
+        )
+        categorias = Reference(
+            ws,
+            min_col=3,
+            min_row=fila_inicio + 2,
+            max_row=fila_inicio + 8,
+        )
+        chart.add_data(data, titles_from_data=True)
+        chart.set_categories(categorias)
+
+        # Nombres explícitos para que Excel y otros renderizadores conserven
+        # exactamente la leyenda del reporte de referencia.
+        chart.series[0].tx = SeriesLabel(v=encabezados[1])
+        chart.series[1].tx = SeriesLabel(v=encabezados[2])
+
+        # OpenPyXL no siempre escribe el caché de los datos del gráfico.
+        # Se incorpora explícitamente para que Excel, LibreOffice y los
+        # previsualizadores interpreten 0,125 como 12,5% y no como 125m.
+        valores_series = [
+            [
+                float(ws.cell(fila_inicio + offset, 4).value or 0.0)
+                for offset in range(2, 9)
+            ],
+            [
+                float(ws.cell(fila_inicio + offset, 5).value or 0.0)
+                for offset in range(2, 9)
+            ],
+        ]
+        for indice_serie, valores_cache in enumerate(valores_series):
+            chart.series[indice_serie].val.numRef.numCache = NumData(
+                formatCode="0%",
+                ptCount=len(valores_cache),
+                pt=[
+                    NumVal(idx=indice, v=valor)
+                    for indice, valor in enumerate(valores_cache)
+                ],
+            )
+
+        # Colores y bordes de las series del reporte oficial.
+        chart.series[0].graphicalProperties.solidFill = "476475"
+        chart.series[0].graphicalProperties.line.noFill = True
+        chart.series[1].graphicalProperties.solidFill = "E65400"
+        chart.series[1].graphicalProperties.line.noFill = True
+
+        # Etiquetas dentro de las columnas, en porcentaje y texto blanco.
+        chart.dLbls = DataLabelList()
+        chart.dLbls.position = "ctr"
+        chart.dLbls.numFmt = "0%"
+        chart.dLbls.showLegendKey = False
+        # Se muestran los valores con formato porcentual, igual que en
+        # el reporte oficial. Más abajo se incorporan cachés numéricas
+        # para mejorar la compatibilidad con otros renderizadores.
+        chart.dLbls.showVal = True
+        chart.dLbls.showCatName = False
+        chart.dLbls.showSerName = False
+        chart.dLbls.showPercent = False
+        chart.dLbls.showLeaderLines = False
+        chart.dLbls.txPr = RichText(
+            bodyPr=RichTextProperties(anchor="ctr"),
+            p=[
+                Paragraph(
+                    pPr=ParagraphProperties(
+                        defRPr=CharacterProperties(
+                            sz=1050,
+                            solidFill="FFFFFF",
+                        )
+                    ),
+                    endParaRPr=CharacterProperties(lang="es-CL"),
+                )
+            ],
+        )
+
+        # Tipografía del título, leyenda y ejes según el reporte histórico.
+        # El título y la leyenda se reducen al tamaño del reporte
+        # oficial para evitar superposición entre ambos elementos.
+        chart.title.tx.rich.p[0].pPr.defRPr.sz = 1200
+        chart.title.tx.rich.p[0].pPr.defRPr.b = False
+        chart.legend.txPr = RichText(
+            bodyPr=RichTextProperties(),
+            p=[
+                Paragraph(
+                    pPr=ParagraphProperties(
+                        defRPr=CharacterProperties(sz=900)
+                    ),
+                    endParaRPr=CharacterProperties(lang="es-CL"),
+                )
+            ],
+        )
+        chart.x_axis.txPr = RichText(
+            bodyPr=RichTextProperties(),
+            p=[
+                Paragraph(
+                    pPr=ParagraphProperties(
+                        defRPr=CharacterProperties(sz=900)
+                    ),
+                    endParaRPr=CharacterProperties(lang="es-CL"),
+                )
+            ],
+        )
+        chart.y_axis.txPr = RichText(
+            bodyPr=RichTextProperties(),
+            p=[
+                Paragraph(
+                    pPr=ParagraphProperties(
+                        defRPr=CharacterProperties(sz=900)
+                    ),
+                    endParaRPr=CharacterProperties(lang="es-CL"),
+                )
+            ],
+        )
+
+        # Línea de target en el mismo eje de las columnas. Esto evita el
+        # segundo eje vertical que aparecía en la versión anterior.
+        target_chart = LineChart()
+        target_data = Reference(
+            ws,
+            min_col=17,
+            min_row=1,
+            max_row=8,
+        )
+        target_chart.add_data(target_data, titles_from_data=True)
+        target_chart.set_categories(categorias)
+        target_chart.series[0].tx = SeriesLabel(v="Target")
+        target_chart.series[0].val.numRef.numCache = NumData(
+            formatCode="0%",
+            ptCount=7,
+            pt=[NumVal(idx=indice, v=0.85) for indice in range(7)],
+        )
+        target_chart.series[0].graphicalProperties.line.solidFill = "4F81BD"
+        target_chart.series[0].graphicalProperties.line.prstDash = "dash"
+        target_chart.series[0].graphicalProperties.line.width = 22225
+        target_chart.series[0].marker.symbol = "none"
+        target_chart.x_axis.axId = chart.x_axis.axId
+        target_chart.y_axis.axId = chart.y_axis.axId
+
+        chart += target_chart
+
+        # El target no aparece en la leyenda del reporte oficial.
+        chart.legend.legendEntry = [LegendEntry(idx=2, delete=True)]
+
+        # Área interna del gráfico. Los dos primeros gráficos poseen
+        # ajustes ligeramente distintos en el archivo de referencia.
+        if clave == "TM1":
+            chart.layout = Layout(
+                manualLayout=ManualLayout(
+                    layoutTarget="inner",
+                    xMode="edge",
+                    yMode="edge",
+                    x=0.0754470505,
+                    y=0.2985221576,
+                    w=0.9098901360,
+                    h=0.5962449842,
+                )
+            )
+        elif clave == "TM2":
+            chart.layout = Layout(
+                manualLayout=ManualLayout(
+                    layoutTarget="inner",
+                    xMode="edge",
+                    yMode="edge",
+                    x=0.0885002013,
+                    y=0.2532549190,
+                    w=0.9044311103,
+                    h=0.6453989123,
+                )
+            )
+
+        # Anclajes exactos de los tres gráficos visibles del reporte.
+        anclajes_quimico = {
+            "TM1": (
+                AnchorMarker(col=8, colOff=1761016, row=7, rowOff=168004),
+                AnchorMarker(col=12, colOff=1074579, row=20, rowOff=125697),
+            ),
+            "TM2": (
+                AnchorMarker(col=8, colOff=1787486, row=21, rowOff=63262),
+                AnchorMarker(col=12, colOff=1095969, row=34, rowOff=25940),
+            ),
+            "COMBINADO": (
+                AnchorMarker(col=8, colOff=1798841, row=34, rowOff=96617),
+                AnchorMarker(col=12, colOff=1090637, row=47, rowOff=58082),
+            ),
+        }
+        anclajes_fisico = {
+            "TM1": (
+                AnchorMarker(col=8, colOff=1856513, row=7, rowOff=83409),
+                AnchorMarker(col=12, colOff=1238983, row=20, rowOff=96459),
+            ),
+            "TM2": (
+                AnchorMarker(col=8, colOff=1862862, row=21, rowOff=9405),
+                AnchorMarker(col=12, colOff=1249142, row=34, rowOff=13565),
+            ),
+            "COMBINADO": (
+                AnchorMarker(col=8, colOff=1860322, row=34, rowOff=118566),
+                AnchorMarker(col=12, colOff=1246602, row=47, rowOff=123996),
+            ),
+        }
+        anclajes = (
+            anclajes_quimico
+            if tipo.lower() == "quimico"
+            else anclajes_fisico
+        )
+        desde, hasta = anclajes[clave]
+        chart.anchor = TwoCellAnchor(
+            editAs="twoCell",
+            _from=desde,
+            to=hasta,
+        )
+        ws.add_chart(chart)
+
+    # ------------------------------------------------------------
+    # Detalle turno a turno
+    # ------------------------------------------------------------
+    ws.merge_cells("C53:M53")
+    ws["C53"] = (
+        "5.- Detalle turno a turno de mineral apilado, muestras "
+        "representativas y estados trazables."
+    )
+    ws["C53"].font = font_header
+    ws["C53"].alignment = left
+    _aplicar_subrayado(53, 3, 13)
+
+    ws.merge_cells("G55:I55")
+    ws["G55"] = "Torre de muestreo #1"
+    ws.merge_cells("J55:L55")
+    ws["J55"] = "Torre de muestreo #2"
+
+    for celda in ["G55", "J55"]:
+        ws[celda].fill = azul_grupo
+        ws[celda].font = font_header
+        ws[celda].alignment = center
+        ws[celda].border = border_grupo
+
+    headers_detalle = [
+        "Semana",
+        "Fecha",
+        "Pad",
+        "Turno",
+        "TMH\nCV-08",
+        "Muestra representativa CV-08",
+        "Comentarios",
+        "TMH\nCV-108",
+        "Muestra representativa CV-108",
+        "Comentarios",
+        "Representatividad Turno\n(árbol de decisión)",
+    ]
+
+    for col, valor in enumerate(headers_detalle, start=3):
+        cell = ws.cell(56, col, valor)
+        cell.fill = azul_header
+        cell.font = font_header
+        cell.alignment = center
+        cell.border = border_grupo
+
+    # Tablas auxiliares de auditoría: reemplazan los conteos ocultos y
+    # fórmulas COUNTIFS del archivo histórico.
+    auditorias = [
+        ("TM1", 55, "Auditoría TM1"),
+        ("TM2", 66, "Auditoría TM2"),
+        ("COMBINADO", 77, "Auditoría TM1 + TM2"),
+    ]
+
+    for clave, fila_inicio_auditoria, titulo_auditoria in auditorias:
+        ws.merge_cells(
+            start_row=fila_inicio_auditoria,
+            start_column=15,
+            end_row=fila_inicio_auditoria,
+            end_column=18,
+        )
+        ws.cell(fila_inicio_auditoria, 15, titulo_auditoria)
+        ws.cell(fila_inicio_auditoria, 15).fill = amarillo
+        ws.cell(fila_inicio_auditoria, 15).font = font_header
+        ws.cell(fila_inicio_auditoria, 15).alignment = center
+
+        encabezados_auditoria = [
+            "Periodo",
+            "Turnos activos",
+            "Representativos",
+            "No representativos",
+        ]
+        for col, valor in enumerate(encabezados_auditoria, start=15):
+            cell = ws.cell(fila_inicio_auditoria + 1, col, valor)
+            cell.fill = amarillo
+            cell.font = font_header
+            cell.alignment = center
+            cell.border = border
+
+        for offset, fila_resumen in enumerate(resumen[clave], start=2):
+            fila_excel = fila_inicio_auditoria + offset
+            valores_auditoria = [
+                fila_resumen["Periodo"],
+                fila_resumen["Turnos_Activos"],
+                fila_resumen["Representativos"],
+                fila_resumen["No_Representativos"],
+            ]
+            for col, valor in enumerate(valores_auditoria, start=15):
+                cell = ws.cell(fila_excel, col, valor)
+                cell.fill = amarillo
+                cell.font = font_normal
+                cell.alignment = center
+                cell.border = border
+
+            if fila_resumen["Periodo"] == "MTD":
+                for col in range(15, 19):
+                    ws.cell(fila_excel, col).font = Font(
+                        name="Arial",
+                        bold=True,
+                        color="476475",
+                        size=10,
+                    )
+
+    fila_datos = 57
+    for indice, (_, fila) in enumerate(detalle.iterrows()):
+        row_excel = fila_datos + indice
+
+        valores = [
+            fila["Semana"],
+            fila["Fecha"].to_pydatetime(),
+            fila["Pad"],
+            fila["Turno"],
+            fila["TMH_CV08"] if fila["TM1_Activo"] else None,
+            fila["Rep_TM1"] if fila["TM1_Activo"] else None,
+            fila["Comentario_TM1"],
+            fila["TMH_CV108"] if fila["TM2_Activo"] else None,
+            fila["Rep_TM2"] if fila["TM2_Activo"] else None,
+            fila["Comentario_TM2"],
+            fila["Rep_Turno"],
+        ]
+
+        for col, valor in enumerate(valores, start=3):
+            cell = ws.cell(row_excel, col, valor)
+            cell.font = font_normal
+            cell.alignment = center if col not in [9, 12] else left
+            cell.border = border
+
+            if indice % 2 == 1:
+                cell.fill = azul_alt
+
+        ws.cell(row_excel, 4).number_format = "dd-mm-yyyy"
+        ws.cell(row_excel, 7).number_format = "#,##0.0"
+        ws.cell(row_excel, 10).number_format = "#,##0.0"
+
+        for col in [8, 11, 13]:
+            valor = ws.cell(row_excel, col).value
+            if valor == 1:
+                ws.cell(row_excel, col).fill = verde
+                ws.cell(row_excel, col).font = Font(
+                    name="Arial",
+                    bold=True,
+                    color="006100",
+                    size=10,
+                )
+            elif valor == 0:
+                ws.cell(row_excel, col).fill = rojo
+                ws.cell(row_excel, col).font = Font(
+                    name="Arial",
+                    bold=True,
+                    color="9C0006",
+                    size=10,
+                )
+
+        if fila["Pad"] == "Sin clasificar":
+            ws.cell(row_excel, 5).fill = gris
+
+    ultima_fila = fila_datos + len(detalle) - 1
+
+    # Bordes del detalle: contorno oscuro, divisiones internas finas y
+    # grupos de torres claramente delimitados.
+    _aplicar_bordes_tabla(
+        56,
+        3,
+        ultima_fila,
+        13,
+        borde_exterior=medium,
+        borde_interior=thin,
+    )
+    _aplicar_bordes_tabla(55, 7, 55, 9, borde_exterior=medium)
+    _aplicar_bordes_tabla(55, 10, 55, 12, borde_exterior=medium)
+
+    # Cada tabla de auditoría mantiene una grilla completa y un contorno
+    # visible para que no quede como un bloque suelto sin terminación.
+    for _, fila_inicio_auditoria, _ in auditorias:
+        _aplicar_bordes_tabla(
+            fila_inicio_auditoria,
+            15,
+            fila_inicio_auditoria + 8,
+            18,
+            borde_exterior=thin,
+            borde_interior=thin,
+        )
+
+    nota_fila = ultima_fila + 2
+
+    ws.merge_cells(
+        start_row=nota_fila,
+        start_column=3,
+        end_row=nota_fila + 1,
+        end_column=13,
+    )
+    ws.cell(
+        nota_fila,
+        3,
+        "Nota metodológica: los indicadores de las torres se reconstruyen "
+        "desde BD Ton y la evaluabilidad del turno se determina con "
+        "Apilado_TMS_Real del Reporte por Turno, según RN-046. Las "
+        "columnas de comentarios permanecen vacías mientras no exista "
+        "una fuente oficial y trazable de causas operacionales.",
+    )
+    ws.cell(nota_fila, 3).font = font_nota
+    ws.cell(nota_fila, 3).alignment = left
+
+    ws.auto_filter.ref = f"C56:M{ultima_fila}"
+    ws.freeze_panes = None
+
+    # Dimensiones replicadas desde las hojas oficiales. Estas medidas
+    # controlan tanto la lectura de las tablas como el tamaño real de los
+    # gráficos, porque estos utilizan anclajes de dos celdas.
+    if tipo.lower() == "quimico":
+        anchos = {
+            "A": 4.08203125,
+            "B": 1.5,
+            "C": 15.08203125,
+            "D": 15.5,
+            "E": 16.5,
+            "F": 15.5,
+            "G": 10.08203125,
+            "H": 13.5,
+            "I": 42.9140625,
+            "J": 9.5,
+            "K": 13.5,
+            "L": 44.0,
+            "M": 19.9140625,
+            "N": 3.5,
+        }
+    else:
+        anchos = {
+            "A": 4.9140625,
+            "B": 1.5,
+            "C": 12.9140625,
+            "D": 15.5,
+            "E": 16.5,
+            "F": 15.5,
+            "G": 9.0,
+            "H": 13.5,
+            "I": 44.6640625,
+            "J": 9.5,
+            "K": 13.5,
+            "L": 47.08203125,
+            "M": 19.9140625,
+            "N": 1.5,
+        }
+
+    # Las columnas de auditoría quedan fuera del cuerpo principal y con
+    # ancho suficiente para que sus encabezados no se recorten.
+    anchos.update({
+        "O": 15.0,
+        "P": 18.0,
+        "Q": 18.0,
+        "R": 18.0,
+    })
+
+    for columna, ancho in anchos.items():
+        ws.column_dimensions[columna].width = ancho
+
+    # N funciona como separación visual entre el reporte y la auditoría.
+    ws.column_dimensions["N"].hidden = True
+
+    alturas = {
+        2: 14.25,
+        3: 14.5,
+        4: 14.5,
+        5: 14.5,
+        6: 14.5,
+        7: 14.5,
+        9: 20.0,
+        10: 18.0,
+        16: 20.0,
+        17: 37.5,
+        27: 20.0,
+        28: 37.5,
+        38: 20.0,
+        39: 37.5,
+        53: 20.0,
+        55: 15.0,
+        56: 39.5,
+    }
+    for fila, altura in alturas.items():
+        ws.row_dimensions[fila].height = altura
+
+    # Encabezados de las tablas auxiliares de auditoría.
+    for fila in [56, 67, 78]:
+        ws.row_dimensions[fila].height = 39.5
+    for fila in [55, 66, 77]:
+        ws.row_dimensions[fila].height = 18.0
+
+    ws.sheet_view.zoomScale = 85
+    ws.sheet_view.zoomScaleNormal = 85
+
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_margins.left = 0.25
+    ws.page_margins.right = 0.25
+    ws.page_margins.top = 0.5
+    ws.page_margins.bottom = 0.5
+
+    return nombre_hoja
+
+
+def _agregar_hojas_mensuales_torres(
+    wb,
+    df_bd_ton: pd.DataFrame,
+    df_turno: pd.DataFrame | None = None,
+) -> list[str]:
+    """Crea un par Químico/Físico por cada mes incluido en BD Ton."""
+    if df_bd_ton is None or df_bd_ton.empty or "Fecha" not in df_bd_ton.columns:
+        return []
+
+    bd = df_bd_ton.copy()
+    bd["Fecha"] = pd.to_datetime(bd["Fecha"], errors="coerce").dt.normalize()
+    bd = bd[bd["Fecha"].notna()].copy()
+
+    if bd.empty:
+        return []
+
+    material_turno = _preparar_material_por_turno(df_turno)
+    nombres = []
+
+    for periodo, bd_mes in bd.groupby(bd["Fecha"].dt.to_period("M"), sort=True):
+        material_mes = material_turno
+        if not material_turno.empty:
+            material_mes = material_turno[
+                material_turno["Fecha"].dt.to_period("M") == periodo
+            ].copy()
+
+        for tipo in ["Quimico", "Fisico"]:
+            nombre = _agregar_hoja_mensual_torres(
+                wb=wb,
+                df_bd_ton_mes=bd_mes,
+                tipo=tipo,
+                df_material_turno_mes=material_mes,
+            )
+            if nombre:
+                nombres.append(nombre)
+
+    return nombres
+
+
+def _export_representatividad_torres_to_excel(
+    df: pd.DataFrame,
+    df_bd_ton: pd.DataFrame,
+    df_turno: pd.DataFrame | None = None,
+) -> bytes:
     """
     Exporta el reporte de Representatividad Torres a Excel
     con formato similar a la tabla visual de Dash.
@@ -449,9 +2094,25 @@ def _export_representatividad_torres_to_excel(df: pd.DataFrame) -> bytes:
 
     ws.freeze_panes = "B6"
 
+    # Agregar segunda hoja al mismo libro
+    _agregar_hoja_bd_ton(
+        wb=wb,
+        df_bd_ton=df_bd_ton,
+    )
+
+    # Agregar hojas mensuales Químico y Físico.
+    _agregar_hojas_mensuales_torres(
+        wb=wb,
+        df_bd_ton=df_bd_ton,
+        df_turno=df_turno,
+    )
+
     output = io.BytesIO()
     wb.save(output)
+    output.seek(0)
+
     return output.getvalue()
+
 def _export_dataframe_simple_to_excel(df: pd.DataFrame, sheet_name: str = "Reporte") -> bytes:
     output = io.BytesIO()
 
@@ -1257,6 +2918,12 @@ def generar_reporte(n_clicks_list, f_ini, f_fin):
     prevent_initial_call=True
 )
 def exportar_excel(n_clicks_list, f_ini, f_fin):
+    print("\n=== EXPORTAR EXCEL ACTIVADO ===")
+    print("n_clicks_list:", n_clicks_list)
+    print("triggered_id:", ctx.triggered_id)
+    print("fecha inicio:", f_ini)
+    print("fecha final:", f_fin)
+
     triggered = ctx.triggered_id
     if not triggered or not isinstance(triggered, dict):
         return no_update, no_update, no_update
@@ -1279,27 +2946,88 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # REPORTE REPRESENTATIVIDAD TORRES
         # ------------------------------------------------------------
         if tipo == "representatividad_torres":
-            df = fetch_representatividad_torres_report(
+            print("Entró a exportación de Representatividad Torres")
+            # Hoja 1: reporte diario de representatividad
+            df_rep = fetch_representatividad_torres_report(
                 start_date=ini_d,
-                end_date=fin_d
+                end_date=fin_d,
+            )
+            print("Filas Representatividad:", len(df_rep))
+            if df_rep.empty:
+                return (
+                    no_update,
+                    "ℹ️ Sin datos de representatividad para exportar "
+                    "en el rango seleccionado.",
+                    _done,
+                )
+
+            # Hoja 2: BD Ton desde la vista oficial
+            df_bd_ton = fetch_bd_ton_report(
+                start_date=ini_d,
+                end_date=fin_d,
+            )
+            print("Filas BD Ton:", len(df_bd_ton))
+
+            # Fuente oficial para determinar Pad/Material y,
+            # principalmente, la evaluabilidad del turno según RN-046.
+            # Sin esta fuente no es válido reconstruir las hojas mensuales.
+            try:
+                df_turno_material = fetch_reporte_turno_cache(
+                    start_date=ini_d,
+                    end_date=fin_sql_exclusivo,
+                )
+                print("Filas Reporte por Turno:", len(df_turno_material))
+            except Exception as material_error:
+                raise RuntimeError(
+                    "No fue posible obtener el Reporte por Turno "
+                    "necesario para aplicar RN-046."
+                ) from material_error
+
+            if df_turno_material.empty:
+                raise RuntimeError(
+                    "El Reporte por Turno no entregó datos para el rango "
+                    "seleccionado; no es posible determinar la "
+                    "evaluabilidad oficial de los turnos."
+                )
+
+            xbytes = _export_representatividad_torres_to_excel(
+                df=df_rep,
+                df_bd_ton=df_bd_ton,
+                df_turno=df_turno_material,
             )
 
-            if df.empty:
-                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado.", _done
-
-            xbytes = _export_representatividad_torres_to_excel(df)
-
+            print("Excel generado. Tamaño bytes:", len(xbytes))
+            
             filename = (
                 f"Reporte_Representatividad_Torres_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
             )
 
-            status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
-            encoded = base64.b64encode(xbytes).decode("utf-8")
+            status = (
+                f"✔️ Exportado: {filename} — "
+                f"Representatividad: {len(df_rep)} registros — "
+                f"BD Ton: {len(df_bd_ton)} registros — "
+                "Hojas mensuales RN-046: Químico y Físico"
+            )
 
-            return dict(content=encoded, filename=filename, base64=True), status, _done
+            ruta_salida = os.path.join(
+                _EXPORTS_DIR,
+                filename,
+            )
 
+            with open(ruta_salida, "wb") as archivo:
+                archivo.write(xbytes)
+
+            print("Excel guardado físicamente en:", ruta_salida)
+
+            return (
+                dcc.send_file(ruta_salida),
+                status,
+                _done,
+            )
+
+            
         # ------------------------------------------------------------
         # REPORTE POR TURNO + GENERADOR REPORTE
         # ------------------------------------------------------------
@@ -1405,8 +3133,14 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         return dict(content=encoded, filename=filename, base64=True), status, _done
 
     except Exception as e:
-        return no_update, f"❌ Error al exportar: {e}", html.Div()
+        import traceback
+        traceback.print_exc()
 
+        return (
+            no_update,
+            f"❌ Error al exportar: {e}",
+            html.Div(),
+        )
 
 # Clear the progress bar once report-grafico updates (covers the generar_reporte callback)
 @callback(
