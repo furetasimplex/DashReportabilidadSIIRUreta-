@@ -40,7 +40,7 @@ def layout():
                         dcc.Dropdown(
                             id="report-tipo-reporte",
                             options=[
-                                {"label": "Producción Diaria", "value": "prod"},
+                                {"label": "Datos Conciliados", "value": "prod"},
                                 {"label": "Balance Semanal", "value": "balance"},
                                 {"label": "Conciliación Mensual", "value": "conciliacion"},
                                 {"label": "Datos medidos", "value": "Datos medidos"},
@@ -138,7 +138,7 @@ def register_callbacks(app):
                 secondary_y=True
             )
 
-            fig.update_layout(title="Producción Diaria", template="plotly_white", legend=dict(orientation="h", y=1.1))
+            fig.update_layout(title="Datos Conciliados", template="plotly_white", legend=dict(orientation="h", y=1.1))
             fig.update_yaxes(title_text="Tonelaje (TMS)", secondary_y=False)
             fig.update_yaxes(title_text="Ley Cu (%)", secondary_y=True)
             

@@ -3,13 +3,22 @@ import pandas as pd
 import numpy as np
 from datetime import date
 try:
-    from db_connection import get_connection  # usa tu DB_CONNECTION
+    from db_connection import get_engine
 except Exception as e:
-    raise RuntimeError("No se pudo importar get_connection desde db_connection.py") from e
+    raise RuntimeError("No se pudo importar get_engine desde db_connection.py") from e
+
+from sqlalchemy import text as _sa_text
+
+
+def _get_engine():
+    engine = get_engine()
+    if engine is None:
+        raise RuntimeError("get_engine() devolvio None: revisar configuracion de DB.")
+    return engine
 
 # Nombre completo de la tabla (ajusta si cambia)
 TABLE_FQN = "[inventar_SpcHidr].[Datos_conciliados_of]"
-TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[inventar_SpcHidr].[Datos_conciliados_of]"
+TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[Datos_conciliados_of]"
 # Ruta del logo BHP
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
@@ -37,33 +46,13 @@ def first_day_of_month(d: date) -> date:
 
 def fetch_report_data(end_date: date) -> pd.DataFrame:
     """
-    Lee desde SQL Server usando lo que devuelva get_connection():
-
-      - Si get_connection() devuelve un Engine SQLAlchemy:
-            usa sqlalchemy.text + .connect()
-
-      - Si get_connection() devuelve una conexión DBAPI (pyodbc.Connection, etc.):
-            usa query string simple + parámetros posicionales (?).
-
     Trae datos desde el día 1 del mes de end_date hasta end_date (inclusive)
     y añade/normaliza la columna 'es_preliminar'.
     """
     start_date = first_day_of_month(end_date)
-    conn_or_engine = get_connection()
+    engine = _get_engine()
 
-    if conn_or_engine is None:
-        raise RuntimeError("get_connection() devolvió None: revisar DB_CONNECTION.")
-
-    # Versión DBAPI (pyodbc) → placeholders '?'
-    sql_dbapi = f"""
-    SELECT *
-    FROM {TABLE_FQN}
-    WHERE [Fecha] BETWEEN ? AND ?
-    ORDER BY [Fecha] ASC
-    """
-
-    # Versión SQLAlchemy → placeholders ':start' y ':end'
-    sql_sa = f"""
+    sql = f"""
     SELECT *
     FROM {TABLE_FQN}
     WHERE [Fecha] BETWEEN :start AND :end
@@ -71,26 +60,10 @@ def fetch_report_data(end_date: date) -> pd.DataFrame:
     """
 
     try:
-        # Caso 1: conexión DBAPI (pyodbc, etc.) → tiene cursor()
-        if hasattr(conn_or_engine, "cursor"):
-            df = pd.read_sql(
-                sql_dbapi,
-                conn_or_engine,
-                params=(start_date, end_date),
-            )
-
-        # Caso 2: Engine SQLAlchemy → tiene connect(), pero normalmente NO cursor()
-        else:
-            from sqlalchemy import text  # solo si de verdad usamos SA
-            with conn_or_engine.connect() as conn:  # type: ignore[attr-defined]
-                df = pd.read_sql(
-                    text(sql_sa),
-                    conn,
-                    params={"start": start_date, "end": end_date},
-                )
-
+        with engine.connect() as conn:
+            df = pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as e:
-        raise RuntimeError(f"Error al conectar/leer SQL Server en fetch_report_data: {e}") from e
+        raise RuntimeError(f"Error al leer SQL Server en fetch_report_data: {e}") from e
 
     # ===== Manejar columna es_preliminar =====
     prelim = None
@@ -124,90 +97,39 @@ def fetch_report_data(end_date: date) -> pd.DataFrame:
 def fetch_datos_conciliados_report(start_date: date, end_date: date) -> pd.DataFrame:
     """
     Consulta exacta para el reporte de Producción Diaria / plantilla Datos conciliados.
-    Respeta el rango de fechas seleccionado (fecha inicio y fecha final).
     """
-    conn_or_engine = get_connection()
-    if conn_or_engine is None:
-        raise RuntimeError("get_connection() devolvió None: revisar conexión a la base de datos.")
-
+    engine = _get_engine()
     cols = ", ".join(f"[{c}]" for c in COLUMNAS_DATOS_CONCILIADOS)
-    sql_dbapi = f"""
-    SELECT {cols}
-    FROM {TABLE_DATOS_CONCILIADOS}
-    WHERE [Fecha] BETWEEN ? AND ?
-    ORDER BY [Fecha] ASC
-    """
-    sql_sa = f"""
+    sql = f"""
     SELECT {cols}
     FROM {TABLE_DATOS_CONCILIADOS}
     WHERE [Fecha] BETWEEN :start AND :end
     ORDER BY [Fecha] ASC
     """
-
     try:
-        if hasattr(conn_or_engine, "cursor"):
-            df = pd.read_sql(
-                sql_dbapi,
-                conn_or_engine,
-                params=(start_date, end_date),
-            )
-        else:
-            from sqlalchemy import text
-            with conn_or_engine.connect() as conn:
-                df = pd.read_sql(
-                    text(sql_sa),
-                    conn,
-                    params={"start": start_date, "end": end_date},
-                )
+        with engine.connect() as conn:
+            df = pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as e:
         raise RuntimeError(f"Error al leer Datos_conciliados_of: {e}") from e
 
-    # Asegurar orden de columnas
     df = df[[c for c in COLUMNAS_DATOS_CONCILIADOS if c in df.columns]]
     return df
 
 def fetch_representatividad_torres_report(start_date: date, end_date: date) -> pd.DataFrame:
     """
-    Consulta el reporte rápido de representatividad de torres desde procedimiento almacenado.
-    Lee desde la tabla física representatividad_torres_resultado mediante:
-    inventar_SpcHidr.sp_reporte_representatividad_torres
+    Consulta representatividad de torres via sp_reporte_representatividad_torres.
     """
-    conn_or_engine = get_connection()
-
-    if conn_or_engine is None:
-        raise RuntimeError("get_connection() devolvió None: revisar conexión a la base de datos.")
-
-    sql_dbapi = """
-    EXEC inventar_SpcHidr.sp_reporte_representatividad_torres
-        @fecha_inicio = ?,
-        @fecha_fin = ?
-    """
-
-    sql_sa = """
+    engine = _get_engine()
+    sql = """
     EXEC inventar_SpcHidr.sp_reporte_representatividad_torres
         @fecha_inicio = :start,
         @fecha_fin = :end
     """
-
     try:
-        if hasattr(conn_or_engine, "cursor"):
-            df = pd.read_sql(
-                sql_dbapi,
-                conn_or_engine,
-                params=(start_date, end_date),
-            )
-        else:
-            from sqlalchemy import text
-            with conn_or_engine.connect() as conn:
-                df = pd.read_sql(
-                    text(sql_sa),
-                    conn,
-                    params={"start": start_date, "end": end_date},
-                )
-
+        with engine.connect() as conn:
+            df = pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as e:
         raise RuntimeError(f"Error al leer representatividad de torres: {e}") from e
-
     return df
 def fetch_bd_ton_report(
     start_date: date,
@@ -419,122 +341,31 @@ def fetch_estado_apilado_turno_representatividad(
 
 def fetch_reporte_turno_report(start_date: date, end_date: date) -> pd.DataFrame:
     """
-    Consulta el reporte por turno desde el procedimiento almacenado:
-
-        inventar_SpcHidr.sp_reporte_turno_test
-
-    Importante:
-    El procedimiento trabaja con lógica:
-        Fecha >= @fecha_inicio
-        Fecha <  @fecha_fin
+    Consulta el reporte por turno via sp_reporte_turno_test.
+    Fecha >= start_date AND Fecha < end_date (end_date exclusivo).
     """
-
-    conn_or_engine = get_connection()
-
-    if conn_or_engine is None:
-        raise RuntimeError("get_connection() devolvió None: revisar conexión a la base de datos.")
-
-    sql_dbapi = """
-    EXEC inventar_SpcHidr.sp_reporte_turno_test
-        @fecha_inicio = ?,
-        @fecha_fin = ?
-    """
-
-    sql_sa = """
+    engine = _get_engine()
+    sql = """
     EXEC inventar_SpcHidr.sp_reporte_turno_test
         @fecha_inicio = :start,
         @fecha_fin = :end
     """
-
     try:
-        if hasattr(conn_or_engine, "cursor"):
-            df = pd.read_sql(
-                sql_dbapi,
-                conn_or_engine,
-                params=(start_date, end_date),
-            )
-        else:
-            from sqlalchemy import text
-            with conn_or_engine.connect() as conn:
-                df = pd.read_sql(
-                    text(sql_sa),
-                    conn,
-                    params={"start": start_date, "end": end_date},
-                )
-
+        with engine.connect() as conn:
+            df = pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as e:
         raise RuntimeError(f"Error al leer reporte por turno: {e}") from e
-
     return df
 
 
-def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame: 
-
+def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame:
     """
-    Consulta el reporte por turno desde la tabla cache:
-
-        inventar_SpcHidr.reporte_turno_cache
-
-    Mucho más rápido que ejecutar el SP completo.
+    Consulta el reporte por turno desde la tabla cache inventar_SpcHidr.reporte_turno_cache.
+    Fecha >= start_date AND Fecha < end_date (end_date exclusivo).
     """
+    engine = _get_engine()
 
-    conn_or_engine = get_connection()
-
-    if conn_or_engine is None:
-        raise RuntimeError("get_connection() devolvió None: revisar conexión a la base de datos.")
-
-    sql_dbapi = """
-    SELECT
-        Fecha,
-        Campania,
-        Material,
-        Modulo,
-        Avance,
-        Turno,
-        Apilado_TMS_Real,
-        Apilado_TMS_Plan_Mensual,
-        STOCK,
-        MINA,
-        SRR,
-        CuT_Real,
-        CuT_Plan_Mensual,
-        CuT_Plan_Semanal,
-        CuS_Real,
-        CuS_Plan_Mensual,
-        CuS_Plan_Semanal,
-        Solubilidad_Real,
-        Solubilidad_Plan_Mensual,
-        Solubilidad_Plan_Semanal,
-        CO3_Real,
-        CO3_Plan_Mensual,
-        CO3_Plan_Semanal,
-        CuFe_Real,
-        CuFe_Plan_Mensual,
-        CuFe_Plan_Semanal,
-        FeT_Real,
-        FeS_Real,
-        ConsH_Real,
-        Malla_Menos_1_2_Real,
-        Malla_Menos_1_2_Plan_Semanal,
-        Malla_Menos_100_Real,
-        Malla_Menos_100_Plan_Mensual,
-        Malla_Menos_100_Plan_Semanal,
-        CaolBeta_Real,
-        CaolBeta_Plan_Mensual,
-        CaolBeta_Plan_Semanal,
-        Dosis_Acido_Ideal_TM,
-        Dosis_Acido_Programa_Semanal,
-        Fuente_Info_Quimica,
-        Fuente_Info_Fisica,
-        Muestra_Quimica,
-        Muestra_Fisica
-    FROM inventar_SpcHidr.reporte_turno_cache
-    WHERE Fecha >= ?
-      AND Fecha < ?
-    ORDER BY Fecha, Turno;
-    """
-
-    sql_sa = """
+    sql = """
     SELECT
         Fecha,
         Campania,
@@ -586,82 +417,29 @@ def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame:
     """
 
     try:
-        if hasattr(conn_or_engine, "cursor"):
-            df = pd.read_sql(
-                sql_dbapi,
-                conn_or_engine,
-                params=(start_date, end_date),
-            )
-        else:
-            from sqlalchemy import text
-            with conn_or_engine.connect() as conn:
-                df = pd.read_sql(
-                    text(sql_sa),
-                    conn,
-                    params={"start": start_date, "end": end_date},
-                )
-
+        with engine.connect() as conn:
+            df = pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as e:
         raise RuntimeError(f"Error al leer reporte por turno desde cache: {e}") from e
 
     return df
 
-def fetch_generador_reporte_diario(
-    start_date: date,
-    end_date: date,
-) -> pd.DataFrame:
+def fetch_generador_reporte_diario(start_date: date, end_date: date) -> pd.DataFrame:
     """
-    Ejecuta el procedimiento que consolida los turnos A y B
-    en una fila diaria.
-
-    El rango usa fecha final exclusiva:
-        Fecha >= start_date
-        Fecha < end_date
+    Ejecuta sp_generador_reporte_diario (consolida turnos A y B en una fila diaria).
+    Fecha >= start_date AND Fecha < end_date (end_date exclusivo).
     """
-
-    conn_or_engine = get_connection()
-
-    if conn_or_engine is None:
-        raise RuntimeError(
-            "get_connection() devolvió None: revisar conexión a la base de datos."
-        )
-
-    sql_dbapi = """
-    EXEC inventar_SpcHidr.sp_generador_reporte_diario
-        @fecha_inicio = ?,
-        @fecha_fin = ?
-    """
-
-    sql_sa = """
+    engine = _get_engine()
+    sql = """
     EXEC inventar_SpcHidr.sp_generador_reporte_diario
         @fecha_inicio = :start,
         @fecha_fin = :end
     """
-
     try:
-        if hasattr(conn_or_engine, "cursor"):
-            return pd.read_sql(
-                sql_dbapi,
-                conn_or_engine,
-                params=(start_date, end_date),
-            )
-
-        from sqlalchemy import text
-
-        with conn_or_engine.connect() as conn:
-            return pd.read_sql(
-                text(sql_sa),
-                conn,
-                params={
-                    "start": start_date,
-                    "end": end_date,
-                },
-            )
-
+        with engine.connect() as conn:
+            return pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as exc:
-        raise RuntimeError(
-            f"Error al ejecutar sp_generador_reporte_diario: {exc}"
-        ) from exc
+        raise RuntimeError(f"Error al ejecutar sp_generador_reporte_diario: {exc}") from exc
 def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 

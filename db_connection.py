@@ -52,21 +52,21 @@ def get_connection():
             "TrustServerCertificate=yes;"
         )
 
-        print("\n🧩 [DEBUG] Intentando conectar a SQL Server (ENTORNO 3)\n"
-              f"DRIVER={SQLSERVER_DRIVER}\nSERVER={SQLSERVER_HOST}\nDATABASE={SQLSERVER_DB}\nUSER={SQLSERVER_USER}\n"
-              "----------------------------------------------------")
+        print("\n[DEBUG] Intentando conectar a SQL Server (ENTORNO 3)")
+        print(f"DRIVER={SQLSERVER_DRIVER}\nSERVER={SQLSERVER_HOST}\nDATABASE={SQLSERVER_DB}\nUSER={SQLSERVER_USER}")
+        print("----------------------------------------------------")
         try:
             conn = pyodbc.connect(conn_str, timeout=10)
-            print("✅ [DEBUG] Conectado correctamente a SQL Server (ENTORNO 3)")
+            print("[DEBUG] Conectado correctamente a SQL Server (ENTORNO 3)")
             return conn
         except pyodbc.InterfaceError as e:
-            print("❌ [ERROR] Driver ODBC no encontrado o fallo al inicializarlo (E3)")
+            print("[ERROR] Driver ODBC no encontrado o fallo al inicializarlo (E3)")
             print(str(e))
         except pyodbc.Error as e:
-            print("❌ [ERROR] pyodbc general (E3):")
+            print("[ERROR] pyodbc general (E3):")
             print(str(e))
         except Exception as e:
-            print("❌ [ERROR] Excepción inesperada al conectar SQL Server (E3):")
+            print("[ERROR] Excepcion inesperada al conectar SQL Server (E3):")
             print(str(e))
         return None
 
@@ -93,20 +93,20 @@ def get_connection():
             "Authentication=SqlPassword;"
         )
 
-        print("\n🧩 [DEBUG] ENTORNO 4 (macOS ODBC18) con TLS:")
+        print("\n[DEBUG] ENTORNO 4 (ODBC18) con TLS:")
         print(f"SERVER={host},{port}\nDATABASE={db}\nUSER={user}")
         print("Props: Encrypt=yes; TrustServerCertificate=yes; Authentication=SqlPassword")
         print("----------------------------------------------------")
 
         try:
             conn = pyodbc.connect(conn_str, timeout=10)
-            print("✅ [DEBUG] Conectado correctamente a SQL Server (E4)")
+            print("[DEBUG] Conectado correctamente a SQL Server (E4)")
             return conn
         except pyodbc.Error as e:
-            print("❌ [ERROR] pyodbc (E4):", e)
+            print("[ERROR] pyodbc (E4):", e)
         return None
 
-    raise ValueError("❌ ENTORNO no válido. Usa 1=local MySQL, 2=producción MySQL, 3=SQL Server o 4=SQL Server_mac.")
+    raise ValueError("[ERROR] ENTORNO no válido. Usa 1=local MySQL, 2=producción MySQL, 3=SQL Server o 4=SQL Server_mac.")
 
 
 def get_engine():
@@ -130,7 +130,7 @@ def get_engine():
             _engine = create_engine(conn_str)
             return _engine
         except Exception as e:
-            print(f"❌ Error engine MySQL local: {e}")
+            print(f"[ERROR] Error engine MySQL local: {e}")
             return None
 
     if ENTORNO == 2:  # MySQL producción
@@ -143,7 +143,7 @@ def get_engine():
             _engine = create_engine(conn_str)
             return _engine
         except Exception as e:
-            print(f"❌ Error engine MySQL prod: {e}")
+            print(f"[ERROR] Error engine MySQL prod: {e}")
             return None
 
     if ENTORNO == 3:  # SQL Server (Windows / ODBC)
@@ -161,12 +161,12 @@ def get_engine():
 
         try:
             conn_str = f"mssql+pyodbc://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}@{SQLSERVER_HOST}/{SQLSERVER_DB}?{params}"
-            print("\n🧩 [DEBUG] URL SQLAlchemy (ENTORNO 3)")
+            print("\n[DEBUG] URL SQLAlchemy (ENTORNO 3)")
             print(conn_str)
             _engine = create_engine(conn_str, pool_pre_ping=True, pool_recycle=1800)
             return _engine
         except Exception as e:
-            print(f"❌ Error engine SQL Server (E3): {e}")
+            print(f"[ERROR] engine SQL Server (E3): {e}")
             return None
 
     # --- ENTORNO 4: get_engine() ---
@@ -188,7 +188,7 @@ def get_engine():
             _engine = create_engine(url, pool_pre_ping=True, pool_recycle=1800)
             return _engine
         except Exception as e:
-            print(f"❌ Error engine SQL Server (E4): {e}")
+            print(f"[ERROR] Error engine SQL Server (E4): {e}")
             return None
 
-    raise ValueError("❌ ENTORNO no válido. Usa 1=local MySQL, 2=producción MySQL, 3=SQL Server o 4=SQL Server_mac.")
+    raise ValueError("[ERROR] ENTORNO no válido. Usa 1=local MySQL, 2=producción MySQL, 3=SQL Server o 4=SQL Server_mac.")

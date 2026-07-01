@@ -1,6 +1,5 @@
 # Auto-generated on 2025-10-27 18:21:09. Edit as needed.
 
-import base64
 import os
 import io
 import pandas as pd
@@ -38,23 +37,26 @@ _EXPORTS_DIR = os.path.normpath(
 )
 
 os.makedirs(_EXPORTS_DIR, exist_ok=True)
+
+
+def setup_download_route(server):
+    """No-op kept for import compatibility in main.py."""
+    pass
+
+
 # ── Clientside callback: show "generating" bar immediately on any button click ──
 clientside_callback(
     """
-    function(gen_clicks, export_clicks, pdf_clicks) {
+    function(export_clicks, pdf_clicks) {
         const ctx = dash_clientside.callback_context;
         if (!ctx || !ctx.triggered || ctx.triggered.length === 0) {
-            return '';
+            return window.dash_clientside.no_update;
         }
         const t = ctx.triggered[0];
-        if (!t.value || t.value === 0) return '';
+        if (!t.value || t.value === 0) return window.dash_clientside.no_update;
 
         const isPdf = t.prop_id.toLowerCase().includes('pdf');
-        const isExport = t.prop_id.toLowerCase().includes('export');
-
-        let label = 'Generando reporte';
-        if (isPdf) label = 'Generando PDF';
-        else if (isExport) label = 'Generando Excel';
+        const label = isPdf ? 'Generando PDF' : 'Generando Excel';
 
         return {
             props: {
@@ -76,7 +78,6 @@ clientside_callback(
     }
     """,
     Output("report-progress", "children"),
-    Input({"type": "report-gen-btn", "tipo": ALL}, "n_clicks"),
     Input({"type": "report-export-btn", "tipo": ALL}, "n_clicks"),
     Input({"type": "report-pdf-btn", "tipo": ALL}, "n_clicks"),
     prevent_initial_call=True,
@@ -2172,6 +2173,7 @@ def _export_representatividad_torres_to_excel(
         Border,
         Side,
     )
+    from openpyxl.cell.cell import MergedCell
 
     df = df.copy()
 
@@ -2339,6 +2341,8 @@ def _export_representatividad_torres_to_excel(
     for fila in range(4, 7):
         for col in range(1, 10):
             celda = ws.cell(fila, col)
+            if isinstance(celda, MergedCell):
+                continue
             celda.fill = fill_header
             celda.font = font_header
             celda.alignment = center
@@ -3264,8 +3268,11 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
     tipo = triggered["tipo"]
     _done = html.Div()
 
+    print(f"[EXCEL] tipo={tipo} | ini={f_ini} | fin={f_fin}")
+
     if not f_ini or not f_fin:
-        return no_update, "⚠️ Debe seleccionar rango de fechas.", _done
+        print("[EXCEL] Sin fechas - abortando")
+        return no_update, "Debe seleccionar rango de fechas.", _done
 
     ini_d = pd.to_datetime(f_ini).date()
     fin_d = pd.to_datetime(f_fin).date()
@@ -3365,105 +3372,82 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # REPORTE POR TURNO + GENERADOR REPORTE
         # ------------------------------------------------------------
         if tipo == "reporte_turno":
-            df_turno = fetch_reporte_turno_cache(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
-            )
+            print(f"[EXCEL] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
+            df_turno = fetch_reporte_turno_cache(start_date=ini_d, end_date=fin_sql_exclusivo)
+            print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
 
             if df_turno.empty:
-                return (
-                    no_update,
-                    "ℹ️ Sin datos del Reporte por Turno para el rango seleccionado.",
-                    _done,
-                )
+                rng = _cache_date_range()
+                return no_update, f"Sin datos para el rango seleccionado. Datos disponibles: {rng}.", _done
 
-            df_generador = fetch_generador_reporte_diario(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
-            )
+            print(f"[EXCEL] Fetching generador_reporte_diario {ini_d} -> {fin_sql_exclusivo}")
+            df_generador = fetch_generador_reporte_diario(start_date=ini_d, end_date=fin_sql_exclusivo)
+            print(f"[EXCEL] generador rows={len(df_generador)}")
 
             output = io.BytesIO()
-
-            export_reporte_turno_estilo_leyes_finos(
-                df=df_turno,
-                output=output,
-                df_generador=df_generador,
-            )
-
+            export_reporte_turno_estilo_leyes_finos(df=df_turno, output=output, df_generador=df_generador)
             output.seek(0)
             xbytes = output.getvalue()
+            print(f"[EXCEL] reporte_turno excel size={len(xbytes)} bytes")
 
             filename = (
-                f"Analisis_Torres_de_Muestreo"
+                f"Analisis_Torres_de_Muestreo_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
             )
-
-            status = (
-                f"✔️ Exportado: {filename} — "
-                f"Reporte por Turno: {len(df_turno)} registros — "
-                f"Generador Reporte: {len(df_generador)} registros"
-            )
-
-            encoded = base64.b64encode(xbytes).decode("utf-8")
-
-            return dict(content=encoded, filename=filename, base64=True), status, _done
+            status = f"Exportado: {filename} (turno={len(df_turno)}, generador={len(df_generador)})"
+            return dcc.send_bytes(xbytes, filename), status, _done
 
         # ------------------------------------------------------------
         # PRODUCCIÓN DIARIA / DATOS CONCILIADOS
         # ------------------------------------------------------------
         if tipo == "prod":
-            template_path = _find_plantilla_propuesta()
-
-            if not os.path.isfile(template_path):
-                return no_update, f"❌ No se encuentra la plantilla en {_REPORT_EXPORT_DIR}", _done
-
             df = fetch_datos_conciliados_report(
                 start_date=ini_d,
                 end_date=fin_d
             )
 
             if df.empty:
-                return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado.", _done
+                return no_update, "Sin datos para exportar en el rango seleccionado.", _done
 
-            xbytes = export_datos_conciliados_to_template(df, template_path)
+            template_path = _find_plantilla_propuesta()
+            if os.path.isfile(template_path):
+                xbytes = export_datos_conciliados_to_template(df, template_path)
+            else:
+                xbytes = _export_dataframe_simple_to_excel(df, sheet_name="Datos Conciliados")
 
             filename = (
-                f"Reporte_prod_"
+                f"Reporte_DatosConciliados_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
             )
 
-            status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
-            encoded = base64.b64encode(xbytes).decode("utf-8")
-
-            return dict(content=encoded, filename=filename, base64=True), status, _done
+            status = f"Exportado: {filename} — Registros: {len(df)}"
+            return dcc.send_bytes(xbytes, filename), status, _done
 
         # ------------------------------------------------------------
         # BALANCE / CONCILIACIÓN U OTROS REPORTES ANTIGUOS
         # ------------------------------------------------------------
+        print(f"[EXCEL] Fetching report_data tipo={tipo} end={fin_d}")
         df = fetch_report_data(end_date=fin_d)
-
         df = df[
             (pd.to_datetime(df["Fecha"]).dt.date >= ini_d) &
             (pd.to_datetime(df["Fecha"]).dt.date <= fin_d)
         ].copy()
+        print(f"[EXCEL] report_data rows={len(df)}")
 
         if df.empty:
-            return no_update, "ℹ️ Sin datos para exportar en el rango seleccionado.", _done
+            return no_update, "Sin datos para exportar en el rango seleccionado.", _done
 
         xbytes = export_dataframe_with_template(df, TEMPLATE_XLSX_PATH)
+        print(f"[EXCEL] {tipo} excel size={len(xbytes)} bytes")
 
         filename = (
             f"Reporte_{tipo}_"
             f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
             f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
         )
-
-        status = f"✔️ Exportado: {filename} — Registros: {len(df)}"
-        encoded = base64.b64encode(xbytes).decode("utf-8")
-
-        return dict(content=encoded, filename=filename, base64=True), status, _done
+        return dcc.send_bytes(xbytes, filename), f"Exportado: {filename} ({len(df)} registros)", _done
 
     except Exception as e:
         import traceback
@@ -3502,10 +3486,13 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
         return no_update, no_update, no_update
 
     tipo = triggered["tipo"]
-    _done = html.Div()  # clears the progress bar
+    _done = html.Div()
+
+    print(f"[PDF] tipo={tipo} | ini={f_ini} | fin={f_fin}")
 
     if not f_ini or not f_fin:
-        return no_update, "⚠️ Debe seleccionar rango de fechas.", _done
+        print("[PDF] Sin fechas - abortando")
+        return no_update, "Debe seleccionar rango de fechas.", _done
 
     ini_d = pd.to_datetime(f_ini).date()
     fin_d = pd.to_datetime(f_fin).date()
@@ -3514,72 +3501,79 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
     try:
         # ── REPRESENTATIVIDAD TORRES ──────────────────────────────────
         if tipo == "representatividad_torres":
+            print(f"[PDF] Fetching representatividad_torres {ini_d} -> {fin_d}")
             df = fetch_representatividad_torres_report(start_date=ini_d, end_date=fin_d)
+            print(f"[PDF] representatividad_torres rows={len(df)}")
             if df.empty:
-                return no_update, "ℹ️ Sin datos para generar PDF.", _done
+                return no_update, "Sin datos para generar PDF.", _done
 
             pdf_bytes = generar_pdf_representatividad_torres(df, f_ini, f_fin)
+            print(f"[PDF] representatividad_torres pdf size={len(pdf_bytes)} bytes")
             filename = (
                 f"Representatividad_Torres_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
             )
-            encoded = base64.b64encode(pdf_bytes).decode("utf-8")
-            status = f"✔️ PDF generado: {filename} — {len(df)} registros"
-            return dict(content=encoded, filename=filename, base64=True), status, _done
+            return dcc.send_bytes(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
 
         # ── REPORTE POR TURNO ─────────────────────────────────────────
         if tipo == "reporte_turno":
+            print(f"[PDF] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
             df = fetch_reporte_turno_cache(start_date=ini_d, end_date=fin_sql_exclusivo)
+            print(f"[PDF] reporte_turno rows={len(df)}")
             if df.empty:
-                return no_update, "ℹ️ Sin datos para generar PDF.", _done
+                rng = _cache_date_range()
+                return no_update, f"Sin datos para el rango seleccionado. Datos disponibles: {rng}.", _done
 
             pdf_bytes = generar_pdf_reporte_turno(df, f_ini, f_fin)
+            print(f"[PDF] reporte_turno pdf size={len(pdf_bytes)} bytes")
             filename = (
                 f"Analisis_Torres_Turno_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
             )
-            encoded = base64.b64encode(pdf_bytes).decode("utf-8")
-            status = f"✔️ PDF generado: {filename} — {len(df)} registros"
-            return dict(content=encoded, filename=filename, base64=True), status, _done
+            return dcc.send_bytes(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
 
         # ── PRODUCCIÓN DIARIA / DATOS CONCILIADOS ─────────────────────
         if tipo == "prod":
+            print(f"[PDF] Fetching datos_conciliados {ini_d} -> {fin_d}")
             df = fetch_datos_conciliados_report(start_date=ini_d, end_date=fin_d)
+            print(f"[PDF] datos_conciliados rows={len(df)}")
             if df.empty:
-                return no_update, "ℹ️ Sin datos para generar PDF.", _done
+                return no_update, "Sin datos para generar PDF.", _done
 
             pdf_bytes = generar_pdf_datos_conciliados(df, f_ini, f_fin)
+            print(f"[PDF] prod pdf size={len(pdf_bytes)} bytes")
             filename = (
                 f"Produccion_Diaria_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
             )
-            encoded = base64.b64encode(pdf_bytes).decode("utf-8")
-            status = f"✔️ PDF generado: {filename} — {len(df)} registros"
-            return dict(content=encoded, filename=filename, base64=True), status, _done
+            return dcc.send_bytes(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
 
-        # ── OTHER REPORT TYPES (balance / conciliación) ───────────────
-        end_date = fin_d
-        df = fetch_report_data(end_date=end_date)
+        # ── BALANCE / CONCILIACIÓN ────────────────────────────────────
+        print(f"[PDF] Fetching report_data tipo={tipo} end={fin_d}")
+        df = fetch_report_data(end_date=fin_d)
         df = df[
             (pd.to_datetime(df["Fecha"]).dt.date >= ini_d) &
             (pd.to_datetime(df["Fecha"]).dt.date <= fin_d)
         ].copy()
+        print(f"[PDF] report_data rows={len(df)}")
 
         if df.empty:
-            return no_update, "ℹ️ Sin datos para generar PDF.", _done
+            return no_update, "Sin datos para generar PDF.", _done
 
         pdf_bytes = generar_pdf_datos_conciliados(df, f_ini, f_fin)
+        print(f"[PDF] {tipo} pdf size={len(pdf_bytes)} bytes")
         filename = (
             f"Reporte_{tipo}_"
             f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
             f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
         )
-        encoded = base64.b64encode(pdf_bytes).decode("utf-8")
-        status = f"✔️ PDF generado: {filename} — {len(df)} registros"
-        return dict(content=encoded, filename=filename, base64=True), status, _done
+        return dcc.send_bytes(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
 
     except Exception as e:
-        return no_update, f"❌ Error al generar PDF: {e}", _done
+        import traceback
+        print(f"[PDF ERROR] tipo={tipo}: {e}")
+        traceback.print_exc()
+        return no_update, f"Error al generar PDF ({tipo}): {e}", _done

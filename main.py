@@ -4,6 +4,7 @@ from layout import create_layout, register_callbacks
 from dotenv import load_dotenv
 from flask import session, redirect, request
 from auth import auth_bp
+from report_export.callbacks.reportabilidad_cb import setup_download_route
 
 load_dotenv()
 
@@ -14,6 +15,7 @@ external_stylesheets = [
 
 app = Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
 server = app.server
+setup_download_route(server)
 app.title = "Dashboard Hidrometalurgico Spence"
 
 # 🔐 Config Flask

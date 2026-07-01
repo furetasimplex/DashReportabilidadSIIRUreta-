@@ -4,13 +4,13 @@ import pandas as pd
 import datetime as dt
 
 def _default_dates():
-    year = dt.date.today().year
-    month = dt.date.today().month
-    day = dt.date.today().day
-    day_7 = dt.date.today().day-7
-
-    #return f"{year}-{month}-01", f"{year}-{month}-{day}"
-    return f"{year}-03-01", f"{year}-03-{day}"
+    today = dt.date.today()
+    # Use previous month if we are early in the month (< day 5), otherwise current month
+    if today.day < 5:
+        first = (today.replace(day=1) - dt.timedelta(days=1)).replace(day=1)
+    else:
+        first = today.replace(day=1)
+    return first.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
 
 
 def _report_card(title, description, tipo):
@@ -92,7 +92,7 @@ def layout():
                     selected_className="rp-tab--selected",
                     children=dbc.Row([
                         dbc.Col(_report_card(
-                            "Producción Diaria",
+                            "Datos Conciliados",
                             "Datos conciliados diarios de producción. Superintendencia Medición y Reconciliación.",
                             "prod",
                         ), md=4, className="mb-4"),
@@ -102,7 +102,7 @@ def layout():
                             "representatividad_torres",
                         ), md=4, className="mb-4"),
                         dbc.Col(_report_card(
-                            "Análisis Torres por Turno",
+                            "Análisis Torres de Muestreo",
                             "Análisis de las Torres de Muestreo por turno: leyes, granulometrías y fuentes de información.",
                             "reporte_turno",
                         ), md=4, className="mb-4"),

@@ -394,7 +394,7 @@ def generar_pdf_reporte_turno(df: pd.DataFrame, f_ini: str, f_fin: str) -> bytes
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# DATOS CONCILIADOS / PRODUCCIÓN DIARIA
+# DATOS CONCILIADOS
 # ──────────────────────────────────────────────────────────────────────────────
 
 _COLS_PROD_LABELS = {
