@@ -93,6 +93,13 @@
   color: #fff !important;
 }
 
+.rp-btn-export:disabled,
+.rp-btn-pdf:disabled {
+  opacity: 0.5;
+  cursor: wait;
+  pointer-events: none;
+}
+
 /* ── generating progress bar ── */
 .rp-progress-bar {
   display: flex;

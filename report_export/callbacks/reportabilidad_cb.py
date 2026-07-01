@@ -2,9 +2,10 @@
 
 import os
 import io
+import calendar
 import pandas as pd
 import plotly.express as px
-from dash import Input, Output, State, callback, clientside_callback, no_update, dcc, html, dash_table, ALL, ctx
+from dash import Input, Output, State, callback, clientside_callback, no_update, dcc, html, dash_table, ALL, MATCH, ctx
 from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 
@@ -28,20 +29,20 @@ from report_export.pdf_generator import (
 
 TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
 _REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-_EXPORTS_DIR = os.path.normpath(
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "..",
-        "exports",
-    )
-)
-
-os.makedirs(_EXPORTS_DIR, exist_ok=True)
 
 
 def setup_download_route(server):
     """No-op kept for import compatibility in main.py."""
     pass
+
+
+def _enviar_descarga(contenido: bytes, nombre_archivo: str):
+    """Fuerza una descarga binaria y evita la previsualización inline."""
+    return dcc.send_bytes(
+        contenido,
+        nombre_archivo,
+        type="application/octet-stream",
+    )
 
 
 # ── Clientside callback: show "generating" bar immediately on any button click ──
@@ -62,17 +63,18 @@ clientside_callback(
             props: {
                 children: [
                     {
-                        type: 'span',
+                        type: 'Span',
                         props: {
                             className: 'spinner-border spinner-border-sm me-2',
                             role: 'status'
-                        }
+                        },
+                        namespace: 'dash_html_components'
                     },
                     label + ', por favor espere…'
                 ],
                 className: 'rp-progress-bar'
             },
-            type: 'div',
+            type: 'Div',
             namespace: 'dash_html_components'
         };
     }
@@ -620,6 +622,44 @@ _MESES_NOMBRE_TORRES = {
     12: "Diciembre",
 }
 
+def _obtener_rango_fiscal_hasta_mes(fecha_reporte) -> dict:
+    """
+    Obtiene el rango desde el inicio del año fiscal hasta el último
+    día del mes evaluado.
+
+    Ejemplo:
+        Enero 2026 -> FY26
+        Desde 01-07-2025 hasta 31-01-2026.
+    """
+
+    fecha = pd.to_datetime(fecha_reporte).date()
+
+    anio_fiscal = (
+        fecha.year + 1
+        if fecha.month >= 7
+        else fecha.year
+    )
+
+    fecha_inicio_fy = pd.Timestamp(
+        year=anio_fiscal - 1,
+        month=7,
+        day=1,
+    ).date()
+
+    ultimo_dia_mes = calendar.monthrange(
+        fecha.year,
+        fecha.month,
+    )[1]
+
+    fecha_fin_mes = fecha.replace(
+        day=ultimo_dia_mes
+    )
+
+    return {
+        "anio_fiscal": anio_fiscal,
+        "fecha_inicio": fecha_inicio_fy,
+        "fecha_fin": fecha_fin_mes,
+    }
 
 def _normalizar_turno_torres(valor) -> str:
     texto = str(valor or "").strip().upper().replace(" ", "")
@@ -3250,7 +3290,14 @@ def generar_reporte(n_clicks_list, f_ini, f_fin):
     Input({"type": "report-export-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    running=[
+        (
+            Output({"type": "report-export-btn", "tipo": MATCH}, "disabled"),
+            True,
+            False,
+        ),
+    ],
 )
 def exportar_excel(n_clicks_list, f_ini, f_fin):
     print("\n=== EXPORTAR EXCEL ACTIVADO ===")
@@ -3351,18 +3398,8 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 "Hojas mensuales RN-046: Químico y Físico"
             )
 
-            ruta_salida = os.path.join(
-                _EXPORTS_DIR,
-                filename,
-            )
-
-            with open(ruta_salida, "wb") as archivo:
-                archivo.write(xbytes)
-
-            print("Excel guardado físicamente en:", ruta_salida)
-
             return (
-                dcc.send_file(ruta_salida),
+                _enviar_descarga(xbytes, filename),
                 status,
                 _done,
             )
@@ -3396,7 +3433,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
             )
             status = f"Exportado: {filename} (turno={len(df_turno)}, generador={len(df_generador)})"
-            return dcc.send_bytes(xbytes, filename), status, _done
+            return _enviar_descarga(xbytes, filename), status, _done
 
         # ------------------------------------------------------------
         # PRODUCCIÓN DIARIA / DATOS CONCILIADOS
@@ -3423,7 +3460,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             )
 
             status = f"Exportado: {filename} — Registros: {len(df)}"
-            return dcc.send_bytes(xbytes, filename), status, _done
+            return _enviar_descarga(xbytes, filename), status, _done
 
         # ------------------------------------------------------------
         # BALANCE / CONCILIACIÓN U OTROS REPORTES ANTIGUOS
@@ -3447,7 +3484,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
             f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
         )
-        return dcc.send_bytes(xbytes, filename), f"Exportado: {filename} ({len(df)} registros)", _done
+        return _enviar_descarga(xbytes, filename), f"Exportado: {filename} ({len(df)} registros)", _done
 
     except Exception as e:
         import traceback
@@ -3477,6 +3514,13 @@ def _clear_progress_on_viz(_):
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
     prevent_initial_call=True,
+    running=[
+        (
+            Output({"type": "report-pdf-btn", "tipo": MATCH}, "disabled"),
+            True,
+            False,
+        ),
+    ],
 )
 def generar_pdf(n_clicks_list, f_ini, f_fin):
     triggered = ctx.triggered_id
@@ -3514,7 +3558,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
             )
-            return dcc.send_bytes(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
+            return _enviar_descarga(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
 
         # ── REPORTE POR TURNO ─────────────────────────────────────────
         if tipo == "reporte_turno":
@@ -3532,7 +3576,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
             )
-            return dcc.send_bytes(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
+            return _enviar_descarga(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
 
         # ── PRODUCCIÓN DIARIA / DATOS CONCILIADOS ─────────────────────
         if tipo == "prod":
@@ -3549,7 +3593,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
             )
-            return dcc.send_bytes(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
+            return _enviar_descarga(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
 
         # ── BALANCE / CONCILIACIÓN ────────────────────────────────────
         print(f"[PDF] Fetching report_data tipo={tipo} end={fin_d}")
@@ -3570,7 +3614,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
             f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
             f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
         )
-        return dcc.send_bytes(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
+        return _enviar_descarga(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
 
     except Exception as e:
         import traceback
