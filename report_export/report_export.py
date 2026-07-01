@@ -209,6 +209,214 @@ def fetch_representatividad_torres_report(start_date: date, end_date: date) -> p
         raise RuntimeError(f"Error al leer representatividad de torres: {e}") from e
 
     return df
+def fetch_bd_ton_report(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """
+    Consulta BD Ton directamente desde la vista oficial.
+
+    El rango de fechas es inclusivo:
+        Fecha >= start_date
+        Fecha <= end_date
+    """
+    conn_or_engine = get_connection()
+
+    if conn_or_engine is None:
+        raise RuntimeError(
+            "get_connection() devolvió None: revisar conexión a la base de datos."
+        )
+
+    sql_dbapi = """
+    SELECT *
+    FROM inventar_SpcHidr.v_bd_ton_oficial
+    WHERE [Fecha] >= ?
+      AND [Fecha] <= ?
+    ORDER BY [Fecha] ASC;
+    """
+
+    sql_sa = """
+    SELECT *
+    FROM inventar_SpcHidr.v_bd_ton_oficial
+    WHERE [Fecha] >= :start
+      AND [Fecha] <= :end
+    ORDER BY [Fecha] ASC;
+    """
+
+    try:
+        # Conexión DBAPI, por ejemplo pyodbc
+        if hasattr(conn_or_engine, "cursor"):
+            df = pd.read_sql(
+                sql_dbapi,
+                conn_or_engine,
+                params=(start_date, end_date),
+            )
+
+        # Engine SQLAlchemy
+        else:
+            from sqlalchemy import text
+
+            with conn_or_engine.connect() as conn:
+                df = pd.read_sql(
+                    text(sql_sa),
+                    conn,
+                    params={
+                        "start": start_date,
+                        "end": end_date,
+                    },
+                )
+
+    except Exception as exc:
+        raise RuntimeError(
+            f"Error al leer inventar_SpcHidr.v_bd_ton_oficial: {exc}"
+        ) from exc
+
+    if "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(
+            df["Fecha"],
+            errors="coerce",
+        )
+
+    return df
+
+def fetch_estado_apilado_turno_representatividad(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """
+    Obtiene la evaluabilidad oficial de cada Fecha + Turno para el
+    Reporte de Representatividad.
+
+    Fuente principal:
+        inventar_SpcHidr.v_estado_apilado_turno_representatividad
+
+    Material:
+        inventar_SpcHidr.v_reporte_turno_campania_modulo_test
+
+    El rango utiliza fecha final exclusiva:
+        Fecha >= start_date
+        Fecha <  end_date
+
+    La columna Apilado_TMS_Real se conserva como alias interno de
+    compatibilidad con la preparación actual de las hojas mensuales.
+    Para Representatividad solo se utiliza su condición mayor que cero.
+    """
+
+    from sqlalchemy import text
+    from db_connection import get_engine
+
+    engine = get_engine()
+
+    if engine is None:
+        raise RuntimeError(
+            "No se pudo obtener conexión a la base de datos."
+        )
+
+    query = text("""
+        SELECT
+            e.Fecha,
+            e.Turno,
+
+            COALESCE(
+                cm.Material,
+                'Sin clasificar'
+            ) AS Material,
+
+            e.Apilado_TMH_Base AS Apilado_TMS_Real,
+            e.Flag_Apilado_Valido,
+
+            CONVERT(
+                int,
+                e.Turno_Evaluable
+            ) AS Turno_Evaluable
+
+        FROM
+            [inventar_SpcHidr].[v_estado_apilado_turno_representatividad] AS e
+
+        OUTER APPLY
+        (
+            SELECT TOP (1)
+                c.Material
+            FROM
+                [inventar_SpcHidr].[v_reporte_turno_campania_modulo_test] AS c
+            WHERE
+                CAST(c.Fecha AS date) = e.Fecha
+            ORDER BY
+                CASE
+                    WHEN c.Material IS NULL THEN 1
+                    ELSE 0
+                END,
+                COALESCE(c.Volumen_Diario_Modulo_m3, 0) DESC,
+                COALESCE(c.Avance, 0) DESC,
+                c.Material,
+                c.Modulo
+        ) AS cm
+
+        WHERE
+            e.Fecha >= :start_date
+            AND e.Fecha < :end_date
+
+        ORDER BY
+            e.Fecha,
+            e.Turno;
+    """)
+
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql_query(
+                query,
+                conn,
+                params={
+                    "start_date": start_date,
+                    "end_date": end_date,
+                },
+            )
+
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al consultar el estado de apilado por turno "
+            "para Representatividad."
+        ) from exc
+
+    if "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(
+            df["Fecha"],
+            errors="coerce",
+        )
+
+    if "Turno" in df.columns:
+        df["Turno"] = (
+            df["Turno"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+        )
+
+    # La fuente debe entregar una sola fila por Fecha + Turno.
+    duplicados = df[
+        df.duplicated(
+            subset=["Fecha", "Turno"],
+            keep=False,
+        )
+    ]
+
+    if not duplicados.empty:
+        detalle = (
+            duplicados[
+                ["Fecha", "Turno", "Material"]
+            ]
+            .sort_values(["Fecha", "Turno"])
+            .to_string(index=False)
+        )
+
+        raise RuntimeError(
+            "La fuente de evaluabilidad entregó más de una fila "
+            "para una misma Fecha + Turno.\n"
+            f"{detalle}"
+        )
+
+    return df
+
 def fetch_reporte_turno_report(start_date: date, end_date: date) -> pd.DataFrame:
     """
     Consulta el reporte por turno desde el procedimiento almacenado:

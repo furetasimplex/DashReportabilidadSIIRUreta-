@@ -14,6 +14,7 @@ from report_export.report_export import (
     fetch_datos_conciliados_report,
     fetch_representatividad_torres_report,
     fetch_bd_ton_report,
+    fetch_estado_apilado_turno_representatividad,
     fetch_reporte_turno_report,
     fetch_reporte_turno_cache,
     fetch_generador_reporte_diario,
@@ -329,8 +330,9 @@ def _tabla_representatividad_torres(df: pd.DataFrame):
     )
 def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
     """
-    Agrega la hoja BD Ton al libro de Representatividad Torres,
-    conservando el orden entregado por v_bd_ton_oficial.
+    Agrega la hoja BD Ton con la estética del bloque AT:BM de
+    Reporte Diario: fondo blanco, encabezados jerárquicos,
+    bordes completos y desplazamiento libre sin paneles inmovilizados.
     """
     from openpyxl.styles import (
         Font,
@@ -342,7 +344,13 @@ def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
     from openpyxl.utils import get_column_letter
 
     df = df_bd_ton.copy()
+
+    if "BD Ton" in wb.sheetnames:
+        del wb["BD Ton"]
+
     ws = wb.create_sheet(title="BD Ton")
+    ws.sheet_view.showGridLines = False
+    ws.freeze_panes = None
 
     if "Fecha" in df.columns:
         df["Fecha"] = pd.to_datetime(
@@ -350,19 +358,62 @@ def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
             errors="coerce",
         )
 
-    fill_header = PatternFill("solid", fgColor="D9E3EA")
-    fill_fecha = PatternFill("solid", fgColor="FFF2CC")
-    fill_alt = PatternFill("solid", fgColor="EEF3F6")
+    # Paleta equivalente a Reporte Diario, columnas AT:BM.
+    color_header = "D7E1E7"
+    color_texto = "476475"
+    color_borde = "476475"
+    color_borde_interno = "A6A6A6"
+    color_subtitulo = "666666"
 
-    font_header = Font(bold=True, color="1F4E79")
-    font_normal = Font(color="404040")
+    fill_blanco = PatternFill("solid", fgColor="FFFFFF")
+    fill_header = PatternFill("solid", fgColor=color_header)
+    fill_alt = PatternFill("solid", fgColor=color_header)
 
-    thin = Side(style="thin", color="B8B8B8")
-    border = Border(
+    font_titulo = Font(
+        name="Arial",
+        bold=True,
+        color=color_texto,
+        size=14,
+    )
+    font_subtitulo = Font(
+        name="Arial",
+        italic=True,
+        color=color_subtitulo,
+        size=9,
+    )
+    font_header = Font(
+        name="Arial",
+        bold=True,
+        color=color_texto,
+        size=10,
+    )
+    font_normal = Font(
+        name="Arial",
+        color=color_texto,
+        size=9,
+    )
+    font_fecha = Font(
+        name="Arial",
+        bold=True,
+        color=color_texto,
+        size=9,
+    )
+
+    thin = Side(style="thin", color=color_borde_interno)
+    thin_header = Side(style="thin", color=color_borde)
+    medium = Side(style="medium", color=color_borde)
+
+    border_datos = Border(
         left=thin,
         right=thin,
         top=thin,
         bottom=thin,
+    )
+    border_header = Border(
+        left=thin_header,
+        right=thin_header,
+        top=thin_header,
+        bottom=thin_header,
     )
 
     center = Alignment(
@@ -371,23 +422,114 @@ def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
         wrap_text=True,
     )
 
-    # Encabezados
-    for col_idx, nombre in enumerate(df.columns, start=1):
-        cell = ws.cell(
-            row=1,
-            column=col_idx,
-            value=str(nombre),
-        )
-        cell.fill = fill_header
-        cell.font = font_header
-        cell.alignment = center
-        cell.border = border
+    def _aplicar_contorno(
+        fila_ini: int,
+        col_ini: int,
+        fila_fin: int,
+        col_fin: int,
+    ) -> None:
+        """Refuerza solo el contorno del bloque, conservando la grilla interna."""
+        for fila in range(fila_ini, fila_fin + 1):
+            for col in range(col_ini, col_fin + 1):
+                celda = ws.cell(fila, col)
+                borde_actual = celda.border
+                celda.border = Border(
+                    left=medium if col == col_ini else borde_actual.left,
+                    right=medium if col == col_fin else borde_actual.right,
+                    top=medium if fila == fila_ini else borde_actual.top,
+                    bottom=medium if fila == fila_fin else borde_actual.bottom,
+                )
 
+    # ------------------------------------------------------------
+    # Título y descripción
+    # ------------------------------------------------------------
+    ws.merge_cells("A1:U1")
+    ws["A1"] = "Base de datos de tonelajes e indicadores de representatividad"
+    ws["A1"].font = font_titulo
+    ws["A1"].alignment = center
+    ws["A1"].fill = fill_blanco
+
+    ws.merge_cells("A2:U2")
+    ws["A2"] = (
+        "Detalle diario de tonelajes, representatividad calculada "
+        "e indicadores oficiales de muestra."
+    )
+    ws["A2"].font = font_subtitulo
+    ws["A2"].alignment = center
+    ws["A2"].fill = fill_blanco
+
+    # ------------------------------------------------------------
+    # Encabezados jerárquicos
+    # ------------------------------------------------------------
+    ws.merge_cells("A4:A6")
+    ws.merge_cells("B4:E4")
+    ws.merge_cells("F4:M4")
+    ws.merge_cells("N4:U4")
+
+    ws.merge_cells("B5:C5")
+    ws.merge_cells("D5:E5")
+    ws.merge_cells("F5:I5")
+    ws.merge_cells("J5:M5")
+    ws.merge_cells("N5:Q5")
+    ws.merge_cells("R5:U5")
+
+    ws["A4"] = "Fecha"
+    ws["B4"] = "Tonelaje apilado TMH"
+    ws["F4"] = "Representatividad calculada"
+    ws["N4"] = "Indicador oficial de muestra representativa"
+
+    ws["B5"] = "TM1 · CV-08"
+    ws["D5"] = "TM2 · CV-108"
+    ws["F5"] = "Torre de muestreo 1"
+    ws["J5"] = "Torre de muestreo 2"
+    ws["N5"] = "Químico"
+    ws["R5"] = "Físico"
+
+    headers_fila_6 = [
+        "TA",
+        "TB",
+        "TA",
+        "TB",
+        "TA Químico",
+        "TA Físico",
+        "TB Químico",
+        "TB Físico",
+        "TA Químico",
+        "TA Físico",
+        "TB Químico",
+        "TB Físico",
+        "TM1 TA",
+        "TM1 TB",
+        "TM2 TA",
+        "TM2 TB",
+        "TM1 TA",
+        "TM1 TB",
+        "TM2 TA",
+        "TM2 TB",
+    ]
+
+    for col, valor in enumerate(headers_fila_6, start=2):
+        ws.cell(6, col, valor)
+
+    for fila in range(4, 7):
+        for col in range(1, 22):
+            celda = ws.cell(fila, col)
+            celda.fill = fill_header
+            celda.font = font_header
+            celda.alignment = center
+            celda.border = border_header
+
+    # ------------------------------------------------------------
     # Datos
-    for row_idx, valores in enumerate(
+    # ------------------------------------------------------------
+    fila_inicio = 7
+
+    for fila_excel, valores in enumerate(
         df.itertuples(index=False, name=None),
-        start=2,
+        start=fila_inicio,
     ):
+        es_alterna = (fila_excel - fila_inicio) % 2 == 1
+
         for col_idx, valor in enumerate(valores, start=1):
             nombre_columna = str(df.columns[col_idx - 1])
 
@@ -400,65 +542,61 @@ def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
             else:
                 valor_excel = valor
 
-            cell = ws.cell(
-                row=row_idx,
+            celda = ws.cell(
+                row=fila_excel,
                 column=col_idx,
                 value=valor_excel,
             )
-
-            cell.font = font_normal
-            cell.alignment = center
-            cell.border = border
-
-            if (row_idx - 2) % 2 == 1:
-                cell.fill = fill_alt
+            celda.fill = fill_alt if es_alterna else fill_blanco
+            celda.font = font_normal
+            celda.alignment = center
+            celda.border = border_datos
 
             if nombre_columna == "Fecha":
-                cell.number_format = "dd-mm-yyyy"
-                cell.fill = fill_fecha
-                cell.font = Font(
-                    bold=True,
-                    color="404040",
-                )
-
+                celda.number_format = "dd-mm-yyyy"
+                celda.font = font_fecha
             elif nombre_columna.startswith("Apilado TMH"):
-                cell.number_format = "#,##0.0"
-
+                celda.number_format = "#,##0.0"
             elif nombre_columna.startswith("Rep."):
-                cell.number_format = "0.000"
-
+                celda.number_format = "0.000"
             elif (
                 nombre_columna.startswith("Muestra representativa")
                 or nombre_columna.startswith("FISICO")
             ):
-                cell.number_format = "0"
+                celda.number_format = "0"
 
-    # Anchos
-    for col_idx, nombre in enumerate(df.columns, start=1):
-        nombre = str(nombre)
-        letra = get_column_letter(col_idx)
+    ultima_fila = max(fila_inicio + len(df) - 1, fila_inicio)
 
-        if nombre == "Fecha":
-            ancho = 14
-        elif nombre.startswith("Apilado TMH"):
-            ancho = 23
-        elif nombre.startswith("Rep."):
-            ancho = 19
-        else:
-            ancho = 29
+    # Contornos por bloque funcional.
+    for col_ini, col_fin in [
+        (1, 1),
+        (2, 5),
+        (6, 13),
+        (14, 21),
+    ]:
+        _aplicar_contorno(4, col_ini, ultima_fila, col_fin)
 
-        ws.column_dimensions[letra].width = ancho
+    # Dimensiones equivalentes al bloque AT:BM.
+    ws.column_dimensions["A"].width = 13
+    for col in range(2, 6):
+        ws.column_dimensions[get_column_letter(col)].width = 14
+    for col in range(6, 14):
+        ws.column_dimensions[get_column_letter(col)].width = 14
+    for col in range(14, 22):
+        ws.column_dimensions[get_column_letter(col)].width = 13
 
-    ws.row_dimensions[1].height = 42
-    ws.freeze_panes = "A2"
-    ws.sheet_view.showGridLines = False
+    ws.row_dimensions[1].height = 24
+    ws.row_dimensions[2].height = 18
+    ws.row_dimensions[4].height = 28
+    ws.row_dimensions[5].height = 26
+    ws.row_dimensions[6].height = 26
+    for fila in range(fila_inicio, ultima_fila + 1):
+        ws.row_dimensions[fila].height = 21
 
-    if len(df.columns) > 0:
+    if len(df.columns) > 0 and len(df) > 0:
         ultima_columna = get_column_letter(len(df.columns))
-        ultima_fila = max(ws.max_row, 1)
-        ws.auto_filter.ref = (
-            f"A1:{ultima_columna}{ultima_fila}"
-        )
+        ws.auto_filter.ref = f"A6:{ultima_columna}{ultima_fila}"
+
 
 _MESES_ABR_TORRES = {
     1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr",
@@ -507,14 +645,15 @@ def _preparar_material_por_turno(
     df_turno: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Obtiene, para cada Fecha + Turno:
+    Normaliza la fuente independiente de estado de apilado para cada
+    Fecha + Turno y entrega:
 
-    - El material predominante según Apilado_TMS_Real.
-    - El Apilado_TMS_Real total oficial del turno.
-    - El estado de actividad oficial del turno.
+    - El material informado por la fuente independiente.
+    - El apilado oficial del turno.
+    - El estado de evaluabilidad según RN-046.
 
-    El turno se considera activo únicamente cuando el apilado oficial
-    acumulado es mayor que cero.
+    El turno se considera evaluable únicamente cuando el apilado oficial
+    es mayor que cero.
     """
     columnas_salida = [
         "Fecha",
@@ -565,7 +704,8 @@ def _preparar_material_por_turno(
     if df.empty:
         return pd.DataFrame(columns=columnas_salida)
 
-    # Tonelaje acumulado por material dentro de cada turno.
+    # Normalización defensiva por material para garantizar una sola fila
+    # por Fecha + Turno, incluso si la fuente cambia accidentalmente.
     tonelaje_material = (
         df.groupby(
             ["Fecha", "Turno", "Pad"],
@@ -575,7 +715,7 @@ def _preparar_material_por_turno(
         .sum()
     )
 
-    # Seleccionar el material con mayor tonelaje en cada turno.
+    # Conservar un único material por Fecha + Turno.
     material_predominante = (
         tonelaje_material.sort_values(
             ["Fecha", "Turno", "Tonelaje", "Pad"],
@@ -585,7 +725,7 @@ def _preparar_material_por_turno(
         [["Fecha", "Turno", "Pad"]]
     )
 
-    # Tonelaje oficial total del turno, sumando módulos/materiales.
+    # Obtener el apilado oficial del turno.
     apilado_turno = (
         df.groupby(
             ["Fecha", "Turno"],
@@ -679,8 +819,9 @@ def _preparar_detalle_mensual_torres(
     Construye el detalle Fecha + Turno de las hojas mensuales.
 
     La BD Ton aporta tonelajes e indicadores de cada torre.
-    El Reporte por Turno aporta el material y determina si el turno
-    es evaluable, mediante Apilado_TMS_Real_Turno > 0.
+    La fuente independiente de estado de apilado aporta el material
+    y determina si el turno es evaluable por Fecha + Turno,
+    según RN-046.
     """
     tipo_normalizado = str(tipo).strip().lower()
 
@@ -997,6 +1138,7 @@ def _agregar_hoja_mensual_torres(
     evitar GETPIVOTDATA, tablas dinámicas y fórmulas manuales frágiles.
     """
     from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.chart.axis import ChartLines
     from openpyxl.chart.data_source import NumData, NumVal
     from openpyxl.chart.label import DataLabelList
     from openpyxl.chart.layout import Layout, ManualLayout
@@ -1052,8 +1194,6 @@ def _agregar_hoja_mensual_torres(
     azul_grupo = PatternFill("solid", fgColor="D7E1E7")
     azul_alt = PatternFill("solid", fgColor="D7E1E7")
     amarillo = PatternFill("solid", fgColor="FFF2CC")
-    verde = PatternFill("solid", fgColor="E2F0D9")
-    rojo = PatternFill("solid", fgColor="FCE4D6")
     gris = PatternFill("solid", fgColor="F2F2F2")
 
     font_header = Font(
@@ -1125,6 +1265,38 @@ def _agregar_hoja_mensual_torres(
             celda = ws.cell(fila, col)
             celda.border = Border(bottom=lado)
 
+    def _aplicar_semaforo(cell, valor, center_align):
+        """
+        Muestra un semáforo visual:
+        - 1 -> círculo verde
+        - 0 -> círculo rojo
+        - None -> vacío
+        """
+        if valor == 1:
+            cell.value = "●"
+            cell.font = Font(
+                name="Arial",
+                bold=True,
+                color="70AD47",
+                size=16,
+            )
+            cell.alignment = center_align
+
+        elif valor == 0:
+            cell.value = "●"
+            cell.font = Font(
+                name="Arial",
+                bold=True,
+                color="C55A11",
+                size=16,
+            )
+            cell.alignment = center_align
+
+        else:
+            cell.value = None
+            cell.font = font_normal
+            cell.alignment = center_align
+
     center = Alignment(
         horizontal="center",
         vertical="center",
@@ -1146,7 +1318,7 @@ def _agregar_hoja_mensual_torres(
 
     ws.merge_cells("C5:M7")
     ws["C5"] = (
-        "Muestras representativas de torres de muestreo - "
+        "Muestras representativas y no representativas de torres de muestreo - "
         f"Muestra {tipo_titulo} - {mes_texto}"
     )
     ws["C5"].font = font_titulo
@@ -1391,21 +1563,35 @@ def _agregar_hoja_mensual_torres(
         chart.roundedCorners = False
         chart.height = 7.24
         chart.width = 18.40
+
+        # Ejes como en el reporte oficial:
+        # - Eje Y con porcentajes visibles
+        # - Eje X con Semana 1 ... Semana 6 y MTD
+        # - sin título de eje X
+        chart.x_axis.title = None
         chart.y_axis.title = "Muestras representativas"
+
+        chart.x_axis.delete = False
+        chart.y_axis.delete = False
+
         chart.y_axis.scaling.min = 0
         chart.y_axis.scaling.max = 1
         chart.y_axis.numFmt = "0%"
+        chart.y_axis.majorUnit = 0.1
         chart.y_axis.axPos = "l"
         chart.y_axis.tickLblPos = "nextTo"
         chart.y_axis.majorTickMark = "none"
         chart.y_axis.minorTickMark = "none"
         chart.y_axis.crossBetween = "between"
+
         chart.x_axis.axPos = "b"
         chart.x_axis.tickLblPos = "nextTo"
         chart.x_axis.majorTickMark = "none"
         chart.x_axis.minorTickMark = "none"
+
         chart.legend.position = "t"
         chart.legend.overlay = False
+        chart.y_axis.majorGridlines = ChartLines()
 
         data = Reference(
             ws,
@@ -1547,6 +1733,10 @@ def _agregar_hoja_mensual_torres(
         target_chart.series[0].marker.symbol = "none"
         target_chart.x_axis.axId = chart.x_axis.axId
         target_chart.y_axis.axId = chart.y_axis.axId
+        target_chart.y_axis.title = None
+        target_chart.x_axis.title = None
+        target_chart.x_axis.delete = True
+        target_chart.y_axis.delete = True
 
         chart += target_chart
 
@@ -1576,6 +1766,18 @@ def _agregar_hoja_mensual_torres(
                     x=0.0885002013,
                     y=0.2532549190,
                     w=0.9044311103,
+                    h=0.6453989123,
+                )
+            )
+        elif clave == "COMBINADO":
+            chart.layout = Layout(
+                manualLayout=ManualLayout(
+                    layoutTarget="inner",
+                    xMode="edge",
+                    yMode="edge",
+                    x=0.100,
+                    y=0.2532549190,
+                    w=0.885,
                     h=0.6453989123,
                 )
             )
@@ -1756,22 +1958,11 @@ def _agregar_hoja_mensual_torres(
 
         for col in [8, 11, 13]:
             valor = ws.cell(row_excel, col).value
-            if valor == 1:
-                ws.cell(row_excel, col).fill = verde
-                ws.cell(row_excel, col).font = Font(
-                    name="Arial",
-                    bold=True,
-                    color="006100",
-                    size=10,
-                )
-            elif valor == 0:
-                ws.cell(row_excel, col).fill = rojo
-                ws.cell(row_excel, col).font = Font(
-                    name="Arial",
-                    bold=True,
-                    color="9C0006",
-                    size=10,
-                )
+            _aplicar_semaforo(
+                ws.cell(row_excel, col),
+                valor,
+                center,
+            )
 
         if fila["Pad"] == "Sin clasificar":
             ws.cell(row_excel, 5).fill = gris
@@ -1815,10 +2006,12 @@ def _agregar_hoja_mensual_torres(
         nota_fila,
         3,
         "Nota metodológica: los indicadores de las torres se reconstruyen "
-        "desde BD Ton y la evaluabilidad del turno se determina con "
-        "Apilado_TMS_Real del Reporte por Turno, según RN-046. Las "
-        "columnas de comentarios permanecen vacías mientras no exista "
-        "una fuente oficial y trazable de causas operacionales.",
+        "desde BD Ton y la evaluabilidad se determina mediante la fuente "
+        "independiente de estado de apilado por Fecha + Turno, según "
+        "RN-046. Los tonelajes residuales de las torres no definen la "
+        "actividad del turno. Las columnas de comentarios permanecen "
+        "vacías mientras no exista una fuente oficial y trazable de "
+        "causas operacionales.",
     )
     ws.cell(nota_fila, 3).font = font_nota
     ws.cell(nota_fila, 3).alignment = left
@@ -1965,12 +2158,20 @@ def _export_representatividad_torres_to_excel(
     df_turno: pd.DataFrame | None = None,
 ) -> bytes:
     """
-    Exporta el reporte de Representatividad Torres a Excel
-    con formato similar a la tabla visual de Dash.
-    """
+    Exporta el reporte de Representatividad Torres a Excel.
 
+    Las hojas Representatividad Torres y BD Ton utilizan la estética
+    del bloque AT:BM de Reporte Diario: fondo blanco, encabezados
+    jerárquicos, bordes completos y desplazamiento libre.
+    """
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.styles import (
+        Font,
+        Alignment,
+        PatternFill,
+        Border,
+        Side,
+    )
 
     df = df.copy()
 
@@ -1988,119 +2189,248 @@ def _export_representatividad_torres_to_excel(
     wb = Workbook()
     ws = wb.active
     ws.title = "Representatividad Torres"
+    ws.sheet_view.showGridLines = False
+    ws.freeze_panes = None
 
-    # Estilos
-    fill_header = PatternFill("solid", fgColor="D9E3EA")
-    fill_dia = PatternFill("solid", fgColor="FFF2CC")
-    fill_alt = PatternFill("solid", fgColor="EEF3F6")
+    # Paleta equivalente a Reporte Diario, columnas AT:BM.
+    color_header = "D7E1E7"
+    color_texto = "476475"
+    color_borde = "476475"
+    color_borde_interno = "A6A6A6"
+    color_subtitulo = "666666"
 
-    font_header = Font(bold=True, color="1F4E79")
-    font_normal = Font(color="404040")
-    font_red = Font(color="FF0000", bold=True)
-    font_det = Font(color="1F4E79")
+    fill_blanco = PatternFill("solid", fgColor="FFFFFF")
+    fill_header = PatternFill("solid", fgColor=color_header)
+    fill_alt = PatternFill("solid", fgColor=color_header)
 
-    thin = Side(style="thin", color="B8B8B8")
-    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    font_titulo = Font(
+        name="Arial",
+        bold=True,
+        color=color_texto,
+        size=14,
+    )
+    font_subtitulo = Font(
+        name="Arial",
+        italic=True,
+        color=color_subtitulo,
+        size=9,
+    )
+    font_header = Font(
+        name="Arial",
+        bold=True,
+        color=color_texto,
+        size=11,
+    )
+    font_normal = Font(
+        name="Arial",
+        color=color_texto,
+        size=10,
+    )
+    font_fecha = Font(
+        name="Arial",
+        bold=True,
+        color=color_texto,
+        size=10,
+    )
+    font_bajo = Font(
+        name="Arial",
+        bold=True,
+        color="C00000",
+        size=10,
+    )
+    font_detenido = Font(
+        name="Arial",
+        italic=True,
+        color=color_texto,
+        size=10,
+    )
 
-    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    thin = Side(style="thin", color=color_borde_interno)
+    thin_header = Side(style="thin", color=color_borde)
+    medium = Side(style="medium", color=color_borde)
 
-    # Título
+    border_datos = Border(
+        left=thin,
+        right=thin,
+        top=thin,
+        bottom=thin,
+    )
+    border_header = Border(
+        left=thin_header,
+        right=thin_header,
+        top=thin_header,
+        bottom=thin_header,
+    )
+
+    center = Alignment(
+        horizontal="center",
+        vertical="center",
+        wrap_text=True,
+    )
+
+    def _aplicar_contorno(
+        fila_ini: int,
+        col_ini: int,
+        fila_fin: int,
+        col_fin: int,
+    ) -> None:
+        """Refuerza el contorno del bloque sin perder las líneas internas."""
+        for fila in range(fila_ini, fila_fin + 1):
+            for col in range(col_ini, col_fin + 1):
+                celda = ws.cell(fila, col)
+                borde_actual = celda.border
+                celda.border = Border(
+                    left=medium if col == col_ini else borde_actual.left,
+                    right=medium if col == col_fin else borde_actual.right,
+                    top=medium if fila == fila_ini else borde_actual.top,
+                    bottom=medium if fila == fila_fin else borde_actual.bottom,
+                )
+
+    # ------------------------------------------------------------
+    # Título y subtítulo
+    # ------------------------------------------------------------
     ws.merge_cells("A1:I1")
     ws["A1"] = "Representatividad diaria de torres de muestreo"
-    ws["A1"].font = Font(bold=True, size=14, color="1F4E79")
+    ws["A1"].font = font_titulo
     ws["A1"].alignment = center
+    ws["A1"].fill = fill_blanco
 
     ws.merge_cells("A2:I2")
-    ws["A2"] = "Valores expresados en porcentaje. Los valores menores a 75% se destacan en rojo."
-    ws["A2"].font = Font(size=10, color="808080")
+    ws["A2"] = (
+        "Valores expresados en porcentaje. Los valores menores a 75% "
+        "se destacan en rojo."
+    )
+    ws["A2"].font = font_subtitulo
     ws["A2"].alignment = center
+    ws["A2"].fill = fill_blanco
 
-    # Encabezados agrupados
-    ws.merge_cells("A4:A5")
-    ws["A4"] = "Día"
-
+    # ------------------------------------------------------------
+    # Encabezados jerárquicos
+    # ------------------------------------------------------------
+    ws.merge_cells("A4:A6")
     ws.merge_cells("B4:E4")
-    ws["B4"] = "Representatividad TM1"
-
     ws.merge_cells("F4:I4")
+    ws.merge_cells("B5:C5")
+    ws.merge_cells("D5:E5")
+    ws.merge_cells("F5:G5")
+    ws.merge_cells("H5:I5")
+
+    ws["A4"] = "Día"
+    ws["B4"] = "Representatividad TM1"
     ws["F4"] = "Representatividad TM2"
+    ws["B5"] = "Turno A"
+    ws["D5"] = "Turno B"
+    ws["F5"] = "Turno A"
+    ws["H5"] = "Turno B"
 
-    headers = [
-        "Turno A - Químico",
-        "Turno A - Físico",
-        "Turno B - Químico",
-        "Turno B - Físico",
-        "Turno A - Químico",
-        "Turno A - Físico",
-        "Turno B - Químico",
-        "Turno B - Físico",
+    headers_fila_6 = [
+        "Químico",
+        "Físico",
+        "Químico",
+        "Físico",
+        "Químico",
+        "Físico",
+        "Químico",
+        "Físico",
     ]
+    for col, header in enumerate(headers_fila_6, start=2):
+        ws.cell(6, col, header)
 
-    for idx, header in enumerate(headers, start=2):
-        ws.cell(row=5, column=idx).value = header
-
-    # Estilo encabezados
-    for row in range(4, 6):
+    for fila in range(4, 7):
         for col in range(1, 10):
-            cell = ws.cell(row=row, column=col)
-            cell.fill = fill_header
-            cell.font = font_header
-            cell.alignment = center
-            cell.border = border
+            celda = ws.cell(fila, col)
+            celda.fill = fill_header
+            celda.font = font_header
+            celda.alignment = center
+            celda.border = border_header
 
-    ws["A4"].fill = fill_dia
-    ws["A4"].font = font_header
-
+    # ------------------------------------------------------------
     # Datos
-    start_row = 6
+    # ------------------------------------------------------------
+    fila_inicio = 7
 
-    for r_idx, (_, row) in enumerate(df.iterrows(), start=start_row):
-        if "Dia" in df.columns:
-            dia = pd.to_datetime(row["Dia"]).strftime("%d-%m-%Y")
-        else:
-            dia = ""
+    for fila_excel, (_, fila_df) in enumerate(
+        df.iterrows(),
+        start=fila_inicio,
+    ):
+        es_alterna = (fila_excel - fila_inicio) % 2 == 1
+        fill_fila = fill_alt if es_alterna else fill_blanco
 
-        ws.cell(row=r_idx, column=1).value = dia
-        ws.cell(row=r_idx, column=1).fill = fill_dia
-        ws.cell(row=r_idx, column=1).font = Font(bold=True, color="404040")
-        ws.cell(row=r_idx, column=1).alignment = center
-        ws.cell(row=r_idx, column=1).border = border
+        fecha = pd.to_datetime(
+            fila_df.get("Dia"),
+            errors="coerce",
+        )
+        celda_fecha = ws.cell(fila_excel, 1)
+        celda_fecha.value = (
+            fecha.to_pydatetime()
+            if pd.notna(fecha)
+            else None
+        )
+        celda_fecha.number_format = "dd-mm-yyyy"
+        celda_fecha.fill = fill_fila
+        celda_fecha.font = font_fecha
+        celda_fecha.alignment = center
+        celda_fecha.border = border_datos
 
-        for c_idx, col in enumerate(columnas_pct, start=2):
-            cell = ws.cell(row=r_idx, column=c_idx)
-            valor = pd.to_numeric(row.get(col), errors="coerce")
+        for col_excel, nombre_columna in enumerate(
+            columnas_pct,
+            start=2,
+        ):
+            celda = ws.cell(fila_excel, col_excel)
+            valor = pd.to_numeric(
+                fila_df.get(nombre_columna),
+                errors="coerce",
+            )
+
+            celda.fill = fill_fila
+            celda.alignment = center
+            celda.border = border_datos
 
             if pd.isna(valor):
-                cell.value = "Tambor detenido"
-                cell.font = font_det
+                celda.value = "Tambor detenido"
+                celda.font = font_detenido
             else:
-                cell.value = f"{valor * 100:.1f}%"
+                celda.value = float(valor)
+                celda.number_format = "0.0%"
+                celda.font = (
+                    font_bajo
+                    if float(valor) < 0.75
+                    else font_normal
+                )
 
-                if valor < 0.75:
-                    cell.font = font_red
-                else:
-                    cell.font = font_normal
+    ultima_fila = max(fila_inicio + len(df) - 1, fila_inicio)
 
-            cell.alignment = center
-            cell.border = border
+    # Contornos funcionales: Día, TM1 y TM2.
+    for col_ini, col_fin in [
+        (1, 1),
+        (2, 5),
+        (6, 9),
+    ]:
+        _aplicar_contorno(4, col_ini, ultima_fila, col_fin)
 
-            if (r_idx - start_row) % 2 == 1:
-                cell.fill = fill_alt
+    # Dimensiones equivalentes al bloque AT:BM.
+    ws.column_dimensions["A"].width = 15
+    for columna in ["B", "C", "D", "E", "F", "G", "H", "I"]:
+        ws.column_dimensions[columna].width = 15
 
-    # Anchos
-    ws.column_dimensions["A"].width = 14
-    for col_letter in ["B", "C", "D", "E", "F", "G", "H", "I"]:
-        ws.column_dimensions[col_letter].width = 20
+    ws.row_dimensions[1].height = 24
+    ws.row_dimensions[2].height = 18
+    ws.row_dimensions[4].height = 28
+    ws.row_dimensions[5].height = 24
+    ws.row_dimensions[6].height = 24
+    for fila in range(fila_inicio, ultima_fila + 1):
+        ws.row_dimensions[fila].height = 21
 
-    ws.freeze_panes = "B6"
+    if len(df) > 0:
+        ws.auto_filter.ref = f"A6:I{ultima_fila}"
 
-    # Agregar segunda hoja al mismo libro
+    # Segunda hoja: BD Ton con la misma identidad visual.
     _agregar_hoja_bd_ton(
         wb=wb,
         df_bd_ton=df_bd_ton,
     )
 
-    # Agregar hojas mensuales Químico y Físico.
+    # Hojas mensuales Químico y Físico sin alterar su lógica ni diseño.
     _agregar_hojas_mensuales_torres(
         wb=wb,
         df_bd_ton=df_bd_ton,
@@ -2112,6 +2442,7 @@ def _export_representatividad_torres_to_excel(
     output.seek(0)
 
     return output.getvalue()
+
 
 def _export_dataframe_simple_to_excel(df: pd.DataFrame, sheet_name: str = "Reporte") -> bytes:
     output = io.BytesIO()
@@ -2972,20 +3303,22 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             # principalmente, la evaluabilidad del turno según RN-046.
             # Sin esta fuente no es válido reconstruir las hojas mensuales.
             try:
-                df_turno_material = fetch_reporte_turno_cache(
-                    start_date=ini_d,
-                    end_date=fin_sql_exclusivo,
+                df_turno_material = (
+                    fetch_estado_apilado_turno_representatividad(
+                        start_date=ini_d,
+                        end_date=fin_sql_exclusivo,
+                    )
                 )
-                print("Filas Reporte por Turno:", len(df_turno_material))
+                print("Filas Estado de Apilado por Turno:", len(df_turno_material))
             except Exception as material_error:
                 raise RuntimeError(
-                    "No fue posible obtener el Reporte por Turno "
+                    "No fue posible obtener el estado de apilado por turno "
                     "necesario para aplicar RN-046."
                 ) from material_error
 
             if df_turno_material.empty:
                 raise RuntimeError(
-                    "El Reporte por Turno no entregó datos para el rango "
+                    "El estado de apilado por turno no entregó datos para el rango "
                     "seleccionado; no es posible determinar la "
                     "evaluabilidad oficial de los turnos."
                 )
