@@ -142,7 +142,7 @@ def fetch_bd_ton_report(
         Fecha >= start_date
         Fecha <= end_date
     """
-    conn_or_engine = get_connection()
+    conn_or_engine = _get_engine()
 
     if conn_or_engine is None:
         raise RuntimeError(
