@@ -14,6 +14,7 @@ from report_export.report_export import (
     fetch_datos_conciliados_report,
     fetch_representatividad_torres_report,
     fetch_bd_ton_report,
+    fetch_gestion_representatividad_fy,
     fetch_estado_apilado_turno_representatividad,
     fetch_reporte_turno_report,
     fetch_reporte_turno_cache,
@@ -331,6 +332,31 @@ def _tabla_representatividad_torres(df: pd.DataFrame):
         sort_action="native",
         filter_action="native",
     )
+_COLUMNAS_VISIBLES_BD_TON = [
+    "Fecha",
+    "Apilado TMH CV-08 TA",
+    "Apilado TMH CV-08 TB",
+    "Apilado TMH CV-108 TA",
+    "Apilado TMH CV-108 TB",
+    "Rep. TM1 TA Qui.",
+    "Rep. TM1 TA Fis.",
+    "Rep. TM1 TB Qui.",
+    "Rep. TM1 TB Fis.",
+    "Rep. TM2 TA Qui.",
+    "Rep. TM2 TA Fis.",
+    "Rep. TM2 TB Qui.",
+    "Rep. TM2 TB Fis.",
+    "Muestra representativa TM1 TA",
+    "Muestra representativa TM1 TB",
+    "Muestra representativa TM2 TA",
+    "Muestra representativa TM2 TB",
+    "FISICO TM1 TA",
+    "FISICO TM1 TB",
+    "FISICO TM2 TA",
+    "FISICO TM2 TB",
+]
+
+
 def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
     """
     Agrega la hoja BD Ton con la estética del bloque AT:BM de
@@ -347,6 +373,21 @@ def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
     from openpyxl.utils import get_column_letter
 
     df = df_bd_ton.copy()
+    columnas_faltantes = [
+        columna
+        for columna in _COLUMNAS_VISIBLES_BD_TON
+        if columna not in df.columns
+    ]
+    if columnas_faltantes:
+        raise RuntimeError(
+            "BD Ton no contiene todas las columnas visibles requeridas. "
+            f"Faltantes: {columnas_faltantes}. "
+            f"Recibidas: {list(df.columns)}"
+        )
+
+    # Las columnas auxiliares de evaluabilidad permanecen disponibles en
+    # los DataFrames de cálculo, pero no alteran la estructura visual A:U.
+    df = df[_COLUMNAS_VISIBLES_BD_TON].copy()
 
     if "BD Ton" in wb.sheetnames:
         del wb["BD Ton"]
@@ -359,6 +400,15 @@ def _agregar_hoja_bd_ton(wb, df_bd_ton: pd.DataFrame) -> None:
         df["Fecha"] = pd.to_datetime(
             df["Fecha"],
             errors="coerce",
+        )
+        df = (
+            df[df["Fecha"].notna()]
+            .sort_values("Fecha", kind="stable")
+            .drop_duplicates(
+                subset=["Fecha"],
+                keep="last",
+            )
+            .reset_index(drop=True)
         )
 
     # Paleta equivalente a Reporte Diario, columnas AT:BM.
@@ -693,14 +743,16 @@ def _preparar_material_por_turno(
     - El apilado oficial del turno.
     - El estado de evaluabilidad según RN-046.
 
-    El turno se considera evaluable únicamente cuando el apilado oficial
-    es mayor que cero.
+    Desde el 01-01-2026 la evaluabilidad se toma directamente del campo
+    oficial Turno_Evaluable. Para fechas anteriores se conserva la regla
+    histórica basada en apilado mayor que cero.
     """
     columnas_salida = [
         "Fecha",
         "Turno",
         "Pad",
         "Apilado_TMS_Real_Turno",
+        "Turno_Evaluable",
         "Turno_Activo_Oficial",
     ]
 
@@ -736,6 +788,19 @@ def _preparar_material_por_turno(
         df["Apilado_TMS_Real"],
         errors="coerce",
     ).fillna(0.0)
+
+    if "Turno_Evaluable" in df.columns:
+        df["Turno_Evaluable"] = (
+            pd.to_numeric(
+                df["Turno_Evaluable"],
+                errors="coerce",
+            )
+            .fillna(0)
+            .astype(int)
+        )
+    else:
+        # Compatibilidad con fuentes históricas que no incluían el flag.
+        df["Turno_Evaluable"] = 0
 
     df = df[
         df["Fecha"].notna()
@@ -780,8 +845,23 @@ def _preparar_material_por_turno(
         )
     )
 
+    # Conservar el indicador oficial en la misma granularidad Fecha + Turno.
+    evaluabilidad_turno = (
+        df.groupby(
+            ["Fecha", "Turno"],
+            as_index=False,
+        )["Turno_Evaluable"]
+        .max()
+    )
+
     resultado = material_predominante.merge(
         apilado_turno,
+        on=["Fecha", "Turno"],
+        how="left",
+        validate="one_to_one",
+    )
+    resultado = resultado.merge(
+        evaluabilidad_turno,
         on=["Fecha", "Turno"],
         how="left",
         validate="one_to_one",
@@ -795,9 +875,31 @@ def _preparar_material_por_turno(
         .fillna(0.0)
     )
 
+    resultado["Turno_Evaluable"] = (
+        pd.to_numeric(
+            resultado["Turno_Evaluable"],
+            errors="coerce",
+        )
+        .fillna(0)
+        .astype(int)
+    )
+
     resultado["Turno_Activo_Oficial"] = (
         resultado["Apilado_TMS_Real_Turno"] > 0
     )
+
+    mascara_flag_oficial = resultado["Fecha"] >= pd.Timestamp("2026-01-01")
+    resultado.loc[
+        mascara_flag_oficial,
+        "Turno_Activo_Oficial",
+    ] = resultado.loc[
+        mascara_flag_oficial,
+        "Turno_Evaluable",
+    ].eq(1)
+
+    resultado["Turno_Activo_Oficial"] = resultado[
+        "Turno_Activo_Oficial"
+    ].astype(bool)
 
     return (
         resultado[columnas_salida]
@@ -965,18 +1067,52 @@ def _preparar_detalle_mensual_torres(
                 mapa_actividad.get(clave_turno, False)
             )
 
+            tm1_tmh_original = fila.get(
+                f"Apilado TMH CV-08 {turno}"
+            )
+            tm2_tmh_original = fila.get(
+                f"Apilado TMH CV-108 {turno}"
+            )
             tm1_tmh = _numero_torres(
-                fila.get(f"Apilado TMH CV-08 {turno}")
+                tm1_tmh_original
             )
             tm2_tmh = _numero_torres(
-                fila.get(f"Apilado TMH CV-108 {turno}")
+                tm2_tmh_original
             )
 
-            # La evaluabilidad de ambas torres depende exclusivamente
-            # del apilado oficial del turno, no del tonelaje residual
-            # observado en las ventanas de cada torre.
-            tm1_activo = turno_activo_oficial
-            tm2_activo = turno_activo_oficial
+            if fecha >= pd.Timestamp("2026-01-01"):
+                # Desde 2026 existe una sola oportunidad operacional por
+                # turno y la fuente oficial determina su evaluabilidad.
+                tm1_activo = turno_activo_oficial
+                tm2_activo = turno_activo_oficial
+            else:
+                # En el histórico la evaluabilidad es independiente por
+                # torre. El tonelaje original se consulta antes de convertir
+                # nulos a cero para no perder la diferencia NULL/0.
+                tm1_evaluable = fila.get(f"Evaluable_TM1_{turno}")
+                tm2_evaluable = fila.get(f"Evaluable_TM2_{turno}")
+
+                tm1_evaluable_num = pd.to_numeric(
+                    tm1_evaluable,
+                    errors="coerce",
+                )
+                tm2_evaluable_num = pd.to_numeric(
+                    tm2_evaluable,
+                    errors="coerce",
+                )
+
+                tm1_activo = (
+                    bool(int(tm1_evaluable_num) == 1)
+                    if pd.notna(tm1_evaluable_num)
+                    else pd.notna(tm1_tmh_original)
+                )
+                tm2_activo = (
+                    bool(int(tm2_evaluable_num) == 1)
+                    if pd.notna(tm2_evaluable_num)
+                    else pd.notna(tm2_tmh_original)
+                )
+
+            turno_activo_combinado = bool(tm1_activo or tm2_activo)
 
             tm1_flag_fuente = fila.get(
                 config["tm1_flag"].format(turno=turno)
@@ -1004,7 +1140,7 @@ def _preparar_detalle_mensual_torres(
 
             if tm1_flag == 1 or tm2_flag == 1:
                 representatividad_turno = 1
-            elif not turno_activo_oficial:
+            elif not turno_activo_combinado:
                 representatividad_turno = None
             else:
                 representatividad_turno = 0
@@ -1166,11 +1302,612 @@ def _calcular_tonelaje_por_material_torres(
     return resultados
 
 
+def _normalizar_gestion_fy(
+    df_gestion_fy: pd.DataFrame,
+    fecha_base,
+) -> pd.DataFrame:
+    """Adapta la salida del SP FY al contrato canónico del gráfico."""
+    from datetime import date
+    import re
+    import unicodedata
+
+    columnas_canonicas = [
+        "Etiqueta",
+        "Turnos_Evaluables",
+        "Turnos_Representativos",
+        "Representatividad",
+        "Objetivo",
+        "Orden",
+        "Es_YTD",
+    ]
+    if df_gestion_fy is None or df_gestion_fy.empty:
+        return pd.DataFrame(columns=columnas_canonicas)
+
+    df = df_gestion_fy.copy()
+
+    def _token(valor) -> str:
+        texto = unicodedata.normalize("NFKD", str(valor))
+        texto = "".join(c for c in texto if not unicodedata.combining(c))
+        return re.sub(r"[^a-z0-9]", "", texto.lower())
+
+    columnas_por_token = {_token(columna): columna for columna in df.columns}
+
+    def _buscar_columna(*aliases):
+        for alias in aliases:
+            encontrada = columnas_por_token.get(_token(alias))
+            if encontrada is not None:
+                return encontrada
+        return None
+
+    col_etiqueta = _buscar_columna(
+        "Etiqueta",
+        "Periodo",
+        "Mes",
+        "Fecha",
+        "Fecha_Mes",
+        "Etiqueta_Mes",
+        "Mes_Etiqueta",
+    )
+    col_evaluables = _buscar_columna(
+        "Turnos_Evaluables",
+        "Evaluables",
+        "Total_Evaluables",
+        "Cantidad_Evaluable",
+    )
+    col_representativos = _buscar_columna(
+        "Turnos_Representativos",
+        "Representativos",
+        "Total_Representativos",
+        "Cantidad_Representativa",
+    )
+    col_representatividad = _buscar_columna(
+        "Representatividad",
+        "Porcentaje",
+        "Resultado",
+        "Pct_Representatividad",
+    )
+    col_objetivo = _buscar_columna(
+        "Objetivo",
+        "Target",
+        "Meta",
+    )
+    col_orden = _buscar_columna(
+        "Orden",
+        "Orden_Mes",
+        "Orden_Fiscal",
+    )
+    col_es_ytd = _buscar_columna(
+        "Es_YTD",
+        "Tipo_Fila",
+        "Tipo_Registro",
+    )
+
+    requeridas = {
+        "Etiqueta/Periodo/Mes": col_etiqueta,
+        "Turnos_Evaluables/Evaluables": col_evaluables,
+        "Turnos_Representativos/Representativos": col_representativos,
+        "Objetivo/Target": col_objetivo,
+    }
+    faltantes = [nombre for nombre, columna in requeridas.items() if columna is None]
+    if faltantes:
+        raise RuntimeError(
+            "La gestión FY no contiene las columnas indispensables. "
+            f"Requeridas: {faltantes}. Recibidas: {list(df.columns)}"
+        )
+
+    fecha_base = pd.Timestamp(fecha_base).normalize()
+    rango_fy = _obtener_rango_fiscal_hasta_mes(fecha_base)
+    inicio_fy = pd.Timestamp(rango_fy["fecha_inicio"])
+    orden_corte = (
+        (fecha_base.year - inicio_fy.year) * 12
+        + fecha_base.month
+        - inicio_fy.month
+        + 1
+    )
+
+    etiquetas_originales = df[col_etiqueta]
+
+    def _es_ytd(etiqueta, valor=None) -> bool:
+        texto_etiqueta = _token(etiqueta)
+        if "ytd" in texto_etiqueta or "acumulado" in texto_etiqueta:
+            return True
+        if valor is None or pd.isna(valor):
+            return False
+        if isinstance(valor, (bool, int, float)):
+            return bool(valor)
+        texto = _token(valor)
+        return texto in {"1", "true", "si", "ytd", "acumulado"}
+
+    if col_es_ytd is not None:
+        es_ytd = pd.Series(
+            [
+                _es_ytd(etiqueta, valor)
+                for etiqueta, valor in zip(
+                    etiquetas_originales,
+                    df[col_es_ytd],
+                )
+            ],
+            index=df.index,
+            dtype=bool,
+        )
+    else:
+        es_ytd = etiquetas_originales.apply(_es_ytd).astype(bool)
+
+    meses_es = {
+        "ene": 1,
+        "feb": 2,
+        "mar": 3,
+        "abr": 4,
+        "may": 5,
+        "jun": 6,
+        "jul": 7,
+        "ago": 8,
+        "sep": 9,
+        "oct": 10,
+        "nov": 11,
+        "dic": 12,
+    }
+
+    def _orden_desde_etiqueta(valor):
+        if pd.isna(valor):
+            return None
+        if isinstance(valor, (pd.Timestamp, date)):
+            fecha = pd.Timestamp(valor)
+        elif isinstance(valor, (int, float)) and 1 <= int(valor) <= 12:
+            mes = int(valor)
+            anio = rango_fy["anio_fiscal"] - 1 if mes >= 7 else rango_fy["anio_fiscal"]
+            fecha = pd.Timestamp(year=anio, month=mes, day=1)
+        else:
+            texto = str(valor).strip()
+            token = _token(texto)
+            mes = next(
+                (numero for nombre, numero in meses_es.items() if token.startswith(nombre)),
+                None,
+            )
+            if mes is not None:
+                coincidencia_anio = re.search(r"(\d{2,4})", texto)
+                if coincidencia_anio:
+                    anio = int(coincidencia_anio.group(1))
+                    if anio < 100:
+                        anio += 2000
+                else:
+                    anio = (
+                        rango_fy["anio_fiscal"] - 1
+                        if mes >= 7
+                        else rango_fy["anio_fiscal"]
+                    )
+                fecha = pd.Timestamp(year=anio, month=mes, day=1)
+            else:
+                fecha = pd.to_datetime(texto, errors="coerce")
+                if pd.isna(fecha):
+                    return None
+
+        return int(
+            (fecha.year - inicio_fy.year) * 12
+            + fecha.month
+            - inicio_fy.month
+            + 1
+        )
+
+    if col_orden is not None:
+        orden = pd.to_numeric(df[col_orden], errors="coerce")
+    else:
+        orden = pd.Series(index=df.index, dtype=float)
+
+    orden_derivado = etiquetas_originales.apply(_orden_desde_etiqueta)
+    orden = orden.where(orden.notna(), orden_derivado)
+    orden = orden.where(~es_ytd, 13)
+
+    gestion = pd.DataFrame({
+        "Etiqueta_Original": etiquetas_originales,
+        "Turnos_Evaluables": pd.to_numeric(
+            df[col_evaluables], errors="coerce"
+        ),
+        "Turnos_Representativos": pd.to_numeric(
+            df[col_representativos], errors="coerce"
+        ),
+        "Objetivo": pd.to_numeric(df[col_objetivo], errors="coerce"),
+        "Orden": pd.to_numeric(orden, errors="coerce"),
+        "Es_YTD": es_ytd,
+    })
+
+    if col_representatividad is not None:
+        gestion["Representatividad"] = pd.to_numeric(
+            df[col_representatividad],
+            errors="coerce",
+        )
+    else:
+        gestion["Representatividad"] = pd.NA
+
+    for columna in ["Representatividad", "Objetivo"]:
+        gestion[columna] = gestion[columna].apply(
+            lambda valor: (
+                float(valor) / 100.0
+                if pd.notna(valor) and abs(float(valor)) > 1
+                else float(valor)
+                if pd.notna(valor)
+                else float("nan")
+            )
+        )
+
+    meses = gestion[
+        (~gestion["Es_YTD"])
+        & gestion["Orden"].between(1, orden_corte, inclusive="both")
+    ].copy()
+    meses = (
+        meses.sort_values("Orden", kind="stable")
+        .drop_duplicates("Orden", keep="last")
+        .reset_index(drop=True)
+    )
+
+    if meses.empty:
+        raise RuntimeError(
+            "La gestión FY no contiene meses hasta la fecha evaluada. "
+            f"Columnas recibidas: {list(df.columns)}"
+        )
+    if meses[["Turnos_Evaluables", "Turnos_Representativos", "Objetivo"]].isna().any().any():
+        raise RuntimeError(
+            "La gestión FY contiene valores nulos en evaluables, "
+            "representativos u objetivo."
+        )
+
+    calculada = meses["Turnos_Representativos"].div(
+        meses["Turnos_Evaluables"].where(meses["Turnos_Evaluables"] != 0)
+    )
+    meses["Representatividad"] = meses["Representatividad"].where(
+        meses["Representatividad"].notna(),
+        calculada,
+    ).fillna(0.0)
+
+    def _etiqueta_fiscal(valor_orden: int) -> str:
+        fecha = inicio_fy + pd.DateOffset(months=int(valor_orden) - 1)
+        return f"{_MESES_ABR_TORRES[fecha.month]}-{str(fecha.year)[-2:]}"
+
+    meses["Etiqueta"] = meses["Orden"].astype(int).apply(_etiqueta_fiscal)
+
+    total_evaluables = float(meses["Turnos_Evaluables"].sum())
+    total_representativos = float(meses["Turnos_Representativos"].sum())
+    representatividad_ytd = (
+        total_representativos / total_evaluables
+        if total_evaluables
+        else 0.0
+    )
+
+    filas_ytd = gestion[gestion["Es_YTD"]]
+    objetivo_ytd = (
+        float(filas_ytd["Objetivo"].dropna().iloc[-1])
+        if not filas_ytd["Objetivo"].dropna().empty
+        else float(meses["Objetivo"].iloc[-1])
+    )
+    ytd = pd.DataFrame([{
+        "Etiqueta": "YTD",
+        "Turnos_Evaluables": total_evaluables,
+        "Turnos_Representativos": total_representativos,
+        "Representatividad": representatividad_ytd,
+        "Objetivo": objetivo_ytd,
+        "Orden": 13,
+        "Es_YTD": True,
+    }])
+
+    resultado = pd.concat(
+        [meses[columnas_canonicas], ytd[columnas_canonicas]],
+        ignore_index=True,
+    )
+    return resultado
+
+
+def _agregar_grafico_gestion_fy(
+    ws,
+    df_gestion_fy: pd.DataFrame,
+    tipo: str,
+    fecha_base,
+    fila_inicio: int,
+) -> None:
+    """Agrega el gráfico FY y su tabla auxiliar oculta en T:X."""
+    from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.chart.axis import ChartLines
+    from openpyxl.chart.data_source import (
+        AxDataSource,
+        NumData,
+        NumVal,
+        StrData,
+        StrRef,
+        StrVal,
+    )
+    from openpyxl.chart.label import DataLabelList
+    from openpyxl.chart.layout import Layout, ManualLayout
+    from openpyxl.chart.series import SeriesLabel
+    from openpyxl.chart.text import RichText
+    from openpyxl.drawing.text import (
+        CharacterProperties,
+        Paragraph,
+        ParagraphProperties,
+        RichTextProperties,
+    )
+    from openpyxl.styles import Alignment, Border, Font, Side
+    from openpyxl.utils import quote_sheetname
+
+    if df_gestion_fy is None or df_gestion_fy.empty:
+        raise RuntimeError("La gestión FY normalizada está vacía.")
+
+    fecha_base = pd.Timestamp(fecha_base)
+    anio_fiscal = _obtener_rango_fiscal_hasta_mes(fecha_base)["anio_fiscal"]
+    tipo_texto = "química" if str(tipo).lower() == "quimico" else "física"
+    titulo = (
+        f"Gestión de representatividad {tipo_texto} "
+        f"FY{anio_fiscal % 100:02d}"
+    )
+
+    ws.merge_cells(
+        start_row=fila_inicio,
+        start_column=3,
+        end_row=fila_inicio,
+        end_column=13,
+    )
+    celda_titulo = ws.cell(fila_inicio, 3, f"6.- {titulo}.")
+    celda_titulo.font = Font(
+        name="Arial",
+        bold=True,
+        color="476475",
+        size=10,
+    )
+    celda_titulo.alignment = Alignment(horizontal="left", vertical="center")
+    lado = Side(style="thin", color="595959")
+    for columna in range(3, 14):
+        ws.cell(fila_inicio, columna).border = Border(bottom=lado)
+
+    # Tabla auxiliar del gráfico FY: T:X.
+    fila_tabla = fila_inicio
+    encabezados = [
+        "Periodo",
+        "Turnos evaluables",
+        "Turnos representativos",
+        "Representatividad",
+        "Objetivo",
+    ]
+    for columna, encabezado in enumerate(encabezados, start=20):
+        ws.cell(fila_tabla, columna, encabezado)
+
+    etiquetas = []
+    valores_representatividad = []
+    valores_objetivo = []
+
+    for offset, (_, fila) in enumerate(df_gestion_fy.iterrows(), start=1):
+        etiqueta = str(fila["Etiqueta"])
+        representatividad = float(fila["Representatividad"])
+        objetivo = float(fila["Objetivo"])
+
+        valores = [
+            etiqueta,
+            float(fila["Turnos_Evaluables"]),
+            float(fila["Turnos_Representativos"]),
+            representatividad,
+            objetivo,
+        ]
+        for columna, valor in enumerate(valores, start=20):
+            ws.cell(fila_tabla + offset, columna, valor)
+
+        ws.cell(fila_tabla + offset, 23).number_format = "0%"
+        ws.cell(fila_tabla + offset, 24).number_format = "0%"
+
+        etiquetas.append(etiqueta)
+        valores_representatividad.append(representatividad)
+        valores_objetivo.append(objetivo)
+
+    fila_final = fila_tabla + len(df_gestion_fy)
+    categorias = Reference(
+        ws,
+        min_col=20,
+        min_row=fila_tabla + 1,
+        max_row=fila_final,
+    )
+
+    # Categorías como texto explícito y con caché. Esto evita que Excel
+    # transforme o descarte las categorías cuando T:X están ocultas.
+    formula_categorias = (
+        f"{quote_sheetname(ws.title)}!"
+        f"$T${fila_tabla + 1}:$T${fila_final}"
+    )
+
+    def _fuente_categorias() -> AxDataSource:
+        return AxDataSource(
+            strRef=StrRef(
+                f=formula_categorias,
+                strCache=StrData(
+                    ptCount=len(etiquetas),
+                    pt=[
+                        StrVal(idx=indice, v=etiqueta)
+                        for indice, etiqueta in enumerate(etiquetas)
+                    ],
+                ),
+            )
+        )
+
+    chart = BarChart()
+    chart.type = "col"
+    chart.style = 2
+    chart.grouping = "clustered"
+    chart.overlap = 0
+    chart.gapWidth = 150
+    chart.varyColors = False
+    chart.title = titulo
+    chart.title.overlay = False
+    chart.roundedCorners = False
+    chart.width = 18.40
+    chart.height = 7.24
+
+    # Fundamental: el gráfico debe leer los datos aunque T:X estén ocultas.
+    # openpyxl lo serializa como <plotVisOnly val="0"/>.
+    chart.visible_cells_only = False
+
+    chart.x_axis.title = None
+    chart.y_axis.title = "Representatividad"
+    chart.x_axis.delete = False
+    chart.y_axis.delete = False
+
+    chart.y_axis.scaling.min = 0
+    chart.y_axis.scaling.max = 1
+    chart.y_axis.numFmt = "0%"
+    chart.y_axis.majorUnit = 0.1
+    chart.y_axis.axPos = "l"
+    chart.y_axis.tickLblPos = "nextTo"
+    chart.y_axis.majorTickMark = "none"
+    chart.y_axis.minorTickMark = "none"
+    chart.y_axis.crossBetween = "between"
+
+    chart.x_axis.axPos = "b"
+    chart.x_axis.tickLblPos = "nextTo"
+    chart.x_axis.majorTickMark = "none"
+    chart.x_axis.minorTickMark = "none"
+
+    chart.legend.position = "t"
+    chart.legend.overlay = False
+    chart.y_axis.majorGridlines = ChartLines()
+
+    datos = Reference(
+        ws,
+        min_col=23,
+        min_row=fila_tabla,
+        max_row=fila_final,
+    )
+    chart.add_data(datos, titles_from_data=True)
+    chart.set_categories(categorias)
+    chart.series[0].cat = _fuente_categorias()
+    chart.series[0].tx = SeriesLabel(v="Representatividad")
+    chart.series[0].graphicalProperties.solidFill = "476475"
+    chart.series[0].graphicalProperties.line.noFill = True
+
+    # Caché numérica explícita para que Excel, LibreOffice y los
+    # previsualizadores rendericen el gráfico sin depender de recálculo.
+    chart.series[0].val.numRef.numCache = NumData(
+        formatCode="0%",
+        ptCount=len(valores_representatividad),
+        pt=[
+            NumVal(idx=indice, v=valor)
+            for indice, valor in enumerate(valores_representatividad)
+        ],
+    )
+
+    chart.dLbls = DataLabelList()
+    chart.dLbls.showVal = True
+    chart.dLbls.showLegendKey = False
+    chart.dLbls.showCatName = False
+    chart.dLbls.showSerName = False
+    chart.dLbls.showPercent = False
+    chart.dLbls.showBubbleSize = False
+    chart.dLbls.numFmt = "0%"
+    chart.dLbls.position = "ctr"
+    chart.dLbls.txPr = RichText(
+        bodyPr=RichTextProperties(anchor="ctr"),
+        p=[
+            Paragraph(
+                pPr=ParagraphProperties(
+                    defRPr=CharacterProperties(
+                        sz=1050,
+                        solidFill="FFFFFF",
+                    )
+                ),
+                endParaRPr=CharacterProperties(lang="es-CL"),
+            )
+        ],
+    )
+
+    chart.title.tx.rich.p[0].pPr.defRPr.sz = 1200
+    chart.title.tx.rich.p[0].pPr.defRPr.b = False
+    chart.legend.txPr = RichText(
+        bodyPr=RichTextProperties(),
+        p=[
+            Paragraph(
+                pPr=ParagraphProperties(
+                    defRPr=CharacterProperties(sz=900)
+                ),
+                endParaRPr=CharacterProperties(lang="es-CL"),
+            )
+        ],
+    )
+    chart.x_axis.txPr = RichText(
+        bodyPr=RichTextProperties(),
+        p=[
+            Paragraph(
+                pPr=ParagraphProperties(
+                    defRPr=CharacterProperties(sz=900)
+                ),
+                endParaRPr=CharacterProperties(lang="es-CL"),
+            )
+        ],
+    )
+    chart.y_axis.txPr = RichText(
+        bodyPr=RichTextProperties(),
+        p=[
+            Paragraph(
+                pPr=ParagraphProperties(
+                    defRPr=CharacterProperties(sz=900)
+                ),
+                endParaRPr=CharacterProperties(lang="es-CL"),
+            )
+        ],
+    )
+
+    chart.layout = Layout(
+        manualLayout=ManualLayout(
+            layoutTarget="inner",
+            xMode="edge",
+            yMode="edge",
+            x=0.100,
+            y=0.2532549190,
+            w=0.885,
+            h=0.6453989123,
+        )
+    )
+
+    target_chart = LineChart()
+    target_chart.visible_cells_only = False
+    target_data = Reference(
+        ws,
+        min_col=24,
+        min_row=fila_tabla,
+        max_row=fila_final,
+    )
+    target_chart.add_data(target_data, titles_from_data=True)
+    target_chart.set_categories(categorias)
+    target_chart.series[0].cat = _fuente_categorias()
+    target_chart.series[0].tx = SeriesLabel(v="Objetivo 85%")
+    target_chart.series[0].val.numRef.numCache = NumData(
+        formatCode="0%",
+        ptCount=len(valores_objetivo),
+        pt=[
+            NumVal(idx=indice, v=valor)
+            for indice, valor in enumerate(valores_objetivo)
+        ],
+    )
+    target_chart.series[0].graphicalProperties.line.solidFill = "4F81BD"
+    target_chart.series[0].graphicalProperties.line.prstDash = "dash"
+    target_chart.series[0].graphicalProperties.line.width = 22225
+    target_chart.series[0].marker.symbol = "none"
+    target_chart.x_axis.axId = chart.x_axis.axId
+    target_chart.y_axis.axId = chart.y_axis.axId
+    target_chart.x_axis.delete = True
+    target_chart.y_axis.delete = True
+    chart += target_chart
+
+    ws.add_chart(chart, f"C{fila_inicio + 2}")
+
+    # La tabla auxiliar sigue oculta, pero el gráfico puede leerla porque
+    # visible_cells_only=False.
+    for columna in range(20, 25):
+        ws.column_dimensions[
+            ws.cell(1, columna).column_letter
+        ].hidden = True
+
+    fila_fin_impresion = fila_inicio + 34
+    ws.print_area = f"A1:M{fila_fin_impresion}"
+
 def _agregar_hoja_mensual_torres(
     wb,
     df_bd_ton_mes: pd.DataFrame,
     tipo: str,
     df_material_turno_mes: pd.DataFrame | None = None,
+    df_gestion_fy: pd.DataFrame | None = None,
 ) -> str | None:
     """
     Agrega una hoja mensual Químico/Físico al libro.
@@ -2035,7 +2772,9 @@ def _agregar_hoja_mensual_torres(
             borde_interior=thin,
         )
 
-    nota_fila = ultima_fila + 2
+    # La nota y el gráfico FY deben quedar después tanto del detalle como
+    # de las tres auditorías auxiliares (la última termina en la fila 85).
+    nota_fila = max(ultima_fila, 85) + 2
 
     ws.merge_cells(
         start_row=nota_fila,
@@ -2046,16 +2785,35 @@ def _agregar_hoja_mensual_torres(
     ws.cell(
         nota_fila,
         3,
-        "Nota metodológica: los indicadores de las torres se reconstruyen "
-        "desde BD Ton y la evaluabilidad se determina mediante la fuente "
-        "independiente de estado de apilado por Fecha + Turno, según "
-        "RN-046. Los tonelajes residuales de las torres no definen la "
-        "actividad del turno. Las columnas de comentarios permanecen "
-        "vacías mientras no exista una fuente oficial y trazable de "
-        "causas operacionales.",
+        "Nota metodológica: desde el 01-01-2026 la evaluabilidad se "
+        "determina mediante Turno_Evaluable por Fecha + Turno. Para el "
+        "histórico anterior se conserva la evaluabilidad independiente "
+        "por torre informada en BD Ton, con fallback en la existencia del "
+        "tonelaje original. Las columnas de comentarios permanecen vacías "
+        "mientras no exista una fuente oficial y trazable de causas "
+        "operacionales.",
     )
     ws.cell(nota_fila, 3).font = font_nota
     ws.cell(nota_fila, 3).alignment = left
+
+    gestion_fy_normalizada = _normalizar_gestion_fy(
+        df_gestion_fy,
+        fecha_base,
+    )
+    if gestion_fy_normalizada.empty:
+        raise RuntimeError(
+            f"La gestión FY {tipo.lower()} no entregó resultados "
+            "para construir el gráfico."
+        )
+
+    fila_grafico = nota_fila + 4
+    _agregar_grafico_gestion_fy(
+        ws=ws,
+        df_gestion_fy=gestion_fy_normalizada,
+        tipo=tipo,
+        fecha_base=fecha_base,
+        fila_inicio=fila_grafico,
+    )
 
     ws.auto_filter.ref = f"C56:M{ultima_fila}"
     ws.freeze_panes = None
@@ -2145,7 +2903,9 @@ def _agregar_hoja_mensual_torres(
     ws.sheet_view.zoomScaleNormal = 85
 
     ws.page_setup.orientation = "landscape"
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
     ws.page_margins.left = 0.25
     ws.page_margins.right = 0.25
     ws.page_margins.top = 0.5
@@ -2158,6 +2918,8 @@ def _agregar_hojas_mensuales_torres(
     wb,
     df_bd_ton: pd.DataFrame,
     df_turno: pd.DataFrame | None = None,
+    df_gestion_fy_quimico: pd.DataFrame | None = None,
+    df_gestion_fy_fisico: pd.DataFrame | None = None,
 ) -> list[str]:
     """Crea un par Químico/Físico por cada mes incluido en BD Ton."""
     if df_bd_ton is None or df_bd_ton.empty or "Fecha" not in df_bd_ton.columns:
@@ -2181,11 +2943,17 @@ def _agregar_hojas_mensuales_torres(
             ].copy()
 
         for tipo in ["Quimico", "Fisico"]:
+            df_gestion_tipo = (
+                df_gestion_fy_quimico
+                if tipo == "Quimico"
+                else df_gestion_fy_fisico
+            )
             nombre = _agregar_hoja_mensual_torres(
                 wb=wb,
                 df_bd_ton_mes=bd_mes,
                 tipo=tipo,
                 df_material_turno_mes=material_mes,
+                df_gestion_fy=df_gestion_tipo,
             )
             if nombre:
                 nombres.append(nombre)
@@ -2195,8 +2963,11 @@ def _agregar_hojas_mensuales_torres(
 
 def _export_representatividad_torres_to_excel(
     df: pd.DataFrame,
-    df_bd_ton: pd.DataFrame,
-    df_turno: pd.DataFrame | None = None,
+    df_bd_ton_fy: pd.DataFrame,
+    df_bd_ton_mes: pd.DataFrame,
+    df_turno_mes: pd.DataFrame | None = None,
+    df_gestion_fy_quimico: pd.DataFrame | None = None,
+    df_gestion_fy_fisico: pd.DataFrame | None = None,
 ) -> bytes:
     """
     Exporta el reporte de Representatividad Torres a Excel.
@@ -2471,14 +3242,16 @@ def _export_representatividad_torres_to_excel(
     # Segunda hoja: BD Ton con la misma identidad visual.
     _agregar_hoja_bd_ton(
         wb=wb,
-        df_bd_ton=df_bd_ton,
+        df_bd_ton=df_bd_ton_fy,
     )
 
-    # Hojas mensuales Químico y Físico sin alterar su lógica ni diseño.
+    # Hojas mensuales Químico y Físico: solo el mes evaluado.
     _agregar_hojas_mensuales_torres(
         wb=wb,
-        df_bd_ton=df_bd_ton,
-        df_turno=df_turno,
+        df_bd_ton=df_bd_ton_mes,
+        df_turno=df_turno_mes,
+        df_gestion_fy_quimico=df_gestion_fy_quimico,
+        df_gestion_fy_fisico=df_gestion_fy_fisico,
     )
 
     output = io.BytesIO()
@@ -3346,12 +4119,38 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                     _done,
                 )
 
-            # Hoja 2: BD Ton desde la vista oficial
-            df_bd_ton = fetch_bd_ton_report(
-                start_date=ini_d,
-                end_date=fin_d,
+            rango_fy = _obtener_rango_fiscal_hasta_mes(fin_d)
+
+            fecha_inicio_mes = fin_d.replace(day=1)
+            fecha_fin_mes = rango_fy["fecha_fin"]
+            fecha_fin_mes_exclusiva = (
+                pd.Timestamp(fecha_fin_mes) + pd.Timedelta(days=1)
+            ).date()
+
+            # Hoja BD Ton: histórico del FY hasta el mes evaluado.
+            df_bd_ton_fy = fetch_bd_ton_report(
+                start_date=rango_fy["fecha_inicio"],
+                end_date=rango_fy["fecha_fin"],
             )
-            print("Filas BD Ton:", len(df_bd_ton))
+            print(
+                f"Filas BD Ton FY{rango_fy['anio_fiscal'] % 100:02d}:",
+                len(df_bd_ton_fy),
+            )
+            if df_bd_ton_fy.empty:
+                raise RuntimeError(
+                    "BD Ton no entregó datos históricos para el año fiscal."
+                )
+
+            # Hojas RN-046: solamente el mes evaluado.
+            df_bd_ton_mes = fetch_bd_ton_report(
+                start_date=fecha_inicio_mes,
+                end_date=fecha_fin_mes,
+            )
+            print("Filas BD Ton mes evaluado:", len(df_bd_ton_mes))
+            if df_bd_ton_mes.empty:
+                raise RuntimeError(
+                    "BD Ton no entregó datos para el mes evaluado."
+                )
 
             # Fuente oficial para determinar Pad/Material y,
             # principalmente, la evaluabilidad del turno según RN-046.
@@ -3359,8 +4158,8 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             try:
                 df_turno_material = (
                     fetch_estado_apilado_turno_representatividad(
-                        start_date=ini_d,
-                        end_date=fin_sql_exclusivo,
+                        start_date=fecha_inicio_mes,
+                        end_date=fecha_fin_mes_exclusiva,
                     )
                 )
                 print("Filas Estado de Apilado por Turno:", len(df_turno_material))
@@ -3372,15 +4171,50 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
 
             if df_turno_material.empty:
                 raise RuntimeError(
-                    "El estado de apilado por turno no entregó datos para el rango "
-                    "seleccionado; no es posible determinar la "
+                    "El estado de apilado por turno no entregó datos para el mes "
+                    "evaluado; no es posible determinar la "
                     "evaluabilidad oficial de los turnos."
+                )
+
+            df_gestion_fy_quimico = fetch_gestion_representatividad_fy(
+                anio_fiscal=rango_fy["anio_fiscal"],
+                tipo="QUIMICO",
+                alcance="COMBINADO",
+                objetivo=0.85,
+                fecha_corte=rango_fy["fecha_fin"],
+            )
+            print(
+                "Filas Gestión FY Químico:",
+                len(df_gestion_fy_quimico),
+            )
+            if df_gestion_fy_quimico.empty:
+                raise RuntimeError(
+                    "La gestión FY química no entregó resultados."
+                )
+
+            df_gestion_fy_fisico = fetch_gestion_representatividad_fy(
+                anio_fiscal=rango_fy["anio_fiscal"],
+                tipo="FISICO",
+                alcance="COMBINADO",
+                objetivo=0.85,
+                fecha_corte=rango_fy["fecha_fin"],
+            )
+            print(
+                "Filas Gestión FY Físico:",
+                len(df_gestion_fy_fisico),
+            )
+            if df_gestion_fy_fisico.empty:
+                raise RuntimeError(
+                    "La gestión FY física no entregó resultados."
                 )
 
             xbytes = _export_representatividad_torres_to_excel(
                 df=df_rep,
-                df_bd_ton=df_bd_ton,
-                df_turno=df_turno_material,
+                df_bd_ton_fy=df_bd_ton_fy,
+                df_bd_ton_mes=df_bd_ton_mes,
+                df_turno_mes=df_turno_material,
+                df_gestion_fy_quimico=df_gestion_fy_quimico,
+                df_gestion_fy_fisico=df_gestion_fy_fisico,
             )
 
             print("Excel generado. Tamaño bytes:", len(xbytes))
@@ -3394,8 +4228,10 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             status = (
                 f"✔️ Exportado: {filename} — "
                 f"Representatividad: {len(df_rep)} registros — "
-                f"BD Ton: {len(df_bd_ton)} registros — "
-                "Hojas mensuales RN-046: Químico y Físico"
+                f"BD Ton FY{rango_fy['anio_fiscal'] % 100:02d}: "
+                f"{len(df_bd_ton_fy)} registros — "
+                f"Mes evaluado: {len(df_bd_ton_mes)} registros — "
+                "Hojas RN-046: Químico y Físico"
             )
 
             return (
@@ -3414,8 +4250,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
 
             if df_turno.empty:
-                rng = _cache_date_range()
-                return no_update, f"Sin datos para el rango seleccionado. Datos disponibles: {rng}.", _done
+                return no_update, "Sin datos para el rango seleccionado.", _done
 
             print(f"[EXCEL] Fetching generador_reporte_diario {ini_d} -> {fin_sql_exclusivo}")
             df_generador = fetch_generador_reporte_diario(start_date=ini_d, end_date=fin_sql_exclusivo)
@@ -3566,8 +4401,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
             df = fetch_reporte_turno_cache(start_date=ini_d, end_date=fin_sql_exclusivo)
             print(f"[PDF] reporte_turno rows={len(df)}")
             if df.empty:
-                rng = _cache_date_range()
-                return no_update, f"Sin datos para el rango seleccionado. Datos disponibles: {rng}.", _done
+                return no_update, "Sin datos para el rango seleccionado.", _done
 
             pdf_bytes = generar_pdf_reporte_turno(df, f_ini, f_fin)
             print(f"[PDF] reporte_turno pdf size={len(pdf_bytes)} bytes")

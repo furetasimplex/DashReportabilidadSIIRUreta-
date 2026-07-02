@@ -136,7 +136,7 @@ def fetch_bd_ton_report(
     end_date: date,
 ) -> pd.DataFrame:
     """
-    Consulta BD Ton directamente desde la vista oficial.
+    Consulta la capa histórica persistente de BD Ton.
 
     El rango de fechas es inclusivo:
         Fecha >= start_date
@@ -149,17 +149,81 @@ def fetch_bd_ton_report(
             "get_engine() devolvió None: revisar conexión a la base de datos."
         )
 
-    sql_dbapi = """
-    SELECT *
-    FROM inventar_SpcHidr.v_bd_ton_oficial
+    sql = """
+    SELECT
+        [Fecha],
+        [Apilado_TMH_CV08_TA] AS [Apilado TMH CV-08 TA],
+        [Apilado_TMH_CV08_TB] AS [Apilado TMH CV-08 TB],
+        [Apilado_TMH_CV108_TA] AS [Apilado TMH CV-108 TA],
+        [Apilado_TMH_CV108_TB] AS [Apilado TMH CV-108 TB],
+        [Rep_TM1_TA_Qui] AS [Rep. TM1 TA Qui.],
+        [Rep_TM1_TA_Fis] AS [Rep. TM1 TA Fis.],
+        [Rep_TM1_TB_Qui] AS [Rep. TM1 TB Qui.],
+        [Rep_TM1_TB_Fis] AS [Rep. TM1 TB Fis.],
+        [Rep_TM2_TA_Qui] AS [Rep. TM2 TA Qui.],
+        [Rep_TM2_TA_Fis] AS [Rep. TM2 TA Fis.],
+        [Rep_TM2_TB_Qui] AS [Rep. TM2 TB Qui.],
+        [Rep_TM2_TB_Fis] AS [Rep. TM2 TB Fis.],
+        [Muestra_representativa_TM1_TA]
+            AS [Muestra representativa TM1 TA],
+        [Muestra_representativa_TM1_TB]
+            AS [Muestra representativa TM1 TB],
+        [Muestra_representativa_TM2_TA]
+            AS [Muestra representativa TM2 TA],
+        [Muestra_representativa_TM2_TB]
+            AS [Muestra representativa TM2 TB],
+        [FISICO_TM1_TA] AS [FISICO TM1 TA],
+        [FISICO_TM1_TB] AS [FISICO TM1 TB],
+        [FISICO_TM2_TA] AS [FISICO TM2 TA],
+        [FISICO_TM2_TB] AS [FISICO TM2 TB],
+        [Evaluable_TM1_TA],
+        [Evaluable_TM1_TB],
+        [Evaluable_TM2_TA],
+        [Evaluable_TM2_TB],
+        [Evaluable_Combinado_TA],
+        [Evaluable_Combinado_TB],
+        [Fuente_Evaluabilidad]
+    FROM inventar_SpcHidr.v_bd_ton_reportabilidad
     WHERE [Fecha] >= ?
       AND [Fecha] <= ?
     ORDER BY [Fecha] ASC;
     """
 
     sql_sa = """
-    SELECT *
-    FROM inventar_SpcHidr.v_bd_ton_oficial
+    SELECT
+        [Fecha],
+        [Apilado_TMH_CV08_TA] AS [Apilado TMH CV-08 TA],
+        [Apilado_TMH_CV08_TB] AS [Apilado TMH CV-08 TB],
+        [Apilado_TMH_CV108_TA] AS [Apilado TMH CV-108 TA],
+        [Apilado_TMH_CV108_TB] AS [Apilado TMH CV-108 TB],
+        [Rep_TM1_TA_Qui] AS [Rep. TM1 TA Qui.],
+        [Rep_TM1_TA_Fis] AS [Rep. TM1 TA Fis.],
+        [Rep_TM1_TB_Qui] AS [Rep. TM1 TB Qui.],
+        [Rep_TM1_TB_Fis] AS [Rep. TM1 TB Fis.],
+        [Rep_TM2_TA_Qui] AS [Rep. TM2 TA Qui.],
+        [Rep_TM2_TA_Fis] AS [Rep. TM2 TA Fis.],
+        [Rep_TM2_TB_Qui] AS [Rep. TM2 TB Qui.],
+        [Rep_TM2_TB_Fis] AS [Rep. TM2 TB Fis.],
+        [Muestra_representativa_TM1_TA]
+            AS [Muestra representativa TM1 TA],
+        [Muestra_representativa_TM1_TB]
+            AS [Muestra representativa TM1 TB],
+        [Muestra_representativa_TM2_TA]
+            AS [Muestra representativa TM2 TA],
+        [Muestra_representativa_TM2_TB]
+            AS [Muestra representativa TM2 TB],
+        [FISICO_TM1_TA] AS [FISICO TM1 TA],
+        [FISICO_TM1_TB] AS [FISICO TM1 TB],
+        [FISICO_TM2_TA] AS [FISICO TM2 TA],
+        [FISICO_TM2_TB] AS [FISICO TM2 TB],
+        [Evaluable_TM1_TA],
+        [Evaluable_TM1_TB],
+        [Evaluable_TM2_TA],
+        [Evaluable_TM2_TB],
+        [Evaluable_Combinado_TA],
+        [Evaluable_Combinado_TB],
+        [Fuente_Evaluabilidad]
+    FROM inventar_SpcHidr.v_bd_ton_reportabilidad
     WHERE [Fecha] >= :start
       AND [Fecha] <= :end
     ORDER BY [Fecha] ASC;
@@ -168,19 +232,17 @@ def fetch_bd_ton_report(
     try:
         # Conexión DBAPI, por ejemplo pyodbc
         if hasattr(conn_or_engine, "cursor"):
-            df = pd.read_sql(
-                sql_dbapi,
+            df = pd.read_sql_query(
+                sql,
                 conn_or_engine,
                 params=(start_date, end_date),
             )
 
         # Engine SQLAlchemy
         else:
-            from sqlalchemy import text
-
             with conn_or_engine.connect() as conn:
-                df = pd.read_sql(
-                    text(sql_sa),
+                df = pd.read_sql_query(
+                    _sa_text(sql_sa),
                     conn,
                     params={
                         "start": start_date,
@@ -190,16 +252,117 @@ def fetch_bd_ton_report(
 
     except Exception as exc:
         raise RuntimeError(
-            f"Error al leer inventar_SpcHidr.v_bd_ton_oficial: {exc}"
+            "Error al leer "
+            f"inventar_SpcHidr.v_bd_ton_reportabilidad: {exc}"
         ) from exc
 
-    if "Fecha" in df.columns:
-        df["Fecha"] = pd.to_datetime(
-            df["Fecha"],
-            errors="coerce",
+    if "Fecha" not in df.columns:
+        raise RuntimeError(
+            "La vista v_bd_ton_reportabilidad no entregó la columna Fecha. "
+            f"Columnas recibidas: {list(df.columns)}"
         )
 
+    df["Fecha"] = pd.to_datetime(
+        df["Fecha"],
+        errors="coerce",
+    )
+    df = (
+        df[df["Fecha"].notna()]
+        .sort_values("Fecha", kind="stable")
+        .drop_duplicates(subset=["Fecha"], keep="last")
+        .reset_index(drop=True)
+    )
+
     return df
+
+
+def fetch_gestion_representatividad_fy(
+    anio_fiscal: int,
+    tipo: str,
+    alcance: str = "COMBINADO",
+    objetivo: float = 0.85,
+    fecha_corte: date | None = None,
+) -> pd.DataFrame:
+    """Consulta los indicadores de gestión de representatividad del FY."""
+    tipo = str(tipo).strip().upper()
+    alcance = str(alcance).strip().upper()
+
+    if tipo not in {"QUIMICO", "FISICO"}:
+        raise ValueError(
+            "tipo debe ser QUIMICO o FISICO. "
+            f"Valor recibido: {tipo!r}"
+        )
+    if alcance not in {"TM1", "TM2", "COMBINADO"}:
+        raise ValueError(
+            "alcance debe ser TM1, TM2 o COMBINADO. "
+            f"Valor recibido: {alcance!r}"
+        )
+    if not 0 <= float(objetivo) <= 1:
+        raise ValueError(
+            "objetivo debe estar entre 0 y 1. "
+            f"Valor recibido: {objetivo!r}"
+        )
+
+    conn_or_engine = _get_engine()
+
+    if conn_or_engine is None:
+        raise RuntimeError("get_engine() devolvió None.")
+
+    sql_dbapi = """
+        SET NOCOUNT ON;
+        EXEC inventar_SpcHidr.sp_gestion_representatividad_fy
+            @anio_fiscal = ?,
+            @tipo = ?,
+            @alcance = ?,
+            @objetivo = ?,
+            @fecha_corte = ?;
+    """
+
+    sql_sa = """
+        SET NOCOUNT ON;
+        EXEC inventar_SpcHidr.sp_gestion_representatividad_fy
+            @anio_fiscal = :anio_fiscal,
+            @tipo = :tipo,
+            @alcance = :alcance,
+            @objetivo = :objetivo,
+            @fecha_corte = :fecha_corte;
+    """
+
+    parametros = {
+        "anio_fiscal": anio_fiscal,
+        "tipo": tipo,
+        "alcance": alcance,
+        "objetivo": objetivo,
+        "fecha_corte": fecha_corte,
+    }
+
+    try:
+        if hasattr(conn_or_engine, "cursor"):
+            return pd.read_sql(
+                sql_dbapi,
+                conn_or_engine,
+                params=(
+                    anio_fiscal,
+                    tipo,
+                    alcance,
+                    objetivo,
+                    fecha_corte,
+                ),
+            )
+
+        with conn_or_engine.connect() as conn:
+            return pd.read_sql(
+                _sa_text(sql_sa),
+                conn,
+                params=parametros,
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al ejecutar "
+            "inventar_SpcHidr.sp_gestion_representatividad_fy: "
+            f"{exc}"
+        ) from exc
+
 
 def fetch_estado_apilado_turno_representatividad(
     start_date: date,

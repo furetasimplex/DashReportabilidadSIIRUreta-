@@ -7,7 +7,6 @@ from datetime import datetime
 
 from tabs import tab_report
 import report_export.callbacks.reportabilidad_cb
-import report_export.callbacks.report_cb
 
 # === Utilidades ===
 project_folder = os.path.dirname(os.path.realpath(__file__))
