@@ -1605,7 +1605,6 @@ def _agregar_grafico_gestion_fy(
 ) -> None:
     """Agrega el gráfico FY y su tabla auxiliar oculta en T:X."""
     from openpyxl.chart import BarChart, LineChart, Reference
-    from openpyxl.chart.axis import ChartLines
     from openpyxl.chart.data_source import (
         AxDataSource,
         NumData,
@@ -1615,15 +1614,7 @@ def _agregar_grafico_gestion_fy(
         StrVal,
     )
     from openpyxl.chart.label import DataLabelList
-    from openpyxl.chart.layout import Layout, ManualLayout
     from openpyxl.chart.series import SeriesLabel
-    from openpyxl.chart.text import RichText
-    from openpyxl.drawing.text import (
-        CharacterProperties,
-        Paragraph,
-        ParagraphProperties,
-        RichTextProperties,
-    )
     from openpyxl.styles import Alignment, Border, Font, Side
     from openpyxl.utils import quote_sheetname
 
@@ -1727,42 +1718,22 @@ def _agregar_grafico_gestion_fy(
     chart.type = "col"
     chart.style = 2
     chart.grouping = "clustered"
-    chart.overlap = 0
-    chart.gapWidth = 150
     chart.varyColors = False
     chart.title = titulo
-    chart.title.overlay = False
-    chart.roundedCorners = False
-    chart.width = 18.40
-    chart.height = 7.24
+    chart.width = 19
+    chart.height = 8
 
     # Fundamental: el gráfico debe leer los datos aunque T:X estén ocultas.
     # openpyxl lo serializa como <plotVisOnly val="0"/>.
     chart.visible_cells_only = False
 
-    chart.x_axis.title = None
-    chart.y_axis.title = "Representatividad"
-    chart.x_axis.delete = False
-    chart.y_axis.delete = False
-
     chart.y_axis.scaling.min = 0
     chart.y_axis.scaling.max = 1
     chart.y_axis.numFmt = "0%"
     chart.y_axis.majorUnit = 0.1
-    chart.y_axis.axPos = "l"
-    chart.y_axis.tickLblPos = "nextTo"
-    chart.y_axis.majorTickMark = "none"
-    chart.y_axis.minorTickMark = "none"
-    chart.y_axis.crossBetween = "between"
-
-    chart.x_axis.axPos = "b"
-    chart.x_axis.tickLblPos = "nextTo"
-    chart.x_axis.majorTickMark = "none"
-    chart.x_axis.minorTickMark = "none"
-
-    chart.legend.position = "t"
-    chart.legend.overlay = False
-    chart.y_axis.majorGridlines = ChartLines()
+    chart.y_axis.title = "Representatividad"
+    chart.x_axis.title = None
+    chart.legend.position = "b"
 
     datos = Reference(
         ws,
@@ -1796,69 +1767,7 @@ def _agregar_grafico_gestion_fy(
     chart.dLbls.showPercent = False
     chart.dLbls.showBubbleSize = False
     chart.dLbls.numFmt = "0%"
-    chart.dLbls.position = "ctr"
-    chart.dLbls.txPr = RichText(
-        bodyPr=RichTextProperties(anchor="ctr"),
-        p=[
-            Paragraph(
-                pPr=ParagraphProperties(
-                    defRPr=CharacterProperties(
-                        sz=1050,
-                        solidFill="FFFFFF",
-                    )
-                ),
-                endParaRPr=CharacterProperties(lang="es-CL"),
-            )
-        ],
-    )
-
-    chart.title.tx.rich.p[0].pPr.defRPr.sz = 1200
-    chart.title.tx.rich.p[0].pPr.defRPr.b = False
-    chart.legend.txPr = RichText(
-        bodyPr=RichTextProperties(),
-        p=[
-            Paragraph(
-                pPr=ParagraphProperties(
-                    defRPr=CharacterProperties(sz=900)
-                ),
-                endParaRPr=CharacterProperties(lang="es-CL"),
-            )
-        ],
-    )
-    chart.x_axis.txPr = RichText(
-        bodyPr=RichTextProperties(),
-        p=[
-            Paragraph(
-                pPr=ParagraphProperties(
-                    defRPr=CharacterProperties(sz=900)
-                ),
-                endParaRPr=CharacterProperties(lang="es-CL"),
-            )
-        ],
-    )
-    chart.y_axis.txPr = RichText(
-        bodyPr=RichTextProperties(),
-        p=[
-            Paragraph(
-                pPr=ParagraphProperties(
-                    defRPr=CharacterProperties(sz=900)
-                ),
-                endParaRPr=CharacterProperties(lang="es-CL"),
-            )
-        ],
-    )
-
-    chart.layout = Layout(
-        manualLayout=ManualLayout(
-            layoutTarget="inner",
-            xMode="edge",
-            yMode="edge",
-            x=0.100,
-            y=0.2532549190,
-            w=0.885,
-            h=0.6453989123,
-        )
-    )
+    chart.dLbls.position = "outEnd"
 
     target_chart = LineChart()
     target_chart.visible_cells_only = False
@@ -1901,7 +1810,6 @@ def _agregar_grafico_gestion_fy(
 
     fila_fin_impresion = fila_inicio + 34
     ws.print_area = f"A1:M{fila_fin_impresion}"
-
 def _agregar_hoja_mensual_torres(
     wb,
     df_bd_ton_mes: pd.DataFrame,
