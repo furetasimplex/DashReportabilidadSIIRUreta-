@@ -13,7 +13,16 @@ external_stylesheets = [
     "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css",
 ]
 
-app = Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
+external_scripts = [
+    "https://cdn.jsdelivr.net/npm/date-fns@4.1.0/locale/es/cdn.min.js",
+]
+
+app = Dash(
+    __name__,
+    external_stylesheets=external_stylesheets,
+    external_scripts=external_scripts,
+    suppress_callback_exceptions=True,
+)
 server = app.server
 setup_download_route(server)
 app.title = "Dashboard Hidrometalurgico Spence"

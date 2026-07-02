@@ -23,10 +23,10 @@ from report_export.report_export import (
 )
 from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
 from report_export.pdf_generator import (
-    generar_pdf_representatividad_torres,
     generar_pdf_reporte_turno,
     generar_pdf_datos_conciliados,
 )
+from report_export.xlsx_to_pdf import convert_xlsx_bytes_to_pdf
 
 TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
 _REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -88,21 +88,72 @@ clientside_callback(
 
 
 @callback(
-    Output("report-fecha-inicio", "date"),
+    Output("report-fecha-mes-wrap", "style"),
+    Output("report-fecha-rango-wrap", "style"),
+    Output("report-fecha-inicio", "date", allow_duplicate=True),
+    Output("report-fecha-final", "date", allow_duplicate=True),
+    Output("report-fecha-inicio", "initial_visible_month"),
+    Output("report-fecha-final", "initial_visible_month"),
+    Input("report-fecha-modo", "value"),
+    Input("report-fecha-mes", "value"),
+    prevent_initial_call="initial_duplicate",
+)
+def sync_modo_y_mes(modo, mes_val):
+    """Alterna controles visibles y sincroniza fechas al elegir mes completo."""
+    if modo == "rango":
+        return (
+            {"display": "none"},
+            {"display": "block"},
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+        )
+
+    if not mes_val:
+        return (
+            {"display": "block"},
+            {"display": "none"},
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+        )
+
+    year, month = map(int, mes_val.split("-"))
+    last_day = calendar.monthrange(year, month)[1]
+    ini = f"{year:04d}-{month:02d}-01"
+    fin = f"{year:04d}-{month:02d}-{last_day:02d}"
+    return (
+        {"display": "block"},
+        {"display": "none"},
+        ini,
+        fin,
+        ini,
+        fin,
+    )
+
+
+@callback(
+    Output("report-fecha-inicio", "date", allow_duplicate=True),
     Output("report-fecha-warning", "children"),
     Output("report-status", "children", allow_duplicate=True),
     Input("report-fecha-inicio", "date"),
     Input("report-fecha-final", "date"),
+    State("report-fecha-modo", "value"),
     prevent_initial_call=True,
 )
-def validar_rango_fechas(fecha_ini, fecha_fin):
+def validar_rango_fechas(fecha_ini, fecha_fin, modo):
+    if modo == "mes":
+        return no_update, html.Div(), html.Div()
+
     if not fecha_ini or not fecha_fin:
-        return no_update, no_update, html.Div()
+        return no_update, html.Div(), html.Div()
 
     ini = pd.to_datetime(fecha_ini)
     fin = pd.to_datetime(fecha_fin)
 
-    if ini >= fin:
+    if ini > fin:
         corregida = fin - pd.Timedelta(days=7)
         warning = dbc.Alert(
             "Fecha inicio ajustada a una semana antes de Fecha final.",
@@ -2822,6 +2873,122 @@ def _agregar_hoja_mensual_torres(
     return nombre_hoja
 
 
+def _fetch_fuentes_mensuales_torres(fecha_fin) -> dict:
+    """
+    Consulta las fuentes necesarias para las hojas mensuales RN-046
+    (Químico y Físico) del mes evaluado.
+    """
+    fin_d = pd.to_datetime(fecha_fin).date()
+    rango_fy = _obtener_rango_fiscal_hasta_mes(fin_d)
+
+    fecha_inicio_mes = fin_d.replace(day=1)
+    fecha_fin_mes = rango_fy["fecha_fin"]
+    fecha_fin_mes_exclusiva = (
+        pd.Timestamp(fecha_fin_mes) + pd.Timedelta(days=1)
+    ).date()
+
+    df_bd_ton_mes = fetch_bd_ton_report(
+        start_date=fecha_inicio_mes,
+        end_date=fecha_fin_mes,
+    )
+    if df_bd_ton_mes.empty:
+        raise RuntimeError(
+            "BD Ton no entregó datos para el mes evaluado."
+        )
+
+    try:
+        df_turno_mes = fetch_estado_apilado_turno_representatividad(
+            start_date=fecha_inicio_mes,
+            end_date=fecha_fin_mes_exclusiva,
+        )
+    except Exception as material_error:
+        raise RuntimeError(
+            "No fue posible obtener el estado de apilado por turno "
+            "necesario para aplicar RN-046."
+        ) from material_error
+
+    if df_turno_mes.empty:
+        raise RuntimeError(
+            "El estado de apilado por turno no entregó datos para el mes "
+            "evaluado; no es posible determinar la "
+            "evaluabilidad oficial de los turnos."
+        )
+
+    df_gestion_fy_quimico = fetch_gestion_representatividad_fy(
+        anio_fiscal=rango_fy["anio_fiscal"],
+        tipo="QUIMICO",
+        alcance="COMBINADO",
+        objetivo=0.85,
+        fecha_corte=rango_fy["fecha_fin"],
+    )
+    if df_gestion_fy_quimico.empty:
+        raise RuntimeError(
+            "La gestión FY química no entregó resultados."
+        )
+
+    df_gestion_fy_fisico = fetch_gestion_representatividad_fy(
+        anio_fiscal=rango_fy["anio_fiscal"],
+        tipo="FISICO",
+        alcance="COMBINADO",
+        objetivo=0.85,
+        fecha_corte=rango_fy["fecha_fin"],
+    )
+    if df_gestion_fy_fisico.empty:
+        raise RuntimeError(
+            "La gestión FY física no entregó resultados."
+        )
+
+    return {
+        "rango_fy": rango_fy,
+        "fecha_inicio_mes": fecha_inicio_mes,
+        "fecha_fin_mes": fecha_fin_mes,
+        "df_bd_ton_mes": df_bd_ton_mes,
+        "df_turno_mes": df_turno_mes,
+        "df_gestion_fy_quimico": df_gestion_fy_quimico,
+        "df_gestion_fy_fisico": df_gestion_fy_fisico,
+    }
+
+
+def _build_xlsx_solo_hojas_mensuales(fuentes: dict) -> tuple[bytes, list[str]]:
+    """
+    Arma un libro Excel que contiene únicamente las hojas mensuales
+    RN-046 (Químico y Físico).
+    """
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    nombres = _agregar_hojas_mensuales_torres(
+        wb=wb,
+        df_bd_ton=fuentes["df_bd_ton_mes"],
+        df_turno=fuentes["df_turno_mes"],
+        df_gestion_fy_quimico=fuentes["df_gestion_fy_quimico"],
+        df_gestion_fy_fisico=fuentes["df_gestion_fy_fisico"],
+    )
+
+    if len(nombres) < 2:
+        raise RuntimeError(
+            "No se generaron las hojas mensuales Químico y Físico "
+            "para exportar a PDF."
+        )
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output.getvalue(), nombres
+
+
+def _prefijo_mes_desde_nombres_hojas(nombres: list[str]) -> str:
+    """Extrae '01_Ene_26' desde '01_Ene_26 Quimico'."""
+    if not nombres:
+        return "mes"
+    primera = nombres[0]
+    if " " in primera:
+        return primera.split(" ", 1)[0]
+    return primera[:31]
+
+
 def _agregar_hojas_mensuales_torres(
     wb,
     df_bd_ton: pd.DataFrame,
@@ -4029,12 +4196,6 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
 
             rango_fy = _obtener_rango_fiscal_hasta_mes(fin_d)
 
-            fecha_inicio_mes = fin_d.replace(day=1)
-            fecha_fin_mes = rango_fy["fecha_fin"]
-            fecha_fin_mes_exclusiva = (
-                pd.Timestamp(fecha_fin_mes) + pd.Timedelta(days=1)
-            ).date()
-
             # Hoja BD Ton: histórico del FY hasta el mes evaluado.
             df_bd_ton_fy = fetch_bd_ton_report(
                 start_date=rango_fy["fecha_inicio"],
@@ -4049,72 +4210,16 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                     "BD Ton no entregó datos históricos para el año fiscal."
                 )
 
-            # Hojas RN-046: solamente el mes evaluado.
-            df_bd_ton_mes = fetch_bd_ton_report(
-                start_date=fecha_inicio_mes,
-                end_date=fecha_fin_mes,
-            )
+            fuentes_mensuales = _fetch_fuentes_mensuales_torres(fin_d)
+            df_bd_ton_mes = fuentes_mensuales["df_bd_ton_mes"]
+            df_turno_material = fuentes_mensuales["df_turno_mes"]
+            df_gestion_fy_quimico = fuentes_mensuales["df_gestion_fy_quimico"]
+            df_gestion_fy_fisico = fuentes_mensuales["df_gestion_fy_fisico"]
+
             print("Filas BD Ton mes evaluado:", len(df_bd_ton_mes))
-            if df_bd_ton_mes.empty:
-                raise RuntimeError(
-                    "BD Ton no entregó datos para el mes evaluado."
-                )
-
-            # Fuente oficial para determinar Pad/Material y,
-            # principalmente, la evaluabilidad del turno según RN-046.
-            # Sin esta fuente no es válido reconstruir las hojas mensuales.
-            try:
-                df_turno_material = (
-                    fetch_estado_apilado_turno_representatividad(
-                        start_date=fecha_inicio_mes,
-                        end_date=fecha_fin_mes_exclusiva,
-                    )
-                )
-                print("Filas Estado de Apilado por Turno:", len(df_turno_material))
-            except Exception as material_error:
-                raise RuntimeError(
-                    "No fue posible obtener el estado de apilado por turno "
-                    "necesario para aplicar RN-046."
-                ) from material_error
-
-            if df_turno_material.empty:
-                raise RuntimeError(
-                    "El estado de apilado por turno no entregó datos para el mes "
-                    "evaluado; no es posible determinar la "
-                    "evaluabilidad oficial de los turnos."
-                )
-
-            df_gestion_fy_quimico = fetch_gestion_representatividad_fy(
-                anio_fiscal=rango_fy["anio_fiscal"],
-                tipo="QUIMICO",
-                alcance="COMBINADO",
-                objetivo=0.85,
-                fecha_corte=rango_fy["fecha_fin"],
-            )
-            print(
-                "Filas Gestión FY Químico:",
-                len(df_gestion_fy_quimico),
-            )
-            if df_gestion_fy_quimico.empty:
-                raise RuntimeError(
-                    "La gestión FY química no entregó resultados."
-                )
-
-            df_gestion_fy_fisico = fetch_gestion_representatividad_fy(
-                anio_fiscal=rango_fy["anio_fiscal"],
-                tipo="FISICO",
-                alcance="COMBINADO",
-                objetivo=0.85,
-                fecha_corte=rango_fy["fecha_fin"],
-            )
-            print(
-                "Filas Gestión FY Físico:",
-                len(df_gestion_fy_fisico),
-            )
-            if df_gestion_fy_fisico.empty:
-                raise RuntimeError(
-                    "La gestión FY física no entregó resultados."
-                )
+            print("Filas Estado de Apilado por Turno:", len(df_turno_material))
+            print("Filas Gestión FY Químico:", len(df_gestion_fy_quimico))
+            print("Filas Gestión FY Físico:", len(df_gestion_fy_fisico))
 
             xbytes = _export_representatividad_torres_to_excel(
                 df=df_rep,
@@ -4288,20 +4393,22 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
     try:
         # ── REPRESENTATIVIDAD TORRES ──────────────────────────────────
         if tipo == "representatividad_torres":
-            print(f"[PDF] Fetching representatividad_torres {ini_d} -> {fin_d}")
-            df = fetch_representatividad_torres_report(start_date=ini_d, end_date=fin_d)
-            print(f"[PDF] representatividad_torres rows={len(df)}")
-            if df.empty:
-                return no_update, "Sin datos para generar PDF.", _done
-
-            pdf_bytes = generar_pdf_representatividad_torres(df, f_ini, f_fin)
-            print(f"[PDF] representatividad_torres pdf size={len(pdf_bytes)} bytes")
-            filename = (
-                f"Representatividad_Torres_"
-                f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
-                f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
+            print(f"[PDF] Generando PDF mensual RN-046 {ini_d} -> {fin_d}")
+            fuentes_mensuales = _fetch_fuentes_mensuales_torres(fin_d)
+            xlsx_bytes, nombres_hojas = _build_xlsx_solo_hojas_mensuales(
+                fuentes_mensuales
             )
-            return _enviar_descarga(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
+            print(f"[PDF] Hojas mensuales: {nombres_hojas}")
+            pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_bytes)
+            print(f"[PDF] representatividad_torres pdf size={len(pdf_bytes)} bytes")
+            prefijo_mes = _prefijo_mes_desde_nombres_hojas(nombres_hojas)
+            filename = f"Representatividad_Torres_RN046_{prefijo_mes}.pdf"
+            hojas_txt = ", ".join(nombres_hojas)
+            return (
+                _enviar_descarga(pdf_bytes, filename),
+                f"PDF generado: {filename} — Hojas: {hojas_txt}",
+                _done,
+            )
 
         # ── REPORTE POR TURNO ─────────────────────────────────────────
         if tipo == "reporte_turno":

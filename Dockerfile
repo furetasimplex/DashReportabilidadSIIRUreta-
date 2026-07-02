@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     libgl1 \
     libglib2.0-0 \
+    libreoffice-calc \
+    libreoffice-writer \
  && rm -rf /var/lib/apt/lists/*
 
 # 🔹 Copiar los archivos de la aplicación
