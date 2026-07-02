@@ -1861,12 +1861,69 @@ def _agregar_grafico_gestion_fy(
 
     fila_fin_impresion = fila_inicio + 34
     ws.print_area = f"A1:M{fila_fin_impresion}"
+
+
+def _nombre_hoja_gestion_fy(fecha_base, tipo: str) -> str:
+    fecha = pd.Timestamp(fecha_base)
+    prefijo = (
+        f"01_{_MESES_ABR_TORRES[fecha.month]}_"
+        f"{str(fecha.year)[-2:]}"
+    )
+    sufijo = "Quimico" if str(tipo).lower() == "quimico" else "Fisico"
+    return f"{prefijo} FY {sufijo}"[:31]
+
+
+def _agregar_hoja_grafico_gestion_fy(
+    wb,
+    df_gestion_fy: pd.DataFrame,
+    tipo: str,
+    fecha_base,
+) -> str | None:
+    """Hoja dedicada solo al gráfico de gestión FY (para PDF sin solapes)."""
+    gestion_fy_normalizada = _normalizar_gestion_fy(
+        df_gestion_fy,
+        fecha_base,
+    )
+    if gestion_fy_normalizada.empty:
+        raise RuntimeError(
+            f"La gestión FY {tipo.lower()} no entregó resultados "
+            "para construir el gráfico."
+        )
+
+    nombre_hoja = _nombre_hoja_gestion_fy(fecha_base, tipo)
+    if nombre_hoja in wb.sheetnames:
+        del wb[nombre_hoja]
+
+    ws = wb.create_sheet(title=nombre_hoja)
+    ws.sheet_view.showGridLines = False
+
+    _agregar_grafico_gestion_fy(
+        ws=ws,
+        df_gestion_fy=gestion_fy_normalizada,
+        tipo=tipo,
+        fecha_base=fecha_base,
+        fila_inicio=3,
+    )
+
+    ws.page_setup.orientation = "landscape"
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 1
+    ws.page_margins.left = 0.35
+    ws.page_margins.right = 0.35
+    ws.page_margins.top = 0.45
+    ws.page_margins.bottom = 0.45
+
+    return nombre_hoja
+
+
 def _agregar_hoja_mensual_torres(
     wb,
     df_bd_ton_mes: pd.DataFrame,
     tipo: str,
     df_material_turno_mes: pd.DataFrame | None = None,
     df_gestion_fy: pd.DataFrame | None = None,
+    incluir_grafico_fy: bool = True,
 ) -> str | None:
     """
     Agrega una hoja mensual Químico/Físico al libro.
@@ -2759,20 +2816,26 @@ def _agregar_hoja_mensual_torres(
         df_gestion_fy,
         fecha_base,
     )
-    if gestion_fy_normalizada.empty:
+    if incluir_grafico_fy:
+        if gestion_fy_normalizada.empty:
+            raise RuntimeError(
+                f"La gestión FY {tipo.lower()} no entregó resultados "
+                "para construir el gráfico."
+            )
+
+        fila_grafico = nota_fila + 4
+        _agregar_grafico_gestion_fy(
+            ws=ws,
+            df_gestion_fy=gestion_fy_normalizada,
+            tipo=tipo,
+            fecha_base=fecha_base,
+            fila_inicio=fila_grafico,
+        )
+    elif gestion_fy_normalizada.empty:
         raise RuntimeError(
             f"La gestión FY {tipo.lower()} no entregó resultados "
             "para construir el gráfico."
         )
-
-    fila_grafico = nota_fila + 4
-    _agregar_grafico_gestion_fy(
-        ws=ws,
-        df_gestion_fy=gestion_fy_normalizada,
-        tipo=tipo,
-        fecha_base=fecha_base,
-        fila_inicio=fila_grafico,
-    )
 
     ws.auto_filter.ref = f"C56:M{ultima_fila}"
     ws.freeze_panes = None
@@ -2870,6 +2933,10 @@ def _agregar_hoja_mensual_torres(
     ws.page_margins.top = 0.5
     ws.page_margins.bottom = 0.5
 
+    if not incluir_grafico_fy:
+        fila_fin_impresion = max(ultima_fila, nota_fila + 1)
+        ws.print_area = f"A1:M{fila_fin_impresion}"
+
     return nombre_hoja
 
 
@@ -2965,6 +3032,7 @@ def _build_xlsx_solo_hojas_mensuales(fuentes: dict) -> tuple[bytes, list[str]]:
         df_turno=fuentes["df_turno_mes"],
         df_gestion_fy_quimico=fuentes["df_gestion_fy_quimico"],
         df_gestion_fy_fisico=fuentes["df_gestion_fy_fisico"],
+        grafico_fy_en_hoja_aparte=True,
     )
 
     if len(nombres) < 2:
@@ -2995,6 +3063,7 @@ def _agregar_hojas_mensuales_torres(
     df_turno: pd.DataFrame | None = None,
     df_gestion_fy_quimico: pd.DataFrame | None = None,
     df_gestion_fy_fisico: pd.DataFrame | None = None,
+    grafico_fy_en_hoja_aparte: bool = False,
 ) -> list[str]:
     """Crea un par Químico/Físico por cada mes incluido en BD Ton."""
     if df_bd_ton is None or df_bd_ton.empty or "Fecha" not in df_bd_ton.columns:
@@ -3029,9 +3098,21 @@ def _agregar_hojas_mensuales_torres(
                 tipo=tipo,
                 df_material_turno_mes=material_mes,
                 df_gestion_fy=df_gestion_tipo,
+                incluir_grafico_fy=not grafico_fy_en_hoja_aparte,
             )
             if nombre:
                 nombres.append(nombre)
+
+            if grafico_fy_en_hoja_aparte:
+                fecha_base = pd.to_datetime(bd_mes["Fecha"].min())
+                nombre_fy = _agregar_hoja_grafico_gestion_fy(
+                    wb=wb,
+                    df_gestion_fy=df_gestion_tipo,
+                    tipo=tipo,
+                    fecha_base=fecha_base,
+                )
+                if nombre_fy:
+                    nombres.append(nombre_fy)
 
     return nombres
 
