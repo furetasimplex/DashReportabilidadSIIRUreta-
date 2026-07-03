@@ -22,6 +22,30 @@ A3_WIDTH_PT = 841.8898
 A3_HEIGHT_PT = 1190.5512
 
 
+def _stack_pages_vertically(pdf_bytes: bytes) -> bytes:
+    """Une varias paginas en una sola tira vertical (pagina 0 arriba)."""
+    from pypdf import PageObject, PdfReader, PdfWriter, Transformation
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    pages = reader.pages
+    total_height = sum(float(p.mediabox.height) for p in pages)
+    max_width = max(float(p.mediabox.width) for p in pages)
+
+    combined = PageObject.create_blank_page(width=max_width, height=total_height)
+    cursor_y = total_height
+    for page in pages:
+        cursor_y -= float(page.mediabox.height)
+        combined.merge_transformed_page(
+            page, Transformation().translate(0, cursor_y)
+        )
+
+    writer = PdfWriter()
+    writer.add_page(combined)
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
 def normalize_single_page_to_a3(
     pdf_bytes: bytes,
     margin_pt: float = 24.0,
@@ -33,10 +57,12 @@ def normalize_single_page_to_a3(
 
     reader = PdfReader(BytesIO(pdf_bytes))
     if len(reader.pages) != 1:
-        raise RuntimeError(
-            "El PDF de representatividad debe contener exactamente una pagina; "
-            f"se generaron {len(reader.pages)}."
-        )
+        # LibreOffice (Linux) no encoge tanto como Excel para fitToPage 1x1
+        # y desborda el contenido en varias paginas apiladas verticalmente
+        # (fitToWidth=1 => 1 pagina de ancho). Se concatenan en una sola tira
+        # vertical y luego el recorte+escalado A3 de abajo se encarga del resto.
+        pdf_bytes = _stack_pages_vertically(pdf_bytes)
+        reader = PdfReader(BytesIO(pdf_bytes))
 
     source = reader.pages[0]
     source_width = float(source.mediabox.width)
