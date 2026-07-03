@@ -3254,14 +3254,15 @@ def _build_xlsx_pdf_desde_excel(
 
     nombre = candidatos[0]
     ws = wb[nombre]
-    # Las hojas auxiliares se conservan ocultas porque algunos graficos
-    # mantienen referencias internas a ellas. Eliminarlas puede dejar a Excel
-    # esperando una reparacion del libro durante ExportAsFixedFormat.
-    for nombre_otro in wb.sheetnames:
-        wb[nombre_otro].sheet_state = (
-            "visible" if nombre_otro == nombre else "hidden"
-        )
-    wb.active = wb.sheetnames.index(nombre)
+    # LibreOffice (Linux) exporta TODAS las hojas al convertir a PDF e ignora
+    # el sheet_state oculto, por lo que el PDF salia con Quimica y Fisica juntas.
+    # Los graficos de la hoja mensual referencian solo celdas de su propia hoja,
+    # asi que se eliminan las demas y queda un libro de una sola hoja. Esto tambien
+    # funciona en Windows (Excel COM) porque no quedan referencias colgantes.
+    for nombre_otro in list(wb.sheetnames):
+        if nombre_otro != nombre:
+            wb.remove(wb[nombre_otro])
+    wb.active = 0
 
     ws.page_setup.orientation = "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_A3
