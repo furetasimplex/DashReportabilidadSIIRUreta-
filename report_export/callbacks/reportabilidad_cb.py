@@ -3002,9 +3002,10 @@ def _agregar_hoja_mensual_torres(
                 "para construir el gráfico."
             )
 
-        # El gráfico FY comienza inmediatamente después del contenido y
-        # de las tablas auxiliares, sin reservar espacio para una nota.
-        fila_grafico = max(ultima_fila, 85) + 2
+        # El gráfico FY se separa de la tabla detalle (sección 5) con varias
+        # filas en blanco para que el título "6.-" y el gráfico no rocen la
+        # última fila de datos.
+        fila_grafico = max(ultima_fila, 85) + 6
         _agregar_grafico_gestion_fy(
             ws=ws,
             df_gestion_fy=gestion_fy_normalizada,

@@ -107,8 +107,14 @@ def normalize_single_page_to_a3(
     content_height = max(content_y1 - content_y0, 1.0)
     target_width = A3_WIDTH_PT - 2 * margin_pt
     target_height = A3_HEIGHT_PT - 2 * margin_pt
-    scale_x = target_width / content_width
-    scale_y = target_height / content_height
+    # Escala uniforme (misma en X e Y) para no deformar tablas ni graficos.
+    # Un escalado independiente por eje "aplana" el contenido cuando el
+    # recuadro ocupado no comparte la proporcion del A3 (caso LibreOffice).
+    scale = min(target_width / content_width, target_height / content_height)
+    scaled_width = content_width * scale
+    scaled_height = content_height * scale
+    offset_x = margin_pt + (target_width - scaled_width) / 2.0
+    offset_y = margin_pt + (target_height - scaled_height) / 2.0
 
     a3_page = PageObject.create_blank_page(
         width=A3_WIDTH_PT,
@@ -125,8 +131,8 @@ def normalize_single_page_to_a3(
     transform = (
         Transformation()
         .translate(-content_x0, -content_y0)
-        .scale(scale_x, scale_y)
-        .translate(margin_pt, margin_pt)
+        .scale(scale, scale)
+        .translate(offset_x, offset_y)
     )
     a3_page.merge_transformed_page(source, transform)
 
