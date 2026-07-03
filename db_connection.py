@@ -161,8 +161,11 @@ def get_engine():
 
         try:
             conn_str = f"mssql+pyodbc://{SQLSERVER_USER}:{SQLSERVER_PASSWORD}@{SQLSERVER_HOST}/{SQLSERVER_DB}?{params}"
-            print("\n[DEBUG] URL SQLAlchemy (ENTORNO 3)")
-            print(conn_str)
+            print("\n[DEBUG] SQLAlchemy (ENTORNO 3)")
+            print(
+                f"SERVER={SQLSERVER_HOST} | DATABASE={SQLSERVER_DB} | "
+                f"USER={SQLSERVER_USER} | DRIVER={SQLSERVER_DRIVER}"
+            )
             _engine = create_engine(conn_str, pool_pre_ping=True, pool_recycle=1800)
             return _engine
         except Exception as e:

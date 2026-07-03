@@ -16,6 +16,7 @@ from report_export.report_export import (
     fetch_bd_ton_report,
     fetch_gestion_representatividad_fy,
     fetch_estado_apilado_turno_representatividad,
+    fetch_fecha_corte_representatividad,
     fetch_reporte_turno_report,
     fetch_reporte_turno_cache,
     fetch_generador_reporte_diario,
@@ -26,7 +27,10 @@ from report_export.pdf_generator import (
     generar_pdf_reporte_turno,
     generar_pdf_datos_conciliados,
 )
-from report_export.xlsx_to_pdf import convert_xlsx_bytes_to_pdf
+from report_export.xlsx_to_pdf import (
+    convert_xlsx_bytes_to_pdf,
+    normalize_single_page_to_a3,
+)
 
 TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
 _REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -237,8 +241,42 @@ def _style_table(df: pd.DataFrame) -> dash_table.DataTable:
             {"if": {"column_id": "Fecha"}, "backgroundColor": "#d9eaf7", "fontWeight": "bold"},
         ],
     )
-def _tabla_representatividad_torres(df: pd.DataFrame):
+def _completar_calendario_representatividad(
+    df: pd.DataFrame,
+    fecha_inicio,
+    fecha_fin,
+) -> pd.DataFrame:
+    calendario = pd.DataFrame({
+        "Dia": pd.date_range(
+            start=fecha_inicio,
+            end=fecha_fin,
+            freq="D",
+        )
+    })
+
+    datos = df.copy()
+    if "Dia" in datos.columns:
+        datos["Dia"] = pd.to_datetime(
+            datos["Dia"],
+            errors="coerce",
+        ).dt.normalize()
+    else:
+        datos["Dia"] = pd.NaT
+
+    return (
+        calendario
+        .merge(datos, on="Dia", how="left")
+        .sort_values("Dia")
+        .reset_index(drop=True)
+    )
+
+
+def _tabla_representatividad_torres(
+    df: pd.DataFrame,
+    fecha_corte_operacional=None,
+):
     df = df.copy()
+    df_num = df.copy()
 
     if "Dia" in df.columns:
         df["Dia"] = pd.to_datetime(df["Dia"]).dt.strftime("%d-%m-%Y")
@@ -253,8 +291,6 @@ def _tabla_representatividad_torres(df: pd.DataFrame):
         "TM2_TurnoB_Quimico",
         "TM2_TurnoB_Fisico",
     ]
-
-    df_num = df.copy()
 
     for col in columnas_pct:
         if col in df_num.columns:
@@ -273,8 +309,21 @@ def _tabla_representatividad_torres(df: pd.DataFrame):
         valores_formateados = []
         estados = []
 
-        for valor in df_num[col]:
-            if pd.isna(valor):
+        for indice, valor in enumerate(df_num[col]):
+            fecha_fila = pd.to_datetime(
+                df_num.iloc[indice].get("Dia"),
+                errors="coerce",
+            )
+            es_futura = (
+                fecha_corte_operacional is not None
+                and pd.notna(fecha_fila)
+                and fecha_fila.date() > fecha_corte_operacional
+            )
+
+            if es_futura:
+                valores_formateados.append("")
+                estados.append("sin_dato")
+            elif pd.isna(valor):
                 valores_formateados.append("Tambor detenido")
                 estados.append("detenido")
             else:
@@ -325,14 +374,13 @@ def _tabla_representatividad_torres(df: pd.DataFrame):
         if estado_col not in df.columns:
             continue
 
-        # Tambor detenido: azul/gris, nunca rojo
         style_data_conditional.append({
             "if": {
                 "filter_query": f'{{{estado_col}}} = "detenido"',
-                "column_id": col
+                "column_id": col,
             },
             "color": "#1f4e79",
-            "fontWeight": "500"
+            "fontWeight": "500",
         })
 
         # Representatividad menor a 75%, incluyendo 0.0%: rojo
@@ -1008,6 +1056,9 @@ def _preparar_detalle_mensual_torres(
     df_bd_ton: pd.DataFrame,
     tipo: str,
     df_material_turno: pd.DataFrame | None = None,
+    fecha_inicio_mes=None,
+    fecha_fin_mes=None,
+    fecha_corte_operacional=None,
 ) -> pd.DataFrame:
     """
     Construye el detalle Fecha + Turno de las hojas mensuales.
@@ -1037,8 +1088,8 @@ def _preparar_detalle_mensual_torres(
         raise ValueError(f"Tipo de hoja no soportado: {tipo}")
 
     df = df_bd_ton.copy()
-    if "Fecha" not in df.columns or df.empty:
-        return pd.DataFrame()
+    if "Fecha" not in df.columns:
+        df["Fecha"] = pd.NaT
 
     df["Fecha"] = pd.to_datetime(
         df["Fecha"],
@@ -1051,10 +1102,34 @@ def _preparar_detalle_mensual_torres(
         .reset_index(drop=True)
     )
 
-    if df.empty:
+    inicio = pd.to_datetime(fecha_inicio_mes, errors="coerce")
+    fin = pd.to_datetime(fecha_fin_mes, errors="coerce")
+    corte = pd.to_datetime(fecha_corte_operacional, errors="coerce")
+
+    if pd.isna(inicio) and not df.empty:
+        inicio = df["Fecha"].min()
+    if pd.isna(fin) and not df.empty:
+        fin = df["Fecha"].max()
+    if pd.isna(corte):
+        corte = fin
+
+    if pd.isna(inicio) or pd.isna(fin):
         return pd.DataFrame()
 
-    primera_fecha = df["Fecha"].min()
+    inicio = inicio.normalize()
+    fin = fin.normalize()
+    corte = corte.normalize()
+    primera_fecha = inicio
+
+    calendario = pd.DataFrame({
+        "Fecha": pd.date_range(inicio, fin, freq="D")
+    })
+    df = (
+        calendario
+        .merge(df, on="Fecha", how="left")
+        .sort_values("Fecha")
+        .reset_index(drop=True)
+    )
 
     mapa_material = {}
     mapa_actividad = {}
@@ -1113,6 +1188,26 @@ def _preparar_detalle_mensual_torres(
 
         for turno in ["TA", "TB"]:
             clave_turno = (fecha, turno)
+
+            if fecha > corte:
+                registros.append({
+                    "Semana_Num": semana_num,
+                    "Semana": f"Semana {semana_num}",
+                    "Fecha": fecha,
+                    "Pad": None,
+                    "Turno": turno,
+                    "Apilado_Oficial_Turno": None,
+                    "TMH_CV08": None,
+                    "TM1_Activo": 0,
+                    "Rep_TM1": None,
+                    "Comentario_TM1": None,
+                    "TMH_CV108": None,
+                    "TM2_Activo": 0,
+                    "Rep_TM2": None,
+                    "Comentario_TM2": None,
+                    "Rep_Turno": None,
+                })
+                continue
 
             turno_activo_oficial = bool(
                 mapa_actividad.get(clave_turno, False)
@@ -1276,18 +1371,14 @@ def _calcular_resumen_mensual_torres(
             pct_rep = (
                 representativos / activos
                 if activos
-                else 0.0
+                else None
             )
             pct_no_rep = (
                 no_representativos / activos
                 if activos
-                else 0.0
+                else None
             )
-            total = (
-                pct_rep + pct_no_rep
-                if activos
-                else 0.0
-            )
+            total = 1.0 if activos else None
 
             resumen[clave].append({
                 "Periodo": etiqueta,
@@ -1656,6 +1747,7 @@ def _agregar_grafico_gestion_fy(
 ) -> None:
     """Agrega el gráfico FY y su tabla auxiliar oculta en T:X."""
     from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.chart.axis import ChartLines
     from openpyxl.chart.data_source import (
         AxDataSource,
         NumData,
@@ -1665,7 +1757,16 @@ def _agregar_grafico_gestion_fy(
         StrVal,
     )
     from openpyxl.chart.label import DataLabelList
+    from openpyxl.chart.marker import DataPoint
     from openpyxl.chart.series import SeriesLabel
+    from openpyxl.chart.shapes import GraphicalProperties
+    from openpyxl.chart.text import RichText
+    from openpyxl.drawing.text import (
+        CharacterProperties,
+        Paragraph,
+        ParagraphProperties,
+        RichTextProperties,
+    )
     from openpyxl.styles import Alignment, Border, Font, Side
     from openpyxl.utils import quote_sheetname
 
@@ -1693,7 +1794,12 @@ def _agregar_grafico_gestion_fy(
         color="476475",
         size=10,
     )
-    celda_titulo.alignment = Alignment(horizontal="left", vertical="center")
+    celda_titulo.alignment = Alignment(
+        horizontal="left",
+        vertical="center",
+        wrap_text=True,
+    )
+    ws.row_dimensions[fila_inicio].height = 20
     lado = Side(style="thin", color="595959")
     for columna in range(3, 14):
         ws.cell(fila_inicio, columna).border = Border(bottom=lado)
@@ -1771,8 +1877,13 @@ def _agregar_grafico_gestion_fy(
     chart.grouping = "clustered"
     chart.varyColors = False
     chart.title = titulo
-    chart.width = 19
-    chart.height = 8
+    chart.width = 30
+    chart.height = 13
+    chart.roundedCorners = True
+    chart.graphical_properties = GraphicalProperties()
+    chart.graphical_properties.solidFill = "FFFFFF"
+    chart.graphical_properties.line.solidFill = "898989"
+    chart.graphical_properties.line.width = 19050
 
     # Fundamental: el gráfico debe leer los datos aunque T:X estén ocultas.
     # openpyxl lo serializa como <plotVisOnly val="0"/>.
@@ -1782,9 +1893,24 @@ def _agregar_grafico_gestion_fy(
     chart.y_axis.scaling.max = 1
     chart.y_axis.numFmt = "0%"
     chart.y_axis.majorUnit = 0.1
-    chart.y_axis.title = "Representatividad"
+    chart.y_axis.title = None
+    chart.y_axis.delete = False
+    chart.y_axis.axPos = "l"
+    chart.y_axis.tickLblPos = "nextTo"
+    chart.y_axis.majorTickMark = "none"
+    chart.y_axis.minorTickMark = "none"
+    chart.y_axis.majorGridlines = ChartLines()
+    chart.y_axis.majorGridlines.graphicalProperties = GraphicalProperties()
+    chart.y_axis.majorGridlines.graphicalProperties.line.solidFill = "000000"
+    chart.y_axis.majorGridlines.graphicalProperties.line.width = 12700
     chart.x_axis.title = None
+    chart.x_axis.delete = False
+    chart.x_axis.axPos = "b"
+    chart.x_axis.tickLblPos = "nextTo"
+    chart.x_axis.majorTickMark = "none"
+    chart.x_axis.minorTickMark = "none"
     chart.legend.position = "b"
+    chart.legend.overlay = False
 
     datos = Reference(
         ws,
@@ -1798,6 +1924,11 @@ def _agregar_grafico_gestion_fy(
     chart.series[0].tx = SeriesLabel(v="Representatividad")
     chart.series[0].graphicalProperties.solidFill = "476475"
     chart.series[0].graphicalProperties.line.noFill = True
+    if valores_representatividad:
+        punto_ytd = DataPoint(idx=len(valores_representatividad) - 1)
+        punto_ytd.graphicalProperties.solidFill = "E65400"
+        punto_ytd.graphicalProperties.line.noFill = True
+        chart.series[0].dPt = [punto_ytd]
 
     # Caché numérica explícita para que Excel, LibreOffice y los
     # previsualizadores rendericen el gráfico sin depender de recálculo.
@@ -1818,7 +1949,58 @@ def _agregar_grafico_gestion_fy(
     chart.dLbls.showPercent = False
     chart.dLbls.showBubbleSize = False
     chart.dLbls.numFmt = "0%"
-    chart.dLbls.position = "outEnd"
+    chart.dLbls.position = "ctr"
+    chart.dLbls.txPr = RichText(
+        bodyPr=RichTextProperties(anchor="ctr"),
+        p=[
+            Paragraph(
+                pPr=ParagraphProperties(
+                    defRPr=CharacterProperties(
+                        sz=1100,
+                        b=True,
+                        solidFill="FFFFFF",
+                    )
+                ),
+                endParaRPr=CharacterProperties(lang="es-CL"),
+            )
+        ],
+    )
+
+    chart.title.tx.rich.p[0].pPr.defRPr.sz = 1600
+    chart.title.tx.rich.p[0].pPr.defRPr.b = True
+    chart.legend.txPr = RichText(
+        bodyPr=RichTextProperties(),
+        p=[
+            Paragraph(
+                pPr=ParagraphProperties(
+                    defRPr=CharacterProperties(sz=1100)
+                ),
+                endParaRPr=CharacterProperties(lang="es-CL"),
+            )
+        ],
+    )
+    chart.x_axis.txPr = RichText(
+        bodyPr=RichTextProperties(),
+        p=[
+            Paragraph(
+                pPr=ParagraphProperties(
+                    defRPr=CharacterProperties(sz=1000)
+                ),
+                endParaRPr=CharacterProperties(lang="es-CL"),
+            )
+        ],
+    )
+    chart.y_axis.txPr = RichText(
+        bodyPr=RichTextProperties(),
+        p=[
+            Paragraph(
+                pPr=ParagraphProperties(
+                    defRPr=CharacterProperties(sz=1000, b=True)
+                ),
+                endParaRPr=CharacterProperties(lang="es-CL"),
+            )
+        ],
+    )
 
     target_chart = LineChart()
     target_chart.visible_cells_only = False
@@ -1846,8 +2028,11 @@ def _agregar_grafico_gestion_fy(
     target_chart.series[0].marker.symbol = "none"
     target_chart.x_axis.axId = chart.x_axis.axId
     target_chart.y_axis.axId = chart.y_axis.axId
-    target_chart.x_axis.delete = True
-    target_chart.y_axis.delete = True
+    # Los ejes comparten IDs con el gráfico de columnas. No deben marcarse
+    # como eliminados, porque Excel aplicaría esa propiedad al eje combinado
+    # y ocultaría los meses fiscales y la escala porcentual.
+    target_chart.x_axis.delete = False
+    target_chart.y_axis.delete = False
     chart += target_chart
 
     ws.add_chart(chart, f"C{fila_inicio + 2}")
@@ -1897,6 +2082,13 @@ def _agregar_hoja_grafico_gestion_fy(
     ws = wb.create_sheet(title=nombre_hoja)
     ws.sheet_view.showGridLines = False
 
+    # El gráfico FY ocupa C:M. En una hoja independiente estas columnas
+    # deben ampliarse para evitar que Excel recorte meses y la barra YTD.
+    for columna in range(3, 14):
+        ws.column_dimensions[
+            ws.cell(1, columna).column_letter
+        ].width = 15
+
     _agregar_grafico_gestion_fy(
         ws=ws,
         df_gestion_fy=gestion_fy_normalizada,
@@ -1924,6 +2116,9 @@ def _agregar_hoja_mensual_torres(
     df_material_turno_mes: pd.DataFrame | None = None,
     df_gestion_fy: pd.DataFrame | None = None,
     incluir_grafico_fy: bool = True,
+    fecha_inicio_mes=None,
+    fecha_fin_mes=None,
+    fecha_corte_operacional=None,
 ) -> str | None:
     """
     Agrega una hoja mensual Químico/Físico al libro.
@@ -1943,6 +2138,7 @@ def _agregar_hoja_mensual_torres(
         AnchorMarker,
         TwoCellAnchor,
     )
+    from openpyxl.drawing.image import Image as OpenpyxlImage
     from openpyxl.drawing.text import (
         CharacterProperties,
         Paragraph,
@@ -1962,6 +2158,9 @@ def _agregar_hoja_mensual_torres(
         df_bd_ton=df_bd_ton_mes,
         tipo=tipo,
         df_material_turno=df_material_turno_mes,
+        fecha_inicio_mes=fecha_inicio_mes,
+        fecha_fin_mes=fecha_fin_mes,
+        fecha_corte_operacional=fecha_corte_operacional,
     )
 
     if detalle.empty:
@@ -2013,13 +2212,6 @@ def _agregar_hoja_mensual_torres(
         color="476475",
         size=10,
     )
-    font_nota = Font(
-        name="Arial",
-        color="666666",
-        italic=True,
-        size=9,
-    )
-
     thin = Side(style="thin", color="595959")
     medium = Side(style="medium", color="404040")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -2118,30 +2310,41 @@ def _agregar_hoja_mensual_torres(
     ws["C5"].font = font_titulo
     ws["C5"].alignment = center
 
-    ws.merge_cells("K2:M4")
-    ws["K2"] = (
+    ws.merge_cells("J2:L4")
+    ws["J2"] = (
         "Superintendencia de Medición y Reconciliación\n"
         "Gerencia de Planificación de la Producción"
     )
-    ws["K2"].font = Font(
+    ws["J2"].font = Font(
         name="Arial",
         bold=True,
         color="476475",
         size=10,
     )
-    ws["K2"].alignment = center
+    ws["J2"].alignment = center
+
+    logo_path = os.path.join(
+        os.path.dirname(_REPORT_EXPORT_DIR),
+        "assets",
+        "logoBHP.png",
+    )
+    if os.path.isfile(logo_path):
+        logo = OpenpyxlImage(logo_path)
+        logo.width = 55
+        logo.height = 22
+        ws.add_image(logo, "M2")
 
     # ------------------------------------------------------------
     # 1. Tonelaje por material y condición de representatividad
     # ------------------------------------------------------------
-    ws.merge_cells("C9:F9")
+    ws.merge_cells("C9:H9")
     ws["C9"] = (
         "1.- Mineral apilado y caracterizado con información "
         f"{tipo_titulo.lower()} de torres de muestreo."
     )
     ws["C9"].font = font_header
-    ws["C9"].alignment = left_no_wrap
-    _aplicar_subrayado(9, 3, 6)
+    ws["C9"].alignment = left
+    _aplicar_subrayado(9, 3, 8)
 
     # Misma estructura visual del reporte de referencia:
     # "Pad" y un encabezado agrupado para las tres columnas de mineral.
@@ -2236,12 +2439,12 @@ def _agregar_hoja_mensual_torres(
             start_row=fila_inicio,
             start_column=3,
             end_row=fila_inicio,
-            end_column=6,
+            end_column=8,
         )
         ws.cell(fila_inicio, 3, titulo_seccion)
         ws.cell(fila_inicio, 3).font = font_header
-        ws.cell(fila_inicio, 3).alignment = left_no_wrap
-        _aplicar_subrayado(fila_inicio, 3, 6)
+        ws.cell(fila_inicio, 3).alignment = left
+        _aplicar_subrayado(fila_inicio, 3, 8)
 
         encabezados_por_seccion = {
             "TM1": [
@@ -2788,30 +2991,6 @@ def _agregar_hoja_mensual_torres(
             borde_interior=thin,
         )
 
-    # La nota y el gráfico FY deben quedar después tanto del detalle como
-    # de las tres auditorías auxiliares (la última termina en la fila 85).
-    nota_fila = max(ultima_fila, 85) + 2
-
-    ws.merge_cells(
-        start_row=nota_fila,
-        start_column=3,
-        end_row=nota_fila + 1,
-        end_column=13,
-    )
-    ws.cell(
-        nota_fila,
-        3,
-        "Nota metodológica: desde el 01-01-2026 la evaluabilidad se "
-        "determina mediante Turno_Evaluable por Fecha + Turno. Para el "
-        "histórico anterior se conserva la evaluabilidad independiente "
-        "por torre informada en BD Ton, con fallback en la existencia del "
-        "tonelaje original. Las columnas de comentarios permanecen vacías "
-        "mientras no exista una fuente oficial y trazable de causas "
-        "operacionales.",
-    )
-    ws.cell(nota_fila, 3).font = font_nota
-    ws.cell(nota_fila, 3).alignment = left
-
     gestion_fy_normalizada = _normalizar_gestion_fy(
         df_gestion_fy,
         fecha_base,
@@ -2823,7 +3002,9 @@ def _agregar_hoja_mensual_torres(
                 "para construir el gráfico."
             )
 
-        fila_grafico = nota_fila + 4
+        # El gráfico FY comienza inmediatamente después del contenido y
+        # de las tablas auxiliares, sin reservar espacio para una nota.
+        fila_grafico = max(ultima_fila, 85) + 2
         _agregar_grafico_gestion_fy(
             ws=ws,
             df_gestion_fy=gestion_fy_normalizada,
@@ -2900,13 +3081,13 @@ def _agregar_hoja_mensual_torres(
         5: 14.5,
         6: 14.5,
         7: 14.5,
-        9: 20.0,
+        9: 32.0,
         10: 18.0,
-        16: 20.0,
+        16: 32.0,
         17: 37.5,
-        27: 20.0,
+        27: 32.0,
         28: 37.5,
-        38: 20.0,
+        38: 32.0,
         39: 37.5,
         53: 20.0,
         55: 15.0,
@@ -2934,29 +3115,34 @@ def _agregar_hoja_mensual_torres(
     ws.page_margins.bottom = 0.5
 
     if not incluir_grafico_fy:
-        fila_fin_impresion = max(ultima_fila, nota_fila + 1)
-        ws.print_area = f"A1:M{fila_fin_impresion}"
+        ws.print_area = f"A1:M{ultima_fila}"
 
     return nombre_hoja
 
 
-def _fetch_fuentes_mensuales_torres(fecha_fin) -> dict:
+def _fetch_fuentes_mensuales_torres(
+    fecha_fin,
+    fecha_corte_operacional=None,
+) -> dict:
     """
     Consulta las fuentes necesarias para las hojas mensuales RN-046
     (Químico y Físico) del mes evaluado.
     """
     fin_d = pd.to_datetime(fecha_fin).date()
-    rango_fy = _obtener_rango_fiscal_hasta_mes(fin_d)
+    corte_d = pd.to_datetime(
+        fecha_corte_operacional or fin_d
+    ).date()
+    rango_fy = _obtener_rango_fiscal_hasta_mes(corte_d)
 
     fecha_inicio_mes = fin_d.replace(day=1)
-    fecha_fin_mes = rango_fy["fecha_fin"]
-    fecha_fin_mes_exclusiva = (
-        pd.Timestamp(fecha_fin_mes) + pd.Timedelta(days=1)
+    fecha_fin_mes = fin_d
+    fecha_corte_exclusiva = (
+        pd.Timestamp(corte_d) + pd.Timedelta(days=1)
     ).date()
 
     df_bd_ton_mes = fetch_bd_ton_report(
         start_date=fecha_inicio_mes,
-        end_date=fecha_fin_mes,
+        end_date=corte_d,
     )
     if df_bd_ton_mes.empty:
         raise RuntimeError(
@@ -2966,7 +3152,7 @@ def _fetch_fuentes_mensuales_torres(fecha_fin) -> dict:
     try:
         df_turno_mes = fetch_estado_apilado_turno_representatividad(
             start_date=fecha_inicio_mes,
-            end_date=fecha_fin_mes_exclusiva,
+            end_date=fecha_corte_exclusiva,
         )
     except Exception as material_error:
         raise RuntimeError(
@@ -2986,7 +3172,7 @@ def _fetch_fuentes_mensuales_torres(fecha_fin) -> dict:
         tipo="QUIMICO",
         alcance="COMBINADO",
         objetivo=0.85,
-        fecha_corte=rango_fy["fecha_fin"],
+        fecha_corte=corte_d,
     )
     if df_gestion_fy_quimico.empty:
         raise RuntimeError(
@@ -2998,7 +3184,7 @@ def _fetch_fuentes_mensuales_torres(fecha_fin) -> dict:
         tipo="FISICO",
         alcance="COMBINADO",
         objetivo=0.85,
-        fecha_corte=rango_fy["fecha_fin"],
+        fecha_corte=corte_d,
     )
     if df_gestion_fy_fisico.empty:
         raise RuntimeError(
@@ -3009,6 +3195,7 @@ def _fetch_fuentes_mensuales_torres(fecha_fin) -> dict:
         "rango_fy": rango_fy,
         "fecha_inicio_mes": fecha_inicio_mes,
         "fecha_fin_mes": fecha_fin_mes,
+        "fecha_corte_operacional": corte_d,
         "df_bd_ton_mes": df_bd_ton_mes,
         "df_turno_mes": df_turno_mes,
         "df_gestion_fy_quimico": df_gestion_fy_quimico,
@@ -3016,35 +3203,81 @@ def _fetch_fuentes_mensuales_torres(fecha_fin) -> dict:
     }
 
 
-def _build_xlsx_solo_hojas_mensuales(fuentes: dict) -> tuple[bytes, list[str]]:
-    """
-    Arma un libro Excel que contiene únicamente las hojas mensuales
-    RN-046 (Químico y Físico).
-    """
-    from openpyxl import Workbook
-
-    wb = Workbook()
-    wb.remove(wb.active)
-
-    nombres = _agregar_hojas_mensuales_torres(
-        wb=wb,
-        df_bd_ton=fuentes["df_bd_ton_mes"],
-        df_turno=fuentes["df_turno_mes"],
-        df_gestion_fy_quimico=fuentes["df_gestion_fy_quimico"],
-        df_gestion_fy_fisico=fuentes["df_gestion_fy_fisico"],
-        grafico_fy_en_hoja_aparte=True,
+def _ruta_cache_excel_representatividad(fecha_inicio, fecha_fin) -> str:
+    nombre = (
+        "Reporte_Representatividad_Torres_"
+        f"{pd.Timestamp(fecha_inicio).strftime('%Y%m%d')}_"
+        f"{pd.Timestamp(fecha_fin).strftime('%Y%m%d')}.xlsx"
     )
+    return os.path.join(_REPORT_EXPORT_DIR, "exports", nombre)
 
-    if len(nombres) < 2:
+
+def _guardar_cache_excel_representatividad(
+    contenido: bytes,
+    fecha_inicio,
+    fecha_fin,
+) -> str:
+    ruta = _ruta_cache_excel_representatividad(fecha_inicio, fecha_fin)
+    os.makedirs(os.path.dirname(ruta), exist_ok=True)
+    with open(ruta, "wb") as archivo:
+        archivo.write(contenido)
+    return ruta
+
+
+def _build_xlsx_pdf_desde_excel(
+    xlsx_bytes: bytes,
+    tipo_analisis: str,
+    fecha_fin,
+) -> tuple[bytes, str]:
+    """
+    Extrae del mismo Excel descargable la hoja Quimico o Fisico y la prepara
+    como una pagina A3. De esta forma PDF y Excel comparten exactamente los
+    mismos valores, semaforos, tablas y graficos.
+    """
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(xlsx_bytes))
+    fecha = pd.Timestamp(fecha_fin)
+    sufijo = "Quimico" if tipo_analisis.lower() == "quimico" else "Fisico"
+    esperado = (
+        f"01_{_MESES_ABR_TORRES[fecha.month]}_"
+        f"{str(fecha.year)[-2:]} {sufijo}"
+    )
+    candidatos = [
+        nombre for nombre in wb.sheetnames
+        if nombre == esperado or nombre.endswith(f" {sufijo}")
+    ]
+    if not candidatos:
         raise RuntimeError(
-            "No se generaron las hojas mensuales Químico y Físico "
-            "para exportar a PDF."
+            f"El Excel no contiene la hoja mensual {sufijo}."
         )
+
+    nombre = candidatos[0]
+    ws = wb[nombre]
+    # Las hojas auxiliares se conservan ocultas porque algunos graficos
+    # mantienen referencias internas a ellas. Eliminarlas puede dejar a Excel
+    # esperando una reparacion del libro durante ExportAsFixedFormat.
+    for nombre_otro in wb.sheetnames:
+        wb[nombre_otro].sheet_state = (
+            "visible" if nombre_otro == nombre else "hidden"
+        )
+    wb.active = wb.sheetnames.index(nombre)
+
+    ws.page_setup.orientation = "portrait"
+    ws.page_setup.paperSize = ws.PAPERSIZE_A3
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 1
+    ws.print_options.horizontalCentered = True
+    ws.print_options.verticalCentered = False
+    ws.sheet_view.showGridLines = False
+    if not ws.print_area:
+        ws.print_area = f"A1:M{ws.max_row}"
 
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
-    return output.getvalue(), nombres
+    return output.getvalue(), nombre
 
 
 def _prefijo_mes_desde_nombres_hojas(nombres: list[str]) -> str:
@@ -3064,6 +3297,9 @@ def _agregar_hojas_mensuales_torres(
     df_gestion_fy_quimico: pd.DataFrame | None = None,
     df_gestion_fy_fisico: pd.DataFrame | None = None,
     grafico_fy_en_hoja_aparte: bool = False,
+    fecha_inicio_mes=None,
+    fecha_fin_mes=None,
+    fecha_corte_operacional=None,
 ) -> list[str]:
     """Crea un par Químico/Físico por cada mes incluido en BD Ton."""
     if df_bd_ton is None or df_bd_ton.empty or "Fecha" not in df_bd_ton.columns:
@@ -3099,6 +3335,9 @@ def _agregar_hojas_mensuales_torres(
                 df_material_turno_mes=material_mes,
                 df_gestion_fy=df_gestion_tipo,
                 incluir_grafico_fy=not grafico_fy_en_hoja_aparte,
+                fecha_inicio_mes=fecha_inicio_mes,
+                fecha_fin_mes=fecha_fin_mes,
+                fecha_corte_operacional=fecha_corte_operacional,
             )
             if nombre:
                 nombres.append(nombre)
@@ -3124,6 +3363,9 @@ def _export_representatividad_torres_to_excel(
     df_turno_mes: pd.DataFrame | None = None,
     df_gestion_fy_quimico: pd.DataFrame | None = None,
     df_gestion_fy_fisico: pd.DataFrame | None = None,
+    fecha_inicio_mes=None,
+    fecha_fin_mes=None,
+    fecha_corte_operacional=None,
 ) -> bytes:
     """
     Exporta el reporte de Representatividad Torres a Excel.
@@ -3207,13 +3449,6 @@ def _export_representatividad_torres_to_excel(
         color="C00000",
         size=10,
     )
-    font_detenido = Font(
-        name="Arial",
-        italic=True,
-        color=color_texto,
-        size=10,
-    )
-
     thin = Side(style="thin", color=color_borde_interno)
     thin_header = Side(style="thin", color=color_borde)
     medium = Side(style="medium", color=color_borde)
@@ -3242,6 +3477,7 @@ def _export_representatividad_torres_to_excel(
         col_ini: int,
         fila_fin: int,
         col_fin: int,
+        estilo=medium,
     ) -> None:
         """Refuerza el contorno del bloque sin perder las líneas internas."""
         for fila in range(fila_ini, fila_fin + 1):
@@ -3249,10 +3485,10 @@ def _export_representatividad_torres_to_excel(
                 celda = ws.cell(fila, col)
                 borde_actual = celda.border
                 celda.border = Border(
-                    left=medium if col == col_ini else borde_actual.left,
-                    right=medium if col == col_fin else borde_actual.right,
-                    top=medium if fila == fila_ini else borde_actual.top,
-                    bottom=medium if fila == fila_fin else borde_actual.bottom,
+                    left=estilo if col == col_ini else borde_actual.left,
+                    right=estilo if col == col_fin else borde_actual.right,
+                    top=estilo if fila == fila_ini else borde_actual.top,
+                    bottom=estilo if fila == fila_fin else borde_actual.bottom,
                 )
 
     # ------------------------------------------------------------
@@ -3357,9 +3593,22 @@ def _export_representatividad_torres_to_excel(
             celda.alignment = center
             celda.border = border_datos
 
-            if pd.isna(valor):
+            es_futura = (
+                fecha_corte_operacional is not None
+                and pd.notna(fecha)
+                and fecha.date() > fecha_corte_operacional
+            )
+            if es_futura:
+                celda.value = None
+                celda.font = font_normal
+            elif pd.isna(valor):
                 celda.value = "Tambor detenido"
-                celda.font = font_detenido
+                celda.font = Font(
+                    name="Arial",
+                    italic=True,
+                    color=color_texto,
+                    size=10,
+                )
             else:
                 celda.value = float(valor)
                 celda.number_format = "0.0%"
@@ -3378,6 +3627,21 @@ def _export_representatividad_torres_to_excel(
         (6, 9),
     ]:
         _aplicar_contorno(4, col_ini, ultima_fila, col_fin)
+
+    # Las celdas combinadas de los títulos requieren un contorno propio.
+    # Aplicarlo a todo el rango evita los cortes que Excel puede producir en
+    # el borde inferior de una celda combinada.
+    _aplicar_contorno(4, 2, 4, 5)
+    _aplicar_contorno(4, 6, 4, 9)
+    for referencia in ("B4", "F4"):
+        # Excel reconstruye el borde exterior de una celda combinada desde
+        # su celda ancla; por eso los cuatro lados deben quedar definidos.
+        ws[referencia].border = Border(
+            left=medium,
+            right=medium,
+            top=medium,
+            bottom=medium,
+        )
 
     # Dimensiones equivalentes al bloque AT:BM.
     ws.column_dimensions["A"].width = 15
@@ -3408,6 +3672,9 @@ def _export_representatividad_torres_to_excel(
         df_turno=df_turno_mes,
         df_gestion_fy_quimico=df_gestion_fy_quimico,
         df_gestion_fy_fisico=df_gestion_fy_fisico,
+        fecha_inicio_mes=fecha_inicio_mes,
+        fecha_fin_mes=fecha_fin_mes,
+        fecha_corte_operacional=fecha_corte_operacional,
     )
 
     output = io.BytesIO()
@@ -3415,6 +3682,63 @@ def _export_representatividad_torres_to_excel(
     output.seek(0)
 
     return output.getvalue()
+
+
+def _generar_excel_representatividad_completo(
+    fecha_inicio,
+    fecha_fin,
+) -> bytes:
+    """Construye una unica fuente Excel para las descargas XLSX y PDF."""
+    fecha_corte_operacional = fetch_fecha_corte_representatividad(
+        start_date=fecha_inicio,
+        end_date=fecha_fin,
+    )
+    if fecha_corte_operacional is None:
+        raise RuntimeError(
+            "No existe informacion disponible en Peso Torres para el rango."
+        )
+
+    df_rep_real = fetch_representatividad_torres_report(
+        start_date=fecha_inicio,
+        end_date=fecha_corte_operacional,
+    )
+    if df_rep_real.empty:
+        raise RuntimeError(
+            "Sin datos de representatividad para el rango seleccionado."
+        )
+    df_rep = _completar_calendario_representatividad(
+        df=df_rep_real,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+    )
+
+    rango_fy = _obtener_rango_fiscal_hasta_mes(
+        fecha_corte_operacional
+    )
+    df_bd_ton_fy = fetch_bd_ton_report(
+        start_date=rango_fy["fecha_inicio"],
+        end_date=fecha_corte_operacional,
+    )
+    if df_bd_ton_fy.empty:
+        raise RuntimeError(
+            "BD Ton no entrego datos historicos para el ano fiscal."
+        )
+
+    fuentes = _fetch_fuentes_mensuales_torres(
+        fecha_fin,
+        fecha_corte_operacional,
+    )
+    return _export_representatividad_torres_to_excel(
+        df=df_rep,
+        df_bd_ton_fy=df_bd_ton_fy,
+        df_bd_ton_mes=fuentes["df_bd_ton_mes"],
+        df_turno_mes=fuentes["df_turno_mes"],
+        df_gestion_fy_quimico=fuentes["df_gestion_fy_quimico"],
+        df_gestion_fy_fisico=fuentes["df_gestion_fy_fisico"],
+        fecha_inicio_mes=fuentes["fecha_inicio_mes"],
+        fecha_fin_mes=fuentes["fecha_fin_mes"],
+        fecha_corte_operacional=fecha_corte_operacional,
+    )
 
 
 def _export_dataframe_simple_to_excel(df: pd.DataFrame, sheet_name: str = "Reporte") -> bytes:
@@ -4002,9 +4326,27 @@ def generar_reporte(n_clicks_list, f_ini, f_fin):
     # ------------------------------------------------------------
     if tipo == "representatividad_torres":
         try:
-            df_rep = fetch_representatividad_torres_report(
+            fecha_corte_operacional = fetch_fecha_corte_representatividad(
                 start_date=ini,
-                end_date=fin
+                end_date=fin,
+            )
+            if fecha_corte_operacional is None:
+                return (
+                    dbc.Alert(
+                        "Sin datos operacionales cerrados para el rango seleccionado.",
+                        color="info",
+                    ),
+                    html.Div(),
+                    html.Div(),
+                )
+            df_rep_real = fetch_representatividad_torres_report(
+                start_date=ini,
+                end_date=fecha_corte_operacional,
+            )
+            df_rep = _completar_calendario_representatividad(
+                df=df_rep_real,
+                fecha_inicio=ini,
+                fecha_fin=fin,
             )
         except Exception as e:
             return (
@@ -4030,7 +4372,10 @@ def generar_reporte(n_clicks_list, f_ini, f_fin):
 
         tabla = html.Div([
             titulo,
-            _tabla_representatividad_torres(df_rep)
+            _tabla_representatividad_torres(
+                df_rep,
+                fecha_corte_operacional=fecha_corte_operacional,
+            )
         ])
 
         historial = dbc.Table(
@@ -4261,26 +4606,51 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # ------------------------------------------------------------
         if tipo == "representatividad_torres":
             print("Entró a exportación de Representatividad Torres")
-            # Hoja 1: reporte diario de representatividad
-            df_rep = fetch_representatividad_torres_report(
+            fecha_corte_operacional = fetch_fecha_corte_representatividad(
                 start_date=ini_d,
                 end_date=fin_d,
             )
-            print("Filas Representatividad:", len(df_rep))
-            if df_rep.empty:
+
+            if fecha_corte_operacional is None:
+                return (
+                    no_update,
+                    "ℹ️ No existe información disponible en Peso Torres "
+                    "para el rango seleccionado.",
+                    _done,
+                )
+
+            print(
+                "Fecha máxima disponible en Peso Torres:",
+                fecha_corte_operacional,
+            )
+
+            # Hoja 1: reporte diario de representatividad
+            df_rep_real = fetch_representatividad_torres_report(
+                start_date=ini_d,
+                end_date=fecha_corte_operacional,
+            )
+            print("Filas Representatividad reales:", len(df_rep_real))
+            if df_rep_real.empty:
                 return (
                     no_update,
                     "ℹ️ Sin datos de representatividad para exportar "
                     "en el rango seleccionado.",
                     _done,
                 )
+            df_rep = _completar_calendario_representatividad(
+                df=df_rep_real,
+                fecha_inicio=ini_d,
+                fecha_fin=fin_d,
+            )
 
-            rango_fy = _obtener_rango_fiscal_hasta_mes(fin_d)
+            rango_fy = _obtener_rango_fiscal_hasta_mes(
+                fecha_corte_operacional
+            )
 
             # Hoja BD Ton: histórico del FY hasta el mes evaluado.
             df_bd_ton_fy = fetch_bd_ton_report(
                 start_date=rango_fy["fecha_inicio"],
-                end_date=rango_fy["fecha_fin"],
+                end_date=fecha_corte_operacional,
             )
             print(
                 f"Filas BD Ton FY{rango_fy['anio_fiscal'] % 100:02d}:",
@@ -4291,7 +4661,10 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                     "BD Ton no entregó datos históricos para el año fiscal."
                 )
 
-            fuentes_mensuales = _fetch_fuentes_mensuales_torres(fin_d)
+            fuentes_mensuales = _fetch_fuentes_mensuales_torres(
+                fin_d,
+                fecha_corte_operacional,
+            )
             df_bd_ton_mes = fuentes_mensuales["df_bd_ton_mes"]
             df_turno_material = fuentes_mensuales["df_turno_mes"]
             df_gestion_fy_quimico = fuentes_mensuales["df_gestion_fy_quimico"]
@@ -4309,9 +4682,18 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 df_turno_mes=df_turno_material,
                 df_gestion_fy_quimico=df_gestion_fy_quimico,
                 df_gestion_fy_fisico=df_gestion_fy_fisico,
+                fecha_inicio_mes=fuentes_mensuales["fecha_inicio_mes"],
+                fecha_fin_mes=fuentes_mensuales["fecha_fin_mes"],
+                fecha_corte_operacional=fecha_corte_operacional,
             )
 
             print("Excel generado. Tamaño bytes:", len(xbytes))
+            ruta_cache = _guardar_cache_excel_representatividad(
+                xbytes,
+                ini_d,
+                fin_d,
+            )
+            print("Excel base para PDF guardado en:", ruta_cache)
             
             filename = (
                 f"Reporte_Representatividad_Torres_"
@@ -4473,21 +4855,51 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
 
     try:
         # ── REPRESENTATIVIDAD TORRES ──────────────────────────────────
-        if tipo == "representatividad_torres":
-            print(f"[PDF] Generando PDF mensual RN-046 {ini_d} -> {fin_d}")
-            fuentes_mensuales = _fetch_fuentes_mensuales_torres(fin_d)
-            xlsx_bytes, nombres_hojas = _build_xlsx_solo_hojas_mensuales(
-                fuentes_mensuales
+        if tipo in {
+            "representatividad_torres",
+            "representatividad_torres_quimico",
+            "representatividad_torres_fisico",
+        }:
+            analisis = "quimico" if tipo.endswith("_quimico") else "fisico"
+            print(
+                f"[PDF] Generando PDF {analisis} RN-046 "
+                f"{ini_d} -> {fin_d}"
             )
-            print(f"[PDF] Hojas mensuales: {nombres_hojas}")
+
+            ruta_cache = _ruta_cache_excel_representatividad(ini_d, fin_d)
+            if os.path.isfile(ruta_cache):
+                with open(ruta_cache, "rb") as archivo:
+                    excel_base = archivo.read()
+                print(f"[PDF] Usando Excel base: {ruta_cache}")
+            else:
+                excel_base = _generar_excel_representatividad_completo(
+                    ini_d,
+                    fin_d,
+                )
+                _guardar_cache_excel_representatividad(
+                    excel_base,
+                    ini_d,
+                    fin_d,
+                )
+
+            xlsx_bytes, nombre_hoja = _build_xlsx_pdf_desde_excel(
+                excel_base,
+                analisis,
+                fin_d,
+            )
+            print(f"[PDF] Hoja mensual: {nombre_hoja}")
             pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_bytes)
+            pdf_bytes = normalize_single_page_to_a3(pdf_bytes)
             print(f"[PDF] representatividad_torres pdf size={len(pdf_bytes)} bytes")
-            prefijo_mes = _prefijo_mes_desde_nombres_hojas(nombres_hojas)
-            filename = f"Representatividad_Torres_RN046_{prefijo_mes}.pdf"
-            hojas_txt = ", ".join(nombres_hojas)
+            fecha_corte = pd.Timestamp(fin_d).strftime("%d-%m-%Y")
+            analisis_titulo = "Química" if analisis == "quimico" else "Física"
+            filename = (
+                f"Representatividad muestra {analisis_titulo} Torre "
+                f"{fecha_corte}.pdf"
+            )
             return (
                 _enviar_descarga(pdf_bytes, filename),
-                f"PDF generado: {filename} — Hojas: {hojas_txt}",
+                f"PDF generado: {filename} - una pagina A3 vertical",
                 _done,
             )
 

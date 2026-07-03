@@ -12,11 +12,103 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from io import BytesIO
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 XL_TYPE_PDF = 0
+A3_WIDTH_PT = 841.8898
+A3_HEIGHT_PT = 1190.5512
+
+
+def normalize_single_page_to_a3(
+    pdf_bytes: bytes,
+    margin_pt: float = 24.0,
+) -> bytes:
+    """Ajusta el contenido de una unica pagina al lienzo A3 vertical."""
+    import pdfplumber
+    from pypdf import PageObject, PdfReader, PdfWriter, Transformation
+    from pypdf.generic import DecodedStreamObject, NameObject
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    if len(reader.pages) != 1:
+        raise RuntimeError(
+            "El PDF de representatividad debe contener exactamente una pagina; "
+            f"se generaron {len(reader.pages)}."
+        )
+
+    source = reader.pages[0]
+    source_width = float(source.mediabox.width)
+    source_height = float(source.mediabox.height)
+    if source_width <= 0 or source_height <= 0:
+        raise RuntimeError("La pagina PDF generada tiene dimensiones invalidas.")
+
+    # Excel puede ignorar A3 si el controlador de impresora activo no lo
+    # soporta. Se detecta el rectangulo realmente ocupado y se lleva al A3
+    # con margenes controlados, evitando una pagina diminuta en el centro.
+    with pdfplumber.open(BytesIO(pdf_bytes)) as plumber_pdf:
+        plumber_page = plumber_pdf.pages[0]
+        objetos = []
+        for coleccion in plumber_page.objects.values():
+            objetos.extend(coleccion)
+
+    limites = []
+    for obj in objetos:
+        x0 = obj.get("x0")
+        x1 = obj.get("x1")
+        y0 = obj.get("y0")
+        y1 = obj.get("y1")
+        if None in (x0, x1, y0, y1):
+            continue
+        ancho = float(x1) - float(x0)
+        alto = float(y1) - float(y0)
+        if ancho >= source_width * 0.98 and alto >= source_height * 0.98:
+            continue
+        limites.append((float(x0), float(y0), float(x1), float(y1)))
+
+    if limites:
+        padding = 6.0
+        content_x0 = max(0.0, min(v[0] for v in limites) - padding)
+        content_y0 = max(0.0, min(v[1] for v in limites) - padding)
+        content_x1 = min(source_width, max(v[2] for v in limites) + padding)
+        content_y1 = min(source_height, max(v[3] for v in limites) + padding)
+    else:
+        content_x0, content_y0 = 0.0, 0.0
+        content_x1, content_y1 = source_width, source_height
+
+    content_width = max(content_x1 - content_x0, 1.0)
+    content_height = max(content_y1 - content_y0, 1.0)
+    target_width = A3_WIDTH_PT - 2 * margin_pt
+    target_height = A3_HEIGHT_PT - 2 * margin_pt
+    scale_x = target_width / content_width
+    scale_y = target_height / content_height
+
+    a3_page = PageObject.create_blank_page(
+        width=A3_WIDTH_PT,
+        height=A3_HEIGHT_PT,
+    )
+    fondo = DecodedStreamObject()
+    fondo.set_data(
+        (
+            "q 1 1 1 rg 0 0 "
+            f"{A3_WIDTH_PT:.4f} {A3_HEIGHT_PT:.4f} re f Q\n"
+        ).encode("ascii")
+    )
+    a3_page[NameObject("/Contents")] = fondo
+    transform = (
+        Transformation()
+        .translate(-content_x0, -content_y0)
+        .scale(scale_x, scale_y)
+        .translate(margin_pt, margin_pt)
+    )
+    a3_page.merge_transformed_page(source, transform)
+
+    writer = PdfWriter()
+    writer.add_page(a3_page)
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
 
 
 def _convert_with_excel_com(xlsx_path: Path, pdf_path: Path) -> None:
@@ -25,7 +117,9 @@ def _convert_with_excel_com(xlsx_path: Path, pdf_path: Path) -> None:
     excel = None
     workbook = None
     try:
-        excel = win32com.client.Dispatch("Excel.Application")
+        # DispatchEx fuerza una instancia aislada y evita interferir con un
+        # Excel que el usuario ya tenga abierto.
+        excel = win32com.client.DispatchEx("Excel.Application")
         excel.Visible = False
         excel.DisplayAlerts = False
         workbook = excel.Workbooks.Open(str(xlsx_path.resolve()))

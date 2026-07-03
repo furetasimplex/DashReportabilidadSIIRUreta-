@@ -70,6 +70,29 @@ def _month_options():
 
 
 def _report_card(title, description, tipo):
+    botones_pdf = []
+    if tipo == "representatividad_torres":
+        botones_pdf = [
+            dbc.Button([
+                html.I(className="bi bi-file-earmark-pdf me-2"),
+                "PDF Químico",
+            ], id={"type": "report-pdf-btn", "tipo": f"{tipo}_quimico"},
+               className="rp-btn-pdf", n_clicks=0),
+            dbc.Button([
+                html.I(className="bi bi-file-earmark-pdf me-2"),
+                "PDF Físico",
+            ], id={"type": "report-pdf-btn", "tipo": f"{tipo}_fisico"},
+               className="rp-btn-pdf", n_clicks=0),
+        ]
+    else:
+        botones_pdf = [
+            dbc.Button([
+                html.I(className="bi bi-file-earmark-pdf me-2"),
+                "Exportar PDF",
+            ], id={"type": "report-pdf-btn", "tipo": tipo},
+               className="rp-btn-pdf", n_clicks=0),
+        ]
+
     return dbc.Card([
         dbc.CardBody([
             # Icon + title + badge
@@ -94,11 +117,7 @@ def _report_card(title, description, tipo):
                     "Exportar Excel",
                 ], id={"type": "report-export-btn", "tipo": tipo},
                    className="rp-btn-export me-2", n_clicks=0),
-                dbc.Button([
-                    html.I(className="bi bi-file-earmark-pdf me-2"),
-                    "Exportar PDF",
-                ], id={"type": "report-pdf-btn", "tipo": tipo},
-                   className="rp-btn-pdf", n_clicks=0),
+                *botones_pdf,
             ], className="d-flex flex-wrap gap-2"),
         ])
     ], className="rp-card h-100")

@@ -131,6 +131,69 @@ def fetch_representatividad_torres_report(start_date: date, end_date: date) -> p
     except Exception as e:
         raise RuntimeError(f"Error al leer representatividad de torres: {e}") from e
     return df
+
+
+def fetch_fecha_corte_representatividad(
+    start_date: date,
+    end_date: date,
+) -> date | None:
+    """
+    Devuelve la última fecha operacional completamente cerrada
+    para el Reporte de Representatividad de Torres.
+
+    Un día se considera cerrado cuando existen los cuatro
+    incrementos brutos:
+
+    - CV-008 turno A
+    - CV-008 turno B
+    - CV-108 turno A
+    - CV-108 turno B
+    """
+    engine = _get_engine()
+
+    sql = """
+        SELECT
+            MAX(Fecha) AS Fecha_Corte
+        FROM inventar_SpcHidr.v_datos_apilado_tmh_v2
+        WHERE Fecha >= :start
+          AND Fecha <= :end
+          AND TMH_CV008_A_Bruto IS NOT NULL
+          AND TMH_CV008_B_Bruto IS NOT NULL
+          AND TMH_CV108_A_Bruto IS NOT NULL
+          AND TMH_CV108_B_Bruto IS NOT NULL;
+    """
+
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql_query(
+                _sa_text(sql),
+                conn,
+                params={
+                    "start": start_date,
+                    "end": end_date,
+                },
+            )
+
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al obtener la fecha de corte operacional "
+            "de Representatividad de Torres: "
+            f"{exc}"
+        ) from exc
+
+    if (
+        df.empty
+        or "Fecha_Corte" not in df.columns
+        or pd.isna(df.loc[0, "Fecha_Corte"])
+    ):
+        return None
+
+    return pd.to_datetime(
+        df.loc[0, "Fecha_Corte"],
+        errors="coerce",
+    ).date()
+
+
 def fetch_bd_ton_report(
     start_date: date,
     end_date: date,

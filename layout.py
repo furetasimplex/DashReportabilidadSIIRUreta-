@@ -66,7 +66,7 @@ def render_main_header():
         html.Div([
             html.Span("SIIR", className="siir-bc-item"),
             html.Span(" / ", className="siir-bc-sep"),
-            html.Span("CONCENTRADORA", className="siir-bc-item"),
+            html.Span("HIDROMETALURGIA", className="siir-bc-item"),
             html.Span(" / ", className="siir-bc-sep"),
             html.Span("REPORTES", className="siir-bc-active"),
         ], className="siir-breadcrumb"),
