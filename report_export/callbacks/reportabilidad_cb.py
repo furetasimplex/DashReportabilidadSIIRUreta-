@@ -3,6 +3,7 @@
 import os
 import io
 import calendar
+from datetime import date
 import pandas as pd
 import plotly.express as px
 from dash import Input, Output, State, callback, clientside_callback, no_update, dcc, html, dash_table, ALL, MATCH, ctx
@@ -21,6 +22,18 @@ from report_export.report_export import (
     fetch_reporte_turno_cache,
     fetch_generador_reporte_diario,
     export_reporte_turno_estilo_leyes_finos,
+    write_reporte_torre_oficial,
+    armar_paquete_reporte_torre_oficial,
+    fetch_historial_reporte_torre_oficial,
+    fetch_reporte_torre_oficial_detalle,
+    fetch_reporte_torre_oficial_snapshot,
+    fetch_comentarios_representatividad_periodo,
+    soft_delete_reporte_torre_oficial,
+    es_mes_completo,
+    normalizar_periodo_mes,
+    comentarios_mapa_desde_dataframe,
+    mes_tiene_reporte_activo,
+    comentario_torres_para_tipo,
 )
 from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
 from report_export.pdf_generator import (
@@ -34,6 +47,559 @@ from report_export.xlsx_to_pdf import (
 
 TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
 _REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+_NOMBRE_REPORTE_REPRESENTATIVIDAD_TORRES = "Representatividad Torres"
+_TEXTO_CONFIRMACION_BORRADO = "confirmar borrado"
+
+
+def _usuario_sesion() -> str:
+    try:
+        from flask import has_request_context, session
+        if has_request_context():
+            return str(session.get("user") or "desconocido")
+    except Exception:
+        pass
+    return "desconocido"
+
+
+def _fusionar_detalle_representatividad(df_quimico: pd.DataFrame, df_fisico: pd.DataFrame) -> pd.DataFrame:
+    """Une detalle quimico y fisico en un registro por Fecha+Turno con 4 comentarios."""
+    if df_quimico is None or df_quimico.empty:
+        return pd.DataFrame()
+
+    base = df_quimico.copy()
+    base["Fecha"] = pd.to_datetime(base["Fecha"], errors="coerce").dt.normalize()
+    if "Comentario_TM1" in base.columns:
+        base["Comentario_TM1_Quimico"] = base["Comentario_TM1"]
+    if "Comentario_TM2" in base.columns:
+        base["Comentario_TM2_Quimico"] = base["Comentario_TM2"]
+    for col in [
+        "Comentario_TM1_Quimico",
+        "Comentario_TM2_Quimico",
+        "Comentario_TM1_Fisico",
+        "Comentario_TM2_Fisico",
+    ]:
+        if col not in base.columns:
+            base[col] = None
+
+    base = base.rename(columns={
+        "Rep_TM1": "Rep_TM1_Quimico",
+        "Rep_TM2": "Rep_TM2_Quimico",
+        "Rep_Turno": "Rep_Turno_Quimico",
+    })
+    base = base.drop(columns=["Comentario_TM1", "Comentario_TM2"], errors="ignore")
+
+    if df_fisico is not None and not df_fisico.empty:
+        fis = df_fisico.copy()
+        fis["Fecha"] = pd.to_datetime(fis["Fecha"], errors="coerce").dt.normalize()
+        if "Comentario_TM1" in fis.columns:
+            fis["Comentario_TM1_Fisico"] = fis["Comentario_TM1"]
+        if "Comentario_TM2" in fis.columns:
+            fis["Comentario_TM2_Fisico"] = fis["Comentario_TM2"]
+        fis = fis.rename(columns={
+            "Rep_TM1": "Rep_TM1_Fisico",
+            "Rep_TM2": "Rep_TM2_Fisico",
+            "Rep_Turno": "Rep_Turno_Fisico",
+        })
+        cols_fis = [
+            "Fecha", "Turno",
+            "Rep_TM1_Fisico", "Rep_TM2_Fisico", "Rep_Turno_Fisico",
+            "Comentario_TM1_Fisico", "Comentario_TM2_Fisico",
+        ]
+        base = base.merge(
+            fis[cols_fis],
+            on=["Fecha", "Turno"],
+            how="left",
+        )
+    else:
+        base["Rep_TM1_Fisico"] = None
+        base["Rep_TM2_Fisico"] = None
+        base["Rep_Turno_Fisico"] = None
+
+    return base.sort_values(["Fecha", "Turno"]).reset_index(drop=True)
+
+
+def _rep_cols_por_tab(tab_activo: str) -> dict:
+    tab = str(tab_activo or "quimico").lower()
+    if tab == "fisico":
+        return {
+            "rep_tm1": "Rep_TM1_Fisico",
+            "rep_tm2": "Rep_TM2_Fisico",
+            "rep_turno": "Rep_Turno_Fisico",
+            "com_tm1": "Comentario_TM1_Fisico",
+            "com_tm2": "Comentario_TM2_Fisico",
+        }
+    return {
+        "rep_tm1": "Rep_TM1_Quimico",
+        "rep_tm2": "Rep_TM2_Quimico",
+        "rep_turno": "Rep_Turno_Quimico",
+        "com_tm1": "Comentario_TM1_Quimico",
+        "com_tm2": "Comentario_TM2_Quimico",
+    }
+
+
+def _etiqueta_semaforo_rep(valor, activo: bool) -> str:
+    if not activo:
+        return ""
+    rep = pd.to_numeric(valor, errors="coerce")
+    if pd.isna(rep):
+        return "—"
+    return "Representativo" if int(rep) == 1 else "No representativo"
+
+
+def _df_a_grilla_rep(df: pd.DataFrame, tab_activo: str) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    cols = _rep_cols_por_tab(tab_activo)
+    filas = []
+    for _, fila in df.iterrows():
+        fecha = pd.to_datetime(fila.get("Fecha"), errors="coerce")
+        tm1_activo = int(pd.to_numeric(fila.get("TM1_Activo"), errors="coerce") or 0) == 1
+        tm2_activo = int(pd.to_numeric(fila.get("TM2_Activo"), errors="coerce") or 0) == 1
+        turno_activo = tm1_activo or tm2_activo
+        rep_tm1 = fila.get(cols["rep_tm1"]) if tm1_activo else None
+        rep_tm2 = fila.get(cols["rep_tm2"]) if tm2_activo else None
+        rep_turno = fila.get(cols["rep_turno"]) if turno_activo else None
+
+        tmh_tm1 = pd.to_numeric(fila.get("TMH_CV08"), errors="coerce")
+        tmh_tm2 = pd.to_numeric(fila.get("TMH_CV108"), errors="coerce")
+
+        filas.append({
+            "Semana": fila.get("Semana"),
+            "Fecha": fecha.strftime("%d-%m-%Y") if pd.notna(fecha) else "",
+            "Pad": fila.get("Pad"),
+            "Turno": fila.get("Turno"),
+            "TMH_CV08": round(float(tmh_tm1), 1) if tm1_activo and pd.notna(tmh_tm1) else None,
+            "Rep_TM1": _etiqueta_semaforo_rep(rep_tm1, tm1_activo),
+            "Comentario_TM1": str(fila.get(cols["com_tm1"]) or ""),
+            "TMH_CV108": round(float(tmh_tm2), 1) if tm2_activo and pd.notna(tmh_tm2) else None,
+            "Rep_TM2": _etiqueta_semaforo_rep(rep_tm2, tm2_activo),
+            "Comentario_TM2": str(fila.get(cols["com_tm2"]) or ""),
+            "Rep_Turno": _etiqueta_semaforo_rep(rep_turno, turno_activo),
+        })
+
+    return pd.DataFrame(filas)
+
+
+def _fusionar_comentarios_grilla(
+    registros: list,
+    grid_data: list | None,
+    tab_activo: str,
+) -> list:
+    if not registros:
+        return []
+
+    cols = _rep_cols_por_tab(tab_activo)
+    df = pd.DataFrame(registros)
+    if "Fecha" in df.columns:
+        df["_fecha_key"] = pd.to_datetime(df["Fecha"], errors="coerce").dt.strftime("%Y-%m-%d")
+
+    for fila in grid_data or []:
+        fecha_dt = pd.to_datetime(
+            fila.get("Fecha"),
+            errors="coerce",
+            dayfirst=True,
+        )
+        fecha = fecha_dt.strftime("%Y-%m-%d") if pd.notna(fecha_dt) else ""
+        turno = str(fila.get("Turno") or "").strip().upper()
+        mask = (
+            (df["_fecha_key"].astype(str) == fecha)
+            & (df["Turno"].astype(str).str.upper() == turno)
+        )
+        if mask.any():
+            df.loc[mask, cols["com_tm1"]] = str(fila.get("Comentario_TM1") or "")
+            df.loc[mask, cols["com_tm2"]] = str(fila.get("Comentario_TM2") or "")
+
+    df = df.drop(columns=["_fecha_key"], errors="ignore")
+    return df.to_dict("records")
+
+
+def _grilla_comentarios_representatividad(df_grilla: pd.DataFrame):
+    columns = [
+        {"name": ["", "Semana"], "id": "Semana", "editable": False},
+        {"name": ["", "Fecha"], "id": "Fecha", "editable": False},
+        {"name": ["", "Pad"], "id": "Pad", "editable": False},
+        {"name": ["", "Turno"], "id": "Turno", "editable": False},
+        {"name": ["Torre de muestreo #1", "TMH CV-08"], "id": "TMH_CV08", "type": "numeric", "editable": False},
+        {"name": ["Torre de muestreo #1", "Muestra representativa"], "id": "Rep_TM1", "editable": False},
+        {"name": ["Torre de muestreo #1", "Comentarios"], "id": "Comentario_TM1", "editable": True},
+        {"name": ["Torre de muestreo #2", "TMH CV-108"], "id": "TMH_CV108", "type": "numeric", "editable": False},
+        {"name": ["Torre de muestreo #2", "Muestra representativa"], "id": "Rep_TM2", "editable": False},
+        {"name": ["Torre de muestreo #2", "Comentarios"], "id": "Comentario_TM2", "editable": True},
+        {"name": ["", "Representatividad turno"], "id": "Rep_Turno", "editable": False},
+    ]
+
+    style_data_conditional = [
+        {"if": {"row_index": "odd"}, "backgroundColor": "#eef3f6"},
+        {"if": {"column_id": "Fecha"}, "backgroundColor": "#fff2cc", "fontWeight": "bold"},
+        {"if": {"column_id": "Semana"}, "backgroundColor": "#f2f2f2", "fontWeight": "bold"},
+        {
+            "if": {"filter_query": '{Pad} = "Sin clasificar"', "column_id": "Pad"},
+            "backgroundColor": "#d9d9d9",
+        },
+        {
+            "if": {"filter_query": '{Rep_TM1} = "Representativo"', "column_id": "Rep_TM1"},
+            "color": "#70AD47",
+            "fontWeight": "bold",
+        },
+        {
+            "if": {"filter_query": '{Rep_TM1} = "No representativo"', "column_id": "Rep_TM1"},
+            "color": "#C55A11",
+            "fontWeight": "bold",
+        },
+        {
+            "if": {"filter_query": '{Rep_TM2} = "Representativo"', "column_id": "Rep_TM2"},
+            "color": "#70AD47",
+            "fontWeight": "bold",
+        },
+        {
+            "if": {"filter_query": '{Rep_TM2} = "No representativo"', "column_id": "Rep_TM2"},
+            "color": "#C55A11",
+            "fontWeight": "bold",
+        },
+        {
+            "if": {"filter_query": '{Rep_Turno} = "Representativo"', "column_id": "Rep_Turno"},
+            "color": "#70AD47",
+            "fontWeight": "bold",
+        },
+        {
+            "if": {"filter_query": '{Rep_Turno} = "No representativo"', "column_id": "Rep_Turno"},
+            "color": "#C55A11",
+            "fontWeight": "bold",
+        },
+    ]
+
+    return dash_table.DataTable(
+        id="rep-comentarios-grid",
+        columns=columns,
+        data=df_grilla.astype(object).where(pd.notna(df_grilla), None).to_dict("records"),
+        editable=True,
+        merge_duplicate_headers=True,
+        page_size=40,
+        sort_action="native",
+        filter_action="none",
+        fixed_rows={"headers": True},
+        style_table={
+            "overflowX": "auto",
+            "overflowY": "auto",
+            "maxHeight": "560px",
+            "width": "100%",
+            "border": "1px solid #b8b8b8",
+        },
+        style_cell={
+            "textAlign": "center",
+            "fontFamily": "Arial",
+            "fontSize": "12px",
+            "padding": "6px",
+            "border": "1px solid #b8b8b8",
+            "minWidth": "90px",
+            "whiteSpace": "normal",
+            "height": "auto",
+        },
+        style_cell_conditional=[
+            {
+                "if": {"column_id": ["Comentario_TM1", "Comentario_TM2"]},
+                "textAlign": "left",
+                "minWidth": "160px",
+                "width": "180px",
+                "maxWidth": "220px",
+            },
+        ],
+        style_header={
+            "backgroundColor": "#d9e3ea",
+            "fontWeight": "bold",
+            "color": "#1f4e79",
+            "border": "1px solid #7f9db9",
+            "textAlign": "center",
+        },
+        style_data_conditional=style_data_conditional,
+    )
+
+
+def _etiqueta_mes_periodo(periodo_mes: str) -> str:
+    if not periodo_mes:
+        return "—"
+    try:
+        year, month = map(int, str(periodo_mes).split("-"))
+    except (ValueError, TypeError):
+        return str(periodo_mes)
+    nombres = {
+        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+        5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+        9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+    }
+    return f"{nombres.get(month, str(month))} {year}"
+
+
+def _periodo_store_desde_fechas(ini, fin, modo: str) -> dict:
+    modo = str(modo or "mes").lower()
+    store = {
+        "inicio": str(ini),
+        "fin": str(fin),
+        "modo": modo,
+        "periodo_mes": None,
+    }
+    if modo == "mes" and es_mes_completo(ini, fin):
+        _, _, periodo_mes = normalizar_periodo_mes(ini, fin)
+        store["periodo_mes"] = periodo_mes
+    return store
+
+
+def _cargar_detalle_representatividad_periodo(ini, fin, periodo_mes=None):
+    fecha_corte_operacional = fetch_fecha_corte_representatividad(
+        start_date=ini,
+        end_date=fin,
+    )
+    if fecha_corte_operacional is None:
+        raise RuntimeError(
+            "Sin datos operacionales cerrados para el rango seleccionado."
+        )
+
+    fuentes = _fetch_fuentes_mensuales_torres(fin, fecha_corte_operacional)
+    df_turno_preparado = _preparar_material_por_turno(fuentes["df_turno_mes"])
+    df_quimico = _preparar_detalle_mensual_torres(
+        df_bd_ton=fuentes["df_bd_ton_mes"],
+        tipo="quimico",
+        df_material_turno=df_turno_preparado,
+        fecha_inicio_mes=fuentes["fecha_inicio_mes"],
+        fecha_fin_mes=fuentes["fecha_fin_mes"],
+        fecha_corte_operacional=fecha_corte_operacional,
+    )
+    df_fisico = _preparar_detalle_mensual_torres(
+        df_bd_ton=fuentes["df_bd_ton_mes"],
+        tipo="fisico",
+        df_material_turno=df_turno_preparado,
+        fecha_inicio_mes=fuentes["fecha_inicio_mes"],
+        fecha_fin_mes=fuentes["fecha_fin_mes"],
+        fecha_corte_operacional=fecha_corte_operacional,
+    )
+    detalle = _fusionar_detalle_representatividad(df_quimico, df_fisico)
+
+    try:
+        if periodo_mes:
+            guardado = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
+        elif es_mes_completo(ini, fin):
+            _, _, pm = normalizar_periodo_mes(ini, fin)
+            guardado = fetch_reporte_torre_oficial_detalle(periodo_mes=pm)
+        else:
+            guardado = fetch_comentarios_representatividad_periodo(ini, fin)
+        if not guardado.empty:
+            for _, fila_g in guardado.iterrows():
+                fecha_g = pd.to_datetime(fila_g["Fecha"], errors="coerce").normalize()
+                turno_g = str(fila_g.get("Turno") or "").strip().upper()
+                mask = (
+                    (pd.to_datetime(detalle["Fecha"]).dt.normalize() == fecha_g)
+                    & (detalle["Turno"].astype(str).str.upper() == turno_g)
+                )
+                for col in [
+                    "Comentario_TM1_Quimico",
+                    "Comentario_TM2_Quimico",
+                    "Comentario_TM1_Fisico",
+                    "Comentario_TM2_Fisico",
+                ]:
+                    if col in fila_g and mask.any():
+                        detalle.loc[mask, col] = fila_g.get(col)
+    except Exception:
+        pass
+
+    return detalle, fecha_corte_operacional
+
+
+def _tabla_historial_representatividad(df_hist: pd.DataFrame):
+    if df_hist is None or df_hist.empty:
+        return dbc.Card([
+            dbc.CardHeader("Historial de reportes oficiales"),
+            dbc.CardBody(
+                html.P(
+                    "Aun no hay reportes publicados. Use Generar reporte final "
+                    "en modo mes completo para guardar el primer reporte del mes.",
+                    className="text-muted mb-0",
+                )
+            ),
+        ], className="mt-2")
+
+    filas = []
+    for _, fila in df_hist.iterrows():
+        id_reporte = int(fila["id_reporte"])
+        periodo_mes = fila.get("periodo_mes")
+        if periodo_mes and pd.notna(periodo_mes):
+            etiqueta_mes = _etiqueta_mes_periodo(str(periodo_mes))
+            subtitulo_mes = str(periodo_mes)
+        else:
+            etiqueta_mes = (
+                f"{pd.to_datetime(fila['periodo_inicio']).strftime('%d-%m-%Y')} "
+                f"a {pd.to_datetime(fila['periodo_fin']).strftime('%d-%m-%Y')}"
+            )
+            subtitulo_mes = ""
+
+        corte = fila.get("fecha_corte_operacional")
+        if corte is not None and pd.notna(corte):
+            etiqueta_corte = pd.to_datetime(corte).strftime("%d-%m-%Y")
+        else:
+            etiqueta_corte = "-"
+
+        filas.append(html.Tr([
+            html.Td([
+                html.Div(etiqueta_mes, className="fw-semibold"),
+                html.Small(subtitulo_mes, className="text-muted") if subtitulo_mes else None,
+            ]),
+            html.Td(
+                _NOMBRE_REPORTE_REPRESENTATIVIDAD_TORRES,
+                className="text-nowrap",
+            ),
+            html.Td(etiqueta_corte),
+            html.Td(pd.to_datetime(fila["fecha_generacion"]).strftime("%d-%m-%Y %H:%M")),
+            html.Td(fila.get("usuario") or "-"),
+            html.Td(int(fila.get("filas") or 0)),
+            html.Td([
+                dbc.Button(
+                    "Excel",
+                    size="sm",
+                    color="success",
+                    outline=True,
+                    className="me-1 mb-1",
+                    title="Descargar libro Excel completo",
+                    id={"type": "rep-hist-xlsx", "id_reporte": id_reporte},
+                ),
+                dbc.Button(
+                    "PDF Quimico",
+                    size="sm",
+                    color="danger",
+                    outline=True,
+                    className="me-1 mb-1",
+                    title="PDF muestra quimica (A3)",
+                    id={"type": "rep-hist-pdf", "id_reporte": id_reporte, "subtipo": "quimico"},
+                ),
+                dbc.Button(
+                    "PDF Fisico",
+                    size="sm",
+                    color="danger",
+                    outline=True,
+                    className="me-1 mb-1",
+                    title="PDF muestra fisica (A3)",
+                    id={"type": "rep-hist-pdf", "id_reporte": id_reporte, "subtipo": "fisico"},
+                ),
+                dbc.Button(
+                    "Reabrir",
+                    size="sm",
+                    color="primary",
+                    outline=True,
+                    className="me-1 mb-1",
+                    title="Cargar comentarios en el editor",
+                    id={"type": "rep-hist-reabrir", "id_reporte": id_reporte},
+                ),
+                dbc.Button(
+                    "Eliminar",
+                    size="sm",
+                    color="secondary",
+                    outline=True,
+                    className="mb-1",
+                    title="Quitar del historial (soft-delete)",
+                    id={"type": "rep-hist-del", "id_reporte": id_reporte},
+                ),
+            ], className="d-flex flex-wrap"),
+        ]))
+
+    cantidad = len(df_hist)
+    return dbc.Card([
+        dbc.CardHeader([
+            html.Span("Historial de reportes oficiales", className="me-2"),
+            dbc.Badge(f"{cantidad} mes{'es' if cantidad != 1 else ''}", color="secondary"),
+        ]),
+        dbc.CardBody(
+            dbc.Table([
+                html.Thead(html.Tr([
+                    html.Th("Mes"),
+                    html.Th("Reporte"),
+                    html.Th("Corte operacional"),
+                    html.Th("Actualizado"),
+                    html.Th("Usuario"),
+                    html.Th("Turnos"),
+                    html.Th("Acciones"),
+                ])),
+                html.Tbody(filas),
+            ], bordered=True, hover=True, responsive=True, className="mb-0"),
+        ),
+    ], className="mt-2")
+
+
+def _editor_comentarios_representatividad(
+    df: pd.DataFrame,
+    tab_activo: str = "quimico",
+    registros_store=None,
+    periodo_store=None,
+    puede_publicar: bool = True,
+    es_republicacion: bool = False,
+):
+    if df is None or df.empty:
+        return dbc.Alert("Sin detalle para editar comentarios.", color="info")
+
+    tab_activo = str(tab_activo or "quimico").lower()
+    df_grilla = _df_a_grilla_rep(df, tab_activo)
+    titulo_tab = "Quimico" if tab_activo == "quimico" else "Fisico"
+
+    if not puede_publicar:
+        texto_ayuda = html.P(
+            "La publicacion solo esta disponible en modo Mes completo. "
+            "En rango personalizado puede exportar XLSX/PDF sin guardar en historial.",
+            className="text-warning small mb-2",
+        )
+        texto_boton = "Generar reporte final"
+        color_boton = "success"
+    elif es_republicacion:
+        texto_ayuda = html.P(
+            "Actualiza el reporte del mes con datos al dia y los comentarios editados.",
+            className="text-muted small mb-2",
+        )
+        texto_boton = "Confirmar cambios de comentarios"
+        color_boton = "primary"
+    else:
+        texto_ayuda = html.P(
+            "Guarda el reporte oficial del mes en historial (incluye datos y comentarios).",
+            className="text-muted small mb-2",
+        )
+        texto_boton = "Generar reporte final"
+        color_boton = "success"
+
+    return html.Div([
+        html.H5("5.- Detalle turno a turno — comentarios", className="mb-2"),
+        html.P(
+            f"Vista {titulo_tab}: misma estructura que la seccion 5 del reporte. "
+            "Los comentarios son opcionales; edite directamente en la grilla.",
+            className="text-muted small mb-3",
+        ),
+        texto_ayuda,
+        dbc.ButtonGroup([
+            dbc.Button(
+                "Quimico",
+                id="rep-tab-quimico",
+                color="primary",
+                outline=(tab_activo != "quimico"),
+                size="sm",
+            ),
+            dbc.Button(
+                "Fisico",
+                id="rep-tab-fisico",
+                color="primary",
+                outline=(tab_activo != "fisico"),
+                size="sm",
+            ),
+        ], className="mb-3"),
+        _grilla_comentarios_representatividad(df_grilla),
+        html.Div([
+            dbc.Button(
+                texto_boton,
+                id="rep-generar-final-btn",
+                color=color_boton,
+                className="mt-3 me-2",
+                disabled=not puede_publicar,
+            ),
+            html.Span(id="rep-publicar-status", className="text-muted small"),
+        ]),
+        dcc.Store(id="rep-comentarios-store", data=registros_store),
+        dcc.Store(id="rep-tab-activo-store", data=tab_activo),
+        dcc.Store(id="rep-periodo-store", data=periodo_store),
+    ])
 
 
 def setup_download_route(server):
@@ -63,30 +629,84 @@ clientside_callback(
 
         const isPdf = t.prop_id.toLowerCase().includes('pdf');
         const label = isPdf ? 'Generando PDF' : 'Generando Excel';
-
-        return {
-            props: {
-                children: [
-                    {
-                        type: 'Span',
-                        props: {
-                            className: 'spinner-border spinner-border-sm me-2',
-                            role: 'status'
-                        },
-                        namespace: 'dash_html_components'
-                    },
-                    label + ', por favor espere…'
-                ],
-                className: 'rp-progress-bar'
-            },
-            type: 'Div',
-            namespace: 'dash_html_components'
-        };
+        return label + ', por favor espere…';
     }
     """,
     Output("report-progress", "children"),
     Input({"type": "report-export-btn", "tipo": ALL}, "n_clicks"),
     Input({"type": "report-pdf-btn", "tipo": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+
+
+clientside_callback(
+    """
+    function(tabla_children) {
+        setTimeout(function() {
+            const table = document.getElementById('rep-comentarios-grid');
+            if (!table) return;
+
+            function commitInput(input) {
+                if (!input || input.tagName !== 'INPUT') return;
+                input.dispatchEvent(new KeyboardEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                }));
+            }
+
+            if (table._repBlurCommitHandler) {
+                table.removeEventListener('focusout', table._repBlurCommitHandler, true);
+            }
+            if (table._repGridClickHandler) {
+                table.removeEventListener('click', table._repGridClickHandler, true);
+            }
+
+            table._repBlurCommitHandler = function(e) {
+                if (e.target.tagName === 'INPUT' && table.contains(e.target)) {
+                    setTimeout(function() { commitInput(e.target); }, 0);
+                }
+            };
+            table._repGridClickHandler = function(e) {
+                const active = document.activeElement;
+                if (
+                    active
+                    && active.tagName === 'INPUT'
+                    && table.contains(active)
+                    && e.target !== active
+                ) {
+                    commitInput(active);
+                }
+            };
+
+            table.addEventListener('focusout', table._repBlurCommitHandler, true);
+            table.addEventListener('click', table._repGridClickHandler, true);
+
+            if (!window._repGridDocMouseDown) {
+                window._repGridDocMouseDown = true;
+                document.addEventListener('mousedown', function(e) {
+                    const grid = document.getElementById('rep-comentarios-grid');
+                    const active = document.activeElement;
+                    if (
+                        grid
+                        && active
+                        && grid.contains(active)
+                        && active.tagName === 'INPUT'
+                        && !active.contains(e.target)
+                        && e.target !== active
+                    ) {
+                        commitInput(active);
+                    }
+                }, true);
+            }
+        }, 50);
+        return Date.now();
+    }
+    """,
+    Output("rep-grid-blur-hook", "data"),
+    Input("report-tabla", "children"),
     prevent_initial_call=True,
 )
 
@@ -1059,6 +1679,7 @@ def _preparar_detalle_mensual_torres(
     fecha_inicio_mes=None,
     fecha_fin_mes=None,
     fecha_corte_operacional=None,
+    mapa_comentarios: dict | None = None,
 ) -> pd.DataFrame:
     """
     Construye el detalle Fecha + Turno de las hojas mensuales.
@@ -1307,11 +1928,15 @@ def _preparar_detalle_mensual_torres(
                 "TMH_CV08": tm1_tmh if tm1_activo else None,
                 "TM1_Activo": int(tm1_activo),
                 "Rep_TM1": tm1_flag,
-                "Comentario_TM1": None,
+                "Comentario_TM1": comentario_torres_para_tipo(
+                    mapa_comentarios, fecha, turno, "TM1", tipo_normalizado
+                ),
                 "TMH_CV108": tm2_tmh if tm2_activo else None,
                 "TM2_Activo": int(tm2_activo),
                 "Rep_TM2": tm2_flag,
-                "Comentario_TM2": None,
+                "Comentario_TM2": comentario_torres_para_tipo(
+                    mapa_comentarios, fecha, turno, "TM2", tipo_normalizado
+                ),
                 "Rep_Turno": representatividad_turno,
             })
 
@@ -2119,6 +2744,7 @@ def _agregar_hoja_mensual_torres(
     fecha_inicio_mes=None,
     fecha_fin_mes=None,
     fecha_corte_operacional=None,
+    mapa_comentarios: dict | None = None,
 ) -> str | None:
     """
     Agrega una hoja mensual Químico/Físico al libro.
@@ -2161,6 +2787,7 @@ def _agregar_hoja_mensual_torres(
         fecha_inicio_mes=fecha_inicio_mes,
         fecha_fin_mes=fecha_fin_mes,
         fecha_corte_operacional=fecha_corte_operacional,
+        mapa_comentarios=mapa_comentarios,
     )
 
     if detalle.empty:
@@ -3282,6 +3909,28 @@ def _build_xlsx_pdf_desde_excel(
     return output.getvalue(), nombre
 
 
+def _pdf_representatividad_desde_xlsx(
+    xlsx_bytes: bytes,
+    tipo_analisis: str,
+    fecha_fin,
+) -> tuple[bytes, str]:
+    """Convierte Excel de representatividad a PDF A3 (hoja Químico o Físico)."""
+    xlsx_filtrado, nombre_hoja = _build_xlsx_pdf_desde_excel(
+        xlsx_bytes,
+        tipo_analisis,
+        fecha_fin,
+    )
+    pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_filtrado)
+    pdf_bytes = normalize_single_page_to_a3(pdf_bytes)
+    fecha = pd.Timestamp(fecha_fin)
+    analisis_titulo = "Química" if str(tipo_analisis).lower() == "quimico" else "Física"
+    filename = (
+        f"Representatividad muestra {analisis_titulo} Torre "
+        f"{fecha.strftime('%d-%m-%Y')}.pdf"
+    )
+    return pdf_bytes, filename
+
+
 def _prefijo_mes_desde_nombres_hojas(nombres: list[str]) -> str:
     """Extrae '01_Ene_26' desde '01_Ene_26 Quimico'."""
     if not nombres:
@@ -3302,6 +3951,7 @@ def _agregar_hojas_mensuales_torres(
     fecha_inicio_mes=None,
     fecha_fin_mes=None,
     fecha_corte_operacional=None,
+    mapa_comentarios: dict | None = None,
 ) -> list[str]:
     """Crea un par Químico/Físico por cada mes incluido en BD Ton."""
     if df_bd_ton is None or df_bd_ton.empty or "Fecha" not in df_bd_ton.columns:
@@ -3340,6 +3990,7 @@ def _agregar_hojas_mensuales_torres(
                 fecha_inicio_mes=fecha_inicio_mes,
                 fecha_fin_mes=fecha_fin_mes,
                 fecha_corte_operacional=fecha_corte_operacional,
+                mapa_comentarios=mapa_comentarios,
             )
             if nombre:
                 nombres.append(nombre)
@@ -3368,6 +4019,7 @@ def _export_representatividad_torres_to_excel(
     fecha_inicio_mes=None,
     fecha_fin_mes=None,
     fecha_corte_operacional=None,
+    mapa_comentarios: dict | None = None,
 ) -> bytes:
     """
     Exporta el reporte de Representatividad Torres a Excel.
@@ -3677,6 +4329,7 @@ def _export_representatividad_torres_to_excel(
         fecha_inicio_mes=fecha_inicio_mes,
         fecha_fin_mes=fecha_fin_mes,
         fecha_corte_operacional=fecha_corte_operacional,
+        mapa_comentarios=mapa_comentarios,
     )
 
     output = io.BytesIO()
@@ -3686,11 +4339,49 @@ def _export_representatividad_torres_to_excel(
     return output.getvalue()
 
 
+def _export_representatividad_desde_paquete(
+    paquete: dict,
+    mapa_comentarios: dict | None = None,
+) -> bytes:
+    """Arma Excel desde snapshot guardado (sin SP ni consultas pesadas)."""
+    if not paquete or "rep_torres" not in paquete:
+        raise RuntimeError("Paquete de snapshot incompleto.")
+
+    fecha_corte = paquete.get("fecha_corte_operacional")
+    if fecha_corte is not None and not isinstance(fecha_corte, date):
+        fecha_corte = pd.to_datetime(fecha_corte).date()
+
+    return _export_representatividad_torres_to_excel(
+        df=paquete["rep_torres"],
+        df_bd_ton_fy=paquete["bd_ton_fy"],
+        df_bd_ton_mes=paquete["bd_ton_mes"],
+        df_turno_mes=paquete["turno_mes"],
+        df_gestion_fy_quimico=paquete["gestion_fy_quimico"],
+        df_gestion_fy_fisico=paquete["gestion_fy_fisico"],
+        fecha_inicio_mes=paquete.get("fecha_inicio_mes"),
+        fecha_fin_mes=paquete.get("fecha_fin_mes"),
+        fecha_corte_operacional=fecha_corte,
+        mapa_comentarios=mapa_comentarios,
+    )
+
+
 def _generar_excel_representatividad_completo(
     fecha_inicio,
     fecha_fin,
+    mapa_comentarios: dict | None = None,
 ) -> bytes:
     """Construye una unica fuente Excel para las descargas XLSX y PDF."""
+    if mapa_comentarios is None:
+        try:
+            guardado = fetch_comentarios_representatividad_periodo(
+                fecha_inicio,
+                fecha_fin,
+            )
+            if not guardado.empty:
+                mapa_comentarios = comentarios_mapa_desde_dataframe(guardado)
+        except Exception:
+            mapa_comentarios = None
+
     fecha_corte_operacional = fetch_fecha_corte_representatividad(
         start_date=fecha_inicio,
         end_date=fecha_fin,
@@ -3740,6 +4431,7 @@ def _generar_excel_representatividad_completo(
         fecha_inicio_mes=fuentes["fecha_inicio_mes"],
         fecha_fin_mes=fuentes["fecha_fin_mes"],
         fecha_corte_operacional=fecha_corte_operacional,
+        mapa_comentarios=mapa_comentarios,
     )
 
 
@@ -4294,15 +4986,32 @@ def _export_reporte_turno_formateado(df: pd.DataFrame) -> bytes:
 
 
 @callback(
+    Output("report-historial", "children"),
+    Input("report-subtabs", "value"),
+    prevent_initial_call=False,
+)
+def cargar_historial_representatividad_torres(subtab):
+    """Muestra el historial al abrir Reportes Diarios, sin pulsar Editar comentarios."""
+    if subtab != "tab-diarios":
+        return html.Div()
+    try:
+        df_hist = fetch_historial_reporte_torre_oficial()
+    except Exception:
+        df_hist = pd.DataFrame()
+    return _tabla_historial_representatividad(df_hist)
+
+
+@callback(
     Output("report-grafico", "children"),
     Output("report-tabla", "children"),
-    Output("report-historial", "children"),
+    Output("report-historial", "children", allow_duplicate=True),
     Input({"type": "report-gen-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
+    State("report-fecha-modo", "value"),
     prevent_initial_call=True
 )
-def generar_reporte(n_clicks_list, f_ini, f_fin):
+def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
     triggered = ctx.triggered_id
     if not triggered or not isinstance(triggered, dict):
         return no_update, no_update, no_update
@@ -4315,7 +5024,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin):
         return (
             dbc.Alert("⚠️ Debe seleccionar rango de fechas.", color="warning"),
             html.Div(),
-            html.Div(),
+            no_update,
         )
 
     ini = pd.to_datetime(f_ini).date()
@@ -4328,81 +5037,55 @@ def generar_reporte(n_clicks_list, f_ini, f_fin):
     # ------------------------------------------------------------
     if tipo == "representatividad_torres":
         try:
-            fecha_corte_operacional = fetch_fecha_corte_representatividad(
-                start_date=ini,
-                end_date=fin,
+            periodo_store = _periodo_store_desde_fechas(ini, fin, modo_fecha)
+            puede_publicar = periodo_store.get("modo") == "mes" and bool(
+                periodo_store.get("periodo_mes")
             )
-            if fecha_corte_operacional is None:
+            detalle, _ = _cargar_detalle_representatividad_periodo(
+                ini,
+                fin,
+                periodo_mes=periodo_store.get("periodo_mes"),
+            )
+            if detalle.empty:
                 return (
-                    dbc.Alert(
-                        "Sin datos operacionales cerrados para el rango seleccionado.",
-                        color="info",
-                    ),
+                    dbc.Alert("Sin detalle para comentarios en el rango.", color="info"),
                     html.Div(),
-                    html.Div(),
+                    no_update,
                 )
-            df_rep_real = fetch_representatividad_torres_report(
-                start_date=ini,
-                end_date=fecha_corte_operacional,
+
+            registros = detalle.copy()
+            registros["Fecha"] = pd.to_datetime(
+                registros["Fecha"], errors="coerce"
+            ).dt.strftime("%Y-%m-%d")
+            registros = registros.astype(object).where(pd.notna(registros), None)
+
+            es_republicacion = (
+                puede_publicar
+                and bool(periodo_store.get("periodo_mes"))
+                and mes_tiene_reporte_activo(str(periodo_store["periodo_mes"]))
             )
-            df_rep = _completar_calendario_representatividad(
-                df=df_rep_real,
-                fecha_inicio=ini,
-                fecha_fin=fin,
+            editor = _editor_comentarios_representatividad(
+                detalle,
+                tab_activo="quimico",
+                registros_store=registros.to_dict("records"),
+                periodo_store=periodo_store,
+                puede_publicar=puede_publicar,
+                es_republicacion=es_republicacion,
             )
+
+            try:
+                df_hist = fetch_historial_reporte_torre_oficial()
+            except Exception:
+                df_hist = pd.DataFrame()
+
+            historial = _tabla_historial_representatividad(df_hist)
+            return html.Div(), editor, historial
         except Exception as e:
             return (
-                dbc.Alert(f"Error al consultar representatividad de torres: {e}", color="danger"),
+                dbc.Alert(f"Error al cargar editor de comentarios: {e}", color="danger"),
                 html.Div(),
-                html.Div(),
+                no_update,
             )
-
-        if df_rep.empty:
-            return (
-                dbc.Alert("Sin datos de representatividad para el rango seleccionado.", color="info"),
-                html.Div(),
-                html.Div(),
-            )
-
-        titulo = html.Div([
-            html.H5("Representatividad diaria de torres de muestreo", className="mb-2"),
-            html.P(
-                "Valores expresados en porcentaje. Los valores menores a 75% se destacan en rojo.",
-                className="text-muted mb-3"
-            )
-        ])
-
-        tabla = html.Div([
-            titulo,
-            _tabla_representatividad_torres(
-                df_rep,
-                fecha_corte_operacional=fecha_corte_operacional,
-            )
-        ])
-
-        historial = dbc.Table(
-            [
-                html.Thead(
-                    html.Tr([
-                        html.Th("Fecha"),
-                        html.Th("Tipo"),
-                        html.Th("Usuario")
-                    ]),
-                    style={"backgroundColor": "#FEEBC8"}
-                ),
-                html.Tbody([
-                    html.Tr([
-                        html.Td(pd.Timestamp.now().strftime("%d-%m-%Y")),
-                        html.Td("Representatividad Torres"),
-                        html.Td("usuario_actual")
-                    ]),
-                ])
-            ],
-            bordered=True,
-            hover=True
-        )
-
-        return html.Div(), tabla, historial
 
     # ------------------------------------------------------------
     # REPORTE POR TURNO
@@ -4677,16 +5360,9 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             print("Filas Gestión FY Químico:", len(df_gestion_fy_quimico))
             print("Filas Gestión FY Físico:", len(df_gestion_fy_fisico))
 
-            xbytes = _export_representatividad_torres_to_excel(
-                df=df_rep,
-                df_bd_ton_fy=df_bd_ton_fy,
-                df_bd_ton_mes=df_bd_ton_mes,
-                df_turno_mes=df_turno_material,
-                df_gestion_fy_quimico=df_gestion_fy_quimico,
-                df_gestion_fy_fisico=df_gestion_fy_fisico,
-                fecha_inicio_mes=fuentes_mensuales["fecha_inicio_mes"],
-                fecha_fin_mes=fuentes_mensuales["fecha_fin_mes"],
-                fecha_corte_operacional=fecha_corte_operacional,
+            xbytes = _generar_excel_representatividad_completo(
+                ini_d,
+                fin_d,
             )
 
             print("Excel generado. Tamaño bytes:", len(xbytes))
@@ -4884,21 +5560,12 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                     fin_d,
                 )
 
-            xlsx_bytes, nombre_hoja = _build_xlsx_pdf_desde_excel(
+            pdf_bytes, filename = _pdf_representatividad_desde_xlsx(
                 excel_base,
                 analisis,
                 fin_d,
             )
-            print(f"[PDF] Hoja mensual: {nombre_hoja}")
-            pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_bytes)
-            pdf_bytes = normalize_single_page_to_a3(pdf_bytes)
             print(f"[PDF] representatividad_torres pdf size={len(pdf_bytes)} bytes")
-            fecha_corte = pd.Timestamp(fin_d).strftime("%d-%m-%Y")
-            analisis_titulo = "Química" if analisis == "quimico" else "Física"
-            filename = (
-                f"Representatividad muestra {analisis_titulo} Torre "
-                f"{fecha_corte}.pdf"
-            )
             return (
                 _enviar_descarga(pdf_bytes, filename),
                 f"PDF generado: {filename} - una pagina A3 vertical",
@@ -4965,3 +5632,325 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
         print(f"[PDF ERROR] tipo={tipo}: {e}")
         traceback.print_exc()
         return no_update, f"Error al generar PDF ({tipo}): {e}", _done
+
+
+@callback(
+    Output("rep-comentarios-store", "data", allow_duplicate=True),
+    Input("rep-comentarios-grid", "data"),
+    State("rep-comentarios-store", "data"),
+    State("rep-tab-activo-store", "data"),
+    prevent_initial_call=True,
+)
+def sincronizar_comentarios_desde_grilla(grid_data, registros, tab_activo):
+    if not registros or grid_data is None:
+        return no_update
+    tab = str(tab_activo or "quimico").lower()
+    return _fusionar_comentarios_grilla(registros, grid_data, tab)
+
+
+@callback(
+    Output("rep-tab-quimico", "outline"),
+    Output("rep-tab-fisico", "outline"),
+    Output("rep-tab-activo-store", "data"),
+    Output("rep-comentarios-store", "data", allow_duplicate=True),
+    Output("report-tabla", "children", allow_duplicate=True),
+    Input("rep-tab-quimico", "n_clicks"),
+    Input("rep-tab-fisico", "n_clicks"),
+    State("rep-comentarios-store", "data"),
+    State("rep-tab-activo-store", "data"),
+    State("rep-periodo-store", "data"),
+    State("rep-comentarios-grid", "data"),
+    prevent_initial_call=True,
+)
+def cambiar_tab_comentarios_rep(n_q, n_f, registros, tab_activo, periodo, grid_data):
+    triggered = ctx.triggered_id
+    if not registros:
+        return no_update, no_update, no_update, no_update, no_update
+
+    registros = _fusionar_comentarios_grilla(registros, grid_data, tab_activo)
+
+    if triggered == "rep-tab-fisico":
+        tab = "fisico"
+        outline_q, outline_f = True, False
+    else:
+        tab = "quimico"
+        outline_q, outline_f = False, True
+
+    df = pd.DataFrame(registros)
+    if "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+    puede_publicar = (
+        isinstance(periodo, dict)
+        and periodo.get("modo") == "mes"
+        and bool(periodo.get("periodo_mes"))
+    )
+    es_republicacion = (
+        puede_publicar
+        and mes_tiene_reporte_activo(str(periodo.get("periodo_mes")))
+    )
+    editor = _editor_comentarios_representatividad(
+        df,
+        tab_activo=tab,
+        registros_store=registros,
+        periodo_store=periodo,
+        puede_publicar=puede_publicar,
+        es_republicacion=es_republicacion,
+    )
+    return outline_q, outline_f, tab, registros, editor
+
+
+@callback(
+    Output("rep-publicar-status", "children"),
+    Output("report-historial", "children", allow_duplicate=True),
+    Output("rep-comentarios-store", "data", allow_duplicate=True),
+    Input("rep-generar-final-btn", "n_clicks"),
+    State("rep-comentarios-store", "data"),
+    State("rep-periodo-store", "data"),
+    State("rep-tab-activo-store", "data"),
+    State("rep-comentarios-grid", "data"),
+    State("report-fecha-modo", "value"),
+    prevent_initial_call=True,
+)
+def publicar_reporte_representatividad(
+    n_clicks, registros, periodo, tab_activo, grid_data, modo_fecha,
+):
+    if not n_clicks:
+        return no_update, no_update, no_update
+
+    if not registros or not periodo:
+        return "Debe cargar el detalle antes de publicar.", no_update, no_update
+
+    modo = str(modo_fecha or periodo.get("modo") or "mes").lower()
+    if modo != "mes":
+        return (
+            "Solo se guardan reportes en modo Mes completo. "
+            "Use exportacion XLSX/PDF para rangos personalizados.",
+            no_update,
+            no_update,
+        )
+
+    registros = _fusionar_comentarios_grilla(registros, grid_data, tab_activo)
+    df = pd.DataFrame(registros)
+    if "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+
+    ini = pd.to_datetime(periodo.get("inicio")).date()
+    fin = pd.to_datetime(periodo.get("fin")).date()
+    usuario = _usuario_sesion()
+
+    try:
+        ini, fin, periodo_mes = normalizar_periodo_mes(ini, fin)
+        es_republicacion = mes_tiene_reporte_activo(periodo_mes)
+        paquete = armar_paquete_reporte_torre_oficial(ini, fin)
+        write_reporte_torre_oficial(
+            df_detalle=df,
+            periodo_inicio=ini,
+            periodo_fin=fin,
+            usuario=usuario,
+            paquete=paquete,
+        )
+        df_hist = fetch_historial_reporte_torre_oficial()
+        historial = _tabla_historial_representatividad(df_hist)
+        etiqueta = _etiqueta_mes_periodo(periodo_mes)
+        if es_republicacion:
+            mensaje = f"Cambios de {etiqueta} confirmados."
+        else:
+            mensaje = f"Reporte de {etiqueta} generado."
+        return (
+            mensaje,
+            historial,
+            registros,
+        )
+    except Exception as exc:
+        return f"Error al publicar: {exc}", no_update, registros
+
+
+@callback(
+    Output("rep-eliminar-modal", "is_open"),
+    Output("rep-eliminar-id-store", "data"),
+    Output("rep-eliminar-texto", "value"),
+    Input({"type": "rep-hist-del", "id_reporte": ALL}, "n_clicks"),
+    Input("rep-eliminar-cancel-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
+def abrir_cerrar_modal_eliminar_rep(n_clicks_list, cancel_clicks):
+    triggered = ctx.triggered_id
+    if triggered == "rep-eliminar-cancel-btn":
+        return False, no_update, ""
+    if not isinstance(triggered, dict) or triggered.get("type") != "rep-hist-del":
+        return no_update, no_update, no_update
+    if not any(n_clicks_list):
+        return no_update, no_update, no_update
+    return True, triggered.get("id_reporte"), ""
+
+
+@callback(
+    Output("rep-eliminar-confirm-btn", "disabled"),
+    Input("rep-eliminar-texto", "value"),
+)
+def validar_texto_eliminar_rep(texto):
+    return str(texto or "").strip().lower() != _TEXTO_CONFIRMACION_BORRADO
+
+
+@callback(
+    Output("rep-eliminar-modal", "is_open", allow_duplicate=True),
+    Output("report-historial", "children", allow_duplicate=True),
+    Output("report-status", "children", allow_duplicate=True),
+    Output("rep-eliminar-texto", "value", allow_duplicate=True),
+    Input("rep-eliminar-confirm-btn", "n_clicks"),
+    State("rep-eliminar-id-store", "data"),
+    State("rep-eliminar-texto", "value"),
+    prevent_initial_call=True,
+)
+def eliminar_reporte_representatividad(n_clicks, id_reporte, texto):
+    if not n_clicks:
+        return no_update, no_update, no_update, no_update
+    if str(texto or "").strip().lower() != _TEXTO_CONFIRMACION_BORRADO:
+        return (
+            no_update,
+            no_update,
+            f'Debe escribir "{_TEXTO_CONFIRMACION_BORRADO}" para eliminar.',
+            no_update,
+        )
+    if id_reporte is None:
+        return no_update, no_update, no_update, no_update
+    try:
+        soft_delete_reporte_torre_oficial(
+            int(id_reporte),
+            _usuario_sesion(),
+        )
+        df_hist = fetch_historial_reporte_torre_oficial()
+        return (
+            False,
+            _tabla_historial_representatividad(df_hist),
+            "Reporte eliminado del historial.",
+            "",
+        )
+    except Exception as exc:
+        return no_update, no_update, f"Error al eliminar: {exc}", no_update
+
+
+@callback(
+    Output("report-tabla", "children", allow_duplicate=True),
+    Output("report-historial", "children", allow_duplicate=True),
+    Output("report-status", "children", allow_duplicate=True),
+    Input({"type": "rep-hist-reabrir", "id_reporte": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def reabrir_reporte_representatividad(n_clicks_list):
+    if not any(n_clicks_list):
+        return no_update, no_update, no_update
+    triggered = ctx.triggered_id
+    if not isinstance(triggered, dict):
+        return no_update, no_update, no_update
+
+    id_reporte = int(triggered["id_reporte"])
+    try:
+        df = fetch_reporte_torre_oficial_detalle(id_reporte=id_reporte)
+        if df.empty:
+            return (
+                dbc.Alert("Reporte no encontrado.", color="warning"),
+                no_update,
+                no_update,
+            )
+        registros = df.copy()
+        registros["Fecha"] = pd.to_datetime(
+            registros["Fecha"], errors="coerce"
+        ).dt.strftime("%Y-%m-%d")
+        detalle = df.copy()
+        periodo = {
+            "inicio": str(df["periodo_inicio"].iloc[0]),
+            "fin": str(df["periodo_fin"].iloc[0]),
+            "modo": "mes",
+            "periodo_mes": str(df["periodo_mes"].iloc[0])
+            if "periodo_mes" in df.columns and pd.notna(df["periodo_mes"].iloc[0])
+            else None,
+        }
+        editor = _editor_comentarios_representatividad(
+            detalle,
+            tab_activo="quimico",
+            registros_store=registros.to_dict("records"),
+            periodo_store=periodo,
+            puede_publicar=True,
+            es_republicacion=True,
+        )
+        df_hist = fetch_historial_reporte_torre_oficial()
+        return (
+            editor,
+            _tabla_historial_representatividad(df_hist),
+            "Reporte reabierto desde historial.",
+        )
+    except Exception as exc:
+        return (
+            dbc.Alert(f"Error al reabrir: {exc}", color="danger"),
+            no_update,
+            no_update,
+        )
+
+
+@callback(
+    Output("report-download-xlsx", "data", allow_duplicate=True),
+    Output("report-status", "children", allow_duplicate=True),
+    Input({"type": "rep-hist-xlsx", "id_reporte": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def descargar_historial_xlsx_representatividad(n_clicks_list):
+    if not any(n_clicks_list):
+        return no_update, no_update
+    triggered = ctx.triggered_id
+    if not isinstance(triggered, dict):
+        return no_update, no_update
+
+    id_reporte = int(triggered["id_reporte"])
+    try:
+        paquete = fetch_reporte_torre_oficial_snapshot(id_reporte)
+        if not paquete or paquete.get("rep_torres") is None or paquete["rep_torres"].empty:
+            return no_update, "Reporte no encontrado."
+        df_detalle = fetch_reporte_torre_oficial_detalle(id_reporte=id_reporte)
+        mapa = comentarios_mapa_desde_dataframe(df_detalle)
+        xbytes = _export_representatividad_desde_paquete(paquete, mapa_comentarios=mapa)
+        ini = pd.to_datetime(paquete.get("periodo_inicio")).date()
+        fin = pd.to_datetime(paquete.get("periodo_fin")).date()
+        filename = (
+            f"Reporte_Representatividad_Torres_{ini.strftime('%Y%m%d')}_"
+            f"{fin.strftime('%Y%m%d')}.xlsx"
+        )
+        return _enviar_descarga(xbytes, filename), f"XLSX generado desde reporte guardado."
+    except Exception as exc:
+        return no_update, f"Error al exportar historial: {exc}"
+
+
+@callback(
+    Output("report-download-pdf", "data", allow_duplicate=True),
+    Output("report-status", "children", allow_duplicate=True),
+    Input({"type": "rep-hist-pdf", "id_reporte": ALL, "subtipo": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def descargar_historial_pdf_representatividad(n_clicks_list):
+    if not any(n_clicks_list):
+        return no_update, no_update
+    triggered = ctx.triggered_id
+    if not isinstance(triggered, dict):
+        return no_update, no_update
+
+    id_reporte = int(triggered["id_reporte"])
+    subtipo = str(triggered.get("subtipo") or "quimico").lower()
+    try:
+        paquete = fetch_reporte_torre_oficial_snapshot(id_reporte)
+        if not paquete or paquete.get("rep_torres") is None or paquete["rep_torres"].empty:
+            return no_update, "Reporte no encontrado."
+        df_detalle = fetch_reporte_torre_oficial_detalle(id_reporte=id_reporte)
+        mapa = comentarios_mapa_desde_dataframe(df_detalle)
+        xbytes = _export_representatividad_desde_paquete(paquete, mapa_comentarios=mapa)
+        fin = pd.to_datetime(paquete.get("periodo_fin")).date()
+        pdf_bytes, filename = _pdf_representatividad_desde_xlsx(
+            xbytes,
+            subtipo,
+            fin,
+        )
+        return (
+            _enviar_descarga(pdf_bytes, filename),
+            f"PDF {subtipo} generado desde reporte guardado.",
+        )
+    except Exception as exc:
+        return no_update, f"Error al generar PDF historial: {exc}"

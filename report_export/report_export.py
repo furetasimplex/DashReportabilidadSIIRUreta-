@@ -1,4 +1,6 @@
 import os
+import io
+import calendar
 import pandas as pd
 import numpy as np
 from datetime import date
@@ -666,6 +668,671 @@ def fetch_generador_reporte_diario(start_date: date, end_date: date) -> pd.DataF
             return pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as exc:
         raise RuntimeError(f"Error al ejecutar sp_generador_reporte_diario: {exc}") from exc
+
+
+RTO_CAB_TABLE = "inventar_SpcHidr.reporte_torre_oficial_cab"
+RTO_SNAPSHOT_TABLE = "inventar_SpcHidr.reporte_torre_oficial_snapshot"
+RTO_DETALLE_TABLE = "inventar_SpcHidr.reporte_torre_oficial_detalle"
+
+RTO_SNAPSHOT_BLOQUES = (
+    "rep_torres",
+    "bd_ton_fy",
+    "bd_ton_mes",
+    "turno_mes",
+    "gestion_fy_quimico",
+    "gestion_fy_fisico",
+)
+
+RTO_DETALLE_COLUMNAS = (
+    "Fecha", "Turno", "Semana", "Pad",
+    "TMH_CV08", "Rep_TM1_Quimico", "TMH_CV108", "Rep_TM2_Quimico",
+    "Rep_Turno_Quimico", "Rep_TM1_Fisico", "Rep_TM2_Fisico",
+    "Rep_Turno_Fisico", "TM1_Activo", "TM2_Activo",
+    "Comentario_TM1_Quimico", "Comentario_TM2_Quimico",
+    "Comentario_TM1_Fisico", "Comentario_TM2_Fisico",
+)
+
+
+def _dataframe_a_snapshot_json(df: pd.DataFrame) -> str:
+    if df is None or df.empty:
+        return "[]"
+    copia = df.copy()
+    for col in copia.columns:
+        if pd.api.types.is_datetime64_any_dtype(copia[col]):
+            copia[col] = copia[col].dt.strftime("%Y-%m-%d")
+    return copia.to_json(orient="records", date_format="iso")
+
+
+def _snapshot_json_a_dataframe(payload: str) -> pd.DataFrame:
+    if not payload or payload.strip() in ("", "[]", "null"):
+        return pd.DataFrame()
+    df = pd.read_json(io.StringIO(payload), orient="records")
+    for col in df.columns:
+        if col.lower() in {"dia", "fecha"}:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+    return df
+
+
+def _obtener_rango_fiscal_hasta_mes(fecha_reporte) -> dict:
+    fecha = pd.to_datetime(fecha_reporte).date()
+    anio_fiscal = fecha.year + 1 if fecha.month >= 7 else fecha.year
+    fecha_inicio_fy = date(anio_fiscal - 1, 7, 1)
+    ultimo_dia_mes = calendar.monthrange(fecha.year, fecha.month)[1]
+    fecha_fin_mes = fecha.replace(day=ultimo_dia_mes)
+    return {
+        "anio_fiscal": anio_fiscal,
+        "fecha_inicio": fecha_inicio_fy,
+        "fecha_fin": fecha_fin_mes,
+    }
+
+
+def _completar_calendario_representatividad(
+    df: pd.DataFrame,
+    fecha_inicio,
+    fecha_fin,
+) -> pd.DataFrame:
+    calendario = pd.DataFrame({
+        "Dia": pd.date_range(start=fecha_inicio, end=fecha_fin, freq="D"),
+    })
+    datos = df.copy()
+    if "Dia" in datos.columns:
+        datos["Dia"] = pd.to_datetime(datos["Dia"], errors="coerce").dt.normalize()
+    else:
+        datos["Dia"] = pd.NaT
+    return (
+        calendario
+        .merge(datos, on="Dia", how="left")
+        .sort_values("Dia")
+        .reset_index(drop=True)
+    )
+
+
+def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=None) -> dict:
+    fin_d = pd.to_datetime(fecha_fin).date()
+    corte_d = pd.to_datetime(fecha_corte_operacional or fin_d).date()
+    rango_fy = _obtener_rango_fiscal_hasta_mes(corte_d)
+    fecha_inicio_mes = fin_d.replace(day=1)
+    fecha_fin_mes = fin_d
+    fecha_corte_exclusiva = (pd.Timestamp(corte_d) + pd.Timedelta(days=1)).date()
+
+    df_bd_ton_mes = fetch_bd_ton_report(start_date=fecha_inicio_mes, end_date=corte_d)
+    if df_bd_ton_mes.empty:
+        raise RuntimeError("BD Ton no entregó datos para el mes evaluado.")
+
+    df_turno_mes = fetch_estado_apilado_turno_representatividad(
+        start_date=fecha_inicio_mes,
+        end_date=fecha_corte_exclusiva,
+    )
+    if df_turno_mes.empty:
+        raise RuntimeError(
+            "El estado de apilado por turno no entregó datos para el mes evaluado."
+        )
+
+    df_gestion_fy_quimico = fetch_gestion_representatividad_fy(
+        anio_fiscal=rango_fy["anio_fiscal"],
+        tipo="QUIMICO",
+        alcance="COMBINADO",
+        objetivo=0.85,
+        fecha_corte=corte_d,
+    )
+    if df_gestion_fy_quimico.empty:
+        raise RuntimeError("La gestión FY química no entregó resultados.")
+
+    df_gestion_fy_fisico = fetch_gestion_representatividad_fy(
+        anio_fiscal=rango_fy["anio_fiscal"],
+        tipo="FISICO",
+        alcance="COMBINADO",
+        objetivo=0.85,
+        fecha_corte=corte_d,
+    )
+    if df_gestion_fy_fisico.empty:
+        raise RuntimeError("La gestión FY física no entregó resultados.")
+
+    return {
+        "rango_fy": rango_fy,
+        "fecha_inicio_mes": fecha_inicio_mes,
+        "fecha_fin_mes": fecha_fin_mes,
+        "fecha_corte_operacional": corte_d,
+        "df_bd_ton_mes": df_bd_ton_mes,
+        "df_turno_mes": df_turno_mes,
+        "df_gestion_fy_quimico": df_gestion_fy_quimico,
+        "df_gestion_fy_fisico": df_gestion_fy_fisico,
+    }
+
+
+def armar_paquete_reporte_torre_oficial(
+    periodo_inicio: date,
+    periodo_fin: date,
+) -> dict:
+    """
+    Ejecuta SPs y consultas pesadas una vez (solo al publicar).
+    Devuelve dict con DataFrames y metadatos para snapshot + export.
+    """
+    periodo_inicio, periodo_fin, _ = normalizar_periodo_mes(
+        periodo_inicio,
+        periodo_fin,
+    )
+
+    fecha_corte_operacional = fetch_fecha_corte_representatividad(
+        start_date=periodo_inicio,
+        end_date=periodo_fin,
+    )
+    if fecha_corte_operacional is None:
+        raise RuntimeError(
+            "No existe información disponible en Peso Torres para el rango."
+        )
+
+    df_rep_real = fetch_representatividad_torres_report(
+        start_date=periodo_inicio,
+        end_date=fecha_corte_operacional,
+    )
+    if df_rep_real.empty:
+        raise RuntimeError("Sin datos de representatividad para el rango seleccionado.")
+
+    df_rep = _completar_calendario_representatividad(
+        df=df_rep_real,
+        fecha_inicio=periodo_inicio,
+        fecha_fin=periodo_fin,
+    )
+
+    rango_fy = _obtener_rango_fiscal_hasta_mes(fecha_corte_operacional)
+    df_bd_ton_fy = fetch_bd_ton_report(
+        start_date=rango_fy["fecha_inicio"],
+        end_date=fecha_corte_operacional,
+    )
+    if df_bd_ton_fy.empty:
+        raise RuntimeError("BD Ton no entregó datos históricos para el año fiscal.")
+
+    fuentes = _fetch_fuentes_mensuales_torres_oficial(
+        periodo_fin,
+        fecha_corte_operacional,
+    )
+
+    return {
+        "rep_torres": df_rep,
+        "bd_ton_fy": df_bd_ton_fy,
+        "bd_ton_mes": fuentes["df_bd_ton_mes"],
+        "turno_mes": fuentes["df_turno_mes"],
+        "gestion_fy_quimico": fuentes["df_gestion_fy_quimico"],
+        "gestion_fy_fisico": fuentes["df_gestion_fy_fisico"],
+        "fecha_corte_operacional": fecha_corte_operacional,
+        "anio_fiscal": rango_fy["anio_fiscal"],
+        "fecha_inicio_mes": fuentes["fecha_inicio_mes"],
+        "fecha_fin_mes": fuentes["fecha_fin_mes"],
+    }
+
+
+def _siguiente_id_reporte_torre_oficial(conn) -> int:
+    sql = _sa_text(
+        f"SELECT ISNULL(MAX(id_reporte), 0) + 1 AS next_id FROM {RTO_CAB_TABLE}"
+    )
+    return int(conn.execute(sql).scalar() or 1)
+
+
+def _registros_detalle_torre_oficial(df_guardar: pd.DataFrame) -> list:
+    registros = []
+    for _, fila in df_guardar.iterrows():
+        fecha = pd.to_datetime(fila.get("Fecha"), errors="coerce")
+        turno = _normalizar_turno_rep(fila.get("Turno"))
+        if pd.isna(fecha) or turno not in {"TA", "TB"}:
+            continue
+        registro = {"Fecha": fecha.date(), "Turno": turno}
+        for col in RTO_DETALLE_COLUMNAS:
+            if col in ("Fecha", "Turno"):
+                continue
+            valor = fila.get(col)
+            if isinstance(valor, float) and pd.isna(valor):
+                valor = None
+            registro[col] = valor
+        registros.append(registro)
+    return registros
+
+
+def write_reporte_torre_oficial(
+    df_detalle: pd.DataFrame,
+    periodo_inicio: date,
+    periodo_fin: date,
+    usuario: str,
+    paquete: dict,
+) -> int:
+    """
+    Persiste snapshot oficial: cab + 6 bloques JSON + detalle.
+    Reemplaza el reporte activo del mes (soft-delete cab anterior).
+    """
+    if df_detalle is None or df_detalle.empty:
+        raise ValueError("No hay filas para guardar.")
+    if not paquete:
+        raise ValueError("Paquete de snapshot vacío.")
+
+    periodo_inicio, periodo_fin, periodo_mes = normalizar_periodo_mes(
+        periodo_inicio,
+        periodo_fin,
+    )
+
+    previo = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
+    mapa_prev = comentarios_mapa_desde_dataframe(previo)
+    df_guardar = _merge_comentarios_representatividad(df_detalle, mapa_prev)
+    registros_detalle = _registros_detalle_torre_oficial(df_guardar)
+    if not registros_detalle:
+        raise ValueError("No hay filas válidas para guardar.")
+
+    fecha_corte = paquete.get("fecha_corte_operacional")
+    if fecha_corte is None:
+        raise ValueError("El paquete debe incluir fecha_corte_operacional.")
+
+    insert_cab = _sa_text(f"""
+        INSERT INTO {RTO_CAB_TABLE} (
+            id_reporte, periodo_mes, periodo_inicio, periodo_fin,
+            fecha_corte_operacional, anio_fiscal,
+            usuario, estado, activo
+        ) VALUES (
+            :id_reporte, :periodo_mes, :periodo_inicio, :periodo_fin,
+            :fecha_corte_operacional, :anio_fiscal,
+            :usuario, :estado, :activo
+        )
+    """)
+
+    insert_snap = _sa_text(f"""
+        INSERT INTO {RTO_SNAPSHOT_TABLE} (
+            id_reporte, bloque, payload, filas
+        ) VALUES (
+            :id_reporte, :bloque, :payload, :filas
+        )
+    """)
+
+    insert_det = _sa_text(f"""
+        INSERT INTO {RTO_DETALLE_TABLE} (
+            id_reporte, Fecha, Turno, Semana, Pad,
+            TMH_CV08, Rep_TM1_Quimico, TMH_CV108, Rep_TM2_Quimico, Rep_Turno_Quimico,
+            Rep_TM1_Fisico, Rep_TM2_Fisico, Rep_Turno_Fisico,
+            TM1_Activo, TM2_Activo,
+            Comentario_TM1_Quimico, Comentario_TM2_Quimico,
+            Comentario_TM1_Fisico, Comentario_TM2_Fisico
+        ) VALUES (
+            :id_reporte, :Fecha, :Turno, :Semana, :Pad,
+            :TMH_CV08, :Rep_TM1_Quimico, :TMH_CV108, :Rep_TM2_Quimico, :Rep_Turno_Quimico,
+            :Rep_TM1_Fisico, :Rep_TM2_Fisico, :Rep_Turno_Fisico,
+            :TM1_Activo, :TM2_Activo,
+            :Comentario_TM1_Quimico, :Comentario_TM2_Quimico,
+            :Comentario_TM1_Fisico, :Comentario_TM2_Fisico
+        )
+    """)
+
+    soft_delete_cab = _sa_text(f"""
+        UPDATE {RTO_CAB_TABLE}
+        SET activo = 0,
+            fecha_eliminacion = SYSDATETIME(),
+            usuario_eliminacion = :usuario
+        WHERE periodo_mes = :periodo_mes
+          AND activo = 1
+    """)
+
+    engine = _get_engine()
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                soft_delete_cab,
+                {"periodo_mes": periodo_mes, "usuario": usuario},
+            )
+            id_reporte = _siguiente_id_reporte_torre_oficial(conn)
+            conn.execute(
+                insert_cab,
+                {
+                    "id_reporte": id_reporte,
+                    "periodo_mes": periodo_mes,
+                    "periodo_inicio": periodo_inicio,
+                    "periodo_fin": periodo_fin,
+                    "fecha_corte_operacional": pd.to_datetime(fecha_corte).date(),
+                    "anio_fiscal": paquete.get("anio_fiscal"),
+                    "usuario": usuario,
+                    "estado": "FINALIZADO",
+                    "activo": 1,
+                },
+            )
+            for bloque in RTO_SNAPSHOT_BLOQUES:
+                df_bloque = paquete.get(bloque)
+                payload = _dataframe_a_snapshot_json(df_bloque)
+                filas = 0 if df_bloque is None or df_bloque.empty else len(df_bloque)
+                conn.execute(
+                    insert_snap,
+                    {
+                        "id_reporte": id_reporte,
+                        "bloque": bloque,
+                        "payload": payload,
+                        "filas": filas,
+                    },
+                )
+            for registro in registros_detalle:
+                registro["id_reporte"] = id_reporte
+                conn.execute(insert_det, registro)
+    except Exception as exc:
+        raise RuntimeError(
+            f"Error al guardar reporte_torre_oficial: {exc}"
+        ) from exc
+
+    return id_reporte
+
+
+def fetch_reporte_torre_oficial_cab(id_reporte: int) -> pd.Series | None:
+    sql = _sa_text(f"""
+        SELECT *
+        FROM {RTO_CAB_TABLE}
+        WHERE id_reporte = :id_reporte
+          AND activo = 1
+    """)
+    with _get_engine().connect() as conn:
+        df = pd.read_sql(sql, conn, params={"id_reporte": id_reporte})
+    if df.empty:
+        return None
+    return df.iloc[0]
+
+
+def fetch_reporte_torre_oficial_snapshot(id_reporte: int) -> dict:
+    sql = _sa_text(f"""
+        SELECT bloque, payload
+        FROM {RTO_SNAPSHOT_TABLE}
+        WHERE id_reporte = :id_reporte
+    """)
+    with _get_engine().connect() as conn:
+        df = pd.read_sql(sql, conn, params={"id_reporte": id_reporte})
+
+    paquete = {}
+    for _, fila in df.iterrows():
+        bloque = str(fila["bloque"])
+        paquete[bloque] = _snapshot_json_a_dataframe(fila["payload"])
+
+    cab = fetch_reporte_torre_oficial_cab(id_reporte)
+    if cab is not None:
+        paquete["fecha_corte_operacional"] = cab.get("fecha_corte_operacional")
+        paquete["anio_fiscal"] = cab.get("anio_fiscal")
+        paquete["fecha_inicio_mes"] = cab.get("periodo_inicio")
+        paquete["fecha_fin_mes"] = cab.get("periodo_fin")
+        paquete["periodo_inicio"] = cab.get("periodo_inicio")
+        paquete["periodo_fin"] = cab.get("periodo_fin")
+        paquete["periodo_mes"] = cab.get("periodo_mes")
+
+    return paquete
+
+
+def fetch_reporte_torre_oficial_detalle(
+    id_reporte: int | None = None,
+    periodo_mes: str | None = None,
+) -> pd.DataFrame:
+    if id_reporte is not None:
+        sql = _sa_text(f"""
+            SELECT d.*, c.periodo_mes, c.periodo_inicio, c.periodo_fin, c.usuario
+            FROM {RTO_DETALLE_TABLE} d
+            INNER JOIN {RTO_CAB_TABLE} c ON c.id_reporte = d.id_reporte
+            WHERE d.id_reporte = :id_reporte
+              AND c.activo = 1
+            ORDER BY d.Fecha, d.Turno
+        """)
+        params = {"id_reporte": id_reporte}
+    elif periodo_mes:
+        sql = _sa_text(f"""
+            SELECT d.*, c.periodo_mes, c.periodo_inicio, c.periodo_fin, c.usuario
+            FROM {RTO_DETALLE_TABLE} d
+            INNER JOIN {RTO_CAB_TABLE} c ON c.id_reporte = d.id_reporte
+            WHERE c.periodo_mes = :periodo_mes
+              AND c.activo = 1
+            ORDER BY d.Fecha, d.Turno
+        """)
+        params = {"periodo_mes": periodo_mes}
+    else:
+        return pd.DataFrame()
+
+    with _get_engine().connect() as conn:
+        df = pd.read_sql(sql, conn, params=params)
+
+    if "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+    return df
+
+
+def mes_tiene_reporte_activo(periodo_mes: str) -> bool:
+    """True si existe un reporte oficial activo para el mes YYYY-MM."""
+    if not periodo_mes:
+        return False
+    sql = _sa_text(f"""
+        SELECT TOP 1 1 AS ok
+        FROM {RTO_CAB_TABLE}
+        WHERE periodo_mes = :periodo_mes
+          AND activo = 1
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            val = conn.execute(sql, {"periodo_mes": periodo_mes}).scalar()
+        return val is not None
+    except Exception:
+        return False
+
+
+def fetch_historial_reporte_torre_oficial(limit: int = 50) -> pd.DataFrame:
+    sql = _sa_text(f"""
+        SELECT TOP (:limite)
+            c.id_reporte,
+            c.periodo_mes,
+            c.periodo_inicio,
+            c.periodo_fin,
+            c.fecha_corte_operacional,
+            c.fecha_generacion,
+            c.usuario,
+            c.estado,
+            (
+                SELECT COUNT(*)
+                FROM {RTO_DETALLE_TABLE} d
+                WHERE d.id_reporte = c.id_reporte
+            ) AS filas
+        FROM {RTO_CAB_TABLE} c
+        WHERE c.activo = 1
+        ORDER BY c.periodo_mes DESC, c.fecha_generacion DESC
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            return pd.read_sql(sql, conn, params={"limite": limit})
+    except Exception as exc:
+        raise RuntimeError(
+            f"Error al leer historial reporte_torre_oficial: {exc}"
+        ) from exc
+
+
+def soft_delete_reporte_torre_oficial(id_reporte: int, usuario: str) -> None:
+    sql = _sa_text(f"""
+        UPDATE {RTO_CAB_TABLE}
+        SET activo = 0,
+            fecha_eliminacion = SYSDATETIME(),
+            usuario_eliminacion = :usuario
+        WHERE id_reporte = :id_reporte
+          AND activo = 1
+    """)
+    try:
+        with _get_engine().begin() as conn:
+            conn.execute(sql, {"id_reporte": id_reporte, "usuario": usuario})
+    except Exception as exc:
+        raise RuntimeError(
+            f"Error al eliminar reporte_torre_oficial: {exc}"
+        ) from exc
+
+
+def _normalizar_turno_rep(valor) -> str:
+    texto = str(valor or "").strip().upper()
+    if texto in {"A", "TA"}:
+        return "TA"
+    if texto in {"B", "TB"}:
+        return "TB"
+    return texto
+
+
+def comentarios_mapa_desde_dataframe(df: pd.DataFrame) -> dict:
+    """Construye mapa (fecha, turno) -> dict de comentarios por torre/tipo."""
+    if df is None or df.empty:
+        return {}
+
+    mapa = {}
+    for _, fila in df.iterrows():
+        fecha = pd.to_datetime(fila.get("Fecha"), errors="coerce")
+        turno = _normalizar_turno_rep(fila.get("Turno"))
+        if pd.isna(fecha) or turno not in {"TA", "TB"}:
+            continue
+        clave = (fecha.normalize(), turno)
+        mapa[clave] = {
+            "Comentario_TM1_Quimico": fila.get("Comentario_TM1_Quimico"),
+            "Comentario_TM2_Quimico": fila.get("Comentario_TM2_Quimico"),
+            "Comentario_TM1_Fisico": fila.get("Comentario_TM1_Fisico"),
+            "Comentario_TM2_Fisico": fila.get("Comentario_TM2_Fisico"),
+        }
+    return mapa
+
+
+def comentario_torres_para_tipo(mapa: dict, fecha, turno: str, torre: str, tipo: str):
+    """Devuelve comentario para export (TM1/TM2 + quimico/fisico)."""
+    if not mapa:
+        return None
+    fecha_norm = pd.to_datetime(fecha, errors="coerce")
+    if pd.isna(fecha_norm):
+        return None
+    turno_norm = _normalizar_turno_rep(turno)
+    datos = mapa.get((fecha_norm.normalize(), turno_norm), {})
+    if not datos:
+        return None
+    tipo_norm = str(tipo).strip().lower()
+    torre_norm = str(torre).strip().upper()
+    if torre_norm not in {"TM1", "TM2"}:
+        return None
+    sufijo = "Quimico" if tipo_norm == "quimico" else "Fisico"
+    valor = datos.get(f"Comentario_{torre_norm}_{sufijo}")
+    if valor is None or (isinstance(valor, float) and pd.isna(valor)):
+        return None
+    texto = str(valor).strip()
+    return texto or None
+
+
+def _periodo_mes_desde_fecha(fecha: date) -> str:
+    return f"{fecha.year:04d}-{fecha.month:02d}"
+
+
+def es_mes_completo(periodo_inicio: date, periodo_fin: date) -> bool:
+    """True si el rango es el mes calendario completo (día 1 al último)."""
+    ini = pd.to_datetime(periodo_inicio).date()
+    fin = pd.to_datetime(periodo_fin).date()
+    if ini.day != 1:
+        return False
+    ultimo = calendar.monthrange(ini.year, ini.month)[1]
+    esperado_fin = date(ini.year, ini.month, ultimo)
+    return fin == esperado_fin and _periodo_mes_desde_fecha(ini) == _periodo_mes_desde_fecha(fin)
+
+
+def normalizar_periodo_mes(periodo_inicio: date, periodo_fin: date) -> tuple[date, date, str]:
+    """
+    Valida mes calendario completo y devuelve (inicio, fin, periodo_mes YYYY-MM).
+  """
+    if not es_mes_completo(periodo_inicio, periodo_fin):
+        raise ValueError(
+            "Solo se pueden guardar reportes de mes calendario completo "
+            f"({periodo_inicio} a {periodo_fin})."
+        )
+    ini = pd.to_datetime(periodo_inicio).date()
+    ultimo = calendar.monthrange(ini.year, ini.month)[1]
+    fin = date(ini.year, ini.month, ultimo)
+    return ini, fin, _periodo_mes_desde_fecha(ini)
+
+
+def _merge_comentarios_representatividad(
+    df_detalle: pd.DataFrame,
+    comentarios_previos: dict,
+) -> pd.DataFrame:
+    """
+    Datos referenciales siempre del detalle actual.
+    Comentarios: pantalla gana si no vacío; si vacío conserva BD previa.
+    """
+    if df_detalle is None or df_detalle.empty:
+        return df_detalle
+
+    df = df_detalle.copy()
+    cols_com = [
+        "Comentario_TM1_Quimico",
+        "Comentario_TM2_Quimico",
+        "Comentario_TM1_Fisico",
+        "Comentario_TM2_Fisico",
+    ]
+    for col in cols_com:
+        if col not in df.columns:
+            df[col] = None
+
+    if not comentarios_previos:
+        return df
+
+    for idx, fila in df.iterrows():
+        fecha = pd.to_datetime(fila.get("Fecha"), errors="coerce")
+        turno = _normalizar_turno_rep(fila.get("Turno"))
+        if pd.isna(fecha) or turno not in {"TA", "TB"}:
+            continue
+        prev = comentarios_previos.get((fecha.normalize(), turno), {})
+        for col in cols_com:
+            actual = str(fila.get(col) or "").strip()
+            if actual:
+                continue
+            prev_val = prev.get(col)
+            if prev_val is not None and str(prev_val).strip():
+                df.at[idx, col] = str(prev_val).strip()
+    return df
+
+
+def write_representatividad_torres_generado(
+    df_detalle: pd.DataFrame,
+    periodo_inicio: date,
+    periodo_fin: date,
+    usuario: str,
+    paquete: dict | None = None,
+) -> int:
+    """Compat: requiere paquete snapshot; usar write_reporte_torre_oficial."""
+    if paquete is None:
+        paquete = armar_paquete_reporte_torre_oficial(periodo_inicio, periodo_fin)
+    return write_reporte_torre_oficial(
+        df_detalle, periodo_inicio, periodo_fin, usuario, paquete
+    )
+
+
+def fetch_historial_representatividad(limit: int = 50) -> pd.DataFrame:
+    return fetch_historial_reporte_torre_oficial(limit)
+
+
+def fetch_representatividad_por_mes(periodo_mes: str) -> pd.DataFrame:
+    return fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
+
+
+def fetch_representatividad_guardado(id_reporte: int) -> pd.DataFrame:
+    return fetch_reporte_torre_oficial_detalle(id_reporte=id_reporte)
+
+
+def fetch_comentarios_representatividad_periodo(
+    periodo_inicio: date,
+    periodo_fin: date,
+) -> pd.DataFrame:
+    try:
+        _, _, periodo_mes = normalizar_periodo_mes(periodo_inicio, periodo_fin)
+    except ValueError:
+        return pd.DataFrame()
+    return fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
+
+
+def soft_delete_representatividad_por_mes(periodo_mes: str, usuario: str) -> None:
+    sql = _sa_text(f"""
+        UPDATE {RTO_CAB_TABLE}
+        SET activo = 0,
+            fecha_eliminacion = SYSDATETIME(),
+            usuario_eliminacion = :usuario
+        WHERE periodo_mes = :periodo_mes
+          AND activo = 1
+    """)
+    with _get_engine().begin() as conn:
+        conn.execute(sql, {"periodo_mes": periodo_mes, "usuario": usuario})
+
+
+def soft_delete_representatividad_generado(id_reporte: int, usuario: str) -> None:
+    soft_delete_reporte_torre_oficial(id_reporte, usuario)
+
+
 def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 

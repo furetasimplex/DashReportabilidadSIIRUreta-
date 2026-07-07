@@ -113,6 +113,13 @@ def _report_card(title, description, tipo):
             # Buttons
             html.Div([
                 dbc.Button([
+                    html.I(className="bi bi-pencil-square me-2"),
+                    "Editar comentarios",
+                ], id={"type": "report-gen-btn", "tipo": tipo},
+                   className="rp-btn-export me-2", n_clicks=0, color="primary")
+                if tipo == "representatividad_torres"
+                else html.Div(),
+                dbc.Button([
                     html.I(className="bi bi-file-earmark-excel me-2"),
                     "Exportar Excel",
                 ], id={"type": "report-export-btn", "tipo": tipo},
@@ -271,6 +278,50 @@ def layout():
                 ]),
             ),
             html.Div(id="report-historial", className="mt-3"),
+            dcc.Store(id="rep-eliminar-id-store"),
+            dcc.Store(id="rep-grid-blur-hook", data=0),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(
+                        dbc.ModalTitle("Eliminar reporte del historial"),
+                    ),
+                    dbc.ModalBody([
+                        html.P(
+                            "Esta accion quitara el reporte del historial. "
+                            "No se puede deshacer.",
+                            className="mb-2",
+                        ),
+                        html.P(
+                            'Escriba "confirmar borrado" para continuar:',
+                            className="mb-2 fw-semibold",
+                        ),
+                        dbc.Input(
+                            id="rep-eliminar-texto",
+                            type="text",
+                            placeholder="confirmar borrado",
+                            autocomplete="off",
+                        ),
+                    ]),
+                    dbc.ModalFooter([
+                        dbc.Button(
+                            "Cancelar",
+                            id="rep-eliminar-cancel-btn",
+                            color="secondary",
+                            outline=True,
+                            className="me-2",
+                        ),
+                        dbc.Button(
+                            "Eliminar",
+                            id="rep-eliminar-confirm-btn",
+                            color="danger",
+                            disabled=True,
+                        ),
+                    ]),
+                ],
+                id="rep-eliminar-modal",
+                is_open=False,
+                backdrop="static",
+            ),
             dcc.Download(id="report-download-xlsx"),
             dcc.Download(id="report-download-pdf"),
             html.Div(id="report-status", className="mt-2 text-muted small"),
