@@ -7,7 +7,7 @@ import pandas as pd
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
-BHP_LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "logoBHP.png")
+BHP_LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "pampa-norte-bhp.png")
 
 # Brand colors
 _DARK_BLUE = "#1F4E79"
@@ -57,7 +57,7 @@ def _page_header(title: str, subtitle: str, fecha_range: str):
         leading=12,
     )
 
-    logo = _logo_image(28, 14)
+    logo = _logo_image(58, 9)
     logo_cell = logo if logo else ""
 
     title_para = Paragraph(title, h_title)

@@ -25,7 +25,30 @@ TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[Datos_conciliados_of]"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
 
-BHP_LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "logoBHP.png")
+BHP_LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "pampa-norte-bhp.png")
+
+COLOR_PAMPA_NORTE = "#018982"
+COLOR_BLANCO = "#FFFFFF"
+COLOR_BORDE = "#808080"
+
+def _aplicar_dimensiones_oficiales_torre(worksheet, con_turno=False):
+    worksheet.set_column("A:A", 15 if con_turno else 11)
+    worksheet.set_column("B:B", 10 if con_turno else 9)
+    worksheet.set_column("C:C", 13.8)
+    worksheet.set_column("D:D", 14.3 if con_turno else 15.4)
+    worksheet.set_column("E:E", 12.8)
+    worksheet.set_column("F:F", 11.8)
+    worksheet.set_column("G:AM", 13)
+    worksheet.set_column("AN:AN", 10.2 if con_turno else 13)
+    worksheet.set_column("AO:AO", 9.8 if con_turno else 13)
+    worksheet.set_column("AP:AP", 5.2 if con_turno else 11.4)
+
+    worksheet.set_row(0, 14.7)
+    worksheet.set_row(1, 15.6)
+    worksheet.set_row(2, 20.5)
+    worksheet.set_row(3, 23.55 if con_turno else 21)
+    worksheet.set_row(4, 23.55 if con_turno else 21)
+    worksheet.set_row(5, 23.55 if con_turno else 21)
 # Columnas exactas para el reporte "Producción Diaria" / plantilla Datos conciliados
 COLUMNAS_DATOS_CONCILIADOS = [
     "Fecha", "Chancado_TMS_Real", "Humedad_Turno_A", "Humedad_Turno_B", "Humedad_promedio_dia",
@@ -1751,6 +1774,7 @@ def preparar_df_generador_reporte_excel(
 def agregar_hoja_generador_reporte(
     writer: pd.ExcelWriter,
     df_diario: pd.DataFrame,
+    df_turno_resumen: pd.DataFrame = None,
 ) -> None:
     """
     Agrega la hoja diaria "Generador Reporte" al mismo archivo Excel
@@ -1775,96 +1799,211 @@ def agregar_hoja_generador_reporte(
     # ============================================================
     fmt_titulo = workbook.add_format({
         "bold": True,
-        "font_size": 16,
-        "align": "left",
+        "font_name": "Arial",
+        "font_size": 18,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center",
         "valign": "vcenter",
     })
 
     fmt_subtitulo = workbook.add_format({
         "bold": True,
-        "font_size": 16,
-        "align": "left",
+        "font_name": "Arial",
+        "font_size": 18,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center",
         "valign": "vcenter",
     })
 
     fmt_grupo = workbook.add_format({
         "bold": True,
+        "font_name": "Calibri",
+        "font_size": 16,
+        "font_color": COLOR_BLANCO,
         "align": "center",
         "valign": "vcenter",
-        "bg_color": "#D9EAF7",
-        "border": 1,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "border": 2,
+        "border_color": COLOR_BORDE,
         "text_wrap": True,
     })
 
     fmt_header = workbook.add_format({
         "bold": True,
+        "font_name": "Calibri",
+        "font_size": 12,
         "align": "center",
         "valign": "vcenter",
-        "bg_color": "#9DC3E6",
-        "font_color": "#1F4E79",
-        "border": 1,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "font_color": COLOR_BLANCO,
+        "border": 2,
+        "border_color": COLOR_BORDE,
         "text_wrap": True,
     })
 
     fmt_header_claro = workbook.add_format({
         "bold": True,
+        "font_name": "Calibri",
+        "font_size": 12,
         "align": "center",
         "valign": "vcenter",
-        "bg_color": "#D9EAF7",
-        "font_color": "#1F4E79",
-        "border": 1,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "font_color": COLOR_BLANCO,
+        "border": 2,
+        "border_color": COLOR_BORDE,
         "text_wrap": True,
     })
 
     fmt_texto = workbook.add_format({
+        "font_name": "Calibri",
+        "font_size": 10,
         "border": 1,
+        "border_color": COLOR_BORDE,
         "align": "center",
         "valign": "vcenter",
         "text_wrap": True,
     })
 
     fmt_texto_gris = workbook.add_format({
-        "border": 1,
+        "font_name": "Calibri",
+        "font_size": 10,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "border": 2,
+        "border_color": COLOR_BORDE,
         "align": "center",
         "valign": "vcenter",
-        "bg_color": "#F2F2F2",
         "text_wrap": True,
     })
 
     fmt_fecha = workbook.add_format({
+        "font_name": "Calibri",
+        "font_size": 10,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
         "num_format": "dd-mm-yyyy",
-        "border": 1,
+        "border": 2,
+        "border_color": COLOR_BORDE,
         "align": "center",
         "valign": "vcenter",
     })
 
     fmt_numero = workbook.add_format({
+        "font_name": "Calibri",
+        "font_size": 10,
         "num_format": "#,##0",
         "border": 1,
+        "border_color": COLOR_BORDE,
         "align": "center",
         "valign": "vcenter",
     })
 
     fmt_decimal_2 = workbook.add_format({
+        "font_name": "Calibri",
+        "font_size": 10,
         "num_format": "0.00",
         "border": 1,
+        "border_color": COLOR_BORDE,
         "align": "center",
         "valign": "vcenter",
     })
 
     fmt_decimal_3 = workbook.add_format({
+        "font_name": "Calibri",
+        "font_size": 10,
         "num_format": "0.000",
         "border": 1,
+        "border_color": COLOR_BORDE,
         "align": "center",
         "valign": "vcenter",
     })
 
     fmt_decimal_gris = workbook.add_format({
+        "font_name": "Calibri",
+        "font_size": 10,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
         "num_format": "0.00",
-        "border": 1,
+        "border": 2,
+        "border_color": COLOR_BORDE,
         "align": "center",
         "valign": "vcenter",
-        "bg_color": "#F2F2F2",
+    })
+
+    fmt_resumen_titulo = workbook.add_format({
+        "bold": True,
+        "font_name": "Calibri",
+        "font_size": 16,
+        "align": "center",
+        "valign": "vcenter",
+    })
+    fmt_resumen_header = workbook.add_format({
+        "bold": True,
+        "font_name": "Calibri",
+        "font_size": 12,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center",
+        "valign": "vcenter",
+        "border": 2,
+        "border_color": COLOR_BORDE,
+        "text_wrap": True,
+    })
+    fmt_resumen_fecha = workbook.add_format({
+        "bold": True,
+        "font_name": "Calibri",
+        "font_size": 12,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "num_format": "dd-mm-yyyy",
+        "align": "center",
+        "valign": "vcenter",
+        "border": 2,
+        "border_color": COLOR_BORDE,
+    })
+    fmt_resumen_subheader = workbook.add_format({
+        "bold": True,
+        "font_name": "Calibri",
+        "font_size": 11,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center",
+        "valign": "vcenter",
+        "border": 1,
+        "border_color": COLOR_BORDE,
+        "text_wrap": True,
+    })
+    fmt_resumen_label = workbook.add_format({
+        "bold": True,
+        "font_name": "Calibri",
+        "font_size": 11,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center",
+        "valign": "vcenter",
+        "border": 2,
+        "border_color": COLOR_BORDE,
+    })
+    fmt_resumen_num = workbook.add_format({
+        "bold": True,
+        "font_name": "Calibri",
+        "font_size": 11,
+        "num_format": "0.00",
+        "align": "center",
+        "valign": "vcenter",
+        "border": 1,
+        "border_color": COLOR_BORDE,
+    })
+    fmt_resumen_texto = workbook.add_format({
+        "bold": True,
+        "font_name": "Calibri",
+        "font_size": 11,
+        "align": "center",
+        "valign": "vcenter",
+        "border": 1,
+        "border_color": COLOR_BORDE,
     })
 
     # ============================================================
@@ -1872,29 +2011,29 @@ def agregar_hoja_generador_reporte(
     # ============================================================
     if os.path.exists(BHP_LOGO_PATH):
         worksheet.insert_image(
-            "B1",
+            "C3",
             BHP_LOGO_PATH,
             {
-                "x_scale": 1.15,
-                "y_scale": 1.15,
-                "x_offset": 5,
-                "y_offset": 3,
+                "x_scale": 1.03,
+                "y_scale": 1.07,
+                "x_offset": 55,
+                "y_offset": 25,
                 "object_position": 1,
             },
         )
 
     worksheet.merge_range(
-        "G2:AO2",
+        "H4:T4",
         "Superintendencia de Medición y Reconciliación",
         fmt_titulo,
     )
     worksheet.merge_range(
-        "G3:AO3",
+        "H5:T5",
         "Gerencia de Planificación de la Producción",
         fmt_subtitulo,
     )
     worksheet.merge_range(
-        "G4:AO4",
+        "H6:T6",
         "Minerals Americas / Pampa Norte / Spence",
         fmt_subtitulo,
     )
@@ -1906,6 +2045,117 @@ def agregar_hoja_generador_reporte(
     # No se agrega una columna visible llamada
     # "Clasificación Solubilidad".
     # ============================================================
+
+    def _valor_ultimo_dia(df_src, fecha_ref, col_name):
+        if not col_name or df_src is None or df_src.empty or col_name not in df_src.columns:
+            return ""
+        data = df_src.copy()
+        if "Fecha" in data.columns:
+            fechas = pd.to_datetime(data["Fecha"], errors="coerce")
+            data = data.loc[fechas.dt.date == fecha_ref.date()]
+        if data.empty:
+            return ""
+        value = data.iloc[-1][col_name]
+        return "" if pd.isna(value) else value
+
+    def _valor_turno(fecha_ref, turno, col_name):
+        if df_turno_resumen is None or df_turno_resumen.empty or col_name not in df_turno_resumen.columns:
+            return ""
+        data = df_turno_resumen.copy()
+        if "Fecha" in data.columns:
+            fechas = pd.to_datetime(data["Fecha"], errors="coerce")
+            data = data.loc[fechas.dt.date == fecha_ref.date()]
+        if "Turno_excel" in data.columns:
+            data = data.loc[data["Turno_excel"].astype(str).str.upper().eq(turno)]
+        elif "Turno" in data.columns:
+            data = data.loc[data["Turno"].astype(str).str.upper().eq(turno)]
+        if data.empty:
+            return ""
+        value = data.iloc[-1][col_name]
+        return "" if pd.isna(value) else value
+
+    def _promedio_periodo(df_src, fecha_ref, col_name, solo_semana=False):
+        if not col_name or df_src is None or df_src.empty or col_name not in df_src.columns or "Fecha" not in df_src.columns:
+            return ""
+        data = df_src.copy()
+        fechas = pd.to_datetime(data["Fecha"], errors="coerce")
+        data = data.loc[fechas.notna()].copy()
+        fechas = pd.to_datetime(data["Fecha"], errors="coerce")
+        data = data.loc[(fechas.dt.month == fecha_ref.month) & (fechas.dt.year == fecha_ref.year)]
+        if solo_semana:
+            semana = ((fecha_ref.day - 1) // 7) + 1
+            fechas = pd.to_datetime(data["Fecha"], errors="coerce")
+            data = data.loc[(((fechas.dt.day - 1) // 7) + 1) == semana]
+        valores = pd.to_numeric(data[col_name], errors="coerce").dropna()
+        return "" if valores.empty else float(valores.mean())
+
+    def _escribir_resumen_ultimo_dia():
+        if df_export.empty or "Fecha" not in df_export.columns:
+            return
+        fechas = pd.to_datetime(df_export["Fecha"], errors="coerce").dropna()
+        if fechas.empty:
+            return
+
+        fecha_ref = fechas.max()
+        semana = ((fecha_ref.day - 1) // 7) + 1
+
+        worksheet.merge_range("V3:AE3", "Reporte Diario Análisis Torre de Muestreo", fmt_resumen_titulo)
+        worksheet.merge_range("V4:W4", fecha_ref.to_pydatetime(), fmt_resumen_fecha)
+        worksheet.write("X4", "TA", fmt_resumen_header)
+        worksheet.write("Y4", "TB", fmt_resumen_header)
+        worksheet.write("Z4", "Día", fmt_resumen_header)
+        worksheet.write("AA4", "Día ", fmt_resumen_header)
+        worksheet.merge_range("AB4:AC4", "Acumulado Semana", fmt_resumen_header)
+        worksheet.merge_range("AD4:AE4", "Acumulado Mes", fmt_resumen_header)
+        worksheet.merge_range("V5:W5", f"Semana {semana}", fmt_resumen_header)
+        for cell, text in {
+            "X5": "Real",
+            "Y5": "Real",
+            "Z5": "Real",
+            "AA5": "Programa",
+            "AB5": "Real",
+            "AC5": "Programa Semanal",
+            "AD5": "Real",
+            "AE5": "Mensual",
+        }.items():
+            worksheet.write(cell, text, fmt_resumen_subheader)
+
+        filas = [
+            ("CuT", "%", "CuT_Real", "CuT_Real_Dia", "CuT_Programa", "CuT_Plan"),
+            ("CuS", "%", "CuS_Real", "CuS_Real_Dia", "CuS_Programa", "CuS_Plan"),
+            ("Solubilidad", "%", "Solubilidad_Real", "Solubilidad_Real_Dia", "Solubilidad_Programa", "Solubilidad_Plan"),
+            ("CO3", "%", "CO3_Real", "CO3_Real_Dia", "CO3_Programa", "CO3_Plan"),
+            ("CuFe", "%", "CuFe_Real", "CuFe_Real_Dia", "CuFe_Programa", "CuFe_Plan"),
+            ("-100#Ty", "%", "Malla_Menos_100_Real", "Malla_Menos_100_Real_Dia", "Malla_Menos_100_Programa", "Malla_Menos_100_Plan"),
+            ("-1/2´", "%", "Malla_Menos_1_2_Real", "Malla_Menos_1_2_Real_Dia", "Malla_Menos_1_2_Programa", "Malla_Menos_1_2_Programa"),
+            ("Caolbeta", "%", "CaolBeta_Real", "CaolBeta_Real_Dia", "CaolBeta_Programa", "CaolBeta_Plan"),
+            ("Mina", "%", "MINA", "MINA_Dia", None, None),
+            ("Stock", "%", "STOCK", "STOCK_Dia", None, None),
+            ("SRR", "%", "SRR", "SRR_Dia", None, None),
+        ]
+
+        for row_idx, (label, unidad, turno_col, dia_col, programa_col, plan_col) in enumerate(filas, start=5):
+            worksheet.write(row_idx, 21, label, fmt_resumen_label)
+            worksheet.write(row_idx, 22, unidad, fmt_resumen_label)
+            valores = [
+                _valor_turno(fecha_ref, "TA", turno_col),
+                _valor_turno(fecha_ref, "TB", turno_col),
+                _valor_ultimo_dia(df_export, fecha_ref, dia_col),
+                _valor_ultimo_dia(df_export, fecha_ref, programa_col),
+                _promedio_periodo(df_export, fecha_ref, dia_col, solo_semana=True),
+                _valor_ultimo_dia(df_export, fecha_ref, programa_col),
+                _promedio_periodo(df_export, fecha_ref, dia_col, solo_semana=False),
+                _valor_ultimo_dia(df_export, fecha_ref, plan_col),
+            ]
+            for col_idx, value in enumerate(valores, start=23):
+                if value == "":
+                    worksheet.write_blank(row_idx, col_idx, None, fmt_resumen_num)
+                elif isinstance(value, str):
+                    worksheet.write(row_idx, col_idx, value, fmt_resumen_texto)
+                else:
+                    worksheet.write_number(row_idx, col_idx, float(value), fmt_resumen_num)
+
+    _escribir_resumen_ultimo_dia()
 
     # Grupos superiores
     worksheet.merge_range("N18:AE19", "Analisis Quimicos", fmt_grupo)
@@ -1947,7 +2197,7 @@ def agregar_hoja_generador_reporte(
     worksheet.write("S21", "Plan", fmt_header)
 
     # Solubilidad: razón adimensional, sin unidad %
-    worksheet.merge_range("T20:V20", "Solubilidad", fmt_header)
+    worksheet.merge_range("T20:V20", "Solubilidad %", fmt_header)
     worksheet.write("T21", "Real", fmt_header)
     worksheet.write("U21", "Programa", fmt_header)
     worksheet.write("V21", "Plan", fmt_header)
@@ -2014,9 +2264,6 @@ def agregar_hoja_generador_reporte(
 
     columnas_grises = {
         "Fecha",
-        "Material",
-        "Modulo",
-        "Avance",
     }
 
     columnas_2_decimales = {
@@ -2073,7 +2320,7 @@ def agregar_hoja_generador_reporte(
                 continue
 
             if es_numero_valido(value):
-                formato = fmt_decimal_gris if col_name == "Avance" else fmt_decimal_2
+                formato = fmt_decimal_2
                 worksheet.write_number(excel_row, excel_col, float(value), formato)
                 continue
 
@@ -2083,31 +2330,19 @@ def agregar_hoja_generador_reporte(
     # ============================================================
     # ANCHOS Y PRESENTACIÓN
     # ============================================================
-    worksheet.set_column("A:A", 4)
-    worksheet.set_column("B:B", 4)
-    worksheet.set_column("C:C", 13)
-    worksheet.set_column("D:E", 16)
-    worksheet.set_column("F:F", 11)
-    worksheet.set_column("G:G", 12)
-    worksheet.set_column("H:J", 15)
-    worksheet.set_column("K:M", 10)
-    worksheet.set_column("N:AB", 12)
-    worksheet.set_column("AC:AE", 16)
-    worksheet.set_column("AF:AM", 13)
-    worksheet.set_column("AN:AO", 16)
-    worksheet.set_column("AP:AP", 3)
+    _aplicar_dimensiones_oficiales_torre(worksheet, con_turno=False)
 
-    worksheet.set_row(0, 42)
-    worksheet.set_row(1, 42)
-    worksheet.set_row(2, 28)
-    worksheet.set_row(3, 24)
-    worksheet.set_row(17, 22)
-    worksheet.set_row(18, 22)
-    worksheet.set_row(19, 28)
-    worksheet.set_row(20, 38)
+    worksheet.set_row(16, 14.7)
+    worksheet.set_row(17, 21)
+    worksheet.set_row(18, 21.75)
+    worksheet.set_row(19, 46.5)
+    worksheet.set_row(20, 26.1)
+    # La segunda fila de la mini tabla necesita dos lineas para
+    # mostrar completo "Programa Semanal".
+    worksheet.set_row(4, 32)
 
     for row_num in range(fila_data, fila_data + len(df_export)):
-        worksheet.set_row(row_num, 20)
+        worksheet.set_row(row_num, 15)
 
     last_row = fila_data + len(df_export) - 1
     last_col = col_offset + len(df_export.columns) - 1
@@ -2118,6 +2353,7 @@ def agregar_hoja_generador_reporte(
     worksheet.set_margins(left=0.35, right=0.35, top=0.35, bottom=0.35)
     worksheet.center_horizontally()
     worksheet.set_landscape()
+    worksheet.set_paper(8)
     worksheet.fit_to_pages(1, 0)
     worksheet.print_area(0, 0, last_row + 2, last_col + 1)
     worksheet.hide_gridlines(2)
@@ -2208,13 +2444,13 @@ def export_reporte_turno_estilo_leyes_finos(
         # ============================================================
         if os.path.exists(BHP_LOGO_PATH):
             worksheet.insert_image(
-                "B1",
+                "C3",
                 BHP_LOGO_PATH,
                 {
-                    "x_scale": 1.15,
-                    "y_scale": 1.15,
-                    "x_offset": 5,
-                    "y_offset": 3,
+                    "x_scale": 1.03,
+                    "y_scale": 1.07,
+                    "x_offset": 55,
+                    "y_offset": 25,
                     "object_position": 1,
                 }
             )
@@ -2224,101 +2460,145 @@ def export_reporte_turno_estilo_leyes_finos(
         # ============================================================
         fmt_titulo = workbook.add_format({
             "bold": True,
-            "font_size": 16,
-            "align": "left",
+            "font_name": "Arial",
+            "font_size": 18,
+            "font_color": COLOR_BLANCO,
+            "bg_color": COLOR_PAMPA_NORTE,
+            "align": "center",
             "valign": "vcenter"
         })
 
         fmt_subtitulo = workbook.add_format({
         "bold": True,
-        "font_size": 16,
-        "align": "left",
+        "font_name": "Arial",
+        "font_size": 18,
+        "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center",
         "valign": "vcenter"
         })
 
         fmt_grupo = workbook.add_format({
             "bold": True,
+            "font_name": "Calibri",
+            "font_size": 16,
+            "font_color": COLOR_BLANCO,
             "align": "center",
             "valign": "vcenter",
-            "bg_color": "#D9EAF7",
-            "border": 1,
+            "bg_color": COLOR_PAMPA_NORTE,
+            "border": 2,
+            "border_color": COLOR_BORDE,
             "text_wrap": True
         })
 
         fmt_header = workbook.add_format({
             "bold": True,
+            "font_name": "Calibri",
+            "font_size": 12,
             "align": "center",
             "valign": "vcenter",
-            "bg_color": "#9DC3E6",
-            "font_color": "#1F4E79",
-            "border": 1,
+            "bg_color": COLOR_PAMPA_NORTE,
+            "font_color": COLOR_BLANCO,
+            "border": 2,
+            "border_color": COLOR_BORDE,
             "text_wrap": True
         })
 
         fmt_header_claro = workbook.add_format({
             "bold": True,
+            "font_name": "Calibri",
+            "font_size": 12,
             "align": "center",
             "valign": "vcenter",
-            "bg_color": "#D9EAF7",
-            "font_color": "#1F4E79",
-            "border": 1,
+            "bg_color": COLOR_PAMPA_NORTE,
+            "font_color": COLOR_BLANCO,
+            "border": 2,
+            "border_color": COLOR_BORDE,
             "text_wrap": True
         })
 
         fmt_texto = workbook.add_format({
+            "font_name": "Calibri",
+            "font_size": 10,
             "border": 1,
+            "border_color": COLOR_BORDE,
             "align": "center",
             "valign": "vcenter",
             "text_wrap": True
         })
 
         fmt_texto_gris = workbook.add_format({
-            "border": 1,
+            "font_name": "Calibri",
+            "font_size": 10,
+            "font_color": COLOR_BLANCO,
+            "bg_color": COLOR_PAMPA_NORTE,
+            "border": 2,
+            "border_color": COLOR_BORDE,
             "align": "center",
             "valign": "vcenter",
-            "bg_color": "#F2F2F2",
             "text_wrap": True
         })
 
         fmt_fecha = workbook.add_format({
+            "font_name": "Calibri",
+            "font_size": 10,
+            "font_color": COLOR_BLANCO,
+            "bg_color": COLOR_PAMPA_NORTE,
             "num_format": "dd-mm-yyyy",
-            "border": 1,
+            "border": 2,
+            "border_color": COLOR_BORDE,
             "align": "center",
             "valign": "vcenter"
         })
 
         fmt_numero = workbook.add_format({
+            "font_name": "Calibri",
+            "font_size": 10,
             "num_format": "#,##0",
             "border": 1,
+            "border_color": COLOR_BORDE,
             "align": "center",
             "valign": "vcenter"
         })
 
         fmt_num_2 = workbook.add_format({
+            "font_name": "Calibri",
+            "font_size": 10,
             "num_format": "0.00",
             "border": 1,
+            "border_color": COLOR_BORDE,
             "align": "center",
             "valign": "vcenter",
         })
 
         fmt_decimal = workbook.add_format({
+            "font_name": "Calibri",
+            "font_size": 10,
             "num_format": "0.00",
             "border": 1,
+            "border_color": COLOR_BORDE,
             "align": "center",
             "valign": "vcenter"
         })
 
         fmt_decimal_gris = workbook.add_format({
+            "font_name": "Calibri",
+            "font_size": 10,
+            "font_color": COLOR_BLANCO,
+            "bg_color": COLOR_PAMPA_NORTE,
             "num_format": "0.00",
-            "border": 1,
+            "border": 2,
+            "border_color": COLOR_BORDE,
             "align": "center",
             "valign": "vcenter",
-            "bg_color": "#F2F2F2",
         })
 
         fmt_porcentaje = workbook.add_format({
+            "font_name": "Calibri",
+            "font_size": 10,
             "num_format": "0.00",
             "border": 1,
+            "border_color": COLOR_BORDE,
             "align": "center",
             "valign": "vcenter"
         })
@@ -2333,9 +2613,9 @@ def export_reporte_turno_estilo_leyes_finos(
         # ============================================================
         # ENCABEZADO INSTITUCIONAL
         # ============================================================
-        worksheet.merge_range("G2:AM2", "Superintendencia de Medición y Reconciliación", fmt_titulo)
-        worksheet.merge_range("G3:AM3", "Gerencia de Planificación de la Producción", fmt_subtitulo)
-        worksheet.merge_range("G4:AM4", "Minerals Americas / Pampa Norte / Spence", fmt_subtitulo)
+        worksheet.merge_range("H4:T4", "Superintendencia de Medición y Reconciliación", fmt_titulo)
+        worksheet.merge_range("H5:T5", "Gerencia de Planificación de la Producción", fmt_subtitulo)
+        worksheet.merge_range("H6:T6", "Minerals Americas / Pampa Norte / Spence", fmt_subtitulo)
 
         # ============================================================
         # ENCABEZADOS TIPO PLANTILLA
@@ -2381,7 +2661,7 @@ def export_reporte_turno_estilo_leyes_finos(
         worksheet.write("R22", "Programa", fmt_header)
         worksheet.write("S22", "Plan", fmt_header)
 
-        worksheet.merge_range("T21:V21", "Solubilidad", fmt_header)
+        worksheet.merge_range("T21:V21", "Solubilidad %", fmt_header)
         worksheet.write("T22", "Real", fmt_header)
         worksheet.write("U22", "Programa", fmt_header)
         worksheet.write("V22", "Plan", fmt_header)
@@ -2391,7 +2671,7 @@ def export_reporte_turno_estilo_leyes_finos(
         worksheet.write("X22", "Programa", fmt_header)
         worksheet.write("Y22", "Plan", fmt_header)
 
-        worksheet.write("Z21", "CuFe (%)", fmt_header)
+        worksheet.write("Z21", "CuFe", fmt_header)
         worksheet.write("AA21", "FeT (%)", fmt_header)
         worksheet.write("AB21", "FeS (%)", fmt_header)
         worksheet.write("AC21", "Consumo de Ácido (kg/ton)", fmt_header)
@@ -2435,19 +2715,14 @@ def export_reporte_turno_estilo_leyes_finos(
         ]
 
         columnas_grises = [
-            "Semana",
             "Fecha",
-            "Campania",
-            "Material",
-            "Modulo",
-            "Avance",
         ]
 
         def formato_columna(col_name):
             if col_name == "Fecha":
                 return fmt_fecha
             if col_name == "Avance":
-                return fmt_decimal_gris
+                return fmt_decimal
             if col_name in columnas_numero_0:
                 return fmt_numero
             if col_name in columnas_porcentaje:
@@ -2615,7 +2890,7 @@ def export_reporte_turno_estilo_leyes_finos(
                 if col_name in ["Fecha_Turno", "Turno_excel", "Muestra_Quimica", "Muestra_Fisica"]:
                     escribir_valor(excel_row, excel_col, col_name, value, fmt_texto)
                 elif col_name == "Avance":
-                    escribir_valor(excel_row, excel_col, col_name, value, fmt_decimal_gris)
+                    escribir_valor(excel_row, excel_col, col_name, value, fmt_decimal)
                 elif col_name in columnas_grises:
                     escribir_valor(excel_row, excel_col, col_name, value, fmt_texto_gris)
                 else:
@@ -2624,44 +2899,17 @@ def export_reporte_turno_estilo_leyes_finos(
         # ============================================================
         # FORMATO GENERAL
         # ============================================================
-        worksheet.set_column("A:A", 4)
-        worksheet.set_column("B:B", 4)
-        worksheet.set_column("C:C", 18)
-        worksheet.set_column("D:D", 11)
-        worksheet.set_column("E:E", 13)
-        worksheet.set_column("F:F", 13)
-        worksheet.set_column("G:G", 13)
-        worksheet.set_column("H:H", 11)
+        _aplicar_dimensiones_oficiales_torre(worksheet, con_turno=True)
 
-        worksheet.set_column("I:J", 13)
-        worksheet.set_column("K:M", 9)
-        worksheet.set_column("L:W", 11)
-        worksheet.set_column("X:AA", 12)
-        worksheet.set_column("AB:AB", 12)
-        worksheet.set_column("AC:AC", 23)
-        worksheet.set_column("AD:AF", 12)
-        worksheet.set_column("AG:AI", 12)
-        worksheet.set_column("AJ:AK", 15)
-        worksheet.set_column("AL:AM", 15)
-        worksheet.set_column("AN:AO", 18)
-        worksheet.set_column("AP:AP", 3)
-        
-        # Espacio superior para logo y encabezado institucional
-        worksheet.set_row(0, 42)
-        worksheet.set_row(1, 42)
-        worksheet.set_row(2, 28)
-        worksheet.set_row(3, 24)
-        worksheet.set_row(4, 24)
-        worksheet.set_row(5, 24)
-
-        worksheet.set_row(18, 22)
-        worksheet.set_row(19, 22)
-        worksheet.set_row(20, 28)
-        worksheet.set_row(21, 38)
+        worksheet.set_row(17, 14.7)
+        worksheet.set_row(18, 21)
+        worksheet.set_row(19, 21.75)
+        worksheet.set_row(20, 46.5)
+        worksheet.set_row(21, 26.1)
 
         # Alto de filas de datos
         for r in range(fila_data, fila_data + len(df_export)):
-            worksheet.set_row(r, 20)
+            worksheet.set_row(r, 15)
 
         last_row = fila_data + len(df_export) - 1
         last_col = len(columnas_finales) - 1 + col_offset
@@ -2683,6 +2931,7 @@ def export_reporte_turno_estilo_leyes_finos(
 
         # Orientación y ajuste a página
         worksheet.set_landscape()
+        worksheet.set_paper(8)
         worksheet.fit_to_pages(1, 0)
 
         # Definir área de impresión considerando logo + tabla
@@ -2740,4 +2989,5 @@ def export_reporte_turno_estilo_leyes_finos(
             agregar_hoja_generador_reporte(
                 writer=writer,
                 df_diario=df_generador,
+                df_turno_resumen=df_export,
             )

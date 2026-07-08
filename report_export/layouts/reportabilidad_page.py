@@ -84,6 +84,19 @@ def _report_card(title, description, tipo):
             ], id={"type": "report-pdf-btn", "tipo": f"{tipo}_fisico"},
                className="rp-btn-pdf", n_clicks=0),
         ]
+    elif tipo == "reporte_turno":
+        botones_pdf = [
+            dbc.Button([
+                html.I(className="bi bi-file-earmark-pdf me-2"),
+                "PDF Reporte por Turno",
+            ], id={"type": "report-pdf-btn", "tipo": "reporte_turno_turno"},
+               className="rp-btn-pdf", n_clicks=0),
+            dbc.Button([
+                html.I(className="bi bi-file-earmark-pdf me-2"),
+                "PDF Generador Reporte",
+            ], id={"type": "report-pdf-btn", "tipo": "reporte_turno_generador"},
+               className="rp-btn-pdf", n_clicks=0),
+        ]
     else:
         botones_pdf = [
             dbc.Button([

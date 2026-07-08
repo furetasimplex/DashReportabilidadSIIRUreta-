@@ -37,7 +37,6 @@ from report_export.report_export import (
 )
 from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
 from report_export.pdf_generator import (
-    generar_pdf_reporte_turno,
     generar_pdf_datos_conciliados,
 )
 from report_export.xlsx_to_pdf import (
@@ -2931,7 +2930,7 @@ def _agregar_hoja_mensual_torres(
 
     ws.merge_cells("C5:M7")
     ws["C5"] = (
-        "Muestras representativas y no representativas de torres de muestreo - "
+        "Muestras representativas de torres de muestreo - "
         f"Muestra {tipo_titulo} - {mes_texto}"
     )
     ws["C5"].font = font_titulo
@@ -2940,7 +2939,7 @@ def _agregar_hoja_mensual_torres(
     ws.merge_cells("J2:L4")
     ws["J2"] = (
         "Superintendencia de Medición y Reconciliación\n"
-        "Gerencia de Planificación de la Producción"
+        "Gerencia Planificación Integrada"
     )
     ws["J2"].font = Font(
         name="Arial",
@@ -2957,8 +2956,8 @@ def _agregar_hoja_mensual_torres(
     )
     if os.path.isfile(logo_path):
         logo = OpenpyxlImage(logo_path)
-        logo.width = 55
-        logo.height = 22
+        logo.width = 96
+        logo.height = 39
         ws.add_image(logo, "M2")
 
     # ------------------------------------------------------------
@@ -3044,19 +3043,19 @@ def _agregar_hoja_mensual_torres(
         (
             "TM1",
             16,
-            "2.- Torre de muestreo #1: Distribución porcentual de muestras representativas y no representativas.",
+            "2.- Torre de muestreo #1: Distribución porcentual de muestras obtenidas y perdidas.",
             "Torre #1",
         ),
         (
             "TM2",
             27,
-            "3.- Torre de muestreo #2: Distribución porcentual de muestras representativas y no representativas.",
+            "3.- Torre de muestreo #2: Distribución porcentual de muestras obtenidas y perdidas.",
             "Torre #2",
         ),
         (
             "COMBINADO",
             38,
-            "4.- Sistema TM1 y TM2: Distribución porcentual de muestras representativas y no representativas.",
+            "4.- Sistema TM1 y TM2: Distribución porcentual de muestras obtenidas y perdidas.",
             "Torre #1 y #2",
         ),
     ]
@@ -3077,19 +3076,19 @@ def _agregar_hoja_mensual_torres(
             "TM1": [
                 f"{_MESES_NOMBRE_TORRES[fecha_base.month]} {fecha_base.year}",
                 "Muestras representativas TM1",
-                "Muestras no representativas TM1",
+                "Muestras perdidas por Falla TM 1",
                 "Total TM1",
             ],
             "TM2": [
                 f"{_MESES_NOMBRE_TORRES[fecha_base.month]} {fecha_base.year}",
                 "Muestras representativas TM2",
-                "Muestras no representativas TM2",
+                "Muestras perdidas por Falla TM 2",
                 "Total TM2",
             ],
             "COMBINADO": [
                 f"{_MESES_NOMBRE_TORRES[fecha_base.month]} {fecha_base.year}",
                 "Muestras representativas TM1+TM2",
-                "Muestras no representativas TM1+TM2",
+                "Muestras perdidas por Falla TM1+TM2",
                 "Total TM1+TM2",
             ],
         }
@@ -3929,6 +3928,37 @@ def _pdf_representatividad_desde_xlsx(
         f"{fecha.strftime('%d-%m-%Y')}.pdf"
     )
     return pdf_bytes, filename
+
+
+def _build_xlsx_pdf_reporte_torre(
+    xlsx_bytes: bytes,
+    nombre_hoja: str,
+) -> bytes:
+    """Deja una sola hoja del reporte de torres lista para convertir a PDF."""
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(xlsx_bytes))
+    if nombre_hoja not in wb.sheetnames:
+        raise RuntimeError(f"El Excel no contiene la hoja '{nombre_hoja}'.")
+
+    for nombre_otro in list(wb.sheetnames):
+        if nombre_otro != nombre_hoja:
+            wb.remove(wb[nombre_otro])
+
+    ws = wb[nombre_hoja]
+    wb.active = 0
+    ws.sheet_state = "visible"
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.paperSize = ws.PAPERSIZE_A3
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.print_options.horizontalCentered = True
+    ws.sheet_view.showGridLines = False
+
+    output = io.BytesIO()
+    wb.save(output)
+    return output.getvalue()
 
 
 def _prefijo_mes_desde_nombres_hojas(nombres: list[str]) -> str:
@@ -5573,21 +5603,54 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
             )
 
         # ── REPORTE POR TURNO ─────────────────────────────────────────
-        if tipo == "reporte_turno":
+        if tipo in {"reporte_turno", "reporte_turno_turno", "reporte_turno_generador"}:
             print(f"[PDF] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
-            df = fetch_reporte_turno_cache(start_date=ini_d, end_date=fin_sql_exclusivo)
-            print(f"[PDF] reporte_turno rows={len(df)}")
-            if df.empty:
+            df_turno = fetch_reporte_turno_cache(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo,
+            )
+            print(f"[PDF] reporte_turno rows={len(df_turno)}")
+            if df_turno.empty:
                 return no_update, "Sin datos para el rango seleccionado.", _done
 
-            pdf_bytes = generar_pdf_reporte_turno(df, f_ini, f_fin)
-            print(f"[PDF] reporte_turno pdf size={len(pdf_bytes)} bytes")
+            df_generador = fetch_generador_reporte_diario(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo,
+            )
+            print(f"[PDF] generador rows={len(df_generador)}")
+
+            output = io.BytesIO()
+            export_reporte_turno_estilo_leyes_finos(
+                df=df_turno,
+                output=output,
+                df_generador=df_generador,
+            )
+            nombre_hoja = (
+                "Generador Reporte"
+                if tipo == "reporte_turno_generador"
+                else "Reporte por Turno"
+            )
+            xlsx_hoja = _build_xlsx_pdf_reporte_torre(
+                output.getvalue(),
+                nombre_hoja,
+            )
+            pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_hoja)
+            print(f"[PDF] {nombre_hoja} pdf size={len(pdf_bytes)} bytes")
+            sufijo = (
+                "Generador_Reporte"
+                if nombre_hoja == "Generador Reporte"
+                else "Reporte_por_Turno"
+            )
             filename = (
-                f"Analisis_Torres_Turno_"
+                f"Analisis_Torres_{sufijo}_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
             )
-            return _enviar_descarga(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
+            status = (
+                f"PDF generado: {filename} "
+                f"(turno={len(df_turno)}, generador={len(df_generador)})"
+            )
+            return _enviar_descarga(pdf_bytes, filename), status, _done
 
         # ── PRODUCCIÓN DIARIA / DATOS CONCILIADOS ─────────────────────
         if tipo == "prod":
