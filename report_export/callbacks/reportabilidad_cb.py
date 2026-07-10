@@ -5466,7 +5466,11 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             if df.empty:
                 return no_update, "Sin datos para exportar en el rango seleccionado.", _done
 
-            template_path = _find_plantilla_propuesta()
+            template_path = (
+                TEMPLATE_XLSX_PATH
+                if os.path.isfile(TEMPLATE_XLSX_PATH)
+                else _find_plantilla_propuesta()
+            )
             if os.path.isfile(template_path):
                 xbytes = export_datos_conciliados_to_template(df, template_path)
             else:

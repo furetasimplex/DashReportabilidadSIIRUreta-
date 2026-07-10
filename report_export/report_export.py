@@ -52,7 +52,12 @@ def _aplicar_dimensiones_oficiales_torre(worksheet, con_turno=False):
 # Columnas exactas para el reporte "Producción Diaria" / plantilla Datos conciliados
 COLUMNAS_DATOS_CONCILIADOS = [
     "Fecha", "Chancado_TMS_Real", "Humedad_Turno_A", "Humedad_Turno_B", "Humedad_promedio_dia",
-    "Sal_turno_A", "Sal_Turno_B", "Sal_promedio_dia",
+    "Sal_turno_A", "Sal_Turno_B", "Sal_promedio_dia", "SRR_TMS_Turno_A", 
+	"SRR_TMS_Turno_B", 
+	"SRR_TMS_promedio_dia", 
+	"SRR_TMS_Plan", 
+	"Ley_CuT_Real_srr", 
+	"Ley_CuT_Plan_srr",
     "Apilado_TMH_turno_A", "Apilado_TMH_turno_B", "Apilado_TMH_promedio_dia",
     "Apilado_TMS_Real", "Apilado_TMS_Plan", "Campana_apilado", "Modulo_apilado", "Avance_apilado",
     "Ley_CuT_Real", "Ley_CuT_Plan", "Cobre_fino_Apilado_Real", "Cobre_fino_Apilado_Plan",
