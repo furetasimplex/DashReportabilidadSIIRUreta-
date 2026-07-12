@@ -160,6 +160,30 @@ def fetch_representatividad_torres_report(start_date: date, end_date: date) -> p
             df = pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as e:
         raise RuntimeError(f"Error al leer representatividad de torres: {e}") from e
+    # El SP actual ya entrega SRR con estos nombres canónicos. Solo se completa
+    # desde la vista oficial si una instalación histórica aún no los expone;
+    # así se evitan colisiones pandas (_x/_y) que oculten los valores reales.
+    mapa_srr = {
+        "Rep. SRR TA Qui.": "SRR_TurnoA_Quimico",
+        "Rep. SRR TA Fis.": "SRR_TurnoA_Fisico",
+        "Rep. SRR TB Qui.": "SRR_TurnoB_Quimico",
+        "Rep. SRR TB Fis.": "SRR_TurnoB_Fisico",
+    }
+    faltantes = {
+        origen: destino
+        for origen, destino in mapa_srr.items()
+        if destino not in df.columns
+    }
+    if not faltantes:
+        return df
+
+    bd_srr = fetch_bd_ton_report(start_date, end_date)
+    disponibles = ["Fecha", *[col for col in faltantes if col in bd_srr.columns]]
+    if len(disponibles) > 1:
+        srr = bd_srr[disponibles].rename(columns={"Fecha": "Dia", **faltantes})
+        df["Dia"] = pd.to_datetime(df["Dia"], errors="coerce").dt.normalize()
+        srr["Dia"] = pd.to_datetime(srr["Dia"], errors="coerce").dt.normalize()
+        df = df.merge(srr, on="Dia", how="left")
     return df
 
 
@@ -249,6 +273,8 @@ def fetch_bd_ton_report(
         [Apilado_TMH_CV08_TB] AS [Apilado TMH CV-08 TB],
         [Apilado_TMH_CV108_TA] AS [Apilado TMH CV-108 TA],
         [Apilado_TMH_CV108_TB] AS [Apilado TMH CV-108 TB],
+        [Apilado_TMH_CV01_TA] AS [Apilado TMH CV-01 TA],
+        [Apilado_TMH_CV01_TB] AS [Apilado TMH CV-01 TB],
         [Rep_TM1_TA_Qui] AS [Rep. TM1 TA Qui.],
         [Rep_TM1_TA_Fis] AS [Rep. TM1 TA Fis.],
         [Rep_TM1_TB_Qui] AS [Rep. TM1 TB Qui.],
@@ -257,6 +283,10 @@ def fetch_bd_ton_report(
         [Rep_TM2_TA_Fis] AS [Rep. TM2 TA Fis.],
         [Rep_TM2_TB_Qui] AS [Rep. TM2 TB Qui.],
         [Rep_TM2_TB_Fis] AS [Rep. TM2 TB Fis.],
+        [Rep_SRR_TA_Qui] AS [Rep. SRR TA Qui.],
+        [Rep_SRR_TA_Fis] AS [Rep. SRR TA Fis.],
+        [Rep_SRR_TB_Qui] AS [Rep. SRR TB Qui.],
+        [Rep_SRR_TB_Fis] AS [Rep. SRR TB Fis.],
         [Muestra_representativa_TM1_TA]
             AS [Muestra representativa TM1 TA],
         [Muestra_representativa_TM1_TB]
@@ -269,12 +299,18 @@ def fetch_bd_ton_report(
         [FISICO_TM1_TB] AS [FISICO TM1 TB],
         [FISICO_TM2_TA] AS [FISICO TM2 TA],
         [FISICO_TM2_TB] AS [FISICO TM2 TB],
+        [Muestra_representativa_TM3_TA] AS [Muestra representativa TM3 TA],
+        [Muestra_representativa_TM3_TB] AS [Muestra representativa TM3 TB],
+        [FISICO_TM3_TA] AS [FISICO TM3 TA],
+        [FISICO_TM3_TB] AS [FISICO TM3 TB],
         [Evaluable_TM1_TA],
         [Evaluable_TM1_TB],
         [Evaluable_TM2_TA],
         [Evaluable_TM2_TB],
         [Evaluable_Combinado_TA],
         [Evaluable_Combinado_TB],
+        [Evaluable_TM3_TA],
+        [Evaluable_TM3_TB],
         [Fuente_Evaluabilidad]
     FROM inventar_SpcHidr.v_bd_ton_reportabilidad
     WHERE [Fecha] >= ?
@@ -289,6 +325,8 @@ def fetch_bd_ton_report(
         [Apilado_TMH_CV08_TB] AS [Apilado TMH CV-08 TB],
         [Apilado_TMH_CV108_TA] AS [Apilado TMH CV-108 TA],
         [Apilado_TMH_CV108_TB] AS [Apilado TMH CV-108 TB],
+        [Apilado_TMH_CV01_TA] AS [Apilado TMH CV-01 TA],
+        [Apilado_TMH_CV01_TB] AS [Apilado TMH CV-01 TB],
         [Rep_TM1_TA_Qui] AS [Rep. TM1 TA Qui.],
         [Rep_TM1_TA_Fis] AS [Rep. TM1 TA Fis.],
         [Rep_TM1_TB_Qui] AS [Rep. TM1 TB Qui.],
@@ -297,6 +335,10 @@ def fetch_bd_ton_report(
         [Rep_TM2_TA_Fis] AS [Rep. TM2 TA Fis.],
         [Rep_TM2_TB_Qui] AS [Rep. TM2 TB Qui.],
         [Rep_TM2_TB_Fis] AS [Rep. TM2 TB Fis.],
+        [Rep_SRR_TA_Qui] AS [Rep. SRR TA Qui.],
+        [Rep_SRR_TA_Fis] AS [Rep. SRR TA Fis.],
+        [Rep_SRR_TB_Qui] AS [Rep. SRR TB Qui.],
+        [Rep_SRR_TB_Fis] AS [Rep. SRR TB Fis.],
         [Muestra_representativa_TM1_TA]
             AS [Muestra representativa TM1 TA],
         [Muestra_representativa_TM1_TB]
@@ -309,12 +351,18 @@ def fetch_bd_ton_report(
         [FISICO_TM1_TB] AS [FISICO TM1 TB],
         [FISICO_TM2_TA] AS [FISICO TM2 TA],
         [FISICO_TM2_TB] AS [FISICO TM2 TB],
+        [Muestra_representativa_TM3_TA] AS [Muestra representativa TM3 TA],
+        [Muestra_representativa_TM3_TB] AS [Muestra representativa TM3 TB],
+        [FISICO_TM3_TA] AS [FISICO TM3 TA],
+        [FISICO_TM3_TB] AS [FISICO TM3 TB],
         [Evaluable_TM1_TA],
         [Evaluable_TM1_TB],
         [Evaluable_TM2_TA],
         [Evaluable_TM2_TB],
         [Evaluable_Combinado_TA],
         [Evaluable_Combinado_TB],
+        [Evaluable_TM3_TA],
+        [Evaluable_TM3_TB],
         [Fuente_Evaluabilidad]
     FROM inventar_SpcHidr.v_bd_ton_reportabilidad
     WHERE [Fecha] >= :start
@@ -718,6 +766,17 @@ RTO_DETALLE_COLUMNAS = (
     "Rep_Turno_Fisico", "TM1_Activo", "TM2_Activo",
     "Comentario_TM1_Quimico", "Comentario_TM2_Quimico",
     "Comentario_TM1_Fisico", "Comentario_TM2_Fisico",
+    "TMH_CV01", "Rep_TM3_Quimico", "Rep_TM3_Fisico", "TM3_Activo",
+    "Comentario_TM3_Quimico", "Comentario_TM3_Fisico",
+)
+
+RTO_TM3_COLUMNAS_OBLIGATORIAS = (
+    "TMH_CV01",
+    "TM3_Activo",
+    "Rep_TM3_Quimico",
+    "Rep_TM3_Fisico",
+    "Comentario_TM3_Quimico",
+    "Comentario_TM3_Fisico",
 )
 
 
@@ -897,6 +956,67 @@ def _siguiente_id_reporte_torre_oficial(conn) -> int:
     return int(conn.execute(sql).scalar() or 1)
 
 
+def _valor_parametro_sql(valor):
+    """Convierte escalares pandas/numpy nulos a NULL DBAPI real."""
+    if valor is None:
+        return None
+    try:
+        if pd.isna(valor):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if hasattr(valor, "item"):
+        try:
+            return valor.item()
+        except (TypeError, ValueError):
+            pass
+    return valor
+
+
+def _nullable_int_sql(valor):
+    """Convierte un entero nullable de pandas en 1, 0 o None para DBAPI."""
+    if valor is None:
+        return None
+
+    try:
+        if pd.isna(valor):
+            return None
+    except (TypeError, ValueError):
+        pass
+
+    return int(valor)
+
+
+def _resumen_parametros_tm3(registros: list) -> dict:
+    """Resume los valores reales que se enviarán al INSERT de detalle."""
+    activos = [registro.get("TM3_Activo") for registro in registros]
+    invalidos = [
+        valor for valor in activos
+        if valor is not None and valor not in (0, 1, 0.0, 1.0)
+    ]
+    if invalidos:
+        raise RuntimeError(
+            f"TM3_Activo contiene valores distintos de 0, 1 o NULL: {invalidos}"
+        )
+    return {
+        "filas": len(registros),
+        "TMH_CV01_no_nulo": sum(
+            registro.get("TMH_CV01") is not None for registro in registros
+        ),
+        "TM3_Activo_1": sum(valor in (1, 1.0) for valor in activos),
+        "TM3_Activo_0": sum(valor in (0, 0.0) for valor in activos),
+        "TM3_Activo_NULL": sum(valor is None for valor in activos),
+        "Rep_TM3_Quimico_no_nulo": sum(
+            registro.get("Rep_TM3_Quimico") is not None
+            for registro in registros
+        ),
+        "Rep_TM3_Fisico_no_nulo": sum(
+            registro.get("Rep_TM3_Fisico") is not None
+            for registro in registros
+        ),
+    }
+
+
 def _registros_detalle_torre_oficial(df_guardar: pd.DataFrame) -> list:
     registros = []
     for _, fila in df_guardar.iterrows():
@@ -908,10 +1028,12 @@ def _registros_detalle_torre_oficial(df_guardar: pd.DataFrame) -> list:
         for col in RTO_DETALLE_COLUMNAS:
             if col in ("Fecha", "Turno"):
                 continue
-            valor = fila.get(col)
-            if isinstance(valor, float) and pd.isna(valor):
-                valor = None
-            registro[col] = valor
+            if col == "TM3_Activo":
+                registro[col] = _nullable_int_sql(
+                    fila.get("TM3_Activo")
+                )
+            else:
+                registro[col] = _valor_parametro_sql(fila.get(col))
         registros.append(registro)
     return registros
 
@@ -932,6 +1054,15 @@ def write_reporte_torre_oficial(
     if not paquete:
         raise ValueError("Paquete de snapshot vacío.")
 
+    faltantes_tm3 = [
+        columna for columna in RTO_TM3_COLUMNAS_OBLIGATORIAS
+        if columna not in df_detalle.columns
+    ]
+    if faltantes_tm3:
+        raise RuntimeError(
+            f"No se puede publicar: faltan columnas TM3 {faltantes_tm3}"
+        )
+
     periodo_inicio, periodo_fin, periodo_mes = normalizar_periodo_mes(
         periodo_inicio,
         periodo_fin,
@@ -943,6 +1074,8 @@ def write_reporte_torre_oficial(
     registros_detalle = _registros_detalle_torre_oficial(df_guardar)
     if not registros_detalle:
         raise ValueError("No hay filas válidas para guardar.")
+    resumen_tm3 = _resumen_parametros_tm3(registros_detalle)
+    print(f"[RTO] Parámetros INSERT detalle TM3: {resumen_tm3}")
 
     fecha_corte = paquete.get("fecha_corte_operacional")
     if fecha_corte is None:
@@ -976,6 +1109,8 @@ def write_reporte_torre_oficial(
             TM1_Activo, TM2_Activo,
             Comentario_TM1_Quimico, Comentario_TM2_Quimico,
             Comentario_TM1_Fisico, Comentario_TM2_Fisico
+            , TMH_CV01, Rep_TM3_Quimico, Rep_TM3_Fisico, TM3_Activo
+            , Comentario_TM3_Quimico, Comentario_TM3_Fisico
         ) VALUES (
             :id_reporte, :Fecha, :Turno, :Semana, :Pad,
             :TMH_CV08, :Rep_TM1_Quimico, :TMH_CV108, :Rep_TM2_Quimico, :Rep_Turno_Quimico,
@@ -983,6 +1118,8 @@ def write_reporte_torre_oficial(
             :TM1_Activo, :TM2_Activo,
             :Comentario_TM1_Quimico, :Comentario_TM2_Quimico,
             :Comentario_TM1_Fisico, :Comentario_TM2_Fisico
+            , :TMH_CV01, :Rep_TM3_Quimico, :Rep_TM3_Fisico, :TM3_Activo
+            , :Comentario_TM3_Quimico, :Comentario_TM3_Fisico
         )
     """)
 
@@ -1208,12 +1345,14 @@ def comentarios_mapa_desde_dataframe(df: pd.DataFrame) -> dict:
             "Comentario_TM2_Quimico": fila.get("Comentario_TM2_Quimico"),
             "Comentario_TM1_Fisico": fila.get("Comentario_TM1_Fisico"),
             "Comentario_TM2_Fisico": fila.get("Comentario_TM2_Fisico"),
+            "Comentario_TM3_Quimico": fila.get("Comentario_TM3_Quimico"),
+            "Comentario_TM3_Fisico": fila.get("Comentario_TM3_Fisico"),
         }
     return mapa
 
 
 def comentario_torres_para_tipo(mapa: dict, fecha, turno: str, torre: str, tipo: str):
-    """Devuelve comentario para export (TM1/TM2 + quimico/fisico)."""
+    """Devuelve comentario para export (TM1/TM2/TM3 + quimico/fisico)."""
     if not mapa:
         return None
     fecha_norm = pd.to_datetime(fecha, errors="coerce")
@@ -1225,7 +1364,7 @@ def comentario_torres_para_tipo(mapa: dict, fecha, turno: str, torre: str, tipo:
         return None
     tipo_norm = str(tipo).strip().lower()
     torre_norm = str(torre).strip().upper()
-    if torre_norm not in {"TM1", "TM2"}:
+    if torre_norm not in {"TM1", "TM2", "TM3"}:
         return None
     sufijo = "Quimico" if tipo_norm == "quimico" else "Fisico"
     valor = datos.get(f"Comentario_{torre_norm}_{sufijo}")
@@ -1282,27 +1421,37 @@ def _merge_comentarios_representatividad(
         "Comentario_TM2_Quimico",
         "Comentario_TM1_Fisico",
         "Comentario_TM2_Fisico",
+        "Comentario_TM3_Quimico",
+        "Comentario_TM3_Fisico",
     ]
     for col in cols_com:
         if col not in df.columns:
             df[col] = None
 
-    if not comentarios_previos:
-        return df
+    def _texto(valor):
+        if valor is None:
+            return None
+        try:
+            if pd.isna(valor):
+                return None
+        except (TypeError, ValueError):
+            pass
+        texto = str(valor).strip()
+        return texto or None
 
     for idx, fila in df.iterrows():
         fecha = pd.to_datetime(fila.get("Fecha"), errors="coerce")
         turno = _normalizar_turno_rep(fila.get("Turno"))
         if pd.isna(fecha) or turno not in {"TA", "TB"}:
             continue
-        prev = comentarios_previos.get((fecha.normalize(), turno), {})
+        prev = (comentarios_previos or {}).get(
+            (fecha.normalize(), turno),
+            {},
+        )
         for col in cols_com:
-            actual = str(fila.get(col) or "").strip()
-            if actual:
-                continue
-            prev_val = prev.get(col)
-            if prev_val is not None and str(prev_val).strip():
-                df.at[idx, col] = str(prev_val).strip()
+            actual = _texto(fila.get(col))
+            previo = _texto(prev.get(col))
+            df.at[idx, col] = actual if actual is not None else previo
     return df
 
 
