@@ -2790,6 +2790,10 @@ def _agregar_grafico_gestion_fy(
     from openpyxl.chart.shapes import GraphicalProperties
     from openpyxl.chart.text import RichText
     from openpyxl.drawing.geometry import PresetGeometry2D
+    from openpyxl.drawing.spreadsheet_drawing import (
+        AnchorMarker,
+        TwoCellAnchor,
+    )
     from openpyxl.drawing.text import (
         CharacterProperties,
         Paragraph,
@@ -2861,8 +2865,8 @@ def _agregar_grafico_gestion_fy(
         for columna, valor in enumerate(valores, start=20):
             ws.cell(fila_tabla + offset, columna, valor)
 
-        ws.cell(fila_tabla + offset, 23).number_format = "0%"
-        ws.cell(fila_tabla + offset, 24).number_format = "0%"
+        ws.cell(fila_tabla + offset, 23).number_format = "0.0%"
+        ws.cell(fila_tabla + offset, 24).number_format = "0.0%"
 
         etiquetas.append(etiqueta)
         valores_representatividad.append(representatividad)
@@ -2967,7 +2971,7 @@ def _agregar_grafico_gestion_fy(
     # Caché numérica explícita para que Excel, LibreOffice y los
     # previsualizadores rendericen el gráfico sin depender de recálculo.
     chart.series[0].val.numRef.numCache = NumData(
-        formatCode="0%",
+        formatCode="0.0%",
         ptCount=len(valores_representatividad),
         pt=[
             NumVal(idx=indice, v=valor)
@@ -2982,7 +2986,7 @@ def _agregar_grafico_gestion_fy(
     chart.dLbls.showSerName = False
     chart.dLbls.showPercent = False
     chart.dLbls.showBubbleSize = False
-    chart.dLbls.numFmt = "0%"
+    chart.dLbls.numFmt = "0.0%"
     chart.dLbls.position = "ctr"
     chart.dLbls.txPr = RichText(
         bodyPr=RichTextProperties(anchor="ctr"),
@@ -3080,7 +3084,17 @@ def _agregar_grafico_gestion_fy(
     target_chart.y_axis.delete = False
     chart += target_chart
 
-    ws.add_chart(chart, f"C{fila_inicio + 2}")
+    # Mantener separados el encabezado visible, los datos auxiliares y el
+    # objeto gráfico. Los marcadores son base cero: para un título en la
+    # fila 122, este anclaje ocupa visualmente C126:M142 y deja libre la
+    # fila 125. El marcador final cae en el borde inicial de N para incluir
+    # todo el ancho de M sin aumentar la altura.
+    chart.anchor = TwoCellAnchor(
+        editAs="twoCell",
+        _from=AnchorMarker(col=2, row=fila_inicio + 3),
+        to=AnchorMarker(col=13, row=fila_inicio + 19),
+    )
+    ws.add_chart(chart)
 
     # La tabla auxiliar sigue oculta, pero el gráfico puede leerla porque
     # visible_cells_only=False.
@@ -3089,7 +3103,7 @@ def _agregar_grafico_gestion_fy(
             ws.cell(1, columna).column_letter
         ].hidden = True
 
-    fila_fin_impresion = fila_inicio + 34
+    fila_fin_impresion = fila_inicio + 20
     ws.print_area = f"A1:M{fila_fin_impresion}"
 
 
@@ -3620,8 +3634,8 @@ def _agregar_hoja_mensual_torres(
                 fila_aux_grafico + indice_aux, 26,
                 float(fila_resumen["Pct_No_Representativos"] or 0.0),
             )
-            ws.cell(fila_aux_grafico + indice_aux, 25).number_format = "0%"
-            ws.cell(fila_aux_grafico + indice_aux, 26).number_format = "0%"
+            ws.cell(fila_aux_grafico + indice_aux, 25).number_format = "0.0%"
+            ws.cell(fila_aux_grafico + indice_aux, 26).number_format = "0.0%"
 
         chart = BarChart()
         chart.visible_cells_only = False
@@ -3714,7 +3728,7 @@ def _agregar_hoja_mensual_torres(
         ]
         for indice_serie, valores_cache in enumerate(valores_series):
             chart.series[indice_serie].val.numRef.numCache = NumData(
-                formatCode="0%",
+                formatCode="0.0%",
                 ptCount=len(valores_cache),
                 pt=[
                     NumVal(idx=indice, v=valor)
@@ -3759,7 +3773,7 @@ def _agregar_hoja_mensual_torres(
         # oficial para evitar superposición entre ambos elementos.
         for serie in chart.series:
             serie.dLbls = DataLabelList()
-            serie.dLbls.numFmt = "0%"
+            serie.dLbls.numFmt = "0.0%"
             serie.dLbls.showLegendKey = False
             serie.dLbls.showVal = True
             serie.dLbls.showCatName = False
@@ -4129,10 +4143,10 @@ def _agregar_hoja_mensual_torres(
                 "para construir el gráfico."
             )
 
-        # El gráfico FY se separa de la tabla detalle (sección 5) con varias
-        # filas en blanco para que el título "6.-" y el gráfico no rocen la
-        # última fila de datos.
-        fila_grafico = max(ultima_fila, 85) + 6
+        # En el formato mensual de julio la sección FY comienza en la fila
+        # 122. Si el detalle creciera, conserva al menos tres filas completas
+        # entre la última fila de datos y el título de la sección.
+        fila_grafico = max(122, ultima_fila + 4)
         _agregar_grafico_gestion_fy(
             ws=ws,
             df_gestion_fy=gestion_fy_normalizada,
@@ -4196,8 +4210,17 @@ def _agregar_hoja_mensual_torres(
         "R": 18.0,
     })
 
+    # En A3 vertical la altura de las 142 filas determina la escala. Ampliar
+    # sólo C:M aprovecha mejor el ancho disponible sin alterar alturas,
+    # fuentes, datos ni las columnas auxiliares fuera del área de impresión.
+    columnas_visibles_pdf = set("CDEFGHIJKLM")
+    factor_ancho_pdf = 1.12
     for columna, ancho in anchos.items():
-        ws.column_dimensions[columna].width = ancho
+        ws.column_dimensions[columna].width = (
+            ancho * factor_ancho_pdf
+            if columna in columnas_visibles_pdf
+            else ancho
+        )
 
     # N funciona como separación visual entre el reporte y la auditoría.
     ws.column_dimensions["N"].hidden = True
@@ -4233,14 +4256,19 @@ def _agregar_hoja_mensual_torres(
     ws.sheet_view.zoomScale = 85
     ws.sheet_view.zoomScaleNormal = 85
 
-    ws.page_setup.orientation = "landscape"
+    ws.page_setup.orientation = "portrait"
+    ws.page_setup.paperSize = ws.PAPERSIZE_A3
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 0
-    ws.page_margins.left = 0.25
-    ws.page_margins.right = 0.25
-    ws.page_margins.top = 0.5
-    ws.page_margins.bottom = 0.5
+    ws.page_setup.fitToHeight = 1
+    ws.print_options.horizontalCentered = True
+    ws.print_options.verticalCentered = False
+    ws.page_margins.left = 0.15
+    ws.page_margins.right = 0.15
+    ws.page_margins.top = 0.20
+    ws.page_margins.bottom = 0.20
+    ws.page_margins.header = 0.0
+    ws.page_margins.footer = 0.0
 
     if not incluir_grafico_fy:
         ws.print_area = f"A1:M{ultima_fila}"
@@ -4331,27 +4359,6 @@ def _fetch_fuentes_mensuales_torres(
     }
 
 
-def _ruta_cache_excel_representatividad(fecha_inicio, fecha_fin) -> str:
-    nombre = (
-        "Reporte_Representatividad_Torres_"
-        f"{pd.Timestamp(fecha_inicio).strftime('%Y%m%d')}_"
-        f"{pd.Timestamp(fecha_fin).strftime('%Y%m%d')}.xlsx"
-    )
-    return os.path.join(_REPORT_EXPORT_DIR, "exports", nombre)
-
-
-def _guardar_cache_excel_representatividad(
-    contenido: bytes,
-    fecha_inicio,
-    fecha_fin,
-) -> str:
-    ruta = _ruta_cache_excel_representatividad(fecha_inicio, fecha_fin)
-    os.makedirs(os.path.dirname(ruta), exist_ok=True)
-    with open(ruta, "wb") as archivo:
-        archivo.write(contenido)
-    return ruta
-
-
 def _build_xlsx_pdf_desde_excel(
     xlsx_bytes: bytes,
     tipo_analisis: str,
@@ -4402,6 +4409,13 @@ def _build_xlsx_pdf_desde_excel(
     ws.page_setup.fitToHeight = 1
     ws.print_options.horizontalCentered = True
     ws.print_options.verticalCentered = False
+    if tipo_norm != "srr":
+        ws.page_margins.left = 0.15
+        ws.page_margins.right = 0.15
+        ws.page_margins.top = 0.20
+        ws.page_margins.bottom = 0.20
+        ws.page_margins.header = 0.0
+        ws.page_margins.footer = 0.0
     ws.sheet_view.showGridLines = False
     if not ws.print_area:
         ws.print_area = f"A1:M{ws.max_row}"
@@ -4416,8 +4430,27 @@ def _pdf_representatividad_desde_xlsx(
     xlsx_bytes: bytes,
     tipo_analisis: str,
     fecha_fin,
+    fecha_corte=None,
 ) -> tuple[bytes, str]:
     """Convierte Excel de representatividad a PDF A3 (hoja Químico o Físico)."""
+    metricas = (
+        _validar_workbook_representatividad(
+            xlsx_bytes,
+            fecha_fin,
+            fecha_corte,
+        )
+        if fecha_corte is not None
+        else _inspeccionar_workbook_representatividad(xlsx_bytes, fecha_fin)
+    )
+    print(
+        "[PDF PREVALIDACION]",
+        {
+            "tipo": str(tipo_analisis).lower(),
+            "fecha_fin": str(fecha_fin),
+            "fecha_corte": str(fecha_corte),
+            "metricas": metricas,
+        },
+    )
     xlsx_filtrado, nombre_hoja = _build_xlsx_pdf_desde_excel(
         xlsx_bytes,
         tipo_analisis,
@@ -4873,7 +4906,7 @@ def _agregar_hoja_mensual_srr(
             ws.cell(fila_aux + indice, 26, 0.0 if valores[2] is None else valores[2])
             ws.cell(fila_aux + indice, 27, 0.85)
             for col_aux in (25, 26, 27):
-                ws.cell(fila_aux + indice, col_aux).number_format = "0%"
+                ws.cell(fila_aux + indice, col_aux).number_format = "0.0%"
 
         chart = BarChart()
         chart.type, chart.grouping, chart.overlap = "col", "percentStacked", 100
@@ -4931,7 +4964,7 @@ def _agregar_hoja_mensual_srr(
         ]
         for indice, valores in enumerate(valores_cache):
             chart.series[indice].val.numRef.numCache = NumData(
-                formatCode="0%", ptCount=7,
+                formatCode="0.0%", ptCount=7,
                 pt=[NumVal(idx=i, v=float(v)) for i, v in enumerate(valores)],
             )
         chart.dLbls = DataLabelList()
@@ -4942,7 +4975,7 @@ def _agregar_hoja_mensual_srr(
         chart.dLbls.showLeaderLines = False
         for serie in chart.series:
             serie.dLbls = DataLabelList()
-            serie.dLbls.numFmt = "0%"
+            serie.dLbls.numFmt = "0.0%"
             serie.dLbls.showVal = True
             serie.dLbls.showLegendKey = False
             serie.dLbls.showCatName = False
@@ -5595,12 +5628,134 @@ def _export_representatividad_desde_paquete(
     )
 
 
-def _generar_excel_representatividad_completo(
+def _inspeccionar_workbook_representatividad(
+    xlsx_bytes: bytes,
+    fecha_fin,
+) -> dict:
+    """Lee del XLSX final el corte, filas e indicadores usados por los PDF."""
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(xlsx_bytes), data_only=False)
+    fecha = pd.Timestamp(fecha_fin)
+    prefijo = (
+        f"01_{_MESES_ABR_TORRES[fecha.month]}_"
+        f"{str(fecha.year)[-2:]}"
+    )
+
+    def _hoja(sufijo: str):
+        esperado = f"{prefijo} {sufijo}"
+        candidatos = [
+            nombre for nombre in wb.sheetnames
+            if nombre == esperado or nombre.endswith(f" {sufijo}")
+        ]
+        if not candidatos:
+            raise RuntimeError(f"El workbook no contiene la hoja {sufijo}.")
+        return wb[candidatos[0]]
+
+    def _valor_periodo(ws, fila_inicio: int, periodo: str) -> float:
+        for fila in range(fila_inicio + 2, fila_inicio + 9):
+            if str(ws.cell(fila, 3).value or "").strip() == periodo:
+                return float(ws.cell(fila, 4).value or 0.0)
+        raise RuntimeError(
+            f"No se encontró {periodo} desde la fila {fila_inicio}."
+        )
+
+    def _detalle(ws, fila_inicio: int, fila_fin: int) -> tuple[date | None, int]:
+        fechas = []
+        filas = 0
+        for fila in range(fila_inicio, fila_fin + 1):
+            # La fecha calendario puede existir en filas futuras; Pad distingue
+            # las filas que realmente contienen detalle operacional.
+            if ws.cell(fila, 5).value in (None, ""):
+                continue
+            fecha_valor = pd.to_datetime(
+                ws.cell(fila, 4).value,
+                errors="coerce",
+            )
+            if pd.notna(fecha_valor):
+                fechas.append(fecha_valor.date())
+                filas += 1
+        return (max(fechas) if fechas else None, filas)
+
+    resultado = {}
+    for tipo, sufijo in (("quimico", "Quimico"), ("fisico", "Fisico")):
+        ws = _hoja(sufijo)
+        fecha_max, filas_detalle = _detalle(ws, 57, 121)
+        fy = {}
+        for fila in range(1, ws.max_row + 1):
+            etiqueta = str(ws.cell(fila, 20).value or "").strip()
+            if etiqueta and etiqueta != "Periodo":
+                valor = ws.cell(fila, 23).value
+                if isinstance(valor, (int, float)):
+                    fy[etiqueta] = float(valor)
+        resultado[tipo] = {
+            "tm2_semana_2": _valor_periodo(ws, 27, "Semana 2"),
+            "tm2_mtd": _valor_periodo(ws, 27, "MTD"),
+            "combinado_semana_2": _valor_periodo(ws, 38, "Semana 2"),
+            "combinado_mtd": _valor_periodo(ws, 38, "MTD"),
+            "fy": fy,
+            "fecha_max_detalle": fecha_max,
+            "filas_detalle": filas_detalle,
+            "print_area": str(ws.print_area),
+        }
+
+    ws_srr = _hoja("SRR")
+    fecha_max_srr, filas_srr = _detalle(ws_srr, 44, ws_srr.max_row)
+    tonelaje_sulfuro_sin_torre = None
+    for fila in range(11, 15):
+        if str(ws_srr.cell(fila, 4).value or "").strip() == "Sin Torre":
+            # Las filas 13:14 corresponden a Sulfuro (C13:C14 combinado).
+            if fila >= 13:
+                tonelaje_sulfuro_sin_torre = float(
+                    ws_srr.cell(fila, 5).value or 0.0
+                )
+                break
+    resultado["srr"] = {
+        "sulfuro_sin_torre": tonelaje_sulfuro_sin_torre,
+        "fecha_max_detalle": fecha_max_srr,
+        "filas_detalle": filas_srr,
+        "print_area": str(ws_srr.print_area),
+    }
+    return resultado
+
+
+def _validar_workbook_representatividad(
+    xlsx_bytes: bytes,
+    fecha_fin,
+    fecha_corte,
+) -> dict:
+    """Impide convertir un workbook cuyo detalle no corresponda al corte."""
+    metricas = _inspeccionar_workbook_representatividad(xlsx_bytes, fecha_fin)
+    corte = pd.to_datetime(fecha_corte).date()
+    for tipo in ("quimico", "fisico", "srr"):
+        fecha_max = metricas[tipo]["fecha_max_detalle"]
+        if fecha_max != corte:
+            raise RuntimeError(
+                f"Workbook inconsistente para {tipo}: corte={corte}, "
+                f"fecha máxima del detalle={fecha_max}. No se convertirá PDF."
+            )
+
+    # En el mes actual del FY, la barra mensual FY debe coincidir con el MTD
+    # combinado. La YTD se conserva y se reporta por separado.
+    etiqueta_mes = f"{_MESES_ABR_TORRES[pd.Timestamp(fecha_fin).month]}-"
+    etiqueta_mes += str(pd.Timestamp(fecha_fin).year)[-2:]
+    for tipo in ("quimico", "fisico"):
+        fy_mes = metricas[tipo]["fy"].get(etiqueta_mes)
+        combinado_mtd = metricas[tipo]["combinado_mtd"]
+        if fy_mes is None or abs(fy_mes - combinado_mtd) > 1e-9:
+            raise RuntimeError(
+                f"Workbook inconsistente para {tipo}: FY {etiqueta_mes}="
+                f"{fy_mes}, combinado MTD={combinado_mtd}. No se convertirá PDF."
+            )
+    return metricas
+
+
+def _construir_fuente_unica_representatividad(
     fecha_inicio,
     fecha_fin,
     mapa_comentarios: dict | None = None,
-) -> bytes:
-    """Construye una unica fuente Excel para las descargas XLSX y PDF."""
+) -> tuple[dict, bytes, dict]:
+    """Construye una vez paquete vivo + workbook para XLSX y los tres PDF."""
     if mapa_comentarios is None:
         try:
             guardado = fetch_comentarios_representatividad_periodo(
@@ -5612,57 +5767,47 @@ def _generar_excel_representatividad_completo(
         except Exception:
             mapa_comentarios = None
 
-    fecha_corte_operacional = fetch_fecha_corte_representatividad(
-        start_date=fecha_inicio,
-        end_date=fecha_fin,
+    paquete = armar_paquete_reporte_torre_oficial(
+        pd.to_datetime(fecha_inicio).date(),
+        pd.to_datetime(fecha_fin).date(),
     )
-    if fecha_corte_operacional is None:
-        raise RuntimeError(
-            "No existe informacion disponible en Peso Torres para el rango."
-        )
-
-    df_rep_real = fetch_representatividad_torres_report(
-        start_date=fecha_inicio,
-        end_date=fecha_corte_operacional,
-    )
-    if df_rep_real.empty:
-        raise RuntimeError(
-            "Sin datos de representatividad para el rango seleccionado."
-        )
-    df_rep = _completar_calendario_representatividad(
-        df=df_rep_real,
-        fecha_inicio=fecha_inicio,
-        fecha_fin=fecha_fin,
-    )
-
-    rango_fy = _obtener_rango_fiscal_hasta_mes(
-        fecha_corte_operacional
-    )
-    df_bd_ton_fy = fetch_bd_ton_report(
-        start_date=rango_fy["fecha_inicio"],
-        end_date=fecha_corte_operacional,
-    )
-    if df_bd_ton_fy.empty:
-        raise RuntimeError(
-            "BD Ton no entrego datos historicos para el ano fiscal."
-        )
-
-    fuentes = _fetch_fuentes_mensuales_torres(
-        fecha_fin,
-        fecha_corte_operacional,
-    )
-    return _export_representatividad_torres_to_excel(
-        df=df_rep,
-        df_bd_ton_fy=df_bd_ton_fy,
-        df_bd_ton_mes=fuentes["df_bd_ton_mes"],
-        df_turno_mes=fuentes["df_turno_mes"],
-        df_gestion_fy_quimico=fuentes["df_gestion_fy_quimico"],
-        df_gestion_fy_fisico=fuentes["df_gestion_fy_fisico"],
-        fecha_inicio_mes=fuentes["fecha_inicio_mes"],
-        fecha_fin_mes=fuentes["fecha_fin_mes"],
-        fecha_corte_operacional=fecha_corte_operacional,
+    xlsx_bytes = _export_representatividad_desde_paquete(
+        paquete,
         mapa_comentarios=mapa_comentarios,
     )
+    metricas = _validar_workbook_representatividad(
+        xlsx_bytes,
+        fecha_fin,
+        paquete["fecha_corte_operacional"],
+    )
+    print(
+        "[RTO FUENTE UNICA]",
+        {
+            "fecha_inicio": str(fecha_inicio),
+            "fecha_fin": str(fecha_fin),
+            "fecha_corte": str(paquete["fecha_corte_operacional"]),
+            "filas_rep": len(paquete["rep_torres"]),
+            "filas_bd_ton_mes": len(paquete["bd_ton_mes"]),
+            "filas_turno_mes": len(paquete["turno_mes"]),
+            "workbook_bytes": len(xlsx_bytes),
+            "metricas": metricas,
+        },
+    )
+    return paquete, xlsx_bytes, metricas
+
+
+def _generar_excel_representatividad_completo(
+    fecha_inicio,
+    fecha_fin,
+    mapa_comentarios: dict | None = None,
+) -> bytes:
+    """Construye una unica fuente Excel para las descargas XLSX y PDF."""
+    _, xlsx_bytes, _ = _construir_fuente_unica_representatividad(
+        fecha_inicio,
+        fecha_fin,
+        mapa_comentarios=mapa_comentarios,
+    )
+    return xlsx_bytes
 
 
 def _export_dataframe_simple_to_excel(df: pd.DataFrame, sheet_name: str = "Reporte") -> bytes:
@@ -6520,89 +6665,23 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # REPORTE REPRESENTATIVIDAD TORRES
         # ------------------------------------------------------------
         if tipo == "representatividad_torres":
-            print("Entró a exportación de Representatividad Torres")
-            fecha_corte_operacional = fetch_fecha_corte_representatividad(
-                start_date=ini_d,
-                end_date=fin_d,
-            )
-
-            if fecha_corte_operacional is None:
-                return (
-                    no_update,
-                    "ℹ️ No existe información disponible en Peso Torres "
-                    "para el rango seleccionado.",
-                    _done,
+            print("Generando fuente única de Representatividad Torres")
+            paquete, xbytes, metricas = (
+                _construir_fuente_unica_representatividad(
+                    ini_d,
+                    fin_d,
                 )
+            )
+            fecha_corte_operacional = paquete["fecha_corte_operacional"]
+            rango_fy = {
+                "anio_fiscal": paquete["anio_fiscal"],
+            }
 
             print(
-                "Fecha máxima disponible en Peso Torres:",
-                fecha_corte_operacional,
+                "Excel generado desde paquete único. Tamaño bytes:",
+                len(xbytes),
             )
 
-            # Hoja 1: reporte diario de representatividad
-            df_rep_real = fetch_representatividad_torres_report(
-                start_date=ini_d,
-                end_date=fecha_corte_operacional,
-            )
-            print("Filas Representatividad reales:", len(df_rep_real))
-            if df_rep_real.empty:
-                return (
-                    no_update,
-                    "ℹ️ Sin datos de representatividad para exportar "
-                    "en el rango seleccionado.",
-                    _done,
-                )
-            df_rep = _completar_calendario_representatividad(
-                df=df_rep_real,
-                fecha_inicio=ini_d,
-                fecha_fin=fin_d,
-            )
-
-            rango_fy = _obtener_rango_fiscal_hasta_mes(
-                fecha_corte_operacional
-            )
-
-            # Hoja BD Ton: histórico del FY hasta el mes evaluado.
-            df_bd_ton_fy = fetch_bd_ton_report(
-                start_date=rango_fy["fecha_inicio"],
-                end_date=fecha_corte_operacional,
-            )
-            print(
-                f"Filas BD Ton FY{rango_fy['anio_fiscal'] % 100:02d}:",
-                len(df_bd_ton_fy),
-            )
-            if df_bd_ton_fy.empty:
-                raise RuntimeError(
-                    "BD Ton no entregó datos históricos para el año fiscal."
-                )
-
-            fuentes_mensuales = _fetch_fuentes_mensuales_torres(
-                fin_d,
-                fecha_corte_operacional,
-            )
-            df_bd_ton_mes = fuentes_mensuales["df_bd_ton_mes"]
-            df_turno_material = fuentes_mensuales["df_turno_mes"]
-            df_gestion_fy_quimico = fuentes_mensuales["df_gestion_fy_quimico"]
-            df_gestion_fy_fisico = fuentes_mensuales["df_gestion_fy_fisico"]
-
-            print("Filas BD Ton mes evaluado:", len(df_bd_ton_mes))
-            print("Filas Estado de Apilado por Turno:", len(df_turno_material))
-            print("Filas Gestión FY Químico:", len(df_gestion_fy_quimico))
-            print("Filas Gestión FY Físico:", len(df_gestion_fy_fisico))
-
-            xbytes = _generar_excel_representatividad_completo(
-                ini_d,
-                fin_d,
-            )
-
-            print("Excel generado. Tamaño bytes:", len(xbytes))
-            ruta_cache = _guardar_cache_excel_representatividad(
-                xbytes,
-                ini_d,
-                fin_d,
-            )
-            print("Excel base para PDF guardado en:", ruta_cache)
-            
             filename = (
                 f"Reporte_Representatividad_Torres_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
@@ -6611,11 +6690,15 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
 
             status = (
                 f"✔️ Exportado: {filename} — "
-                f"Representatividad: {len(df_rep)} registros — "
+                f"corte operacional {fecha_corte_operacional} — "
+                f"Representatividad: {len(paquete['rep_torres'])} registros — "
                 f"BD Ton FY{rango_fy['anio_fiscal'] % 100:02d}: "
-                f"{len(df_bd_ton_fy)} registros — "
-                f"Mes evaluado: {len(df_bd_ton_mes)} registros — "
-                "Hojas RN-046: Químico y Físico"
+                f"{len(paquete['bd_ton_fy'])} registros — "
+                f"Mes evaluado: {len(paquete['bd_ton_mes'])} registros — "
+                f"detalle Q/F/SRR: "
+                f"{metricas['quimico']['filas_detalle']}/"
+                f"{metricas['fisico']['filas_detalle']}/"
+                f"{metricas['srr']['filas_detalle']} filas"
             )
 
             return (
@@ -6783,31 +6866,27 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"{ini_d} -> {fin_d}"
             )
 
-            ruta_cache = _ruta_cache_excel_representatividad(ini_d, fin_d)
-            if os.path.isfile(ruta_cache):
-                with open(ruta_cache, "rb") as archivo:
-                    excel_base = archivo.read()
-                print(f"[PDF] Usando Excel base: {ruta_cache}")
-            else:
-                excel_base = _generar_excel_representatividad_completo(
+            paquete, excel_base, metricas = (
+                _construir_fuente_unica_representatividad(
                     ini_d,
                     fin_d,
                 )
-                _guardar_cache_excel_representatividad(
-                    excel_base,
-                    ini_d,
-                    fin_d,
-                )
+            )
+            fecha_corte_operacional = paquete["fecha_corte_operacional"]
 
             pdf_bytes, filename = _pdf_representatividad_desde_xlsx(
                 excel_base,
                 analisis,
                 fin_d,
+                fecha_corte=fecha_corte_operacional,
             )
             print(f"[PDF] representatividad_torres pdf size={len(pdf_bytes)} bytes")
             return (
                 _enviar_descarga(pdf_bytes, filename),
-                f"PDF generado: {filename} - una pagina A3 vertical",
+                f"PDF generado: {filename} - corte "
+                f"{fecha_corte_operacional} - "
+                f"{metricas[analisis]['filas_detalle']} filas - "
+                "una pagina A3",
                 _done,
             )
 
@@ -7236,6 +7315,7 @@ def descargar_historial_pdf_representatividad(n_clicks_list):
             xbytes,
             subtipo,
             fin,
+            fecha_corte=paquete.get("fecha_corte_operacional"),
         )
         return (
             _enviar_descarga(pdf_bytes, filename),

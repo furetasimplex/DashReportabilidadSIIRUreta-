@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 from io import BytesIO
 from pathlib import Path
 
@@ -252,8 +253,9 @@ def convert_xlsx_bytes_to_pdf(
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
-        xlsx_path = tmp / "reporte.xlsx"
-        pdf_path = tmp / "reporte.pdf"
+        nombre_temporal = f"reporte_{uuid.uuid4().hex}"
+        xlsx_path = tmp / f"{nombre_temporal}.xlsx"
+        pdf_path = tmp / f"{nombre_temporal}.pdf"
         xlsx_path.write_bytes(xlsx_bytes)
 
         if sys.platform == "win32":

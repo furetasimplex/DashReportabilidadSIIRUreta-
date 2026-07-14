@@ -44,11 +44,52 @@ def _aplicar_dimensiones_oficiales_torre(worksheet, con_turno=False):
     worksheet.set_column("AP:AP", 5.2 if con_turno else 11.4)
 
     worksheet.set_row(0, 14.7)
-    worksheet.set_row(1, 15.6)
-    worksheet.set_row(2, 20.5)
-    worksheet.set_row(3, 23.55 if con_turno else 21)
+    # Las filas 2:4 forman dos zonas independientes del encabezado:
+    # logo a la izquierda y bloque institucional a la derecha.
+    worksheet.set_row(1, 23.55)
+    worksheet.set_row(2, 23.55)
+    worksheet.set_row(3, 23.55)
     worksheet.set_row(4, 23.55 if con_turno else 21)
     worksheet.set_row(5, 23.55 if con_turno else 21)
+
+
+def _agregar_encabezado_institucional_torre(
+    worksheet,
+    fmt_titulo,
+    fmt_subtitulo,
+):
+    """Separa el logo Pampa Norte del bloque institucional verde."""
+    # Zona izquierda conceptual: C2:I4. La imagen conserva su proporción
+    # y queda contenida en esas filas y columnas.
+    if os.path.exists(BHP_LOGO_PATH):
+        worksheet.insert_image(
+            "C2",
+            BHP_LOGO_PATH,
+            {
+                "x_scale": 0.78,
+                "y_scale": 0.78,
+                "x_offset": 8,
+                "y_offset": 6,
+                "object_position": 1,
+            },
+        )
+
+    # J queda libre como separación visual. Zona derecha: K2:Q4.
+    worksheet.merge_range(
+        "K2:Q2",
+        "Superintendencia de Medición y Reconciliación",
+        fmt_titulo,
+    )
+    worksheet.merge_range(
+        "K3:Q3",
+        "Gerencia de Planificación de la Producción",
+        fmt_subtitulo,
+    )
+    worksheet.merge_range(
+        "K4:Q4",
+        "Minerals Americas / Pampa Norte / Spence",
+        fmt_subtitulo,
+    )
 # Columnas exactas para el reporte "Producción Diaria" / plantilla Datos conciliados
 COLUMNAS_DATOS_CONCILIADOS = [
     "Fecha", "Chancado_TMS_Real", "Humedad_Turno_A", "Humedad_Turno_B", "Humedad_promedio_dia",
@@ -2163,32 +2204,9 @@ def agregar_hoja_generador_reporte(
     # ============================================================
     # LOGO Y ENCABEZADO INSTITUCIONAL
     # ============================================================
-    if os.path.exists(BHP_LOGO_PATH):
-        worksheet.insert_image(
-            "C3",
-            BHP_LOGO_PATH,
-            {
-                "x_scale": 1.03,
-                "y_scale": 1.07,
-                "x_offset": 55,
-                "y_offset": 25,
-                "object_position": 1,
-            },
-        )
-
-    worksheet.merge_range(
-        "H4:T4",
-        "Superintendencia de Medición y Reconciliación",
+    _agregar_encabezado_institucional_torre(
+        worksheet,
         fmt_titulo,
-    )
-    worksheet.merge_range(
-        "H5:T5",
-        "Gerencia de Planificación de la Producción",
-        fmt_subtitulo,
-    )
-    worksheet.merge_range(
-        "H6:T6",
-        "Minerals Americas / Pampa Norte / Spence",
         fmt_subtitulo,
     )
 
@@ -2594,22 +2612,6 @@ def export_reporte_turno_estilo_leyes_finos(
         worksheet = workbook.add_worksheet(sheet_name)
         writer.sheets[sheet_name] = worksheet
         # ============================================================
-        # LOGO BHP
-        # ============================================================
-        if os.path.exists(BHP_LOGO_PATH):
-            worksheet.insert_image(
-                "C3",
-                BHP_LOGO_PATH,
-                {
-                    "x_scale": 1.03,
-                    "y_scale": 1.07,
-                    "x_offset": 55,
-                    "y_offset": 25,
-                    "object_position": 1,
-                }
-            )
-
-        # ============================================================
         # FORMATOS
         # ============================================================
         fmt_titulo = workbook.add_format({
@@ -2767,9 +2769,11 @@ def export_reporte_turno_estilo_leyes_finos(
         # ============================================================
         # ENCABEZADO INSTITUCIONAL
         # ============================================================
-        worksheet.merge_range("H4:T4", "Superintendencia de Medición y Reconciliación", fmt_titulo)
-        worksheet.merge_range("H5:T5", "Gerencia de Planificación de la Producción", fmt_subtitulo)
-        worksheet.merge_range("H6:T6", "Minerals Americas / Pampa Norte / Spence", fmt_subtitulo)
+        _agregar_encabezado_institucional_torre(
+            worksheet,
+            fmt_titulo,
+            fmt_subtitulo,
+        )
 
         # ============================================================
         # ENCABEZADOS TIPO PLANTILLA
