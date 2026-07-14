@@ -3168,6 +3168,62 @@ def _agregar_hoja_grafico_gestion_fy(
     return nombre_hoja
 
 
+def _aplicar_bordes_tabla_limpia(
+    ws,
+    fila_ini: int,
+    fila_fin: int,
+    col_ini: int,
+    col_fin: int,
+    fila_header: int,
+    fila_mtd: int | None = None,
+    columnas_separadoras: tuple[int, ...] = (),
+    filas_separadoras: tuple[int, ...] = (),
+    lado_exterior=None,
+    lado_estructura=None,
+    lado_mtd=None,
+) -> None:
+    """Dibuja una tabla oficial sin grilla horizontal en el cuerpo.
+
+    ``columnas_separadoras`` contiene las columnas tras las que se conserva
+    una división vertical. ``filas_separadoras`` permite mantener divisiones
+    semánticas puntuales, por ejemplo entre Óxido y Sulfuro.
+    """
+    from openpyxl.styles import Border, Side
+
+    vacio = Side()
+    exterior = lado_exterior or Side(style="thin", color="595959")
+    estructura = lado_estructura or exterior
+    mtd = lado_mtd or Side(style="medium", color="404040")
+    separadores_col = set(columnas_separadoras)
+    separadores_fila = set(filas_separadoras)
+
+    for fila in range(fila_ini, fila_fin + 1):
+        for col in range(col_ini, col_fin + 1):
+            izquierda = exterior if col == col_ini else vacio
+            derecha = (
+                exterior
+                if col == col_fin
+                else estructura if col in separadores_col else vacio
+            )
+            arriba = exterior if fila == fila_ini else vacio
+            abajo = exterior if fila == fila_fin else vacio
+
+            if fila == fila_header:
+                abajo = estructura
+            if fila in separadores_fila:
+                abajo = estructura
+            if fila_mtd is not None and fila == fila_mtd:
+                arriba = mtd
+                abajo = exterior
+
+            ws.cell(fila, col).border = Border(
+                left=izquierda,
+                right=derecha,
+                top=arriba,
+                bottom=abajo,
+            )
+
+
 def _agregar_hoja_mensual_torres(
     wb,
     df_bd_ton_mes: pd.DataFrame,
@@ -3439,8 +3495,21 @@ def _agregar_hoja_mensual_torres(
     ws["C11"].alignment = center
     ws["C13"].alignment = center
 
-    # Contorno y grilla del bloque superior, como en la hoja oficial.
-    _aplicar_bordes_tabla(10, 3, 14, 6, borde_exterior=thin)
+    # Estilo oficial: contorno, separadores de columnas y una sola división
+    # semántica entre Óxido y Sulfuro; sin grilla interna por fila.
+    _aplicar_bordes_tabla_limpia(
+        ws,
+        fila_ini=10,
+        fila_fin=14,
+        col_ini=3,
+        col_fin=6,
+        fila_header=10,
+        columnas_separadoras=(3, 4, 5),
+        filas_separadoras=(12,),
+        lado_exterior=thin,
+        lado_estructura=thin,
+        lado_mtd=medium,
+    )
 
     # ------------------------------------------------------------
     # Resúmenes semanales y MTD
@@ -3592,24 +3661,21 @@ def _agregar_hoja_mensual_torres(
         )
         ws.cell(fila_target, 4).alignment = left_no_wrap
 
-        # Grilla visible y contorno reforzado de la tabla semanal.
-        _aplicar_bordes_tabla(
-            fila_inicio + 1,
-            3,
-            fila_inicio + 8,
-            6,
-            borde_exterior=thin,
-            borde_interior=thin,
+        # Resumen limpio: sin líneas entre semanas, conservando contorno,
+        # encabezado, separadores de columnas y la entrada destacada a MTD.
+        _aplicar_bordes_tabla_limpia(
+            ws,
+            fila_ini=fila_inicio + 1,
+            fila_fin=fila_inicio + 8,
+            col_ini=3,
+            col_fin=6,
+            fila_header=fila_inicio + 1,
+            fila_mtd=fila_inicio + 8,
+            columnas_separadoras=(3, 4, 5),
+            lado_exterior=thin,
+            lado_estructura=thin,
+            lado_mtd=medium,
         )
-        # La fila MTD queda separada visualmente, como en el reporte base.
-        for col in range(3, 7):
-            celda_mtd = ws.cell(fila_inicio + 8, col)
-            celda_mtd.border = Border(
-                left=(thin if col == 3 else thin),
-                right=(thin if col == 6 else thin),
-                top=medium,
-                bottom=medium,
-            )
 
         # Gráfico equivalente al reporte oficial:
         # columnas 100% apiladas, etiquetas porcentuales y línea target 85%.
@@ -4715,26 +4781,38 @@ def _agregar_hoja_mensual_srr(
         """Replica la tabla oficial: fondo blanco y separaciones verticales."""
         for fila in range(fila_encabezado, fila_mtd + 1):
             for col in range(3, 7):
-                celda = ws.cell(fila, col)
-                celda.fill = blanco
-                celda.border = Border(
-                    left=thin,
-                    right=thin,
-                    top=thin if fila in (fila_encabezado, fila_mtd) else Side(),
-                    bottom=thin if fila in (fila_encabezado, fila_mtd) else Side(),
-                )
+                ws.cell(fila, col).fill = blanco
+        _aplicar_bordes_tabla_limpia(
+            ws,
+            fila_ini=fila_encabezado,
+            fila_fin=fila_mtd,
+            col_ini=3,
+            col_fin=6,
+            fila_header=fila_encabezado,
+            fila_mtd=fila_mtd,
+            columnas_separadoras=(3, 4, 5),
+            lado_exterior=thin,
+            lado_estructura=thin,
+            lado_mtd=medium,
+        )
 
     def _estilo_tabla_mineral_oficial():
         for fila in range(10, 15):
             for col in range(3, 7):
-                celda = ws.cell(fila, col)
-                celda.fill = blanco
-                celda.border = Border(
-                    left=thin,
-                    right=thin,
-                    top=thin if fila == 10 else Side(),
-                    bottom=thin if fila in (10, 12, 14) else Side(),
-                )
+                ws.cell(fila, col).fill = blanco
+        _aplicar_bordes_tabla_limpia(
+            ws,
+            fila_ini=10,
+            fila_fin=14,
+            col_ini=3,
+            col_fin=6,
+            fila_header=10,
+            columnas_separadoras=(3, 4, 5),
+            filas_separadoras=(12,),
+            lado_exterior=thin,
+            lado_estructura=thin,
+            lado_mtd=medium,
+        )
 
     def _semaforo(celda, valor):
         if pd.isna(valor):
