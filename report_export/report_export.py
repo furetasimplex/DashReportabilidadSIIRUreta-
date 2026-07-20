@@ -25,7 +25,7 @@ TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[Datos_conciliados_of]"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
 
-BHP_LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "pampa-norte-bhp.png")
+BHP_LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "pampa-norte-bhp-oficial.png")
 
 COLOR_PAMPA_NORTE = "#018982"
 COLOR_BLANCO = "#FFFFFF"
@@ -43,53 +43,124 @@ def _aplicar_dimensiones_oficiales_torre(worksheet, con_turno=False):
     worksheet.set_column("AO:AO", 9.8 if con_turno else 13)
     worksheet.set_column("AP:AP", 5.2 if con_turno else 11.4)
 
-    worksheet.set_row(0, 14.7)
-    # Las filas 2:4 forman dos zonas independientes del encabezado:
-    # logo a la izquierda y bloque institucional a la derecha.
-    worksheet.set_row(1, 23.55)
-    worksheet.set_row(2, 23.55)
-    worksheet.set_row(3, 23.55)
-    worksheet.set_row(4, 23.55 if con_turno else 21)
-    worksheet.set_row(5, 23.55 if con_turno else 21)
+    # Alturas medidas en la versión oficial del 17-07-2026.
+    worksheet.set_row(0, 15)
+    worksheet.set_row(1, 15.6)
+    worksheet.set_row(2, 21 if con_turno else 21.6)
+    worksheet.set_row(3, 23.7 if con_turno else 21)
+    worksheet.set_row(4, 23.7 if con_turno else 21)
+    worksheet.set_row(5, 23.7 if con_turno else 21)
+    worksheet.set_row(6, 15)
 
 
 def _agregar_encabezado_institucional_torre(
     worksheet,
     fmt_titulo,
     fmt_subtitulo,
+    con_turno=False,
 ):
-    """Separa el logo Pampa Norte del bloque institucional verde."""
-    # Zona izquierda conceptual: C2:I4. La imagen conserva su proporción
-    # y queda contenida en esas filas y columnas.
+    """Replica el encabezado de la versión oficial del 17-07-2026."""
     if os.path.exists(BHP_LOGO_PATH):
+        # La hoja por turno usa una imagen apenas más alta en el original.
+        # El PNG oficial declara 144 dpi; XlsxWriter normaliza a 96 dpi.
+        # Estos factores compensados reproducen el tamaño físico de Excel.
+        x_scale = 0.65865 if con_turno else 0.65235
+        y_scale = 0.73695 if con_turno else 0.66195
         worksheet.insert_image(
-            "C2",
+            "C3",
             BHP_LOGO_PATH,
             {
-                "x_scale": 0.78,
-                "y_scale": 0.78,
-                "x_offset": 8,
-                "y_offset": 6,
+                "x_scale": x_scale,
+                "y_scale": y_scale,
+                "x_offset": 55.2,
+                "y_offset": 24.2 if con_turno else 25.25,
                 "object_position": 1,
             },
         )
 
-    # J queda libre como separación visual. Zona derecha: K2:Q4.
     worksheet.merge_range(
-        "K2:Q2",
+        "H4:T4",
         "Superintendencia de Medición y Reconciliación",
         fmt_titulo,
     )
     worksheet.merge_range(
-        "K3:Q3",
+        "H5:T5",
         "Gerencia de Planificación de la Producción",
         fmt_subtitulo,
     )
     worksheet.merge_range(
-        "K4:Q4",
+        "H6:T6",
         "Minerals Americas / Pampa Norte / Spence",
         fmt_subtitulo,
     )
+
+
+def _agregar_marco_exterior_torre(
+    workbook,
+    worksheet,
+    last_row,
+    last_col,
+    filas_respiro_final=2,
+):
+    """Agrega el marco dinámico compartido por las dos hojas de torres."""
+    color_marco = "#000000"
+    fmt_marco_superior = workbook.add_format({
+        "top": 2, "top_color": color_marco,
+    })
+    fmt_marco_izquierdo = workbook.add_format({
+        "left": 2, "left_color": color_marco,
+    })
+    fmt_marco_derecho = workbook.add_format({
+        "right": 2, "right_color": color_marco,
+    })
+    fmt_marco_inferior = workbook.add_format({
+        "bottom": 2, "bottom_color": color_marco,
+    })
+    fmt_esquina_sup_izq = workbook.add_format({
+        "top": 2, "top_color": color_marco,
+        "left": 2, "left_color": color_marco,
+    })
+    fmt_esquina_sup_der = workbook.add_format({
+        "top": 2, "top_color": color_marco,
+        "right": 2, "right_color": color_marco,
+    })
+    fmt_esquina_inf_izq = workbook.add_format({
+        "bottom": 2, "bottom_color": color_marco,
+        "left": 2, "left_color": color_marco,
+    })
+    fmt_esquina_inf_der = workbook.add_format({
+        "bottom": 2, "bottom_color": color_marco,
+        "right": 2, "right_color": color_marco,
+    })
+
+    marco_fila_ini = 1
+    marco_fila_fin = last_row + filas_respiro_final
+    marco_col_ini = 1
+    # Ambas plantillas oficiales cierran en AP, incluso si una consulta
+    # devuelve temporalmente menos columnas con datos.
+    marco_col_fin = max(last_col + 1, 41)
+
+    worksheet.write_blank(
+        marco_fila_ini, marco_col_ini, None, fmt_esquina_sup_izq,
+    )
+    worksheet.write_blank(
+        marco_fila_ini, marco_col_fin, None, fmt_esquina_sup_der,
+    )
+    for c in range(marco_col_ini + 1, marco_col_fin):
+        worksheet.write_blank(marco_fila_ini, c, None, fmt_marco_superior)
+
+    for r in range(marco_fila_ini + 1, marco_fila_fin):
+        worksheet.write_blank(r, marco_col_ini, None, fmt_marco_izquierdo)
+        worksheet.write_blank(r, marco_col_fin, None, fmt_marco_derecho)
+
+    worksheet.write_blank(
+        marco_fila_fin, marco_col_ini, None, fmt_esquina_inf_izq,
+    )
+    worksheet.write_blank(
+        marco_fila_fin, marco_col_fin, None, fmt_esquina_inf_der,
+    )
+    for c in range(marco_col_ini + 1, marco_col_fin):
+        worksheet.write_blank(marco_fila_fin, c, None, fmt_marco_inferior)
 # Columnas exactas para el reporte "Producción Diaria" / plantilla Datos conciliados
 COLUMNAS_DATOS_CONCILIADOS = [
     "Fecha", "Chancado_TMS_Real", "Humedad_Turno_A", "Humedad_Turno_B", "Humedad_promedio_dia",
@@ -2208,6 +2279,7 @@ def agregar_hoja_generador_reporte(
         worksheet,
         fmt_titulo,
         fmt_subtitulo,
+        con_turno=False,
     )
 
     # ============================================================
@@ -2509,10 +2581,6 @@ def agregar_hoja_generador_reporte(
     worksheet.set_row(18, 21.75)
     worksheet.set_row(19, 46.5)
     worksheet.set_row(20, 26.1)
-    # La segunda fila de la mini tabla necesita dos lineas para
-    # mostrar completo "Programa Semanal".
-    worksheet.set_row(4, 32)
-
     for row_num in range(fila_data, fila_data + len(df_export)):
         worksheet.set_row(row_num, 15)
 
@@ -2527,7 +2595,13 @@ def agregar_hoja_generador_reporte(
     worksheet.set_landscape()
     worksheet.set_paper(8)
     worksheet.fit_to_pages(1, 0)
-    worksheet.print_area(0, 0, last_row + 2, last_col + 1)
+    worksheet.print_area(0, 0, last_row + 2, max(last_col + 1, 41))
+    _agregar_marco_exterior_torre(
+        workbook,
+        worksheet,
+        last_row,
+        last_col,
+    )
     worksheet.hide_gridlines(2)
 
 
@@ -2773,6 +2847,7 @@ def export_reporte_turno_estilo_leyes_finos(
             worksheet,
             fmt_titulo,
             fmt_subtitulo,
+            con_turno=True,
         )
 
         # ============================================================
@@ -3093,50 +3168,14 @@ def export_reporte_turno_estilo_leyes_finos(
         worksheet.fit_to_pages(1, 0)
 
         # Definir área de impresión considerando logo + tabla
-        worksheet.print_area(0, 0, last_row + 2, last_col + 1)
+        worksheet.print_area(0, 0, last_row + 2, max(last_col + 1, 41))
 
-        # Marco exterior visual del reporte
-        fmt_marco_superior = workbook.add_format({
-            "top": 2,
-            "top_color": "#808080"
-        })
-
-        fmt_marco_inferior = workbook.add_format({
-            "bottom": 2,
-            "bottom_color": "#808080"
-        })
-
-        fmt_marco_izquierdo = workbook.add_format({
-            "left": 2,
-            "left_color": "#808080"
-        })
-
-        fmt_marco_derecho = workbook.add_format({
-            "right": 2,
-            "right_color": "#808080"
-        })
-
-        # Coordenadas del marco visual
-        marco_fila_ini = 0
-        marco_fila_fin = last_row + 2
-        marco_col_ini = 0
-        marco_col_fin = last_col + 1
-
-        # Borde superior
-        for c in range(marco_col_ini, marco_col_fin + 1):
-            worksheet.write_blank(marco_fila_ini, c, None, fmt_marco_superior)
-
-        # Borde inferior
-        for c in range(marco_col_ini, marco_col_fin + 1):
-            worksheet.write_blank(marco_fila_fin, c, None, fmt_marco_inferior)
-
-        # Borde izquierdo
-        for r in range(marco_fila_ini, marco_fila_fin + 1):
-            worksheet.write_blank(r, marco_col_ini, None, fmt_marco_izquierdo)
-
-        # Borde derecho
-        for r in range(marco_fila_ini, marco_fila_fin + 1):
-            worksheet.write_blank(r, marco_col_fin, None, fmt_marco_derecho)
+        _agregar_marco_exterior_torre(
+            workbook,
+            worksheet,
+            last_row,
+            last_col,
+        )
         # Ocultar líneas de cuadrícula para parecer más plantilla
         worksheet.hide_gridlines(2)
 

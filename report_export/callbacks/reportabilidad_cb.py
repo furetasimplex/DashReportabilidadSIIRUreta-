@@ -523,7 +523,6 @@ def _grilla_comentarios_representatividad(df_grilla: pd.DataFrame):
         {"name": ["Torre de muestreo #3 / SRR", "TMH CV-01"], "id": "TMH_CV01", "type": "numeric", "editable": False},
         {"name": ["Torre de muestreo #3 / SRR", "Muestra representativa"], "id": "Rep_TM3", "editable": False},
         {"name": ["Torre de muestreo #3 / SRR", "Comentarios"], "id": "Comentario_TM3", "editable": True},
-        {"name": ["", "Representatividad turno"], "id": "Rep_Turno", "editable": False},
     ]
 
     style_data_conditional = [
@@ -561,16 +560,6 @@ def _grilla_comentarios_representatividad(df_grilla: pd.DataFrame):
         {
             "if": {"filter_query": '{Rep_TM3} = "No representativo"', "column_id": "Rep_TM3"},
             "color": "#C55A11", "fontWeight": "bold",
-        },
-        {
-            "if": {"filter_query": '{Rep_Turno} = "Representativo"', "column_id": "Rep_Turno"},
-            "color": "#70AD47",
-            "fontWeight": "bold",
-        },
-        {
-            "if": {"filter_query": '{Rep_Turno} = "No representativo"', "column_id": "Rep_Turno"},
-            "color": "#C55A11",
-            "fontWeight": "bold",
         },
     ]
 
@@ -4524,14 +4513,20 @@ def _pdf_representatividad_desde_xlsx(
     )
     pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_filtrado)
     pdf_bytes = normalize_single_page_to_a3(pdf_bytes)
-    fecha = pd.Timestamp(fecha_fin)
-    if str(tipo_analisis).lower() == "srr":
-        filename = f"Representatividad Torre 3 SRR {fecha.strftime('%d-%m-%Y')}.pdf"
+    # El nombre oficial usa la última fecha operacional válida mostrada en
+    # el detalle, no el fin del período seleccionado (por ejemplo, 31 del mes).
+    fecha_nombre = pd.to_datetime(fecha_corte, errors="coerce")
+    if pd.isna(fecha_nombre):
+        fecha_nombre = pd.Timestamp(fecha_fin)
+    fecha_texto = fecha_nombre.strftime("%d-%m-%Y")
+    tipo_norm = str(tipo_analisis).lower()
+    if tipo_norm == "srr":
+        filename = f"Representatividad Muestras SRR Torre {fecha_texto}.pdf"
     else:
-        analisis_titulo = "Química" if str(tipo_analisis).lower() == "quimico" else "Física"
+        analisis_titulo = "Química" if tipo_norm == "quimico" else "Física"
         filename = (
-            f"Representatividad muestra {analisis_titulo} Torre "
-            f"{fecha.strftime('%d-%m-%Y')}.pdf"
+            f"Representatividad Muestra {analisis_titulo} Torre "
+            f"{fecha_texto}.pdf"
         )
     return pdf_bytes, filename
 

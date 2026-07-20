@@ -124,6 +124,7 @@ class EditorComentariosTM3Tests(unittest.TestCase):
         self.assertFalse(columnas["TMH_CV01"]["editable"])
         self.assertFalse(columnas["Rep_TM3"]["editable"])
         self.assertTrue(columnas["Comentario_TM3"]["editable"])
+        self.assertNotIn("Rep_Turno", columnas)
 
     def test_editor_conserva_tmh_cv01_no_evaluable_desde_fuente_viva(self):
         detalle = _detalle_vivo().iloc[[0]].copy()
