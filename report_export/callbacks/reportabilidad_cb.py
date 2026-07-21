@@ -4554,8 +4554,56 @@ def _build_xlsx_pdf_reporte_torre(
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
+    ws.page_setup.horizontalDpi = 600
+    ws.page_setup.verticalDpi = 600
     ws.print_options.horizontalCentered = True
     ws.sheet_view.showGridLines = False
+
+    # La tabla completa se reduce al ancho A3. Los bordes grises finos del
+    # Excel se suavizan demasiado durante esa reducción, por lo que la copia
+    # exclusiva para PDF usa líneas negras sólidas y encabezados reforzados.
+    from openpyxl.styles import Border, Side
+
+    if nombre_hoja == "Generador Reporte":
+        fila_header_ini, fila_data = 18, 22
+    else:
+        fila_header_ini, fila_data = 19, 23
+
+    ultima_fila_data = fila_data - 1
+    for fila in range(ws.max_row, fila_data - 1, -1):
+        if ws.cell(fila, 3).value not in (None, ""):
+            ultima_fila_data = fila
+            break
+
+    lado_fino = Side(style="thin", color="000000")
+    lado_medio = Side(style="medium", color="000000")
+    borde_cuerpo = Border(
+        left=lado_fino,
+        right=lado_fino,
+        top=lado_fino,
+        bottom=lado_fino,
+    )
+    borde_header = Border(
+        left=lado_medio,
+        right=lado_medio,
+        top=lado_medio,
+        bottom=lado_medio,
+    )
+    for fila in range(fila_header_ini, ultima_fila_data + 1):
+        borde = borde_header if fila < fila_data else borde_cuerpo
+        for columna in range(3, 42):  # C:AO
+            ws.cell(fila, columna).border = borde
+
+    # B:AP contiene todo el marco oficial; A solo era espacio en blanco y
+    # provocaba un desplazamiento perceptible al escalar el PDF.
+    fila_fin_impresion = max(ultima_fila_data + 2, fila_data)
+    ws.print_area = f"B1:AP{fila_fin_impresion}"
+    ws.page_margins.left = 0.12
+    ws.page_margins.right = 0.12
+    ws.page_margins.top = 0.15
+    ws.page_margins.bottom = 0.15
+    ws.page_margins.header = 0.0
+    ws.page_margins.footer = 0.0
 
     output = io.BytesIO()
     wb.save(output)
