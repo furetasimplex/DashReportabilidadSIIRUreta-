@@ -50,8 +50,9 @@ def _stack_pages_vertically(pdf_bytes: bytes) -> bytes:
 def normalize_single_page_to_a3(
     pdf_bytes: bytes,
     margin_pt: float = 24.0,
+    landscape: bool = False,
 ) -> bytes:
-    """Ajusta el contenido de una unica pagina al lienzo A3 vertical."""
+    """Ajusta el contenido de una única página al lienzo A3 solicitado."""
     import pdfplumber
     from pypdf import PageObject, PdfReader, PdfWriter, Transformation
     from pypdf.generic import DecodedStreamObject, NameObject
@@ -106,8 +107,10 @@ def normalize_single_page_to_a3(
 
     content_width = max(content_x1 - content_x0, 1.0)
     content_height = max(content_y1 - content_y0, 1.0)
-    target_width = A3_WIDTH_PT - 2 * margin_pt
-    target_height = A3_HEIGHT_PT - 2 * margin_pt
+    page_width = A3_HEIGHT_PT if landscape else A3_WIDTH_PT
+    page_height = A3_WIDTH_PT if landscape else A3_HEIGHT_PT
+    target_width = page_width - 2 * margin_pt
+    target_height = page_height - 2 * margin_pt
     # Escala uniforme (misma en X e Y) para no deformar tablas ni graficos.
     # Un escalado independiente por eje "aplana" el contenido cuando el
     # recuadro ocupado no comparte la proporcion del A3 (caso LibreOffice).
@@ -118,14 +121,14 @@ def normalize_single_page_to_a3(
     offset_y = margin_pt + (target_height - scaled_height) / 2.0
 
     a3_page = PageObject.create_blank_page(
-        width=A3_WIDTH_PT,
-        height=A3_HEIGHT_PT,
+        width=page_width,
+        height=page_height,
     )
     fondo = DecodedStreamObject()
     fondo.set_data(
         (
             "q 1 1 1 rg 0 0 "
-            f"{A3_WIDTH_PT:.4f} {A3_HEIGHT_PT:.4f} re f Q\n"
+            f"{page_width:.4f} {page_height:.4f} re f Q\n"
         ).encode("ascii")
     )
     a3_page[NameObject("/Contents")] = fondo
@@ -141,6 +144,33 @@ def normalize_single_page_to_a3(
     writer.add_page(a3_page)
     output = BytesIO()
     writer.write(output)
+    return output.getvalue()
+
+
+def normalize_pages_to_a3_landscape(
+    pdf_bytes: bytes,
+    margin_pt: float = 18.0,
+) -> bytes:
+    """Normaliza cada página a A3 horizontal sin unir páginas verticalmente."""
+    from pypdf import PdfReader, PdfWriter
+
+    source_reader = PdfReader(BytesIO(pdf_bytes))
+    output_writer = PdfWriter()
+    for source_page in source_reader.pages:
+        one_page_writer = PdfWriter()
+        one_page_writer.add_page(source_page)
+        one_page = BytesIO()
+        one_page_writer.write(one_page)
+        normalized = normalize_single_page_to_a3(
+            one_page.getvalue(),
+            margin_pt=margin_pt,
+            landscape=True,
+        )
+        normalized_reader = PdfReader(BytesIO(normalized))
+        output_writer.add_page(normalized_reader.pages[0])
+
+    output = BytesIO()
+    output_writer.write(output)
     return output.getvalue()
 
 

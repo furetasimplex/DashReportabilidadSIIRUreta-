@@ -41,6 +41,7 @@ from report_export.pdf_generator import (
 )
 from report_export.xlsx_to_pdf import (
     convert_xlsx_bytes_to_pdf,
+    normalize_pages_to_a3_landscape,
     normalize_single_page_to_a3,
 )
 
@@ -7044,6 +7045,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 nombre_hoja,
             )
             pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_hoja)
+            pdf_bytes = normalize_pages_to_a3_landscape(pdf_bytes)
             print(f"[PDF] {nombre_hoja} pdf size={len(pdf_bytes)} bytes")
             sufijo = (
                 "Generador_Reporte"
