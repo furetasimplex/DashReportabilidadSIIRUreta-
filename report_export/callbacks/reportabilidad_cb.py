@@ -45,6 +45,7 @@ from report_export.pdf_generator import (
 )
 from report_export.xlsx_to_pdf import (
     convert_xlsx_bytes_to_pdf,
+    normalize_pages_to_a3,
     normalize_pages_to_a3_landscape,
     normalize_single_page_to_a3,
 )
@@ -4530,6 +4531,30 @@ def _build_xlsx_pdf_desde_excel(
     if not ws.print_area:
         ws.print_area = f"A1:M{ws.max_row}"
 
+    # Ajuste exclusivo de la copia PDF. Quimico y Fisico conservan la hoja
+    # Excel original, pero la seccion 6 comienza siempre en una pagina nueva
+    # para que su grafico no invada la grilla mensual de la seccion 5.
+    if tipo_norm in {"quimico", "fisico"}:
+        from openpyxl.worksheet.pagebreak import Break
+
+        fila_seccion_6 = None
+        for fila in range(1, ws.max_row + 1):
+            valor = ws.cell(fila, 3).value
+            if str(valor or "").strip().startswith("6.-"):
+                fila_seccion_6 = fila
+                break
+        if fila_seccion_6 is None:
+            raise RuntimeError(
+                f"No se encontro la seccion 6 en la hoja {nombre}."
+            )
+
+        ws.page_setup.fitToHeight = 0
+        ws.row_breaks.append(Break(id=fila_seccion_6 - 1))
+        print(
+            "[PDF RTO] Salto de pagina antes de seccion 6: "
+            f"hoja={nombre}, fila={fila_seccion_6}"
+        )
+
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
@@ -4567,14 +4592,18 @@ def _pdf_representatividad_desde_xlsx(
         fecha_fin,
     )
     pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_filtrado)
-    pdf_bytes = normalize_single_page_to_a3(pdf_bytes)
+    tipo_norm = str(tipo_analisis).lower()
+    pdf_bytes = (
+        normalize_pages_to_a3(pdf_bytes)
+        if tipo_norm in {"quimico", "fisico"}
+        else normalize_single_page_to_a3(pdf_bytes)
+    )
     # El nombre oficial usa la última fecha operacional válida mostrada en
     # el detalle, no el fin del período seleccionado (por ejemplo, 31 del mes).
     fecha_nombre = pd.to_datetime(fecha_corte, errors="coerce")
     if pd.isna(fecha_nombre):
         fecha_nombre = pd.Timestamp(fecha_fin)
     fecha_texto = fecha_nombre.strftime("%d-%m-%Y")
-    tipo_norm = str(tipo_analisis).lower()
     if tipo_norm == "srr":
         filename = f"Representatividad Muestras SRR Torre {fecha_texto}.pdf"
     else:
@@ -7083,7 +7112,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"PDF generado: {filename} - corte "
                 f"{fecha_corte_operacional} - "
                 f"{metricas[analisis]['filas_detalle']} filas - "
-                "una pagina A3",
+                "PDF A3 sin solapamientos",
                 _done,
             )
 
