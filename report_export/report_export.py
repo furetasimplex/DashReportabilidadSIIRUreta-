@@ -46,6 +46,18 @@ def log_db_destino_reporte_torre() -> dict:
 # Nombre completo de la tabla (ajusta si cambia)
 TABLE_FQN = "[inventar_SpcHidr].[Datos_conciliados_of]"
 TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[Datos_conciliados_of]"
+# Centralizado para que posteriormente pueda resolverse según ENTORNO.
+# Por requerimiento actual se mantiene el esquema existente.
+DATOS_CONCILIADOS_SCHEMA = "inventar_SpcHidr"
+SP_MANTIENE_DATOS_CONCILIADOS = (
+    f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_mantiene_datos_conciliados_of]"
+)
+SP_REFRESCA_HISTORICO_APILADO = (
+    f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_refrescar_historico_apilado_test]"
+)
+SP_ACTUALIZA_REPORTE_TURNO_CACHE = (
+    f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_actualizar_reporte_turno_cache]"
+)
 # Ruta del logo BHP
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
@@ -259,6 +271,76 @@ def fetch_report_data(end_date: date) -> pd.DataFrame:
     ordered.extend(cols)
 
     return df[ordered]
+
+
+def refrescar_historico_apilado_report(
+    start_date: date,
+    end_date: date,
+    dias_reproceso: int = 0,
+) -> None:
+    """Refresca el histórico de apilado antes de mantener Datos Conciliados."""
+    if start_date is None or end_date is None:
+        raise ValueError("FechaInicio y FechaFin son obligatorias para refrescar el histórico de apilado.")
+    if start_date > end_date:
+        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
+
+    sql = _sa_text(f"""
+        SET NOCOUNT ON;
+        EXEC {SP_REFRESCA_HISTORICO_APILADO}
+            @FechaInicio = :fecha_inicio,
+            @FechaFin = :fecha_fin,
+            @DiasReproceso = :dias_reproceso
+    """)
+    try:
+        with _get_engine().begin() as conn:
+            conn.execute(
+                sql,
+                {
+                    "fecha_inicio": start_date,
+                    "fecha_fin": end_date,
+                    "dias_reproceso": int(dias_reproceso),
+                },
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al refrescar el histórico de apilado mediante "
+            f"{SP_REFRESCA_HISTORICO_APILADO}: {exc}"
+        ) from exc
+
+
+def actualizar_datos_conciliados_report(
+    start_date: date,
+    end_date: date,
+    dias_reproceso: int = 0,
+) -> None:
+    """Actualiza Datos_conciliados_of antes de generar el reporte Excel."""
+    if start_date is None or end_date is None:
+        raise ValueError("FechaInicio y FechaFin son obligatorias para actualizar Datos Conciliados.")
+    if start_date > end_date:
+        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
+
+    sql = _sa_text(f"""
+        SET NOCOUNT ON;
+        EXEC {SP_MANTIENE_DATOS_CONCILIADOS}
+            @FechaInicio = :fecha_inicio,
+            @FechaFin = :fecha_fin,
+            @DiasReproceso = :dias_reproceso
+    """)
+    try:
+        with _get_engine().begin() as conn:
+            conn.execute(
+                sql,
+                {
+                    "fecha_inicio": start_date,
+                    "fecha_fin": end_date,
+                    "dias_reproceso": int(dias_reproceso),
+                },
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al actualizar Datos conciliados mediante "
+            f"{SP_MANTIENE_DATOS_CONCILIADOS}: {exc}"
+        ) from exc
 
 
 def fetch_datos_conciliados_report(start_date: date, end_date: date) -> pd.DataFrame:
@@ -925,6 +1007,35 @@ def fetch_reporte_turno_report(start_date: date, end_date: date) -> pd.DataFrame
     except Exception as e:
         raise RuntimeError(f"Error al leer reporte por turno: {e}") from e
     return df
+
+
+def actualizar_reporte_turno_cache(start_date: date, end_date: date) -> None:
+    """Actualiza el caché antes de exportar Análisis Torres de Muestreo."""
+    if start_date is None or end_date is None:
+        raise ValueError("fecha_inicio y fecha_fin son obligatorias para actualizar el reporte por turno.")
+    if start_date > end_date:
+        raise ValueError("fecha_inicio no puede ser posterior a fecha_fin.")
+
+    sql = _sa_text(f"""
+        SET NOCOUNT ON;
+        EXEC {SP_ACTUALIZA_REPORTE_TURNO_CACHE}
+            @fecha_inicio = :fecha_inicio,
+            @fecha_fin = :fecha_fin
+    """)
+    try:
+        with _get_engine().begin() as conn:
+            conn.execute(
+                sql,
+                {
+                    "fecha_inicio": start_date,
+                    "fecha_fin": end_date,
+                },
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al actualizar el caché del reporte por turno mediante "
+            f"{SP_ACTUALIZA_REPORTE_TURNO_CACHE}: {exc}"
+        ) from exc
 
 
 def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame:

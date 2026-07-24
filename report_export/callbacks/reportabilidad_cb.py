@@ -12,6 +12,8 @@ import dash_bootstrap_components as dbc
 
 from report_export.report_export import (
     fetch_report_data,
+    refrescar_historico_apilado_report,
+    actualizar_datos_conciliados_report,
     fetch_datos_conciliados_report,
     fetch_representatividad_torres_report,
     fetch_bd_ton_report,
@@ -19,6 +21,7 @@ from report_export.report_export import (
     fetch_estado_apilado_turno_representatividad,
     fetch_fecha_corte_representatividad,
     fetch_reporte_turno_report,
+    actualizar_reporte_turno_cache,
     fetch_reporte_turno_cache,
     fetch_generador_reporte_diario,
     export_reporte_turno_estilo_leyes_finos,
@@ -46,8 +49,9 @@ from report_export.xlsx_to_pdf import (
     normalize_single_page_to_a3,
 )
 
-TEMPLATE_XLSX_PATH = "./reporte/Template_DatosConcialiados.xlsx"
 _REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+_PROJECT_DIR = os.path.dirname(_REPORT_EXPORT_DIR)
+TEMPLATE_XLSX_PATH = os.path.join(_PROJECT_DIR, "reporte", "Template_DatosConcialiados.xlsx")
 _NOMBRE_REPORTE_REPRESENTATIVIDAD_TORRES = "Representatividad Torres"
 _TEXTO_CONFIRMACION_BORRADO = "confirmar borrado"
 
@@ -6891,6 +6895,10 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # REPORTE POR TURNO + GENERADOR REPORTE
         # ------------------------------------------------------------
         if tipo == "reporte_turno":
+            actualizar_reporte_turno_cache(
+                start_date=ini_d,
+                end_date=fin_d,
+            )
             print(f"[EXCEL] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
             df_turno = fetch_reporte_turno_cache(start_date=ini_d, end_date=fin_sql_exclusivo)
             print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
@@ -6920,6 +6928,16 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # PRODUCCIÓN DIARIA / DATOS CONCILIADOS
         # ------------------------------------------------------------
         if tipo == "prod":
+            refrescar_historico_apilado_report(
+                start_date=ini_d,
+                end_date=fin_d,
+                dias_reproceso=0,
+            )
+            actualizar_datos_conciliados_report(
+                start_date=ini_d,
+                end_date=fin_d,
+                dias_reproceso=0,
+            )
             df = fetch_datos_conciliados_report(
                 start_date=ini_d,
                 end_date=fin_d
