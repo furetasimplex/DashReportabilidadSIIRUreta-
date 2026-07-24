@@ -876,36 +876,6 @@ def _reporte_oficial_activo_para_periodo(ini, fin) -> dict | None:
     return candidatos.iloc[0].to_dict()
 
 
-def _resumen_reporte_oficial_activo(reporte: dict | None):
-    if not reporte:
-        return dbc.Alert(
-            "No existe un reporte oficial activo para el período seleccionado.",
-            color="warning",
-            className="py-2 mb-0",
-        )
-    generado = pd.to_datetime(
-        reporte.get("fecha_generacion"),
-        errors="coerce",
-    )
-    fecha_generacion = (
-        generado.strftime("%Y-%m-%d %H:%M:%S")
-        if pd.notna(generado)
-        else "—"
-    )
-    return dbc.Alert(
-        [
-            html.Strong("Reporte oficial activo: "),
-            f"id_reporte={reporte.get('id_reporte')} · ",
-            f"corte={reporte.get('fecha_corte_operacional')} · ",
-            f"generado={fecha_generacion} · ",
-            f"usuario={reporte.get('usuario') or '—'} · ",
-            f"estado={reporte.get('estado') or '—'}",
-        ],
-        color="info",
-        className="py-2 mb-0",
-    )
-
-
 def _editor_comentarios_representatividad(
     df: pd.DataFrame,
     tab_activo: str = "quimico",
@@ -988,25 +958,6 @@ def _editor_comentarios_representatividad(
 def setup_download_route(server):
     """No-op kept for import compatibility in main.py."""
     pass
-
-
-@callback(
-    Output("rep-activo-resumen", "children"),
-    Input("report-fecha-inicio", "date"),
-    Input("report-fecha-final", "date"),
-)
-def mostrar_reporte_oficial_activo(f_ini, f_fin):
-    if not f_ini or not f_fin:
-        return _resumen_reporte_oficial_activo(None)
-    try:
-        reporte = _reporte_oficial_activo_para_periodo(f_ini, f_fin)
-        return _resumen_reporte_oficial_activo(reporte)
-    except Exception as exc:
-        return dbc.Alert(
-            f"No fue posible consultar el reporte oficial activo: {exc}",
-            color="danger",
-            className="py-2 mb-0",
-        )
 
 
 def _enviar_descarga(contenido: bytes, nombre_archivo: str):

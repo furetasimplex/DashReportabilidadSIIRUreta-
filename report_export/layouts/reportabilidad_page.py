@@ -154,9 +154,8 @@ def _report_card(title, description, tipo):
                         "Flujo recomendado: primero edite/valide comentarios, "
                         "luego publique el reporte oficial y finalmente "
                         "descargue el Excel.",
-                        className="text-muted small mt-3 mb-2",
+                        className="text-muted small mt-3 mb-0",
                     ),
-                    html.Div(id="rep-activo-resumen"),
                 ]
                 if tipo == "representatividad_torres"
                 else []
