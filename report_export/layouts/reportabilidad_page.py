@@ -139,11 +139,28 @@ def _report_card(title, description, tipo):
                 else html.Div(),
                 dbc.Button([
                     html.I(className="bi bi-file-earmark-excel me-2"),
-                    "Exportar Excel",
+                    (
+                        "Descargar Excel oficial activo"
+                        if tipo == "representatividad_torres"
+                        else "Exportar Excel"
+                    ),
                 ], id={"type": "report-export-btn", "tipo": tipo},
                    className="rp-btn-export me-2", n_clicks=0),
                 *botones_pdf,
             ], className="d-flex flex-wrap gap-2"),
+            html.Div(
+                [
+                    html.P(
+                        "Flujo recomendado: primero edite/valide comentarios, "
+                        "luego publique el reporte oficial y finalmente "
+                        "descargue el Excel.",
+                        className="text-muted small mt-3 mb-2",
+                    ),
+                    html.Div(id="rep-activo-resumen"),
+                ]
+                if tipo == "representatividad_torres"
+                else []
+            ),
         ])
     ], className="rp-card h-100")
 

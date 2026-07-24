@@ -29,6 +29,7 @@ from report_export.report_export import (
     fetch_reporte_torre_oficial_snapshot,
     fetch_comentarios_representatividad_periodo,
     soft_delete_reporte_torre_oficial,
+    log_db_destino_reporte_torre,
     es_mes_completo,
     normalizar_periodo_mes,
     comentarios_mapa_desde_dataframe,
@@ -646,17 +647,43 @@ def _periodo_store_desde_fechas(ini, fin, modo: str) -> dict:
     return store
 
 
-def _cargar_detalle_representatividad_periodo(ini, fin, periodo_mes=None):
-    fecha_corte_operacional = fetch_fecha_corte_representatividad(
-        start_date=ini,
-        end_date=fin,
-    )
-    if fecha_corte_operacional is None:
-        raise RuntimeError(
-            "Sin datos operacionales cerrados para el rango seleccionado."
+def _cargar_detalle_representatividad_periodo(
+    ini,
+    fin,
+    periodo_mes=None,
+    paquete=None,
+):
+    if paquete is not None:
+        fecha_corte_operacional = paquete.get("fecha_corte_operacional")
+        if fecha_corte_operacional is None:
+            raise RuntimeError(
+                "El paquete oficial no incluye fecha_corte_operacional."
+            )
+        fuentes = {
+            "fecha_inicio_mes": paquete.get("fecha_inicio_mes", ini),
+            "fecha_fin_mes": paquete.get("fecha_fin_mes", fin),
+            "fecha_corte_operacional": fecha_corte_operacional,
+            "df_bd_ton_mes": paquete.get("bd_ton_mes", pd.DataFrame()),
+            "df_turno_mes": paquete.get("turno_mes", pd.DataFrame()),
+        }
+        if fuentes["df_bd_ton_mes"].empty or fuentes["df_turno_mes"].empty:
+            raise RuntimeError(
+                "El paquete oficial no contiene las fuentes mensuales "
+                "necesarias para construir el detalle."
+            )
+    else:
+        fecha_corte_operacional = fetch_fecha_corte_representatividad(
+            start_date=ini,
+            end_date=fin,
         )
-
-    fuentes = _fetch_fuentes_mensuales_torres(fin, fecha_corte_operacional)
+        if fecha_corte_operacional is None:
+            raise RuntimeError(
+                "Sin datos operacionales cerrados para el rango seleccionado."
+            )
+        fuentes = _fetch_fuentes_mensuales_torres(
+            fin,
+            fecha_corte_operacional,
+        )
     df_turno_preparado = _preparar_material_por_turno(fuentes["df_turno_mes"])
     df_quimico = _preparar_detalle_mensual_torres(
         df_bd_ton=fuentes["df_bd_ton_mes"],
@@ -675,9 +702,10 @@ def _cargar_detalle_representatividad_periodo(ini, fin, periodo_mes=None):
         fecha_corte_operacional=fecha_corte_operacional,
     )
     detalle = _fusionar_detalle_representatividad(df_quimico, df_fisico)
-    fuente_tm3_editor = fetch_bd_ton_report(
-        start_date=ini,
-        end_date=fin,
+    fuente_tm3_editor = (
+        fuentes["df_bd_ton_mes"]
+        if paquete is not None
+        else fetch_bd_ton_report(start_date=ini, end_date=fin)
     )
     detalle = _completar_tm3_editor_desde_fuente_viva(
         detalle,
@@ -685,6 +713,10 @@ def _cargar_detalle_representatividad_periodo(ini, fin, periodo_mes=None):
     )
 
     try:
+        # Al publicar, los comentarios ya vienen del editor y las metricas
+        # deben proceder exclusivamente del paquete recien refrescado.
+        if paquete is not None:
+            return detalle, pd.to_datetime(fecha_corte_operacional).date()
         if periodo_mes:
             guardado = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
         elif es_mes_completo(ini, fin):
@@ -826,6 +858,54 @@ def _tabla_historial_representatividad(df_hist: pd.DataFrame):
     ], className="mt-2")
 
 
+def _reporte_oficial_activo_para_periodo(ini, fin) -> dict | None:
+    """Obtiene el snapshot activo que corresponde al mes seleccionado."""
+    ini_d = pd.to_datetime(ini).date()
+    fin_d = pd.to_datetime(fin).date()
+    if ini_d.year != fin_d.year or ini_d.month != fin_d.month:
+        return None
+    periodo_mes = f"{ini_d.year:04d}-{ini_d.month:02d}"
+    historial = fetch_historial_reporte_torre_oficial()
+    if historial is None or historial.empty:
+        return None
+    candidatos = historial[
+        historial["periodo_mes"].astype(str).eq(periodo_mes)
+    ]
+    if candidatos.empty:
+        return None
+    return candidatos.iloc[0].to_dict()
+
+
+def _resumen_reporte_oficial_activo(reporte: dict | None):
+    if not reporte:
+        return dbc.Alert(
+            "No existe un reporte oficial activo para el período seleccionado.",
+            color="warning",
+            className="py-2 mb-0",
+        )
+    generado = pd.to_datetime(
+        reporte.get("fecha_generacion"),
+        errors="coerce",
+    )
+    fecha_generacion = (
+        generado.strftime("%Y-%m-%d %H:%M:%S")
+        if pd.notna(generado)
+        else "—"
+    )
+    return dbc.Alert(
+        [
+            html.Strong("Reporte oficial activo: "),
+            f"id_reporte={reporte.get('id_reporte')} · ",
+            f"corte={reporte.get('fecha_corte_operacional')} · ",
+            f"generado={fecha_generacion} · ",
+            f"usuario={reporte.get('usuario') or '—'} · ",
+            f"estado={reporte.get('estado') or '—'}",
+        ],
+        color="info",
+        className="py-2 mb-0",
+    )
+
+
 def _editor_comentarios_representatividad(
     df: pd.DataFrame,
     tab_activo: str = "quimico",
@@ -847,21 +927,21 @@ def _editor_comentarios_representatividad(
             "En rango personalizado puede exportar XLSX/PDF sin guardar en historial.",
             className="text-warning small mb-2",
         )
-        texto_boton = "Generar reporte final"
+        texto_boton = "Publicar reporte oficial"
         color_boton = "success"
     elif es_republicacion:
         texto_ayuda = html.P(
             "Actualiza el reporte del mes con datos al dia y los comentarios editados.",
             className="text-muted small mb-2",
         )
-        texto_boton = "Confirmar cambios de comentarios"
+        texto_boton = "Publicar nueva versión oficial"
         color_boton = "primary"
     else:
         texto_ayuda = html.P(
             "Guarda el reporte oficial del mes en historial (incluye datos y comentarios).",
             className="text-muted small mb-2",
         )
-        texto_boton = "Generar reporte final"
+        texto_boton = "Publicar reporte oficial"
         color_boton = "success"
 
     return html.Div([
@@ -908,6 +988,25 @@ def _editor_comentarios_representatividad(
 def setup_download_route(server):
     """No-op kept for import compatibility in main.py."""
     pass
+
+
+@callback(
+    Output("rep-activo-resumen", "children"),
+    Input("report-fecha-inicio", "date"),
+    Input("report-fecha-final", "date"),
+)
+def mostrar_reporte_oficial_activo(f_ini, f_fin):
+    if not f_ini or not f_fin:
+        return _resumen_reporte_oficial_activo(None)
+    try:
+        reporte = _reporte_oficial_activo_para_periodo(f_ini, f_fin)
+        return _resumen_reporte_oficial_activo(reporte)
+    except Exception as exc:
+        return dbc.Alert(
+            f"No fue posible consultar el reporte oficial activo: {exc}",
+            color="danger",
+            className="py-2 mb-0",
+        )
 
 
 def _enviar_descarga(contenido: bytes, nombre_archivo: str):
@@ -6756,13 +6855,13 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
     ],
 )
 def exportar_excel(n_clicks_list, f_ini, f_fin):
-    print("\n=== EXPORTAR EXCEL ACTIVADO ===")
-    print("n_clicks_list:", n_clicks_list)
-    print("triggered_id:", ctx.triggered_id)
-    print("fecha inicio:", f_ini)
-    print("fecha final:", f_fin)
-
     triggered = ctx.triggered_id
+    print("[RTO] Callback generación Excel disparado")
+    print(f"[RTO] n_clicks={n_clicks_list}")
+    print(f"[RTO] trigger={triggered}")
+    print(f"[RTO] periodo_inicio={f_ini}")
+    print(f"[RTO] periodo_fin={f_fin}")
+    print("[RTO] modo=descargar")
     if not triggered or not isinstance(triggered, dict):
         return no_update, no_update, no_update
     if not any(n for n in n_clicks_list if n):
@@ -6787,21 +6886,36 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # REPORTE REPRESENTATIVIDAD TORRES
         # ------------------------------------------------------------
         if tipo == "representatividad_torres":
-            print("Generando fuente única de Representatividad Torres")
-            paquete, xbytes, metricas = (
-                _construir_fuente_unica_representatividad(
-                    ini_d,
-                    fin_d,
-                )
-            )
-            fecha_corte_operacional = paquete["fecha_corte_operacional"]
-            rango_fy = {
-                "anio_fiscal": paquete["anio_fiscal"],
-            }
-
+            log_db_destino_reporte_torre()
             print(
-                "Excel generado desde paquete único. Tamaño bytes:",
-                len(xbytes),
+                "[RTO] Flujo solo descarga/exportación; "
+                "no publica snapshot oficial."
+            )
+            activo = _reporte_oficial_activo_para_periodo(ini_d, fin_d)
+            if not activo:
+                return (
+                    no_update,
+                    "No existe un reporte oficial activo para descargar "
+                    "en el período seleccionado.",
+                    _done,
+                )
+            id_reporte = int(activo["id_reporte"])
+            fecha_corte_operacional = pd.to_datetime(
+                activo["fecha_corte_operacional"]
+            ).date()
+            print(
+                "[RTO] Descargando reporte oficial activo "
+                f"id_reporte={id_reporte}, "
+                f"corte operacional={fecha_corte_operacional}"
+            )
+            paquete = fetch_reporte_torre_oficial_snapshot(id_reporte)
+            df_detalle = fetch_reporte_torre_oficial_detalle(
+                id_reporte=id_reporte,
+            )
+            mapa = comentarios_mapa_desde_dataframe(df_detalle)
+            xbytes = _export_representatividad_desde_paquete(
+                paquete,
+                mapa_comentarios=mapa,
             )
 
             filename = (
@@ -6811,16 +6925,8 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             )
 
             status = (
-                f"✔️ Exportado: {filename} — "
-                f"corte operacional {fecha_corte_operacional} — "
-                f"Representatividad: {len(paquete['rep_torres'])} registros — "
-                f"BD Ton FY{rango_fy['anio_fiscal'] % 100:02d}: "
-                f"{len(paquete['bd_ton_fy'])} registros — "
-                f"Mes evaluado: {len(paquete['bd_ton_mes'])} registros — "
-                f"detalle Q/F/SRR: "
-                f"{metricas['quimico']['filas_detalle']}/"
-                f"{metricas['fisico']['filas_detalle']}/"
-                f"{metricas['srr']['filas_detalle']} filas"
+                f"Descargado reporte oficial activo id_reporte={id_reporte} "
+                f"— corte operacional {fecha_corte_operacional} — {filename}"
             )
 
             return (
@@ -7210,9 +7316,15 @@ def publicar_reporte_representatividad(
     usuario = _usuario_sesion()
 
     try:
+        print("[RTO] Publicando reporte oficial...")
         ini, fin, periodo_mes = normalizar_periodo_mes(ini, fin)
         es_republicacion = mes_tiene_reporte_activo(periodo_mes)
+        log_db_destino_reporte_torre()
         paquete = armar_paquete_reporte_torre_oficial(ini, fin)
+        print(
+            "[RTO] Fecha corte operacional: "
+            f"{paquete['fecha_corte_operacional']}"
+        )
 
         # La grilla nunca es fuente de tonelajes, actividad ni
         # representatividad. Se reconstruye el detalle vivo y se incorporan
@@ -7221,21 +7333,25 @@ def publicar_reporte_representatividad(
             ini,
             fin,
             periodo_mes=periodo_mes,
+            paquete=paquete,
         )
         df_final = _fusionar_solo_comentarios_en_detalle_vivo(
             detalle_vivo,
             registros,
         )
+        print(f"[RTO] Filas df_detalle: {len(df_final)}")
         resumen_tm3 = _validar_detalle_publicacion_rep(df_final)
         print(f"[RTO] Detalle vivo antes del escritor TM3: {resumen_tm3}")
 
-        write_reporte_torre_oficial(
+        print("[RTO] Llamando write_reporte_torre_oficial...")
+        id_reporte = write_reporte_torre_oficial(
             df_detalle=df_final,
             periodo_inicio=ini,
             periodo_fin=fin,
             usuario=usuario,
             paquete=paquete,
         )
+        print(f"[RTO] Reporte oficial guardado: id_reporte={id_reporte}")
         df_hist = fetch_historial_reporte_torre_oficial()
         historial = _tabla_historial_representatividad(df_hist)
         etiqueta = _etiqueta_mes_periodo(periodo_mes)

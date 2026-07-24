@@ -18,6 +18,31 @@ def _get_engine():
         raise RuntimeError("get_engine() devolvio None: revisar configuracion de DB.")
     return engine
 
+
+def log_db_destino_reporte_torre() -> dict:
+    """Registra la instancia SQL efectiva usada por el flujo RTO."""
+    sql = _sa_text("""
+        SELECT
+            @@SERVERNAME AS server_name,
+            DB_NAME() AS database_name,
+            SUSER_SNAME() AS login_name
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            fila = conn.execute(sql).mappings().one()
+        destino = {
+            "server_name": fila.get("server_name"),
+            "database_name": fila.get("database_name"),
+            "login_name": fila.get("login_name"),
+        }
+    except Exception as exc:
+        raise RuntimeError(
+            f"No fue posible identificar la DB destino de RTO: {exc}"
+        ) from exc
+
+    print(f"[RTO] DB destino: {destino}")
+    return destino
+
 # Nombre completo de la tabla (ajusta si cambia)
 TABLE_FQN = "[inventar_SpcHidr].[Datos_conciliados_of]"
 TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[Datos_conciliados_of]"
@@ -358,6 +383,134 @@ def fetch_fecha_corte_representatividad(
         df.loc[0, "Fecha_Corte"],
         errors="coerce",
     ).date()
+
+
+def fetch_fecha_corte_operacional_representatividad(
+    start_date: date,
+    end_date: date,
+) -> date | None:
+    """
+    Devuelve la ultima fecha operacional completamente cubierta por el
+    totalizador de 10 segundos para T1, T2 y SRR.
+
+    El rango solicitado es inclusivo y el calculo no depende de capas
+    derivadas de apilado o representatividad.
+    """
+    engine = _get_engine()
+    sql = """
+        ;WITH max_totalizador AS
+        (
+            SELECT MAX(fecha) AS Max_Fecha_Totalizador
+            FROM inventar_SpcHidr.tot_TM
+        ),
+        rangos_dia AS
+        (
+            SELECT
+                fecha_turno,
+                MAX(ts_fin) AS Max_ts_fin_dia
+            FROM inventar_SpcHidr.v_bitacora_rangos_norm
+            WHERE fecha_turno >= :start
+              AND fecha_turno <= :end
+              AND Torre IN ('T1', 'T2', 'SRR')
+            GROUP BY fecha_turno
+        )
+        SELECT MAX(r.fecha_turno) AS Fecha_Maxima_Exportable
+        FROM rangos_dia r
+        CROSS JOIN max_totalizador mt
+        WHERE r.Max_ts_fin_dia <= mt.Max_Fecha_Totalizador;
+    """
+
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql_query(
+                _sa_text(sql),
+                conn,
+                params={"start": start_date, "end": end_date},
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al obtener la fecha de corte operacional de "
+            f"Representatividad de Torres: {exc}"
+        ) from exc
+
+    if (
+        df.empty
+        or "Fecha_Maxima_Exportable" not in df.columns
+        or pd.isna(df.loc[0, "Fecha_Maxima_Exportable"])
+    ):
+        return None
+
+    fecha_corte = pd.to_datetime(
+        df.loc[0, "Fecha_Maxima_Exportable"],
+        errors="coerce",
+    )
+    return None if pd.isna(fecha_corte) else fecha_corte.date()
+
+
+def refrescar_representatividad_para_exportacion(
+    start_date: date,
+    end_date: date,
+) -> date:
+    """
+    Calcula el corte operacional y refresca, en orden, las capas requeridas
+    antes de que el exportador realice cualquier lectura.
+    """
+    fecha_corte = fetch_fecha_corte_operacional_representatividad(
+        start_date=start_date,
+        end_date=end_date,
+    )
+    if fecha_corte is None:
+        raise RuntimeError(
+            "No existe una fecha operacional cerrada para exportar "
+            "Representatividad de Torres."
+        )
+
+    print(f"[RTO] Fecha corte operacional: {fecha_corte:%Y-%m-%d}")
+    pasos = (
+        (
+            "inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM",
+            "[RTO] Recalculando Resumen_Intervalo_TotTM...",
+            """
+                EXEC inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM
+                    @FechaInicio = :start,
+                    @FechaFin = :end
+            """,
+        ),
+        (
+            "inventar_SpcHidr.sp_refrescar_representatividad_torres",
+            "[RTO] Refrescando representatividad_torres_resultado...",
+            """
+                EXEC inventar_SpcHidr.sp_refrescar_representatividad_torres
+                    @fecha_inicio = :start,
+                    @fecha_fin = :end
+            """,
+        ),
+        (
+            "inventar_SpcHidr.sp_sincronizar_bd_ton",
+            "[RTO] Sincronizando BD Ton...",
+            """
+                EXEC inventar_SpcHidr.sp_sincronizar_bd_ton
+                    @fecha_inicio = :start,
+                    @fecha_fin = :end
+            """,
+        ),
+    )
+
+    engine = _get_engine()
+    for nombre_sp, mensaje, sql in pasos:
+        print(mensaje)
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    _sa_text(sql),
+                    {"start": start_date, "end": fecha_corte},
+                )
+        except Exception as exc:
+            raise RuntimeError(
+                f"Error al ejecutar {nombre_sp}: {exc}"
+            ) from exc
+
+    return fecha_corte
 
 
 def fetch_bd_ton_report(
@@ -1012,7 +1165,7 @@ def armar_paquete_reporte_torre_oficial(
         periodo_fin,
     )
 
-    fecha_corte_operacional = fetch_fecha_corte_representatividad(
+    fecha_corte_operacional = refrescar_representatividad_para_exportacion(
         start_date=periodo_inicio,
         end_date=periodo_fin,
     )

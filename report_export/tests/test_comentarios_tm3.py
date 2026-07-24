@@ -1,6 +1,9 @@
 import json
+import io
 import unittest
+from contextlib import redirect_stdout
 from datetime import date
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pandas as pd
@@ -213,6 +216,70 @@ class EditorComentariosTM3Tests(unittest.TestCase):
 
 
 class PublicacionSeguraTM3Tests(unittest.TestCase):
+    def test_exportar_excel_es_descarga_y_no_publica_snapshot(self):
+        paquete = {
+            "fecha_corte_operacional": date(2026, 7, 23),
+            "anio_fiscal": 2027,
+            "rep_torres": pd.DataFrame([{"Dia": "2026-07-23"}]),
+            "bd_ton_fy": pd.DataFrame([{"Fecha": "2026-07-23"}]),
+            "bd_ton_mes": pd.DataFrame([{"Fecha": "2026-07-23"}]),
+        }
+        activo = {
+            "id_reporte": 25,
+            "fecha_corte_operacional": date(2026, 7, 23),
+        }
+        salida = io.StringIO()
+
+        with (
+            patch.object(
+                cb,
+                "ctx",
+                SimpleNamespace(
+                    triggered_id={
+                        "type": "report-export-btn",
+                        "tipo": "representatividad_torres",
+                    }
+                ),
+            ),
+            patch.object(cb, "log_db_destino_reporte_torre"),
+            patch.object(
+                cb,
+                "_reporte_oficial_activo_para_periodo",
+                return_value=activo,
+            ),
+            patch.object(
+                cb,
+                "fetch_reporte_torre_oficial_snapshot",
+                return_value=paquete,
+            ),
+            patch.object(
+                cb,
+                "fetch_reporte_torre_oficial_detalle",
+                return_value=_detalle_vivo(),
+            ),
+            patch.object(
+                cb,
+                "_export_representatividad_desde_paquete",
+                return_value=b"xlsx",
+            ),
+            patch.object(cb, "_enviar_descarga", return_value="descarga"),
+            patch.object(cb, "write_reporte_torre_oficial") as writer,
+            redirect_stdout(salida),
+        ):
+            resultado = cb.exportar_excel(
+                [1],
+                "2026-07-01",
+                "2026-07-31",
+            )
+
+        self.assertEqual(resultado[0], "descarga")
+        writer.assert_not_called()
+        self.assertIn(
+            "[RTO] Flujo solo descarga/exportación",
+            salida.getvalue(),
+        )
+        self.assertIn("id_reporte=25", salida.getvalue())
+
     def test_nullable_int_sql_convierte_solo_a_int_o_none(self):
         self.assertIsNone(repo._nullable_int_sql(None))
         self.assertIsNone(repo._nullable_int_sql(pd.NA))
@@ -363,6 +430,7 @@ class PublicacionSeguraTM3Tests(unittest.TestCase):
 
         with (
             patch.object(cb, "mes_tiene_reporte_activo", return_value=False),
+            patch.object(cb, "log_db_destino_reporte_torre"),
             patch.object(
                 cb,
                 "armar_paquete_reporte_torre_oficial",
@@ -372,8 +440,12 @@ class PublicacionSeguraTM3Tests(unittest.TestCase):
                 cb,
                 "_cargar_detalle_representatividad_periodo",
                 return_value=(vivo.copy(), date(2026, 7, 9)),
-            ),
-            patch.object(cb, "write_reporte_torre_oficial") as writer,
+            ) as cargar_detalle,
+            patch.object(
+                cb,
+                "write_reporte_torre_oficial",
+                return_value=25,
+            ) as writer,
             patch.object(cb, "fetch_historial_reporte_torre_oficial", return_value=pd.DataFrame()),
         ):
             resultado = cb.publicar_reporte_representatividad(
@@ -386,6 +458,15 @@ class PublicacionSeguraTM3Tests(unittest.TestCase):
             )
 
         self.assertIn("Reporte de Julio 2026 generado", resultado[0])
+        paquete = {"fecha_corte_operacional": date(2026, 7, 9)}
+        self.assertEqual(
+            cargar_detalle.call_args.kwargs["paquete"],
+            paquete,
+        )
+        self.assertEqual(
+            writer.call_args.kwargs["paquete"]["fecha_corte_operacional"],
+            date(2026, 7, 9),
+        )
         guardado = writer.call_args.kwargs["df_detalle"]
         self.assertEqual(guardado.loc[0, "TMH_CV01"], vivo.loc[0, "TMH_CV01"])
         self.assertEqual(guardado.loc[0, "TM3_Activo"], vivo.loc[0, "TM3_Activo"])
