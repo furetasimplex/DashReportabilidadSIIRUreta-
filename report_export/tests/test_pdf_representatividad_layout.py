@@ -18,8 +18,12 @@ class PdfRepresentatividadLayoutTests(unittest.TestCase):
         wb.save(output)
         return output.getvalue()
 
-    def test_quimico_y_fisico_saltan_antes_de_seccion_6(self):
-        for tipo, sufijo in (("quimico", "Quimico"), ("fisico", "Fisico")):
+    def test_todos_los_tipos_conservan_una_sola_pagina_sin_saltos(self):
+        for tipo, sufijo in (
+            ("quimico", "Quimico"),
+            ("fisico", "Fisico"),
+            ("srr", "SRR"),
+        ):
             with self.subTest(tipo=tipo):
                 xlsx, nombre = cb._build_xlsx_pdf_desde_excel(
                     self._xlsx_muestra(sufijo),
@@ -27,18 +31,10 @@ class PdfRepresentatividadLayoutTests(unittest.TestCase):
                     "2026-07-31",
                 )
                 ws = load_workbook(io.BytesIO(xlsx))[nombre]
-                self.assertEqual(ws.page_setup.fitToHeight, 0)
-                self.assertEqual([salto.id for salto in ws.row_breaks.brk], [121])
-
-    def test_srr_no_agrega_salto_de_seccion_fy(self):
-        xlsx, nombre = cb._build_xlsx_pdf_desde_excel(
-            self._xlsx_muestra("SRR"),
-            "srr",
-            "2026-07-31",
-        )
-        ws = load_workbook(io.BytesIO(xlsx))[nombre]
-        self.assertEqual(list(ws.row_breaks.brk), [])
-
+                self.assertEqual(ws.page_setup.fitToWidth, 1)
+                self.assertEqual(ws.page_setup.fitToHeight, 1)
+                self.assertEqual(list(ws.row_breaks.brk), [])
+                self.assertEqual(str(ws.print_area), "'01_Jul_26 %s'!$A$1:$M$142" % sufijo)
 
 if __name__ == "__main__":
     unittest.main()

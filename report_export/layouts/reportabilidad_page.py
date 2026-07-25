@@ -75,17 +75,17 @@ def _report_card(title, description, tipo):
         botones_pdf = [
             dbc.Button([
                 html.I(className="bi bi-file-earmark-pdf me-2"),
-                "PDF Químico",
+                "PDF Químico vigente",
             ], id={"type": "report-pdf-btn", "tipo": f"{tipo}_quimico"},
                className="rp-btn-pdf", n_clicks=0),
             dbc.Button([
                 html.I(className="bi bi-file-earmark-pdf me-2"),
-                "PDF Físico",
+                "PDF Físico vigente",
             ], id={"type": "report-pdf-btn", "tipo": f"{tipo}_fisico"},
                className="rp-btn-pdf", n_clicks=0),
             dbc.Button([
                 html.I(className="bi bi-file-earmark-pdf me-2"),
-                "PDF SRR",
+                "PDF SRR vigente",
             ], id={"type": "report-pdf-btn", "tipo": f"{tipo}_srr"},
                className="rp-btn-pdf", n_clicks=0),
         ]
@@ -140,7 +140,7 @@ def _report_card(title, description, tipo):
                 dbc.Button([
                     html.I(className="bi bi-file-earmark-excel me-2"),
                     (
-                        "Descargar Excel oficial activo"
+                        "Descargar Excel oficial vigente"
                         if tipo == "representatividad_torres"
                         else "Exportar Excel"
                     ),
@@ -151,9 +151,9 @@ def _report_card(title, description, tipo):
             html.Div(
                 [
                     html.P(
-                        "Flujo recomendado: primero edite/valide comentarios, "
-                        "luego publique el reporte oficial y finalmente "
-                        "descargue el Excel.",
+                        "Los botones principales descargan el reporte oficial "
+                        "vigente. El historial permite descargar una versión "
+                        "publicada específica.",
                         className="text-muted small mt-3 mb-0",
                     ),
                 ]
@@ -317,11 +317,11 @@ def layout():
             dbc.Modal(
                 [
                     dbc.ModalHeader(
-                        dbc.ModalTitle("Eliminar reporte del historial"),
+                        dbc.ModalTitle("Eliminar versión del historial"),
                     ),
                     dbc.ModalBody([
                         html.P(
-                            "Esta accion quitara el reporte del historial. "
+                            "Esta acción quitará esta versión del historial. "
                             "No se puede deshacer.",
                             className="mb-2",
                         ),
@@ -345,7 +345,7 @@ def layout():
                             className="me-2",
                         ),
                         dbc.Button(
-                            "Eliminar",
+                            "Eliminar versión",
                             id="rep-eliminar-confirm-btn",
                             color="danger",
                             disabled=True,

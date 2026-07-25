@@ -45,7 +45,6 @@ from report_export.pdf_generator import (
 )
 from report_export.xlsx_to_pdf import (
     convert_xlsx_bytes_to_pdf,
-    normalize_pages_to_a3,
     normalize_pages_to_a3_landscape,
     normalize_single_page_to_a3,
 )
@@ -788,53 +787,54 @@ def _tabla_historial_representatividad(df_hist: pd.DataFrame):
             html.Td(int(fila.get("filas") or 0)),
             html.Td([
                 dbc.Button(
-                    "Excel",
+                    "Excel de esta versión",
                     size="sm",
                     color="success",
                     outline=True,
                     className="me-1 mb-1",
-                    title="Descargar libro Excel completo",
+                    title="Descargar el Excel de esta versión publicada",
                     id={"type": "rep-hist-xlsx", "id_reporte": id_reporte},
                 ),
                 dbc.Button(
-                    "PDF Quimico",
+                    "PDF Químico de esta versión",
                     size="sm",
                     color="danger",
                     outline=True,
                     className="me-1 mb-1",
-                    title="PDF muestra quimica (A3)",
+                    title="Descargar el PDF Químico de esta versión publicada",
                     id={"type": "rep-hist-pdf", "id_reporte": id_reporte, "subtipo": "quimico"},
                 ),
                 dbc.Button(
-                    "PDF Fisico",
+                    "PDF Físico de esta versión",
                     size="sm",
                     color="danger",
                     outline=True,
                     className="me-1 mb-1",
-                    title="PDF muestra fisica (A3)",
+                    title="Descargar el PDF Físico de esta versión publicada",
                     id={"type": "rep-hist-pdf", "id_reporte": id_reporte, "subtipo": "fisico"},
                 ),
                 dbc.Button(
-                    "PDF SRR", size="sm", color="danger", outline=True,
-                    className="me-1 mb-1", title="PDF Torre 3 / SRR (A3)",
+                    "PDF SRR de esta versión", size="sm", color="danger", outline=True,
+                    className="me-1 mb-1",
+                    title="Descargar el PDF SRR de esta versión publicada",
                     id={"type": "rep-hist-pdf", "id_reporte": id_reporte, "subtipo": "srr"},
                 ),
                 dbc.Button(
-                    "Reabrir",
+                    "Reabrir versión",
                     size="sm",
                     color="primary",
                     outline=True,
                     className="me-1 mb-1",
-                    title="Cargar comentarios en el editor",
+                    title="Reabrir esta versión en el editor de comentarios",
                     id={"type": "rep-hist-reabrir", "id_reporte": id_reporte},
                 ),
                 dbc.Button(
-                    "Eliminar",
+                    "Eliminar versión",
                     size="sm",
                     color="secondary",
                     outline=True,
                     className="mb-1",
-                    title="Quitar del historial (soft-delete)",
+                    title="Eliminar esta versión del historial",
                     id={"type": "rep-hist-del", "id_reporte": id_reporte},
                 ),
             ], className="d-flex flex-wrap"),
@@ -4531,30 +4531,6 @@ def _build_xlsx_pdf_desde_excel(
     if not ws.print_area:
         ws.print_area = f"A1:M{ws.max_row}"
 
-    # Ajuste exclusivo de la copia PDF. Quimico y Fisico conservan la hoja
-    # Excel original, pero la seccion 6 comienza siempre en una pagina nueva
-    # para que su grafico no invada la grilla mensual de la seccion 5.
-    if tipo_norm in {"quimico", "fisico"}:
-        from openpyxl.worksheet.pagebreak import Break
-
-        fila_seccion_6 = None
-        for fila in range(1, ws.max_row + 1):
-            valor = ws.cell(fila, 3).value
-            if str(valor or "").strip().startswith("6.-"):
-                fila_seccion_6 = fila
-                break
-        if fila_seccion_6 is None:
-            raise RuntimeError(
-                f"No se encontro la seccion 6 en la hoja {nombre}."
-            )
-
-        ws.page_setup.fitToHeight = 0
-        ws.row_breaks.append(Break(id=fila_seccion_6 - 1))
-        print(
-            "[PDF RTO] Salto de pagina antes de seccion 6: "
-            f"hoja={nombre}, fila={fila_seccion_6}"
-        )
-
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
@@ -4593,11 +4569,7 @@ def _pdf_representatividad_desde_xlsx(
     )
     pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_filtrado)
     tipo_norm = str(tipo_analisis).lower()
-    pdf_bytes = (
-        normalize_pages_to_a3(pdf_bytes)
-        if tipo_norm in {"quimico", "fisico"}
-        else normalize_single_page_to_a3(pdf_bytes)
-    )
+    pdf_bytes = normalize_single_page_to_a3(pdf_bytes)
     # El nombre oficial usa la última fecha operacional válida mostrada en
     # el detalle, no el fin del período seleccionado (por ejemplo, 31 del mes).
     fecha_nombre = pd.to_datetime(fecha_corte, errors="coerce")

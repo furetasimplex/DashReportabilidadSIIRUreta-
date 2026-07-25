@@ -174,33 +174,6 @@ def normalize_pages_to_a3_landscape(
     return output.getvalue()
 
 
-def normalize_pages_to_a3(
-    pdf_bytes: bytes,
-    margin_pt: float = 24.0,
-) -> bytes:
-    """Normaliza cada pagina a A3 vertical conservando los saltos."""
-    from pypdf import PdfReader, PdfWriter
-
-    source_reader = PdfReader(BytesIO(pdf_bytes))
-    output_writer = PdfWriter()
-    for source_page in source_reader.pages:
-        one_page_writer = PdfWriter()
-        one_page_writer.add_page(source_page)
-        one_page = BytesIO()
-        one_page_writer.write(one_page)
-        normalized = normalize_single_page_to_a3(
-            one_page.getvalue(),
-            margin_pt=margin_pt,
-            landscape=False,
-        )
-        normalized_reader = PdfReader(BytesIO(normalized))
-        output_writer.add_page(normalized_reader.pages[0])
-
-    output = BytesIO()
-    output_writer.write(output)
-    return output.getvalue()
-
-
 def _convert_with_excel_com(xlsx_path: Path, pdf_path: Path) -> None:
     import win32com.client  # type: ignore[import-untyped]
 
