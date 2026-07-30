@@ -1136,7 +1136,7 @@ RTO_SNAPSHOT_BLOQUES = (
 )
 
 RTO_DETALLE_COLUMNAS = (
-    "Fecha", "Turno", "Semana", "Pad",
+    "Fecha", "Turno", "Semana", "Pad", "Pad_Original", "Pad_Ajustado_Por",
     "TMH_CV08", "Rep_TM1_Quimico", "TMH_CV108", "Rep_TM2_Quimico",
     "Rep_Turno_Quimico", "Rep_TM1_Fisico", "Rep_TM2_Fisico",
     "Rep_Turno_Fisico", "TM1_Activo", "TM2_Activo",
@@ -1446,7 +1446,9 @@ def write_reporte_torre_oficial(
 
     previo = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
     mapa_prev = comentarios_mapa_desde_dataframe(previo)
-    df_guardar = _merge_comentarios_representatividad(df_detalle, mapa_prev)
+    df_guardar = _merge_comentarios_representatividad(
+        df_detalle, mapa_prev, usuario=usuario,
+    )
     registros_detalle = _registros_detalle_torre_oficial(df_guardar)
     if not registros_detalle:
         raise ValueError("No hay filas válidas para guardar.")
@@ -1479,7 +1481,7 @@ def write_reporte_torre_oficial(
 
     insert_det = _sa_text(f"""
         INSERT INTO {RTO_DETALLE_TABLE} (
-            id_reporte, Fecha, Turno, Semana, Pad,
+            id_reporte, Fecha, Turno, Semana, Pad, Pad_Original, Pad_Ajustado_Por,
             TMH_CV08, Rep_TM1_Quimico, TMH_CV108, Rep_TM2_Quimico, Rep_Turno_Quimico,
             Rep_TM1_Fisico, Rep_TM2_Fisico, Rep_Turno_Fisico,
             TM1_Activo, TM2_Activo,
@@ -1488,7 +1490,7 @@ def write_reporte_torre_oficial(
             , TMH_CV01, Rep_TM3_Quimico, Rep_TM3_Fisico, TM3_Activo
             , Comentario_TM3_Quimico, Comentario_TM3_Fisico
         ) VALUES (
-            :id_reporte, :Fecha, :Turno, :Semana, :Pad,
+            :id_reporte, :Fecha, :Turno, :Semana, :Pad, :Pad_Original, :Pad_Ajustado_Por,
             :TMH_CV08, :Rep_TM1_Quimico, :TMH_CV108, :Rep_TM2_Quimico, :Rep_Turno_Quimico,
             :Rep_TM1_Fisico, :Rep_TM2_Fisico, :Rep_Turno_Fisico,
             :TM1_Activo, :TM2_Activo,
@@ -1723,6 +1725,12 @@ def comentarios_mapa_desde_dataframe(df: pd.DataFrame) -> dict:
             "Comentario_TM2_Fisico": fila.get("Comentario_TM2_Fisico"),
             "Comentario_TM3_Quimico": fila.get("Comentario_TM3_Quimico"),
             "Comentario_TM3_Fisico": fila.get("Comentario_TM3_Fisico"),
+            # Pad efectivo y derivado: permiten reconocer un ajuste manual
+            # previo (Pad <> Pad_Original) y arrastrarlo a la nueva version
+            # sin perder quien lo hizo.
+            "Pad": fila.get("Pad"),
+            "Pad_Original": fila.get("Pad_Original"),
+            "Pad_Ajustado_Por": fila.get("Pad_Ajustado_Por"),
         }
     return mapa
 
@@ -1748,6 +1756,43 @@ def comentario_torres_para_tipo(mapa: dict, fecha, turno: str, torre: str, tipo:
         return None
     texto = str(valor).strip()
     return texto or None
+
+
+def pad_ajustado_para(mapa: dict, fecha, turno: str):
+    """
+    Pad ajustado a mano para el export, o None si vale el derivado.
+
+    El Excel se arma desde el snapshot y recalcula el Pad en cada corrida;
+    este es el unico canal por el que un ajuste del editor llega a la tabla
+    "Mineral apilado por Pad".
+    """
+    if not mapa:
+        return None
+    fecha_norm = pd.to_datetime(fecha, errors="coerce")
+    if pd.isna(fecha_norm):
+        return None
+    datos = mapa.get((fecha_norm.normalize(), _normalizar_turno_rep(turno)), {})
+    if not datos:
+        return None
+
+    def _texto(valor):
+        if valor is None:
+            return None
+        try:
+            if pd.isna(valor):
+                return None
+        except (TypeError, ValueError):
+            pass
+        return str(valor).strip() or None
+
+    pad = _texto(datos.get("Pad"))
+    original = _texto(datos.get("Pad_Original"))
+    # Sin original no se sabe si hubo ajuste: es una fila anterior al backfill
+    # de Pad_Original. Tratarla como ajuste fijaria un Pad viejo sobre el
+    # derivado fresco.
+    if pad is None or original is None:
+        return None
+    return pad if pad != original else None
 
 
 def _periodo_mes_desde_fecha(fecha: date) -> str:
@@ -1783,10 +1828,12 @@ def normalizar_periodo_mes(periodo_inicio: date, periodo_fin: date) -> tuple[dat
 def _merge_comentarios_representatividad(
     df_detalle: pd.DataFrame,
     comentarios_previos: dict,
+    usuario: str | None = None,
 ) -> pd.DataFrame:
     """
     Datos referenciales siempre del detalle actual.
     Comentarios: pantalla gana si no vacío; si vacío conserva BD previa.
+    Pad: única excepción a la regla referencial, ver bloque al final.
     """
     if df_detalle is None or df_detalle.empty:
         return df_detalle
@@ -1800,7 +1847,7 @@ def _merge_comentarios_representatividad(
         "Comentario_TM3_Quimico",
         "Comentario_TM3_Fisico",
     ]
-    for col in cols_com:
+    for col in (*cols_com, "Pad", "Pad_Original", "Pad_Ajustado_Por"):
         if col not in df.columns:
             df[col] = None
 
@@ -1828,6 +1875,32 @@ def _merge_comentarios_representatividad(
             actual = _texto(fila.get(col))
             previo = _texto(prev.get(col))
             df.at[idx, col] = actual if actual is not None else previo
+
+        # Pad_Original siempre viene del detalle recien calculado. Pad es el
+        # valor efectivo: gana el ajuste de esta sesion, si no hay se arrastra
+        # el ajuste guardado en BD, y si tampoco vuelve al derivado.
+        original = _texto(fila.get("Pad_Original"))
+        ajuste_sesion = _texto(fila.get("Pad"))
+        prev_pad = _texto(prev.get("Pad"))
+        prev_original = _texto(prev.get("Pad_Original"))
+        prev_autor = _texto(prev.get("Pad_Ajustado_Por"))
+        prev_es_ajuste = prev_pad is not None and prev_pad != prev_original
+
+        if ajuste_sesion is not None and ajuste_sesion != original:
+            df.at[idx, "Pad"] = ajuste_sesion
+            # Republicar sin tocar el ajuste no debe robarle la autoria a
+            # quien lo hizo; solo un valor distinto sella un autor nuevo.
+            df.at[idx, "Pad_Ajustado_Por"] = (
+                prev_autor
+                if prev_es_ajuste and prev_pad == ajuste_sesion
+                else usuario
+            )
+        elif prev_es_ajuste:
+            df.at[idx, "Pad"] = prev_pad
+            df.at[idx, "Pad_Ajustado_Por"] = prev_autor
+        else:
+            df.at[idx, "Pad"] = original
+            df.at[idx, "Pad_Ajustado_Por"] = None
     return df
 
 

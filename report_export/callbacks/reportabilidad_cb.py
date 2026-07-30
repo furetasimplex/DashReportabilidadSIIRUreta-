@@ -36,6 +36,7 @@ from report_export.report_export import (
     es_mes_completo,
     normalizar_periodo_mes,
     comentarios_mapa_desde_dataframe,
+    pad_ajustado_para,
     mes_tiene_reporte_activo,
     comentario_torres_para_tipo,
 )
@@ -63,6 +64,11 @@ _COLUMNAS_COMENTARIOS_REP = (
     "Comentario_TM2_Fisico",
     "Comentario_TM3_Fisico",
 )
+
+# Unicos ajustes que el operador puede elegir. "Sin clasificar" es un valor
+# derivado legitimo (aparece en Pad_Original) pero no un destino valido: la
+# tabla "Mineral apilado por Pad" solo agrega Óxido y Sulfuro.
+_PAD_VALORES_VALIDOS = ("Óxido", "Sulfuro")
 
 _COLUMNAS_METRICAS_VIVAS_REP = (
     "TMH_CV08",
@@ -243,10 +249,12 @@ def _fusionar_solo_comentarios_en_detalle_vivo(
     registros_editor,
 ) -> pd.DataFrame:
     """
-    Aplica al detalle vivo únicamente los seis comentarios del editor.
+    Aplica al detalle vivo los seis comentarios del editor y el Pad ajustado.
 
     Prioridad: comentario editado no vacío > comentario histórico vivo > NULL.
-    Ninguna métrica se lee desde ``registros_editor``.
+    El Pad solo viaja desde el editor cuando difiere de ``Pad_Original``, es
+    decir cuando hubo un ajuste manual. Ninguna otra métrica se lee desde
+    ``registros_editor``.
     """
     if detalle_vivo is None or detalle_vivo.empty:
         return pd.DataFrame() if detalle_vivo is None else detalle_vivo.copy()
@@ -274,6 +282,12 @@ def _fusionar_solo_comentarios_en_detalle_vivo(
             texto = _texto_comentario_rep(fila.get(columna))
             if texto is not None:
                 destino[columna] = texto
+        # El Pad ajustado a mano si es un override real; el derivado se
+        # recalcula siempre y no debe viajar desde el editor.
+        pad_editado = _texto_comentario_rep(fila.get("Pad"))
+        pad_original = _texto_comentario_rep(fila.get("Pad_Original"))
+        if pad_editado is not None and pad_editado != pad_original:
+            destino["Pad"] = pad_editado
 
     for indice, fila in resultado.iterrows():
         clave = (
@@ -286,6 +300,12 @@ def _fusionar_solo_comentarios_en_detalle_vivo(
                 columna,
                 _texto_comentario_rep(fila.get(columna)),
             )
+        if "Pad" in editados:
+            # Un ajuste nuevo aun no tiene autor: se sella al publicar, con
+            # el usuario de la sesion que lo confirma.
+            if editados["Pad"] != _texto_comentario_rep(fila.get("Pad")):
+                resultado.at[indice, "Pad_Ajustado_Por"] = None
+            resultado.at[indice, "Pad"] = editados["Pad"]
 
     return resultado
 
@@ -447,7 +467,9 @@ def _df_a_grilla_rep(df: pd.DataFrame, tab_activo: str) -> pd.DataFrame:
         filas.append({
             "Semana": fila.get("Semana"),
             "Fecha": fecha.strftime("%d-%m-%Y") if pd.notna(fecha) else "",
+            "Pad_Original": fila.get("Pad_Original"),
             "Pad": fila.get("Pad"),
+            "Pad_Ajustado_Por": fila.get("Pad_Ajustado_Por"),
             "Turno": fila.get("Turno"),
             "TMH_CV08": round(float(tmh_tm1), 1) if tm1_activo and pd.notna(tmh_tm1) else None,
             "Rep_TM1": _etiqueta_semaforo_rep(rep_tm1, tm1_activo),
@@ -506,6 +528,14 @@ def _fusionar_comentarios_grilla(
                 if comentario is not None:
                     df.loc[mask, cols[clave_columna]] = comentario
 
+            # Pad es único para ambas pestañas (no depende del análisis).
+            # Sin Pad_Original la fila es futura o sin apilado: no hay nada
+            # que ajustar y clasificarla inventaria un dato.
+            pad = _texto_comentario_rep(fila.get("Pad"))
+            original = _texto_comentario_rep(fila.get("Pad_Original"))
+            if pad in _PAD_VALORES_VALIDOS and original:
+                df.loc[mask, "Pad"] = pad
+
     df = df.drop(columns=["_fecha_key", "_turno_key"], errors="ignore")
     return (
         df.astype(object)
@@ -514,11 +544,28 @@ def _fusionar_comentarios_grilla(
     )
 
 
+def _tooltip_pad_rep(fila: dict) -> dict:
+    """Tooltip de la celda Pad: valor anterior y quién lo ajustó."""
+    pad = _texto_comentario_rep(fila.get("Pad"))
+    original = _texto_comentario_rep(fila.get("Pad_Original"))
+    if not pad or not original or pad == original:
+        return {}
+
+    autor = _texto_comentario_rep(fila.get("Pad_Ajustado_Por"))
+    lineas = [f"**Valor anterior:** {original}"]
+    # Sin autor todavia = ajuste de esta sesion, aun sin publicar.
+    lineas.append(f"**Ajustado por:** {autor}" if autor else "_Ajuste sin publicar_")
+    return {"Pad": {"value": "  \n".join(lineas), "type": "markdown"}}
+
+
 def _grilla_comentarios_representatividad(df_grilla: pd.DataFrame):
     columns = [
         {"name": ["", "Semana"], "id": "Semana", "editable": False},
         {"name": ["", "Fecha"], "id": "Fecha", "editable": False},
-        {"name": ["", "Pad"], "id": "Pad", "editable": False},
+        # Pad_Original viaja en ``data`` pero no es columna: el valor
+        # calculado se ve en el tooltip, solo si hubo ajuste.
+        # No editable: el valor se cambia con clic (ver alternar_pad_rep).
+        {"name": ["", "Pad (clic alterna)"], "id": "Pad", "editable": False},
         {"name": ["", "Turno"], "id": "Turno", "editable": False},
         {"name": ["Torre de muestreo #1", "TMH CV-08"], "id": "TMH_CV08", "type": "numeric", "editable": False},
         {"name": ["Torre de muestreo #1", "Muestra representativa"], "id": "Rep_TM1", "editable": False},
@@ -536,8 +583,18 @@ def _grilla_comentarios_representatividad(df_grilla: pd.DataFrame):
         {"if": {"column_id": "Fecha"}, "backgroundColor": "#fff2cc", "fontWeight": "bold"},
         {"if": {"column_id": "Semana"}, "backgroundColor": "#f2f2f2", "fontWeight": "bold"},
         {
-            "if": {"filter_query": '{Pad} = "Sin clasificar"', "column_id": "Pad"},
+            "if": {
+                "filter_query": '{Pad} = "Sin clasificar"',
+                "column_id": "Pad",
+            },
             "backgroundColor": "#d9d9d9",
+        },
+        # Un Pad ajustado a mano queda marcado: cambia cifras del reporte
+        # oficial y tiene que verse de un vistazo.
+        {
+            "if": {"filter_query": "{Pad} != {Pad_Original}", "column_id": "Pad"},
+            "backgroundColor": "#fce4d6",
+            "fontWeight": "bold",
         },
         {
             "if": {"filter_query": '{Rep_TM1} = "Representativo"', "column_id": "Rep_TM1"},
@@ -569,10 +626,20 @@ def _grilla_comentarios_representatividad(df_grilla: pd.DataFrame):
         },
     ]
 
+    registros = (
+        df_grilla.astype(object).where(pd.notna(df_grilla), None).to_dict("records")
+    )
+    # ``id`` por fila: active_cell entrega row_id, que sobrevive al orden
+    # nativo de la tabla. Sin esto, ordenar desalinearia el clic.
+    for fila in registros:
+        fila["id"] = f"{fila.get('Fecha')}|{fila.get('Turno')}"
+
     return dash_table.DataTable(
         id="rep-comentarios-grid",
         columns=columns,
-        data=df_grilla.astype(object).where(pd.notna(df_grilla), None).to_dict("records"),
+        data=registros,
+        tooltip_data=[_tooltip_pad_rep(fila) for fila in registros],
+        tooltip_duration=None,
         editable=True,
         merge_duplicate_headers=True,
         page_size=40,
@@ -2223,6 +2290,7 @@ def _preparar_detalle_mensual_torres(
                     "Semana": f"Semana {semana_num}",
                     "Fecha": fecha,
                     "Pad": None,
+                    "Pad_Original": None,
                     "Turno": turno,
                     "Apilado_Oficial_Turno": None,
                     "TMH_CV08": None,
@@ -2360,7 +2428,13 @@ def _preparar_detalle_mensual_torres(
                 "Semana_Num": semana_num,
                 "Semana": f"Semana {semana_num}",
                 "Fecha": fecha,
-                "Pad": mapa_material.get(
+                # Pad efectivo: gana el ajuste del editor si lo hay, si no el
+                # derivado. Pad_Original conserva siempre el calculado.
+                "Pad": (
+                    pad_ajustado_para(mapa_comentarios, fecha, turno)
+                    or mapa_material.get(clave_turno, "Sin clasificar")
+                ),
+                "Pad_Original": mapa_material.get(
                     clave_turno,
                     "Sin clasificar",
                 ),
@@ -7182,6 +7256,51 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
         print(f"[PDF ERROR] tipo={tipo}: {e}")
         traceback.print_exc()
         return no_update, f"Error al generar PDF ({tipo}): {e}", _done
+
+
+def _alternar_pad(valor: str | None) -> str:
+    """Rota entre los valores válidos; "Sin clasificar" entra por el primero."""
+    actual = _texto_comentario_rep(valor)
+    otros = [v for v in _PAD_VALORES_VALIDOS if v != actual]
+    return otros[0] if otros else _PAD_VALORES_VALIDOS[0]
+
+
+@callback(
+    Output("rep-comentarios-grid", "data", allow_duplicate=True),
+    Output("rep-comentarios-grid", "tooltip_data", allow_duplicate=True),
+    Output("rep-comentarios-grid", "active_cell"),
+    Input("rep-comentarios-grid", "active_cell"),
+    State("rep-comentarios-grid", "data"),
+    prevent_initial_call=True,
+)
+def alternar_pad_rep(active_cell, grid_data):
+    """
+    Clic en la celda Pad alterna el valor.
+
+    Reemplaza al dropdown: el menú de DataTable se dibuja dentro del
+    contenedor con scroll y queda recortado, sin CSS que lo evite mientras
+    la grilla necesite scroll horizontal.
+    """
+    if not active_cell or active_cell.get("column_id") != "Pad":
+        return no_update, no_update, no_update
+
+    fila_id = active_cell.get("row_id")
+    filas = [f for f in (grid_data or []) if f.get("id") == fila_id]
+    if not filas:
+        return no_update, no_update, no_update
+
+    fila = filas[0]
+    # Sin Pad_Original la fila es futura o sin apilado: nada que clasificar.
+    if not _texto_comentario_rep(fila.get("Pad_Original")):
+        return no_update, no_update, None
+
+    fila["Pad"] = _alternar_pad(fila.get("Pad"))
+    # El tooltip se recalcula: la fila recien ajustada tiene que mostrar su
+    # valor anterior, y la que vuelve al calculado tiene que perderlo.
+    tooltips = [_tooltip_pad_rep(f) for f in grid_data]
+    # active_cell a None para que el siguiente clic en la misma celda
+    # vuelva a disparar el callback.
+    return grid_data, tooltips, None
 
 
 @callback(
