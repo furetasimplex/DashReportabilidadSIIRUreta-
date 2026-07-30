@@ -3240,6 +3240,13 @@ def _agregar_grafico_gestion_fy(
     fila_fin_impresion = fila_inicio + 20
     ws.print_area = f"A1:M{fila_fin_impresion}"
 
+    # El grafico se ancla a filas que no existen en el archivo (openpyxl no
+    # escribe <row> para filas vacias, y aca max_row queda en fila_inicio+2).
+    # LibreOffice tiene que inventarse su alto, y no todas las versiones
+    # llegan al mismo numero. Se crean con alto explicito.
+    for fila in range(fila_inicio + 1, fila_fin_impresion + 1):
+        ws.row_dimensions[fila].height = 15.0
+
 
 def _nombre_hoja_gestion_fy(fecha_base, tipo: str) -> str:
     fecha = pd.Timestamp(fecha_base)
@@ -3358,9 +3365,14 @@ def _aplicar_bordes_tabla_limpia(
             )
 
 
-# Escala de impresion del Excel descargable (lo que sale al imprimir desde
-# Excel). El PDF no la usa: va por _una_pagina_de_ancho.
-_ESCALA_PDF_TORRES = 45
+# La hoja mensual completa mide ~2580 pt al 100% (medido sobre un reporte
+# real de julio 2026). Al 45% ocupaba 1161 pt y la pagina daba 1161,75: cabia
+# por 0,75 pt, y basta con que LibreOffice calcule un alto de fila apenas
+# distinto para que el grafico FY se salga y quede sobre la tabla. Al 35%
+# ocupa ~900 pt: 290 pt de holgura, unas 15 filas de detalle de mas.
+# La escala no afecta el tamano final del reporte: normalize_single_page_to_a3
+# recorta y reescala a A3 despues. Solo tiene que caber.
+_ESCALA_PDF_TORRES = 35
 _ESCALA_PDF_SRR = 55
 
 
@@ -3372,20 +3384,6 @@ def _fijar_escala_impresion(ws, escala: int) -> None:
     ws.page_setup.fitToHeight = None
 
 
-def _una_pagina_de_ancho(ws) -> None:
-    """Una pagina de ancho, alto libre: LibreOffice solo trocea, no decide.
-
-    Con fitToHeight=1 (o con una escala fija que se queda corta) el grafico FY
-    no cabe en la pagina y cada version de LibreOffice resuelve distinto: 26.2
-    encoge la hoja, las de apt lo reubican hacia arriba y queda sobre la tabla.
-    Sin limite de alto nunca hay un "no cabe": LibreOffice corta el grafico en
-    el salto de pagina y _stack_pages_vertically lo vuelve a unir intacto
-    (verificado: mismo texto, mismos objetos, misma proporcion).
-    """
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.page_setup.scale = None
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 0
 
 
 def _agregar_hoja_mensual_torres(
@@ -4632,10 +4630,14 @@ def _build_xlsx_pdf_desde_excel(
 
     ws.page_setup.orientation = "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_A3
-    if tipo_norm == "srr":
-        _fijar_escala_impresion(ws, _ESCALA_PDF_SRR)
-    else:
-        _una_pagina_de_ancho(ws)
+    # fitToWidth=1/fitToHeight=0 no sirve aca: LibreOffice pagina por celdas,
+    # no por objetos. Las filas caben en una pagina, asi que no trocea nada y
+    # el grafico que se sale lo aplasta igual contra el borde; encima sube la
+    # escala (medido: 48,9% -> 51,3%) y lo empeora.
+    _fijar_escala_impresion(
+        ws,
+        _ESCALA_PDF_SRR if tipo_norm == "srr" else _ESCALA_PDF_TORRES,
+    )
     ws.print_options.horizontalCentered = True
     ws.print_options.verticalCentered = False
     if tipo_norm != "srr":

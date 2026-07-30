@@ -31,18 +31,15 @@ class PdfRepresentatividadLayoutTests(unittest.TestCase):
                     "2026-07-31",
                 )
                 ws = load_workbook(io.BytesIO(xlsx))[nombre]
-                if tipo == "srr":
-                    self.assertFalse(ws.sheet_properties.pageSetUpPr.fitToPage)
-                    self.assertEqual(ws.page_setup.scale, cb._ESCALA_PDF_SRR)
-                else:
-                    # Alto libre: si LibreOffice tuviera que encajar el alto,
-                    # cada version resuelve distinto el grafico FY que no cabe
-                    # y termina sobre la tabla. Aca solo trocea, y
-                    # _stack_pages_vertically vuelve a unir.
-                    self.assertEqual(ws.page_setup.fitToWidth, 1)
-                    self.assertEqual(ws.page_setup.fitToHeight, 0)
-                    self.assertIsNone(ws.page_setup.scale)
-                    # Un margen vertical se vuelve banda blanca al apilar.
+                # Escala fija con holgura: si el contenido roza el borde de la
+                # pagina, LibreOffice reubica el grafico FY sobre la tabla, y
+                # cada version lo hace en un punto distinto.
+                self.assertFalse(ws.sheet_properties.pageSetUpPr.fitToPage)
+                self.assertEqual(
+                    ws.page_setup.scale,
+                    cb._ESCALA_PDF_SRR if tipo == "srr" else cb._ESCALA_PDF_TORRES,
+                )
+                if tipo != "srr":
                     self.assertEqual(ws.page_margins.top, 0.0)
                     self.assertEqual(ws.page_margins.bottom, 0.0)
                 self.assertEqual(list(ws.row_breaks.brk), [])
