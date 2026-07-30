@@ -1886,7 +1886,15 @@ def _merge_comentarios_representatividad(
         prev_autor = _texto(prev.get("Pad_Ajustado_Por"))
         prev_es_ajuste = prev_pad is not None and prev_pad != prev_original
 
-        if ajuste_sesion is not None and ajuste_sesion != original:
+        # El editor manda: al abrirlo ya trae el override guardado fundido en
+        # el detalle, asi que si aqui llega Pad == Pad_Original es porque el
+        # ajuste se quito. Reponerlo desde BD lo volveria imborrable.
+        es_ajuste = (
+            ajuste_sesion is not None
+            and original is not None
+            and ajuste_sesion != original
+        )
+        if es_ajuste:
             df.at[idx, "Pad"] = ajuste_sesion
             # Republicar sin tocar el ajuste no debe robarle la autoria a
             # quien lo hizo; solo un valor distinto sella un autor nuevo.
@@ -1895,9 +1903,6 @@ def _merge_comentarios_representatividad(
                 if prev_es_ajuste and prev_pad == ajuste_sesion
                 else usuario
             )
-        elif prev_es_ajuste:
-            df.at[idx, "Pad"] = prev_pad
-            df.at[idx, "Pad_Ajustado_Por"] = prev_autor
         else:
             df.at[idx, "Pad"] = original
             df.at[idx, "Pad_Ajustado_Por"] = None

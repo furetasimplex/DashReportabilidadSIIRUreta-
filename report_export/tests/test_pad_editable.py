@@ -126,9 +126,10 @@ class TestPadEditable(unittest.TestCase):
 
         self.assertEqual(salida.loc[1, "Pad"], "Sulfuro")
 
-    def test_republicar_arrastra_el_override_guardado(self):
-        """Regenerar el mes no debe perder un Pad ajustado en la version previa."""
+    def test_republicar_conserva_el_ajuste_que_trae_el_editor(self):
+        """El editor carga el override guardado; republicar no lo pierde."""
         detalle_nuevo = pd.DataFrame(_registros_detalle())
+        detalle_nuevo.loc[1, "Pad"] = "Óxido"
         guardado = pd.DataFrame([
             {
                 "Fecha": pd.Timestamp("2026-07-01"),
@@ -142,6 +143,31 @@ class TestPadEditable(unittest.TestCase):
         salida = repo._merge_comentarios_representatividad(detalle_nuevo, previos)
 
         self.assertEqual(list(salida["Pad"]), ["Sulfuro", "Óxido"])
+
+    def test_quitar_el_ajuste_lo_borra_de_verdad(self):
+        """
+        Regresion: el override guardado no debe resucitar.
+
+        Al destogglear la celda el editor manda Pad == Pad_Original. Reponer
+        el valor de BD hacia el ajuste imborrable.
+        """
+        detalle_nuevo = pd.DataFrame(_registros_detalle())  # Pad == Pad_Original
+        guardado = pd.DataFrame([
+            {
+                "Fecha": pd.Timestamp("2026-07-01"),
+                "Turno": "TB",
+                "Pad": "Óxido",
+                "Pad_Original": "Sin clasificar",
+            }
+        ])
+        previos = repo.comentarios_mapa_desde_dataframe(guardado)
+
+        salida = repo._merge_comentarios_representatividad(
+            detalle_nuevo, previos, usuario="cramos",
+        )
+
+        self.assertEqual(salida.loc[1, "Pad"], "Sin clasificar")
+        self.assertIsNone(salida.loc[1, "Pad_Ajustado_Por"])
 
     def test_republicar_sin_override_usa_el_derivado_fresco(self):
         detalle_nuevo = pd.DataFrame(_registros_detalle())

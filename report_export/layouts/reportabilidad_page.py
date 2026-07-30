@@ -301,17 +301,21 @@ def layout():
         html.Div(id="report-progress", className="mt-3"),
 
         # ── RESULT AREA ───────────────────────────────────────────────
+        # report-tabla (editor/grilla) VA FUERA de Loading: cada clic en Pad
+        # o commit de comentario actualiza props de la grilla/stores y el
+        # spinner de Loading provocaba recarga/parpadeo de toda la UI.
         html.Div([
             dcc.Loading(
                 id="loading-report-visualizacion",
                 type="circle",
                 color="#E86D1F",
-                children=html.Div([
-                    html.Div(id="report-grafico", className="mb-3"),
-                    html.Div(id="report-tabla"),
-                ]),
+                children=html.Div(id="report-grafico", className="mb-3"),
             ),
+            html.Div(id="report-tabla"),
             html.Div(id="report-historial", className="mt-3"),
+            dcc.Store(id="rep-comentarios-store"),
+            dcc.Store(id="rep-tab-activo-store"),
+            dcc.Store(id="rep-periodo-store"),
             dcc.Store(id="rep-eliminar-id-store"),
             dcc.Store(id="rep-grid-blur-hook", data=0),
             dbc.Modal(
@@ -355,6 +359,33 @@ def layout():
                 id="rep-eliminar-modal",
                 is_open=False,
                 backdrop="static",
+            ),
+            dbc.Modal(
+                dbc.ModalBody(
+                    html.Div(
+                        [
+                            dbc.Spinner(
+                                size="sm",
+                                color="primary",
+                                className="me-2",
+                            ),
+                            html.Span(
+                                "Publicando…",
+                                className="fw-semibold",
+                            ),
+                        ],
+                        className=(
+                            "d-flex align-items-center "
+                            "justify-content-center py-3"
+                        ),
+                    ),
+                ),
+                id="rep-publicar-modal",
+                is_open=False,
+                centered=True,
+                size="sm",
+                backdrop=True,
+                keyboard=False,
             ),
             dcc.Download(id="report-download-xlsx"),
             dcc.Download(id="report-download-pdf"),

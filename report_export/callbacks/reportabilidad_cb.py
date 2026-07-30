@@ -558,6 +558,18 @@ def _tooltip_pad_rep(fila: dict) -> dict:
     return {"Pad": {"value": "  \n".join(lineas), "type": "markdown"}}
 
 
+def _registros_tooltips_grilla_rep(df: pd.DataFrame, tab_activo: str):
+    """Datos + tooltips de la grilla sin remountar el DataTable."""
+    df_grilla = _df_a_grilla_rep(df, tab_activo)
+    registros = (
+        df_grilla.astype(object).where(pd.notna(df_grilla), None).to_dict("records")
+    )
+    for fila in registros:
+        fila["id"] = f"{fila.get('Fecha')}|{fila.get('Turno')}"
+    tooltips = [_tooltip_pad_rep(fila) for fila in registros]
+    return registros, tooltips
+
+
 def _grilla_comentarios_representatividad(df_grilla: pd.DataFrame):
     columns = [
         {"name": ["", "Semana"], "id": "Semana", "editable": False},
@@ -1021,9 +1033,8 @@ def _editor_comentarios_representatividad(
             ),
             html.Span(id="rep-publicar-status", className="text-muted small"),
         ]),
-        dcc.Store(id="rep-comentarios-store", data=registros_store),
-        dcc.Store(id="rep-tab-activo-store", data=tab_activo),
-        dcc.Store(id="rep-periodo-store", data=periodo_store),
+        # Stores viven en el layout fijo (reportabilidad_page): evita
+        # remount al editar y el pestañeo de dcc.Loading.
     ])
 
 
@@ -6631,6 +6642,9 @@ def cargar_historial_representatividad_torres(subtab):
     Output("report-grafico", "children"),
     Output("report-tabla", "children"),
     Output("report-historial", "children", allow_duplicate=True),
+    Output("rep-comentarios-store", "data", allow_duplicate=True),
+    Output("rep-tab-activo-store", "data", allow_duplicate=True),
+    Output("rep-periodo-store", "data", allow_duplicate=True),
     Input({"type": "report-gen-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
@@ -6640,9 +6654,9 @@ def cargar_historial_representatividad_torres(subtab):
 def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
     triggered = ctx.triggered_id
     if not triggered or not isinstance(triggered, dict):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update
     if not any(n for n in n_clicks_list if n):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update
 
     tipo = triggered["tipo"]
 
@@ -6650,6 +6664,9 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         return (
             dbc.Alert("⚠️ Debe seleccionar rango de fechas.", color="warning"),
             html.Div(),
+            no_update,
+            no_update,
+            no_update,
             no_update,
         )
 
@@ -6677,6 +6694,9 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
                     dbc.Alert("Sin detalle para comentarios en el rango.", color="info"),
                     html.Div(),
                     no_update,
+                    no_update,
+                    no_update,
+                    no_update,
                 )
 
             registros = detalle.copy()
@@ -6684,6 +6704,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
                 registros["Fecha"], errors="coerce"
             ).dt.strftime("%Y-%m-%d")
             registros = registros.astype(object).where(pd.notna(registros), None)
+            registros_store = registros.to_dict("records")
 
             es_republicacion = (
                 puede_publicar
@@ -6693,7 +6714,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
             editor = _editor_comentarios_representatividad(
                 detalle,
                 tab_activo="quimico",
-                registros_store=registros.to_dict("records"),
+                registros_store=registros_store,
                 periodo_store=periodo_store,
                 puede_publicar=puede_publicar,
                 es_republicacion=es_republicacion,
@@ -6705,11 +6726,21 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
                 df_hist = pd.DataFrame()
 
             historial = _tabla_historial_representatividad(df_hist)
-            return html.Div(), editor, historial
+            return (
+                html.Div(),
+                editor,
+                historial,
+                registros_store,
+                "quimico",
+                periodo_store,
+            )
         except Exception as e:
             return (
                 dbc.Alert(f"Error al cargar editor de comentarios: {e}", color="danger"),
                 html.Div(),
+                no_update,
+                no_update,
+                no_update,
                 no_update,
             )
 
@@ -6731,6 +6762,9 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
                 dbc.Alert(f"Error al consultar reporte por turno: {e}", color="danger"),
                 html.Div(),
                 html.Div(),
+                no_update,
+                no_update,
+                no_update,
             )
 
         if df_turno.empty:
@@ -6738,6 +6772,9 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
                 dbc.Alert("Sin datos para el reporte por turno en el rango seleccionado.", color="info"),
                 html.Div(),
                 html.Div(),
+                no_update,
+                no_update,
+                no_update,
             )
 
         tabla = html.Div([
@@ -6771,7 +6808,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
             hover=True
         )
 
-        return html.Div(), tabla, historial
+        return html.Div(), tabla, historial, no_update, no_update, no_update
 
     # ------------------------------------------------------------
     # REPORTES ANTIGUOS
@@ -6786,6 +6823,9 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
             dbc.Alert("Sin datos en el rango seleccionado.", color="info"),
             html.Div(),
             html.Div(),
+            no_update,
+            no_update,
+            no_update,
         )
 
     if tipo == "prod":
@@ -6800,6 +6840,9 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
                 dbc.Alert("No se encuentra la columna 'Produccion_Catodos_Real' en la tabla.", color="danger"),
                 html.Div(),
                 html.Div(),
+                no_update,
+                no_update,
+                no_update,
             )
 
         plot_df = df.sort_values("Fecha")
@@ -6865,7 +6908,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         hover=True
     )
 
-    return html.Div(), tabla, historial
+    return html.Div(), tabla, historial, no_update, no_update, no_update
 
 
 @callback(
@@ -7314,7 +7357,11 @@ def sincronizar_comentarios_desde_grilla(grid_data, registros, tab_activo):
     if not registros or grid_data is None:
         return no_update
     tab = str(tab_activo or "quimico").lower()
-    return _fusionar_comentarios_grilla(registros, grid_data, tab)
+    fusionados = _fusionar_comentarios_grilla(registros, grid_data, tab)
+    # Sin cambio real no tocar el store: evita roundtrips y re-renders.
+    if fusionados == registros:
+        return no_update
+    return fusionados
 
 
 @callback(
@@ -7322,7 +7369,8 @@ def sincronizar_comentarios_desde_grilla(grid_data, registros, tab_activo):
     Output("rep-tab-fisico", "outline"),
     Output("rep-tab-activo-store", "data"),
     Output("rep-comentarios-store", "data", allow_duplicate=True),
-    Output("report-tabla", "children", allow_duplicate=True),
+    Output("rep-comentarios-grid", "data", allow_duplicate=True),
+    Output("rep-comentarios-grid", "tooltip_data", allow_duplicate=True),
     Input("rep-tab-quimico", "n_clicks"),
     Input("rep-tab-fisico", "n_clicks"),
     State("rep-comentarios-store", "data"),
@@ -7332,9 +7380,10 @@ def sincronizar_comentarios_desde_grilla(grid_data, registros, tab_activo):
     prevent_initial_call=True,
 )
 def cambiar_tab_comentarios_rep(n_q, n_f, registros, tab_activo, periodo, grid_data):
+    """Cambia Químico/Físico sin remountar el editor (evita pestañeo)."""
     triggered = ctx.triggered_id
     if not registros:
-        return no_update, no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update
 
     registros = _fusionar_comentarios_grilla(registros, grid_data, tab_activo)
 
@@ -7348,30 +7397,36 @@ def cambiar_tab_comentarios_rep(n_q, n_f, registros, tab_activo, periodo, grid_d
     df = pd.DataFrame(registros)
     if "Fecha" in df.columns:
         df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
-    puede_publicar = (
-        isinstance(periodo, dict)
-        and periodo.get("modo") == "mes"
-        and bool(periodo.get("periodo_mes"))
-    )
-    es_republicacion = (
-        puede_publicar
-        and mes_tiene_reporte_activo(str(periodo.get("periodo_mes")))
-    )
-    editor = _editor_comentarios_representatividad(
-        df,
-        tab_activo=tab,
-        registros_store=registros,
-        periodo_store=periodo,
-        puede_publicar=puede_publicar,
-        es_republicacion=es_republicacion,
-    )
-    return outline_q, outline_f, tab, registros, editor
+    grilla_data, tooltips = _registros_tooltips_grilla_rep(df, tab)
+    return outline_q, outline_f, tab, registros, grilla_data, tooltips
+
+
+clientside_callback(
+    """
+    function(n) {
+        if (!n) return window.dash_clientside.no_update;
+        setTimeout(function() {
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props(
+                    'rep-publicar-modal',
+                    {is_open: false}
+                );
+            }
+        }, 1000);
+        return true;
+    }
+    """,
+    Output("rep-publicar-modal", "is_open"),
+    Input("rep-generar-final-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
 
 
 @callback(
     Output("rep-publicar-status", "children"),
     Output("report-historial", "children", allow_duplicate=True),
     Output("rep-comentarios-store", "data", allow_duplicate=True),
+    Output("report-tabla", "children", allow_duplicate=True),
     Input("rep-generar-final-btn", "n_clicks"),
     State("rep-comentarios-store", "data"),
     State("rep-periodo-store", "data"),
@@ -7379,21 +7434,30 @@ def cambiar_tab_comentarios_rep(n_q, n_f, registros, tab_activo, periodo, grid_d
     State("rep-comentarios-grid", "data"),
     State("report-fecha-modo", "value"),
     prevent_initial_call=True,
+    running=[
+        (Output("rep-generar-final-btn", "disabled"), True, False),
+    ],
 )
 def publicar_reporte_representatividad(
     n_clicks, registros, periodo, tab_activo, grid_data, modo_fecha,
 ):
     if not n_clicks:
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update
 
     if not registros or not periodo:
-        return "Debe cargar el detalle antes de publicar.", no_update, no_update
+        return (
+            "Debe cargar el detalle antes de publicar.",
+            no_update,
+            no_update,
+            no_update,
+        )
 
     modo = str(modo_fecha or periodo.get("modo") or "mes").lower()
     if modo != "mes":
         return (
             "Solo se guardan reportes en modo Mes completo. "
             "Use exportacion XLSX/PDF para rangos personalizados.",
+            no_update,
             no_update,
             no_update,
         )
@@ -7448,13 +7512,30 @@ def publicar_reporte_representatividad(
             mensaje = f"Cambios de {etiqueta} confirmados."
         else:
             mensaje = f"Reporte de {etiqueta} generado."
-        return (
-            mensaje,
-            historial,
-            registros,
+
+        # Se relee lo guardado y se rearma el editor: sin esto la grilla
+        # sigue mostrando el estado previo al INSERT y un Pad recien
+        # ajustado queda sin su autor en pantalla.
+        guardado = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
+        if guardado.empty:
+            return mensaje, historial, registros, no_update
+
+        registros = (
+            guardado.astype(object)
+            .where(pd.notna(guardado), None)
+            .to_dict("records")
         )
+        editor = _editor_comentarios_representatividad(
+            guardado,
+            tab_activo=str(tab_activo or "quimico").lower(),
+            registros_store=registros,
+            periodo_store=periodo,
+            puede_publicar=True,
+            es_republicacion=True,
+        )
+        return mensaje, historial, registros, editor
     except Exception as exc:
-        return f"Error al publicar: {exc}", no_update, registros
+        return f"Error al publicar: {exc}", no_update, registros, no_update
 
 
 @callback(
@@ -7526,15 +7607,18 @@ def eliminar_reporte_representatividad(n_clicks, id_reporte, texto):
     Output("report-tabla", "children", allow_duplicate=True),
     Output("report-historial", "children", allow_duplicate=True),
     Output("report-status", "children", allow_duplicate=True),
+    Output("rep-comentarios-store", "data", allow_duplicate=True),
+    Output("rep-tab-activo-store", "data", allow_duplicate=True),
+    Output("rep-periodo-store", "data", allow_duplicate=True),
     Input({"type": "rep-hist-reabrir", "id_reporte": ALL}, "n_clicks"),
     prevent_initial_call=True,
 )
 def reabrir_reporte_representatividad(n_clicks_list):
     if not any(n_clicks_list):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update
     triggered = ctx.triggered_id
     if not isinstance(triggered, dict):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update
 
     id_reporte = int(triggered["id_reporte"])
     try:
@@ -7542,6 +7626,9 @@ def reabrir_reporte_representatividad(n_clicks_list):
         if df.empty:
             return (
                 dbc.Alert("Reporte no encontrado.", color="warning"),
+                no_update,
+                no_update,
+                no_update,
                 no_update,
                 no_update,
             )
@@ -7553,6 +7640,7 @@ def reabrir_reporte_representatividad(n_clicks_list):
             pd.notna(registros),
             None,
         )
+        registros_store = registros.to_dict("records")
         detalle = df.copy()
         periodo = {
             "inicio": str(df["periodo_inicio"].iloc[0]),
@@ -7565,7 +7653,7 @@ def reabrir_reporte_representatividad(n_clicks_list):
         editor = _editor_comentarios_representatividad(
             detalle,
             tab_activo="quimico",
-            registros_store=registros.to_dict("records"),
+            registros_store=registros_store,
             periodo_store=periodo,
             puede_publicar=True,
             es_republicacion=True,
@@ -7575,10 +7663,16 @@ def reabrir_reporte_representatividad(n_clicks_list):
             editor,
             _tabla_historial_representatividad(df_hist),
             "Reporte reabierto desde historial.",
+            registros_store,
+            "quimico",
+            periodo,
         )
     except Exception as exc:
         return (
             dbc.Alert(f"Error al reabrir: {exc}", color="danger"),
+            no_update,
+            no_update,
+            no_update,
             no_update,
             no_update,
         )
