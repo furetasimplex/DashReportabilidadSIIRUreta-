@@ -3358,6 +3358,25 @@ def _aplicar_bordes_tabla_limpia(
             )
 
 
+# Con fitToPage 1x1 la escala la elige LibreOffice, y su heuristica cambia
+# entre versiones cuando hay un grafico anclado a celdas: 26.2 encoge la hoja
+# (62% -> 54% medido) para que el grafico FY quepa, y las versiones de apt no,
+# asi que el grafico queda sobre la tabla de la seccion 5. Una escala fija da
+# el mismo PDF en cualquier LibreOffice; 45% es la escala que hoy sale en
+# Windows. ponytail: si el detalle crece y desborda, normalize_single_page_to_a3
+# ya apila las paginas; ajustar el numero si eso se nota.
+_ESCALA_PDF_TORRES = 45
+_ESCALA_PDF_SRR = 55
+
+
+def _fijar_escala_impresion(ws, escala: int) -> None:
+    """Escala de impresion fija (sin fitToPage), reproducible entre versiones."""
+    ws.sheet_properties.pageSetUpPr.fitToPage = False
+    ws.page_setup.scale = escala
+    ws.page_setup.fitToWidth = None
+    ws.page_setup.fitToHeight = None
+
+
 def _agregar_hoja_mensual_torres(
     wb,
     df_bd_ton_mes: pd.DataFrame,
@@ -4458,9 +4477,7 @@ def _agregar_hoja_mensual_torres(
 
     ws.page_setup.orientation = "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_A3
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 1
+    _fijar_escala_impresion(ws, _ESCALA_PDF_TORRES)
     ws.print_options.horizontalCentered = True
     ws.print_options.verticalCentered = False
     ws.page_margins.left = 0.15
@@ -4604,9 +4621,10 @@ def _build_xlsx_pdf_desde_excel(
 
     ws.page_setup.orientation = "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_A3
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 1
+    _fijar_escala_impresion(
+        ws,
+        _ESCALA_PDF_SRR if tipo_norm == "srr" else _ESCALA_PDF_TORRES,
+    )
     ws.print_options.horizontalCentered = True
     ws.print_options.verticalCentered = False
     if tipo_norm != "srr":
@@ -5428,10 +5446,7 @@ def _agregar_hoja_mensual_srr(
     ws.sheet_view.zoomScaleNormal = 75
     ws.page_setup.orientation = "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_A3
-    ws.sheet_properties.pageSetUpPr.fitToPage = False
-    ws.page_setup.scale = 55
-    ws.page_setup.fitToWidth = None
-    ws.page_setup.fitToHeight = 0
+    _fijar_escala_impresion(ws, _ESCALA_PDF_SRR)
     ws.print_options.horizontalCentered = True
     ws.page_margins.left = ws.page_margins.right = 0.25
     ws.page_margins.top = ws.page_margins.bottom = 0.4

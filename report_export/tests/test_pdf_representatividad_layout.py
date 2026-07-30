@@ -31,8 +31,16 @@ class PdfRepresentatividadLayoutTests(unittest.TestCase):
                     "2026-07-31",
                 )
                 ws = load_workbook(io.BytesIO(xlsx))[nombre]
-                self.assertEqual(ws.page_setup.fitToWidth, 1)
-                self.assertEqual(ws.page_setup.fitToHeight, 1)
+                # Escala fija, no fitToPage: con fitToPage 1x1 LibreOffice
+                # elige la escala con una heuristica que cambia entre
+                # versiones y el grafico FY termina sobre la tabla.
+                self.assertFalse(ws.sheet_properties.pageSetUpPr.fitToPage)
+                self.assertEqual(
+                    ws.page_setup.scale,
+                    cb._ESCALA_PDF_SRR if tipo == "srr" else cb._ESCALA_PDF_TORRES,
+                )
+                self.assertIsNone(ws.page_setup.fitToWidth)
+                self.assertIsNone(ws.page_setup.fitToHeight)
                 self.assertEqual(list(ws.row_breaks.brk), [])
                 self.assertEqual(str(ws.print_area), "'01_Jul_26 %s'!$A$1:$M$142" % sufijo)
 
