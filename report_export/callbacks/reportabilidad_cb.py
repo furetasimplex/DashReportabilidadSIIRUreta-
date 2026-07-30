@@ -3384,6 +3384,38 @@ def _fijar_escala_impresion(ws, escala: int) -> None:
     ws.page_setup.fitToHeight = None
 
 
+def _forzar_alturas_pdf_deterministas(ws) -> None:
+    """
+    Fija altura explícita para todas las filas del área de impresión.
+
+    LibreOffice recalcula altura de filas implícitas según fuente/render y
+    eso puede desplazar anclajes de gráficos (solape intermitente). Al
+    materializar cada altura en la copia PDF, el layout queda estable.
+    """
+    from openpyxl.utils.cell import range_boundaries
+
+    fila_fin = ws.max_row or 1
+    area = ws.print_area
+    rangos = getattr(area, "ranges", None)
+    if rangos:
+        limites = []
+        for rango in rangos:
+            texto = str(rango)
+            coords = texto.split("!")[-1].replace("$", "")
+            try:
+                _, _, _, max_row = range_boundaries(coords)
+            except Exception:
+                continue
+            limites.append(int(max_row))
+        if limites:
+            fila_fin = max(fila_fin, max(limites))
+
+    altura_default = float(ws.sheet_format.defaultRowHeight or 15.0)
+    for fila in range(1, int(fila_fin) + 1):
+        if ws.row_dimensions[fila].height is None:
+            ws.row_dimensions[fila].height = altura_default
+
+
 
 
 def _agregar_hoja_mensual_torres(
@@ -4638,6 +4670,9 @@ def _build_xlsx_pdf_desde_excel(
         ws,
         _ESCALA_PDF_SRR if tipo_norm == "srr" else _ESCALA_PDF_TORRES,
     )
+    # PDF determinista entre ambientes: evita depender del "printer default".
+    ws.page_setup.horizontalDpi = 600
+    ws.page_setup.verticalDpi = 600
     ws.print_options.horizontalCentered = True
     ws.print_options.verticalCentered = False
     if tipo_norm != "srr":
@@ -4652,6 +4687,7 @@ def _build_xlsx_pdf_desde_excel(
     ws.sheet_view.showGridLines = False
     if not ws.print_area:
         ws.print_area = f"A1:M{ws.max_row}"
+    _forzar_alturas_pdf_deterministas(ws)
 
     output = io.BytesIO()
     wb.save(output)

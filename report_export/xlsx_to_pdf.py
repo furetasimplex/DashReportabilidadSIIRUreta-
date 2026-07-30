@@ -234,6 +234,13 @@ def _convert_with_libreoffice(
     # ponytail: perfil desechable por llamada; si el arranque en frio pesa,
     # cachear un perfil por worker (env var con el PID).
     perfil = (outdir / "lo_profile").resolve().as_uri()
+    env = os.environ.copy()
+    # Fuerza backend de render y locale estables para minimizar drift visual
+    # entre hosts Linux/Windows y entre workers.
+    env.setdefault("SAL_USE_VCLPLUGIN", "gen")
+    env.setdefault("LC_ALL", "C.UTF-8")
+    env.setdefault("LANG", "C.UTF-8")
+
     result = subprocess.run(
         [
             soffice,
@@ -249,6 +256,7 @@ def _convert_with_libreoffice(
         text=True,
         timeout=timeout_sec,
         check=False,
+        env=env,
     )
     if result.returncode != 0:
         stderr = (result.stderr or result.stdout or "").strip()
