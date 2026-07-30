@@ -200,7 +200,9 @@ class EditorComentariosTM3Tests(unittest.TestCase):
             "edición física",
         )
 
-    def test_comentario_vacio_no_borra_historico(self):
+    def test_comentario_vacio_borra_el_historico(self):
+        # La grilla se abre con lo guardado, asi que vaciar una celda es un
+        # borrado deliberado. Conservar el previo lo volvia imborrable.
         registros = _detalle_vivo().iloc[[0]].to_dict("records")
         grilla = cb._df_a_grilla_rep(pd.DataFrame(registros), "quimico")
         grilla.loc[0, "Comentario_TM3"] = "   "
@@ -209,10 +211,9 @@ class EditorComentariosTM3Tests(unittest.TestCase):
             grilla.to_dict("records"),
             "quimico",
         )
-        self.assertEqual(
-            fusionados[0]["Comentario_TM3_Quimico"],
-            "hist q3",
-        )
+        self.assertIsNone(fusionados[0]["Comentario_TM3_Quimico"])
+        # La pestaña opuesta no viaja en la grilla y no se toca.
+        self.assertEqual(fusionados[0]["Comentario_TM3_Fisico"], "hist f3")
 
 
 class PublicacionSeguraTM3Tests(unittest.TestCase):
@@ -449,7 +450,7 @@ class PublicacionSeguraTM3Tests(unittest.TestCase):
             patch.object(cb, "fetch_historial_reporte_torre_oficial", return_value=pd.DataFrame()),
         ):
             resultado = cb.publicar_reporte_representatividad(
-                1,
+                1,  # rep-publicar-trigger
                 registros,
                 periodo,
                 "quimico",
@@ -496,7 +497,9 @@ class PublicacionSeguraTM3Tests(unittest.TestCase):
                 paquete={"fecha_corte_operacional": date(2026, 7, 9)},
             )
 
-    def test_merge_writer_preserva_historico_tm3(self):
+    def test_merge_writer_borra_el_historico_tm3(self):
+        # Lo que llega del editor manda, vacio incluido: el editor ya se
+        # abrio con el histórico de BD fundido dentro.
         vivo = _detalle_vivo().iloc[[0]].copy()
         vivo.loc[vivo.index[0], "Comentario_TM3_Quimico"] = ""
         clave = (pd.Timestamp("2026-07-01"), "TA")
@@ -504,10 +507,9 @@ class PublicacionSeguraTM3Tests(unittest.TestCase):
             vivo,
             {clave: {"Comentario_TM3_Quimico": "histórico BD"}},
         )
-        self.assertEqual(
-            final.iloc[0]["Comentario_TM3_Quimico"],
-            "histórico BD",
-        )
+        # NaN en columna object; _valor_parametro_sql lo pasa a None al
+        # armar los parametros del INSERT.
+        self.assertTrue(pd.isna(final.iloc[0]["Comentario_TM3_Quimico"]))
 
     def test_roundtrip_local_persistencia_y_reapertura_tm3(self):
         vivo = _detalle_vivo().iloc[[0]].copy()
@@ -531,11 +533,16 @@ class PublicacionSeguraTM3Tests(unittest.TestCase):
             "persistido f",
         )
 
-        mapa = repo.comentarios_mapa_desde_dataframe(reabierto)
+        # Reabrir el editor: el detalle se recalcula sin comentarios y los
+        # guardados se funden encima. Esta es la ruta real de lectura;
+        # _merge_comentarios_representatividad solo corre al publicar.
         fresco = vivo.copy()
         fresco["Comentario_TM3_Quimico"] = None
         fresco["Comentario_TM3_Fisico"] = None
-        recargado = repo._merge_comentarios_representatividad(fresco, mapa)
+        recargado = cb._fusionar_solo_comentarios_en_detalle_vivo(
+            fresco,
+            reabierto,
+        )
         self.assertEqual(
             cb._df_a_grilla_rep(recargado, "quimico").loc[0, "Comentario_TM3"],
             "persistido q",

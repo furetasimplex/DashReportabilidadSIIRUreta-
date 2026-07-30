@@ -1,3 +1,4 @@
+import os
 from dash import Dash
 import dash_bootstrap_components as dbc
 from layout import create_layout, register_callbacks
@@ -28,7 +29,7 @@ setup_download_route(server)
 app.title = "Dashboard Hidrometalurgico Spence"
 
 # 🔐 Config Flask
-server.secret_key = "s1mpl3x"
+server.secret_key = os.environ["SECRET_KEY"]
 server.register_blueprint(auth_bp, url_prefix="/auth")
 
 # Layout Dash
@@ -44,7 +45,5 @@ def protect_dash():
         return redirect("/auth/login_page")
 
 if __name__ == "__main__":
-    import os
-
     port = int(os.getenv("PORT", "8065"))
     app.run(debug=True, port=port)

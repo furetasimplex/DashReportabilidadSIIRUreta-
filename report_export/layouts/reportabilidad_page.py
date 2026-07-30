@@ -318,6 +318,7 @@ def layout():
             dcc.Store(id="rep-periodo-store"),
             dcc.Store(id="rep-eliminar-id-store"),
             dcc.Store(id="rep-grid-blur-hook", data=0),
+            dcc.Store(id="rep-publicar-trigger"),
             dbc.Modal(
                 [
                     dbc.ModalHeader(
@@ -367,7 +368,7 @@ def layout():
                             dbc.Spinner(
                                 size="sm",
                                 color="primary",
-                                className="me-2",
+                                spinner_class_name="me-2",
                             ),
                             html.Span(
                                 "Publicando…",

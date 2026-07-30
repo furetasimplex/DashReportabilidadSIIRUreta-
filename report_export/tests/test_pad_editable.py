@@ -74,6 +74,19 @@ class TestPadEditable(unittest.TestCase):
         self.assertEqual(por_turno["TB"]["Pad_Original"], "Sin clasificar")
         self.assertEqual(por_turno["TA"]["Pad"], "Sulfuro")
 
+    def test_comentario_editado_en_grilla_pisa_el_store(self):
+        """Regresion: republicar debe llevar el texto de la celda, no el viejo."""
+        registros = _registros_detalle()
+        registros[0]["Comentario_TM1_Quimico"] = "comentario viejo"
+        grid = [_fila_grilla("01-07-2026", "TA", "Sulfuro", "Sulfuro")]
+        grid[0]["Comentario_TM1"] = "comentario nuevo"
+
+        salida = cb._fusionar_comentarios_grilla(registros, grid, "quimico")
+
+        self.assertEqual(salida[0]["Comentario_TM1_Quimico"], "comentario nuevo")
+        # Pad de la misma fila sigue viajando: ambos salen del mismo merge.
+        self.assertEqual(salida[0]["Pad"], "Sulfuro")
+
     def test_valor_fuera_de_lista_se_ignora(self):
         registros = _registros_detalle()
         grid = [_fila_grilla("01-07-2026", "TA", "Test", "Sulfuro")]

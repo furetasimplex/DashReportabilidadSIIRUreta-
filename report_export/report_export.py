@@ -1832,7 +1832,7 @@ def _merge_comentarios_representatividad(
 ) -> pd.DataFrame:
     """
     Datos referenciales siempre del detalle actual.
-    Comentarios: pantalla gana si no vacío; si vacío conserva BD previa.
+    Comentarios: manda la pantalla, incluido el vacío (permite borrarlos).
     Pad: única excepción a la regla referencial, ver bloque al final.
     """
     if df_detalle is None or df_detalle.empty:
@@ -1872,9 +1872,10 @@ def _merge_comentarios_representatividad(
             {},
         )
         for col in cols_com:
-            actual = _texto(fila.get(col))
-            previo = _texto(prev.get(col))
-            df.at[idx, col] = actual if actual is not None else previo
+            # El editor ya se abre con los comentarios guardados, asi que un
+            # vacio aqui es un borrado deliberado. Reponerlo desde BD los
+            # volveria imborrables, igual que pasaba con el Pad mas abajo.
+            df.at[idx, col] = _texto(fila.get(col))
 
         # Pad_Original siempre viene del detalle recien calculado. Pad es el
         # valor efectivo: gana el ajuste de esta sesion, si no hay se arrastra

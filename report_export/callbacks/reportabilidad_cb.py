@@ -251,7 +251,7 @@ def _fusionar_solo_comentarios_en_detalle_vivo(
     """
     Aplica al detalle vivo los seis comentarios del editor y el Pad ajustado.
 
-    Prioridad: comentario editado no vacío > comentario histórico vivo > NULL.
+    Prioridad: comentario del editor (vacío incluido) > histórico vivo > NULL.
     El Pad solo viaja desde el editor cuando difiere de ``Pad_Original``, es
     decir cuando hubo un ajuste manual. Ninguna otra métrica se lee desde
     ``registros_editor``.
@@ -279,9 +279,10 @@ def _fusionar_solo_comentarios_en_detalle_vivo(
             continue
         destino = ediciones.setdefault(clave, {})
         for columna in _COLUMNAS_COMENTARIOS_REP:
-            texto = _texto_comentario_rep(fila.get(columna))
-            if texto is not None:
-                destino[columna] = texto
+            # La columna presente manda, aunque venga vacía: así el borrado
+            # viaja. Una columna ausente sí cae al valor vivo más abajo.
+            if columna in fila:
+                destino[columna] = _texto_comentario_rep(fila.get(columna))
         # El Pad ajustado a mano si es un override real; el derivado se
         # recalcula siempre y no debe viajar desde el editor.
         pad_editado = _texto_comentario_rep(fila.get("Pad"))
@@ -504,6 +505,12 @@ def _fusionar_comentarios_grilla(
     df = pd.DataFrame(registros)
     if "Fecha" not in df.columns or "Turno" not in df.columns:
         return registros
+    # Comentarios suelen venir como None desde el Store y pandas infiere
+    # float64; forzar object evita perder el texto al asignar.
+    for columna in _COLUMNAS_COMENTARIOS_REP:
+        if columna not in df.columns:
+            df[columna] = None
+        df[columna] = df[columna].astype(object)
     df["_fecha_key"] = df["Fecha"].apply(_fecha_key_rep)
     df["_turno_key"] = df["Turno"].apply(_turno_key_rep)
 
@@ -520,13 +527,14 @@ def _fusionar_comentarios_grilla(
                 ("Comentario_TM2", "com_tm2"),
                 ("Comentario_TM3", "com_tm3"),
             ):
-                comentario = _texto_comentario_rep(
-                    fila.get(columna_grilla)
-                )
-                # Un vacío no borra el histórico. La pestaña opuesta no se
-                # toca porque ``cols`` solo contiene las columnas activas.
-                if comentario is not None:
-                    df.loc[mask, cols[clave_columna]] = comentario
+                # Vaciar la celda borra el comentario: la grilla ya se abre
+                # con los guardados, así que un vacío es deliberado y
+                # conservar el previo los volvería imborrables. La pestaña
+                # opuesta no se toca porque ``cols`` solo trae las activas.
+                if columna_grilla in fila:
+                    df.loc[mask, cols[clave_columna]] = _texto_comentario_rep(
+                        fila.get(columna_grilla)
+                    )
 
             # Pad es único para ambas pestañas (no depende del análisis).
             # Sin Pad_Original la fila es futura o sin apilado: no hay nada
@@ -1082,15 +1090,11 @@ clientside_callback(
             const table = document.getElementById('rep-comentarios-grid');
             if (!table) return;
 
+            // DataTable (React) confirma la celda al perder el foco.
+            // Un Enter sintético no siempre llega al handler de React.
             function commitInput(input) {
                 if (!input || input.tagName !== 'INPUT') return;
-                input.dispatchEvent(new KeyboardEvent('keydown', {
-                    key: 'Enter',
-                    code: 'Enter',
-                    keyCode: 13,
-                    which: 13,
-                    bubbles: true,
-                }));
+                input.blur();
             }
 
             if (table._repBlurCommitHandler) {
@@ -7405,6 +7409,33 @@ clientside_callback(
     """
     function(n) {
         if (!n) return window.dash_clientside.no_update;
+
+        // El Pad se confirma al clic; el comentario vive en <input> y solo
+        // entra a `data` al perder el foco. Si publicamos en el mismo tick,
+        // el State de la grilla llega sin el texto nuevo.
+        const grid = document.getElementById('rep-comentarios-grid');
+        const active = document.activeElement;
+        if (
+            grid
+            && active
+            && grid.contains(active)
+            && active.tagName === 'INPUT'
+        ) {
+            active.blur();
+        }
+
+        const btn = document.getElementById('rep-generar-final-btn');
+        if (btn) btn.disabled = true;
+
+        setTimeout(function() {
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props(
+                    'rep-publicar-trigger',
+                    {data: Date.now()}
+                );
+            }
+        }, 120);
+
         setTimeout(function() {
             if (window.dash_clientside && window.dash_clientside.set_props) {
                 window.dash_clientside.set_props(
@@ -7427,7 +7458,7 @@ clientside_callback(
     Output("report-historial", "children", allow_duplicate=True),
     Output("rep-comentarios-store", "data", allow_duplicate=True),
     Output("report-tabla", "children", allow_duplicate=True),
-    Input("rep-generar-final-btn", "n_clicks"),
+    Input("rep-publicar-trigger", "data"),
     State("rep-comentarios-store", "data"),
     State("rep-periodo-store", "data"),
     State("rep-tab-activo-store", "data"),
@@ -7439,9 +7470,9 @@ clientside_callback(
     ],
 )
 def publicar_reporte_representatividad(
-    n_clicks, registros, periodo, tab_activo, grid_data, modo_fecha,
+    trigger, registros, periodo, tab_activo, grid_data, modo_fecha,
 ):
-    if not n_clicks:
+    if not trigger:
         return no_update, no_update, no_update, no_update
 
     if not registros or not periodo:

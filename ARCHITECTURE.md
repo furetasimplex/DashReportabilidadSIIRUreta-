@@ -39,7 +39,8 @@ main.py
 
 ### `auth.py` — Autenticación
 - Flask Blueprint montado en `/auth`.
-- Rutas: `GET /login_page`, `POST /login`, `POST /register`, `GET /logout`.
+- Rutas: `GET /login_page`, `POST /login`, `GET /logout`.
+- Valida contra la tabla Django definida en `LOGIN_DATABASE` (ej. `DEV_SIIR.dbo.auth_user`) con `passlib.django_pbkdf2_sha256`. La app no da de alta usuarios: eso se hace desde Django.
 - Usuarios almacenados en `inventar_SpcHidr.usuarios` (SQL Server).
 - Contraseñas con hash Werkzeug (`check_password_hash`).
 

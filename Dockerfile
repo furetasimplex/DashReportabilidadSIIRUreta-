@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     libreoffice-calc \
     libreoffice-writer \
     fonts-liberation \
+    fonts-crosextra-carlito \
  && rm -rf /var/lib/apt/lists/*
 
 # 🔹 Copiar los archivos de la aplicación
