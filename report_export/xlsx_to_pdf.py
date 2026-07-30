@@ -1,8 +1,11 @@
 """
 Conversión de libros Excel (.xlsx) a PDF.
 
-Windows: Microsoft Excel vía COM (win32com).
-Linux/Docker: LibreOffice headless (soffice).
+Único motor: LibreOffice headless (`soffice` / `libreoffice`).
+Post-proceso: pypdf (+ pdfplumber) para normalizar a A3.
+
+Requisito en servidor Linux (y en Windows de desarrollo): LibreOffice instalado
+y `soffice` en PATH, o en las rutas estándar de instalación.
 """
 from __future__ import annotations
 
@@ -18,7 +21,6 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-XL_TYPE_PDF = 0
 A3_WIDTH_PT = 841.8898
 A3_HEIGHT_PT = 1190.5512
 
@@ -59,8 +61,8 @@ def normalize_single_page_to_a3(
 
     reader = PdfReader(BytesIO(pdf_bytes))
     if len(reader.pages) != 1:
-        # LibreOffice (Linux) no encoge tanto como Excel para fitToPage 1x1
-        # y desborda el contenido en varias paginas apiladas verticalmente
+        # LibreOffice no encoge tanto como fitToPage 1x1 ideal y puede
+        # desbordar el contenido en varias paginas apiladas verticalmente
         # (fitToWidth=1 => 1 pagina de ancho). Se concatenan en una sola tira
         # vertical y luego el recorte+escalado A3 de abajo se encarga del resto.
         pdf_bytes = _stack_pages_vertically(pdf_bytes)
@@ -72,8 +74,7 @@ def normalize_single_page_to_a3(
     if source_width <= 0 or source_height <= 0:
         raise RuntimeError("La pagina PDF generada tiene dimensiones invalidas.")
 
-    # Excel puede ignorar A3 si el controlador de impresora activo no lo
-    # soporta. Se detecta el rectangulo realmente ocupado y se lleva al A3
+    # Se detecta el rectangulo realmente ocupado y se lleva al A3
     # con margenes controlados, evitando una pagina diminuta en el centro.
     with pdfplumber.open(BytesIO(pdf_bytes)) as plumber_pdf:
         plumber_page = plumber_pdf.pages[0]
@@ -174,33 +175,6 @@ def normalize_pages_to_a3_landscape(
     return output.getvalue()
 
 
-def _convert_with_excel_com(xlsx_path: Path, pdf_path: Path) -> None:
-    import win32com.client  # type: ignore[import-untyped]
-
-    excel = None
-    workbook = None
-    try:
-        # DispatchEx fuerza una instancia aislada y evita interferir con un
-        # Excel que el usuario ya tenga abierto.
-        excel = win32com.client.DispatchEx("Excel.Application")
-        excel.Visible = False
-        excel.DisplayAlerts = False
-        workbook = excel.Workbooks.Open(str(xlsx_path.resolve()))
-        workbook.ExportAsFixedFormat(
-            Type=XL_TYPE_PDF,
-            Filename=str(pdf_path.resolve()),
-            Quality=0,
-            IncludeDocProperties=True,
-            IgnorePrintAreas=False,
-            OpenAfterPublish=False,
-        )
-    finally:
-        if workbook is not None:
-            workbook.Close(SaveChanges=False)
-        if excel is not None:
-            excel.Quit()
-
-
 def _find_soffice() -> str | None:
     candidates = [
         shutil.which("soffice"),
@@ -231,14 +205,21 @@ def _convert_with_libreoffice(
     soffice = _find_soffice()
     if not soffice:
         raise RuntimeError(
-            "LibreOffice no está instalado o no se encontró 'soffice' en el PATH."
+            "LibreOffice no está instalado o no se encontró 'soffice'/"
+            "'libreoffice' en el PATH (ni en las rutas de instalación estándar)."
         )
 
     outdir = pdf_path.parent
+    # Perfil de usuario propio por conversion: sin esto, dos workers de gunicorn
+    # convirtiendo a la vez chocan en ~/.config/libreoffice y el segundo falla.
+    # ponytail: perfil desechable por llamada; si el arranque en frio pesa,
+    # cachear un perfil por worker (env var con el PID).
+    perfil = (outdir / "lo_profile").resolve().as_uri()
     result = subprocess.run(
         [
             soffice,
             "--headless",
+            f"-env:UserInstallation={perfil}",
             "--convert-to",
             "pdf",
             "--outdir",
@@ -270,16 +251,13 @@ def convert_xlsx_bytes_to_pdf(
     timeout_sec: int = 120,
 ) -> bytes:
     """
-    Convierte bytes de un libro .xlsx a PDF.
+    Convierte bytes de un libro .xlsx a PDF con LibreOffice headless.
 
-    En Windows intenta Excel COM primero; si falla o no está disponible,
-    usa LibreOffice headless.
+    Requiere LibreOffice instalado en el entorno (Linux de producción o
+    Windows de desarrollo).
     """
     if not xlsx_bytes:
         raise RuntimeError("El archivo Excel está vacío.")
-
-    converter_used = None
-    last_error: Exception | None = None
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
@@ -288,35 +266,20 @@ def convert_xlsx_bytes_to_pdf(
         pdf_path = tmp / f"{nombre_temporal}.pdf"
         xlsx_path.write_bytes(xlsx_bytes)
 
-        if sys.platform == "win32":
-            try:
-                _convert_with_excel_com(xlsx_path, pdf_path)
-                converter_used = "excel_com"
-            except ImportError:
-                last_error = RuntimeError(
-                    "pywin32 no está instalado; no se puede usar Excel COM."
-                )
-            except Exception as exc:
-                last_error = exc
-                logger.warning("[PDF] Excel COM falló: %s", exc)
-
-        if converter_used is None:
-            try:
-                _convert_with_libreoffice(xlsx_path, pdf_path, timeout_sec)
-                converter_used = "libreoffice"
-            except Exception as exc:
-                last_error = exc
-
-        if converter_used is None:
-            detail = str(last_error) if last_error else "convertidor desconocido"
+        try:
+            _convert_with_libreoffice(xlsx_path, pdf_path, timeout_sec)
+        except Exception as exc:
             raise RuntimeError(
-                "No fue posible convertir el Excel a PDF. "
-                "Instale Microsoft Excel (Windows) o LibreOffice. "
-                f"Detalle: {detail}"
-            ) from last_error
+                "No fue posible convertir el Excel a PDF con LibreOffice. "
+                "Instale LibreOffice y asegúrese de que 'soffice' esté en el PATH. "
+                f"Detalle: {exc}"
+            ) from exc
 
         if not pdf_path.is_file():
             raise RuntimeError("La conversión a PDF no generó un archivo de salida.")
 
-        logger.info("[PDF] converter=%s size=%s bytes", converter_used, pdf_path.stat().st_size)
+        logger.info(
+            "[PDF] converter=libreoffice size=%s bytes",
+            pdf_path.stat().st_size,
+        )
         return pdf_path.read_bytes()

@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libreoffice-calc \
     libreoffice-writer \
+    fonts-liberation \
  && rm -rf /var/lib/apt/lists/*
 
 # 🔹 Copiar los archivos de la aplicación
