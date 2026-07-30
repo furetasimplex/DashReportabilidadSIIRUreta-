@@ -26,20 +26,39 @@ A3_HEIGHT_PT = 1190.5512
 
 
 def _stack_pages_vertically(pdf_bytes: bytes) -> bytes:
-    """Une varias paginas en una sola tira vertical (pagina 0 arriba)."""
+    """Une varias paginas en una sola tira vertical (pagina 0 arriba).
+
+    Cada pagina se recorta a su contenido antes de apilar. Apilandolas enteras,
+    el borde sin tinta de cada una deja una linea blanca de ~1,6 pt cruzando las
+    tablas justo en el salto de pagina.
+    """
+    import pdfplumber
     from pypdf import PageObject, PdfReader, PdfWriter, Transformation
 
     reader = PdfReader(BytesIO(pdf_bytes))
-    pages = reader.pages
-    total_height = sum(float(p.mediabox.height) for p in pages)
-    max_width = max(float(p.mediabox.width) for p in pages)
+    recortes = []
+    with pdfplumber.open(BytesIO(pdf_bytes)) as plumber_pdf:
+        for pagina in plumber_pdf.pages:
+            alto = float(pagina.height)
+            objetos = [o for grupo in pagina.objects.values() for o in grupo]
+            arriba = [o["top"] for o in objetos if o.get("top") is not None]
+            abajo = [o["bottom"] for o in objetos if o.get("bottom") is not None]
+            # pdfplumber mide desde arriba; el PDF, desde abajo.
+            recortes.append(
+                (alto - max(abajo), alto - min(arriba))
+                if arriba and abajo
+                else (0.0, alto)
+            )
+
+    total_height = sum(y1 - y0 for y0, y1 in recortes)
+    max_width = max(float(p.mediabox.width) for p in reader.pages)
 
     combined = PageObject.create_blank_page(width=max_width, height=total_height)
     cursor_y = total_height
-    for page in pages:
-        cursor_y -= float(page.mediabox.height)
+    for page, (y0, y1) in zip(reader.pages, recortes):
+        cursor_y -= y1 - y0
         combined.merge_transformed_page(
-            page, Transformation().translate(0, cursor_y)
+            page, Transformation().translate(0, cursor_y - y0)
         )
 
     writer = PdfWriter()

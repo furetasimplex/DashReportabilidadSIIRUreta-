@@ -3358,13 +3358,8 @@ def _aplicar_bordes_tabla_limpia(
             )
 
 
-# Con fitToPage 1x1 la escala la elige LibreOffice, y su heuristica cambia
-# entre versiones cuando hay un grafico anclado a celdas: 26.2 encoge la hoja
-# (62% -> 54% medido) para que el grafico FY quepa, y las versiones de apt no,
-# asi que el grafico queda sobre la tabla de la seccion 5. Una escala fija da
-# el mismo PDF en cualquier LibreOffice; 45% es la escala que hoy sale en
-# Windows. ponytail: si el detalle crece y desborda, normalize_single_page_to_a3
-# ya apila las paginas; ajustar el numero si eso se nota.
+# Escala de impresion del Excel descargable (lo que sale al imprimir desde
+# Excel). El PDF no la usa: va por _una_pagina_de_ancho.
 _ESCALA_PDF_TORRES = 45
 _ESCALA_PDF_SRR = 55
 
@@ -3375,6 +3370,22 @@ def _fijar_escala_impresion(ws, escala: int) -> None:
     ws.page_setup.scale = escala
     ws.page_setup.fitToWidth = None
     ws.page_setup.fitToHeight = None
+
+
+def _una_pagina_de_ancho(ws) -> None:
+    """Una pagina de ancho, alto libre: LibreOffice solo trocea, no decide.
+
+    Con fitToHeight=1 (o con una escala fija que se queda corta) el grafico FY
+    no cabe en la pagina y cada version de LibreOffice resuelve distinto: 26.2
+    encoge la hoja, las de apt lo reubican hacia arriba y queda sobre la tabla.
+    Sin limite de alto nunca hay un "no cabe": LibreOffice corta el grafico en
+    el salto de pagina y _stack_pages_vertically lo vuelve a unir intacto
+    (verificado: mismo texto, mismos objetos, misma proporcion).
+    """
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.scale = None
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
 
 
 def _agregar_hoja_mensual_torres(
@@ -4621,17 +4632,19 @@ def _build_xlsx_pdf_desde_excel(
 
     ws.page_setup.orientation = "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_A3
-    _fijar_escala_impresion(
-        ws,
-        _ESCALA_PDF_SRR if tipo_norm == "srr" else _ESCALA_PDF_TORRES,
-    )
+    if tipo_norm == "srr":
+        _fijar_escala_impresion(ws, _ESCALA_PDF_SRR)
+    else:
+        _una_pagina_de_ancho(ws)
     ws.print_options.horizontalCentered = True
     ws.print_options.verticalCentered = False
     if tipo_norm != "srr":
         ws.page_margins.left = 0.15
         ws.page_margins.right = 0.15
-        ws.page_margins.top = 0.20
-        ws.page_margins.bottom = 0.20
+        # Verticales en 0: al apilar las paginas, un margen se convierte en
+        # una banda blanca en medio del reporte (medida: 41 pt).
+        ws.page_margins.top = 0.0
+        ws.page_margins.bottom = 0.0
         ws.page_margins.header = 0.0
         ws.page_margins.footer = 0.0
     ws.sheet_view.showGridLines = False
