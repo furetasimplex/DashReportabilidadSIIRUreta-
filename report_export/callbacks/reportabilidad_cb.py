@@ -4695,13 +4695,149 @@ def _build_xlsx_pdf_desde_excel(
     return output.getvalue(), nombre
 
 
+def _motor_pdf() -> str:
+    """Motor de render: "python" (por defecto) o "libreoffice" (legacy).
+
+    El camino LibreOffice queda disponible por si hay que volver atrás, pero no
+    es reproducible entre versiones: decide alto de fila, escala de impresión y
+    posición de los objetos anclados por su cuenta, y por eso el gráfico FY se
+    montaba sobre la tabla en el servidor y no en Windows.
+    """
+    return os.getenv("PDF_ENGINE", "python").strip().lower()
+
+
+def _datos_pdf_torres(
+    paquete: dict,
+    tipo: str,
+    fecha_fin,
+    mapa_comentarios: dict | None = None,
+) -> dict:
+    """Reúne para el mes del reporte lo mismo que consume la hoja del Excel."""
+    if mapa_comentarios is None:
+        mapa_comentarios = paquete.get("mapa_comentarios")
+    bd = paquete["bd_ton_mes"].copy()
+    bd["Fecha"] = pd.to_datetime(bd["Fecha"], errors="coerce").dt.normalize()
+    bd = bd[bd["Fecha"].notna()]
+    if bd.empty:
+        raise RuntimeError("BD Ton del mes sin fechas válidas.")
+
+    objetivo = pd.Timestamp(fecha_fin).to_period("M")
+    periodos = bd["Fecha"].dt.to_period("M")
+    bd_mes = bd[periodos == objetivo]
+    if bd_mes.empty:
+        # El período pedido puede no coincidir con el del snapshot guardado.
+        bd_mes = bd[periodos == periodos.max()]
+
+    material = _preparar_material_por_turno(paquete["turno_mes"])
+    if not material.empty:
+        material = material[
+            material["Fecha"].dt.to_period("M")
+            == bd_mes["Fecha"].dt.to_period("M").iloc[0]
+        ].copy()
+
+    fecha_corte = paquete.get("fecha_corte_operacional")
+    if fecha_corte is not None and not isinstance(fecha_corte, date):
+        fecha_corte = pd.to_datetime(fecha_corte).date()
+
+    detalle = _preparar_detalle_mensual_torres(
+        df_bd_ton=bd_mes,
+        tipo=tipo,
+        df_material_turno=material,
+        fecha_inicio_mes=paquete.get("fecha_inicio_mes"),
+        fecha_fin_mes=paquete.get("fecha_fin_mes"),
+        fecha_corte_operacional=fecha_corte,
+        mapa_comentarios=mapa_comentarios,
+    )
+    if detalle.empty:
+        raise RuntimeError(f"El detalle mensual {tipo} quedó vacío.")
+
+    fecha_base = pd.to_datetime(detalle["Fecha"].min())
+    gestion_fy = paquete[
+        "gestion_fy_quimico" if tipo.lower() == "quimico"
+        else "gestion_fy_fisico"
+    ]
+    return {
+        "tipo": tipo,
+        "fecha_base": fecha_base,
+        "detalle": detalle,
+        "resumen": _calcular_resumen_mensual_torres(detalle),
+        "tonelaje": _calcular_tonelaje_por_material_torres(detalle),
+        "gestion_fy": _normalizar_gestion_fy(gestion_fy, fecha_base),
+        "anio_fiscal": _obtener_rango_fiscal_hasta_mes(
+            fecha_base
+        )["anio_fiscal"],
+    }
+
+
+def _datos_pdf_srr(
+    paquete: dict,
+    fecha_fin,
+    mapa_comentarios: dict | None = None,
+) -> dict:
+    """Igual que _datos_pdf_torres, pero cruzando químico y físico para TM3."""
+    quimico = _datos_pdf_torres(paquete, "quimico", fecha_fin, mapa_comentarios)
+    fisico = _datos_pdf_torres(paquete, "fisico", fecha_fin, mapa_comentarios)
+    detalle = _merge_detalle_srr(quimico["detalle"], fisico["detalle"])
+    return {
+        "fecha_base": quimico["fecha_base"],
+        "detalle": detalle,
+        "rep_turno": [
+            _rep_turno_srr(
+                fila.get("Rep_TM3_Quimico"), fila.get("Rep_TM3_Fisico")
+            )
+            for _, fila in detalle.iterrows()
+        ],
+        "resumen_quimico": _resumen_srr(quimico["detalle"]),
+        "resumen_fisico": _resumen_srr(fisico["detalle"]),
+        "mineral": _mineral_srr(detalle),
+    }
+
+
+def _nombre_pdf_representatividad(tipo_norm: str, fecha_corte, fecha_fin) -> str:
+    # El nombre oficial usa la última fecha operacional válida mostrada en
+    # el detalle, no el fin del período seleccionado (por ejemplo, 31 del mes).
+    fecha_nombre = pd.to_datetime(fecha_corte, errors="coerce")
+    if pd.isna(fecha_nombre):
+        fecha_nombre = pd.Timestamp(fecha_fin)
+    fecha_texto = fecha_nombre.strftime("%d-%m-%Y")
+    if tipo_norm == "srr":
+        return f"Representatividad Muestras SRR Torre {fecha_texto}.pdf"
+    analisis_titulo = "Química" if tipo_norm == "quimico" else "Física"
+    return (
+        f"Representatividad Muestra {analisis_titulo} Torre {fecha_texto}.pdf"
+    )
+
+
 def _pdf_representatividad_desde_xlsx(
     xlsx_bytes: bytes,
     tipo_analisis: str,
     fecha_fin,
     fecha_corte=None,
+    paquete: dict | None = None,
+    mapa_comentarios: dict | None = None,
 ) -> tuple[bytes, str]:
     """Convierte Excel de representatividad a PDF A3 (hoja Químico o Físico)."""
+    tipo_norm = str(tipo_analisis).lower()
+    if _motor_pdf() == "python" and paquete is not None:
+        from report_export.pdf_torres import render_srr, render_torres
+
+        if tipo_norm == "srr":
+            datos = _datos_pdf_srr(paquete, fecha_fin, mapa_comentarios)
+            pdf_bytes = render_srr(datos)
+        else:
+            datos = _datos_pdf_torres(
+                paquete, tipo_norm, fecha_fin, mapa_comentarios
+            )
+            pdf_bytes = render_torres(datos)
+        print(
+            "[PDF PYTHON]",
+            {"tipo": tipo_norm, "filas_detalle": len(datos["detalle"])},
+        )
+        return (
+            pdf_bytes,
+            _nombre_pdf_representatividad(tipo_norm, fecha_corte, fecha_fin),
+        )
+
     metricas = (
         _validar_workbook_representatividad(
             xlsx_bytes,
@@ -4726,23 +4862,10 @@ def _pdf_representatividad_desde_xlsx(
         fecha_fin,
     )
     pdf_bytes = convert_xlsx_bytes_to_pdf(xlsx_filtrado)
-    tipo_norm = str(tipo_analisis).lower()
     pdf_bytes = normalize_single_page_to_a3(pdf_bytes)
-    # El nombre oficial usa la última fecha operacional válida mostrada en
-    # el detalle, no el fin del período seleccionado (por ejemplo, 31 del mes).
-    fecha_nombre = pd.to_datetime(fecha_corte, errors="coerce")
-    if pd.isna(fecha_nombre):
-        fecha_nombre = pd.Timestamp(fecha_fin)
-    fecha_texto = fecha_nombre.strftime("%d-%m-%Y")
-    if tipo_norm == "srr":
-        filename = f"Representatividad Muestras SRR Torre {fecha_texto}.pdf"
-    else:
-        analisis_titulo = "Química" if tipo_norm == "quimico" else "Física"
-        filename = (
-            f"Representatividad Muestra {analisis_titulo} Torre "
-            f"{fecha_texto}.pdf"
-        )
-    return pdf_bytes, filename
+    return pdf_bytes, _nombre_pdf_representatividad(
+        tipo_norm, fecha_corte, fecha_fin
+    )
 
 
 def _build_xlsx_pdf_reporte_torre(
@@ -4971,6 +5094,96 @@ def _agregar_hoja_mensual_srr_legacy(
     return nombre
 
 
+# Reglas de la hoja SRR/TM3. Viven acá y no dentro del constructor del Excel
+# porque el PDF en Python las necesita idénticas; si se duplicaran, los dos
+# formatos podrían empezar a informar números distintos.
+
+def _merge_detalle_srr(
+    detalle_quimico: pd.DataFrame,
+    detalle_fisico: pd.DataFrame,
+) -> pd.DataFrame:
+    """Cruza químico y físico por Fecha + Turno para el detalle de TM3."""
+    q = detalle_quimico[[
+        "Semana", "Fecha", "Pad", "Turno", "TMH_CV01", "TM3_Activo",
+        "Rep_TM3", "Comentario_TM3",
+    ]].copy().rename(columns={
+        "Rep_TM3": "Rep_TM3_Quimico",
+        "Comentario_TM3": "Comentario_TM3_Quimico",
+    })
+    f = detalle_fisico[["Fecha", "Turno", "Rep_TM3", "Comentario_TM3"]].copy()
+    f = f.rename(columns={
+        "Rep_TM3": "Rep_TM3_Fisico",
+        "Comentario_TM3": "Comentario_TM3_Fisico",
+    })
+    return q.merge(f, on=["Fecha", "Turno"], how="outer").sort_values(
+        ["Fecha", "Turno"]
+    )
+
+
+def _rep_turno_srr(rep_quimico, rep_fisico):
+    """Basta con que una de las dos muestras sea representativa."""
+    if (
+        pd.to_numeric(rep_quimico, errors="coerce") == 1
+        or pd.to_numeric(rep_fisico, errors="coerce") == 1
+    ):
+        return 1
+    if pd.isna(rep_quimico) and pd.isna(rep_fisico):
+        return None
+    return 0
+
+
+def _resumen_srr(detalle: pd.DataFrame) -> list[dict]:
+    """Semanas 1..6 y MTD sobre los turnos con TM3 activa."""
+    filas = []
+
+    def _fila(parte, etiqueta):
+        activos = int((parte["TM3_Activo"] == 1).sum())
+        reps = int(
+            ((parte["TM3_Activo"] == 1) & (parte["Rep_TM3"] == 1)).sum()
+        )
+        no_reps = max(activos - reps, 0)
+        filas.append({
+            "Periodo": etiqueta,
+            "Turnos_Activos": activos,
+            "Representativos": reps,
+            "No_Representativos": no_reps,
+            "Pct_Representativos": reps / activos if activos else None,
+            "Pct_No_Representativos": no_reps / activos if activos else None,
+            "Total": 1.0 if activos else None,
+        })
+
+    for semana in range(1, 7):
+        _fila(detalle[detalle["Semana_Num"] == semana], f"Semana {semana}")
+    _fila(detalle, "MTD")
+    return filas
+
+
+def _mineral_srr(detalle: pd.DataFrame) -> list[dict]:
+    """Tonelaje con y sin torre por material, sobre el detalle ya cruzado."""
+    resultados = []
+    for pad in ["Óxido", "Sulfuro"]:
+        parte = detalle[(detalle["Pad"] == pad) & (detalle["TM3_Activo"] == 1)]
+        rep_any = (
+            (parte["Rep_TM3_Quimico"] == 1) | (parte["Rep_TM3_Fisico"] == 1)
+        )
+        con = float(
+            pd.to_numeric(parte.loc[rep_any, "TMH_CV01"], errors="coerce").sum()
+        )
+        sin = float(
+            pd.to_numeric(
+                parte.loc[~rep_any, "TMH_CV01"], errors="coerce"
+            ).sum()
+        )
+        total = con + sin
+        resultados.extend([
+            {"Pad": pad, "Estado": "Con Torre", "Tonelaje": con,
+             "Distribucion": con / total if total else None},
+            {"Pad": pad, "Estado": "Sin Torre", "Tonelaje": sin,
+             "Distribucion": sin / total if total else None},
+        ])
+    return resultados
+
+
 def _agregar_hoja_mensual_srr(
     wb,
     detalle_quimico: pd.DataFrame,
@@ -5094,41 +5307,17 @@ def _agregar_hoja_mensual_srr(
         celda.alignment = centro
 
     def _resumen(detalle):
-        filas = []
-        for semana in range(1, 7):
-            parte = detalle[detalle["Semana_Num"] == semana]
-            activos = int((parte["TM3_Activo"] == 1).sum())
-            reps = int(((parte["TM3_Activo"] == 1) & (parte["Rep_TM3"] == 1)).sum())
-            no_reps = max(activos - reps, 0)
-            filas.append((
-                f"Semana {semana}",
-                reps / activos if activos else None,
-                no_reps / activos if activos else None,
-                1.0 if activos else None,
-            ))
-        activos = int((detalle["TM3_Activo"] == 1).sum())
-        reps = int(((detalle["TM3_Activo"] == 1) & (detalle["Rep_TM3"] == 1)).sum())
-        no_reps = max(activos - reps, 0)
-        filas.append((
-            "MTD", reps / activos if activos else None,
-            no_reps / activos if activos else None,
-            1.0 if activos else None,
-        ))
-        return filas
+        return [
+            (
+                fila["Periodo"],
+                fila["Pct_Representativos"],
+                fila["Pct_No_Representativos"],
+                fila["Total"],
+            )
+            for fila in _resumen_srr(detalle)
+        ]
 
-    q = detalle_quimico[[
-        "Semana", "Fecha", "Pad", "Turno", "TMH_CV01", "TM3_Activo",
-        "Rep_TM3", "Comentario_TM3",
-    ]].copy().rename(columns={
-        "Rep_TM3": "Rep_TM3_Quimico",
-        "Comentario_TM3": "Comentario_TM3_Quimico",
-    })
-    f = detalle_fisico[["Fecha", "Turno", "Rep_TM3", "Comentario_TM3"]].copy()
-    f = f.rename(columns={
-        "Rep_TM3": "Rep_TM3_Fisico",
-        "Comentario_TM3": "Comentario_TM3_Fisico",
-    })
-    detalle = q.merge(f, on=["Fecha", "Turno"], how="outer").sort_values(["Fecha", "Turno"])
+    detalle = _merge_detalle_srr(detalle_quimico, detalle_fisico)
 
     ws.merge_cells("C5:M7")
     ws["C5"] = (
@@ -5167,17 +5356,10 @@ def _agregar_hoja_mensual_srr(
     for col, valor in {3: "Pad", 4: "Mineral Apilado (ton)"}.items():
         celda = ws.cell(10, col, valor)
         celda.fill, celda.font, celda.alignment, celda.border = blanco, font_header, centro, borde
-    filas_mineral = []
-    for pad in ["Óxido", "Sulfuro"]:
-        parte = detalle[(detalle["Pad"] == pad) & (detalle["TM3_Activo"] == 1)]
-        rep_any = (parte["Rep_TM3_Quimico"] == 1) | (parte["Rep_TM3_Fisico"] == 1)
-        con = float(pd.to_numeric(parte.loc[rep_any, "TMH_CV01"], errors="coerce").sum())
-        sin = float(pd.to_numeric(parte.loc[~rep_any, "TMH_CV01"], errors="coerce").sum())
-        total = con + sin
-        filas_mineral.extend([
-            (pad, "Con Torre", con, con / total if total else None),
-            (pad, "Sin Torre", sin, sin / total if total else None),
-        ])
+    filas_mineral = [
+        (f["Pad"], f["Estado"], f["Tonelaje"], f["Distribucion"])
+        for f in _mineral_srr(detalle)
+    ]
     for fila_excel, valores in enumerate(filas_mineral, 11):
         for col, valor in zip((3, 4, 5, 6), valores):
             celda = ws.cell(fila_excel, col, valor)
@@ -5436,15 +5618,7 @@ def _agregar_hoja_mensual_srr(
         es_futura = pd.isna(fila.get("Pad"))
         rep_quimico = fila.get("Rep_TM3_Quimico")
         rep_fisico = fila.get("Rep_TM3_Fisico")
-        if (
-            pd.to_numeric(rep_quimico, errors="coerce") == 1
-            or pd.to_numeric(rep_fisico, errors="coerce") == 1
-        ):
-            rep_turno_srr = 1
-        elif pd.isna(rep_quimico) and pd.isna(rep_fisico):
-            rep_turno_srr = None
-        else:
-            rep_turno_srr = 0
+        rep_turno_srr = _rep_turno_srr(rep_quimico, rep_fisico)
         valores = [
             None if es_futura else fila.get("Semana"),
             None if es_futura else fila.get("Fecha"),
@@ -6107,6 +6281,10 @@ def _construir_fuente_unica_representatividad(
         paquete,
         mapa_comentarios=mapa_comentarios,
     )
+    # El PDF en Python arma el detalle por su cuenta desde el paquete, así que
+    # necesita el mismo mapa que se usó acá; sin esto perdería los comentarios
+    # y el Pad ajustado en el editor.
+    paquete["mapa_comentarios"] = mapa_comentarios
     metricas = _validar_workbook_representatividad(
         xlsx_bytes,
         fecha_fin,
@@ -7264,6 +7442,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 analisis,
                 fin_d,
                 fecha_corte=fecha_corte_operacional,
+                paquete=paquete,
             )
             print(f"[PDF] representatividad_torres pdf size={len(pdf_bytes)} bytes")
             return (
@@ -7835,6 +8014,8 @@ def descargar_historial_pdf_representatividad(n_clicks_list):
             subtipo,
             fin,
             fecha_corte=paquete.get("fecha_corte_operacional"),
+            paquete=paquete,
+            mapa_comentarios=mapa,
         )
         return (
             _enviar_descarga(pdf_bytes, filename),
