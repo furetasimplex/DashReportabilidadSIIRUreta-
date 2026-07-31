@@ -258,11 +258,6 @@ def layout():
                     selected_className="rp-tab--selected",
                     children=dbc.Row([
                         dbc.Col(_report_card(
-                            "Datos Conciliados",
-                            "Datos conciliados diarios de producción. Superintendencia Medición y Reconciliación.",
-                            "prod",
-                        ), md=4, className="mb-4"),
-                        dbc.Col(_report_card(
                             "Representatividad Torres",
                             "Representatividad diaria de torres de muestreo por turno y tipo de análisis.",
                             "representatividad_torres",
@@ -271,6 +266,11 @@ def layout():
                             "Análisis Torres de Muestreo",
                             "Análisis de las Torres de Muestreo por turno: leyes, granulometrías y fuentes de información.",
                             "reporte_turno",
+                        ), md=4, className="mb-4"),
+                        dbc.Col(_report_card(
+                            "Datos Conciliados",
+                            "Datos conciliados diarios de producción. Superintendencia Medición y Reconciliación.",
+                            "prod",
                         ), md=4, className="mb-4"),
                     ], className="g-4 mt-3"),
                 ),
