@@ -113,7 +113,7 @@ def encabezado():
                 style={"margin": 0, "fontSize": "24px", "fontWeight": 600},
             ),
             html.Div(
-                "Reportabilidad SIIR — Planta Hidrometalurgica · esquema [reclamo]",
+                "Reportabilidad SIIR — Planta Hidrometalúrgica Spence",
                 style={"fontSize": "13px", "opacity": 0.85, "marginTop": "3px"},
             ),
         ],
@@ -168,21 +168,19 @@ def barra_filtros():
                        "fontSize": "13px"},
             ),
             html.Button(
-                "Publicar en Datos_conciliados_of",
+                "Publicar dato conciliado",
                 id="btn-publicar",
                 n_clicks=0,
-                title="Ejecuta inventar_SpcHidr.sp_mantiene_datos_conciliados_of para el "
-                      "periodo seleccionado. Escribe en produccion.",
+                title="Publica el reclamo del periodo seleccionado. Queda visible para el resto de la organización.",
                 style={"backgroundColor": "white", "color": ROJO, "border": f"1px solid {ROJO}",
                        "padding": "9px 22px", "borderRadius": "5px", "cursor": "pointer",
                        "fontSize": "13px", "fontWeight": 600},
             ),
             dcc.ConfirmDialog(
                 id="confirmar-publicar",
-                message="Esto ejecuta inventar_SpcHidr.sp_mantiene_datos_conciliados_of para "
-                        "el periodo seleccionado y ESCRIBE en Datos_conciliados_of (produccion, "
-                        "lo que ve el resto de la organizacion). Confirmar solo si el dato de "
-                        "reclamo ya fue revisado en 'Vista previa del dato conciliado'.",
+                message="Se publicará el dato conciliado del periodo seleccionado. "
+                        "Quedará visible para el resto de la organización. "
+                        "Confirme solo si ya revisó la 'Vista previa del dato conciliado'.",
             ),
             html.Div(id="mensaje-accion",
                      style={"fontSize": "12px", "color": GRIS, "flexGrow": 1}),
@@ -196,11 +194,10 @@ def panel_automatizacion():
         children=[
             html.H3("Mantencion automatica de modulos", style=TITULO_SECCION),
             html.P(
-                "Congela los modulos nuevos que aparecen en topografia o camiones, cierra "
-                "los que llegan a 100 % y abre el que sigue en la secuencia. Esto reemplaza "
-                "los EXEC manuales de congelar/abrir/cerrar: nadie necesita operar SQL Server "
-                "para eso. Los casos que no se pueden decidir solos (fin de PAD, cambio de "
-                "campana) quedan como alerta para revisar aqui, no se adivinan.",
+                "Congela los módulos nuevos que aparecen en topografía o camiones, cierra "
+                "los que llegan a 100 % y abre el que sigue en la secuencia. "
+                "Los casos que no se pueden decidir solos (fin de PAD, cambio de campaña) "
+                "quedan como alerta para revisar aquí.",
                 style=SUBTITULO,
             ),
             html.Button(
@@ -234,13 +231,10 @@ def panel_semaforo():
         children=[
             html.H3("Semaforo de integridad", style=TITULO_SECCION),
             html.P(
-                "Los controles BLOQUEANTES deben quedar en cero antes de publicar el "
-                "reporte. Los de advertencia no impiden publicar, pero deben poder "
-                "explicarse. Este dashboard y el esquema [reclamo] son de VALIDACION: nada "
-                "de esto escribe todavia en inventar_SpcHidr.Datos_conciliados_of. La "
-                "publicacion real es un paso aparte, manual, que se hace recien cuando este "
-                "semaforo este en cero (ver 'Vista previa del dato conciliado' mas abajo para "
-                "lo que se publicaria).",
+                "Los controles bloqueantes deben quedar en cero antes de publicar. "
+                "Los de advertencia no impiden publicar, pero deben poder explicarse. "
+                "Esta pantalla solo valida: no publica nada hasta que usted pulse "
+                "'Publicar datos conciliados'. Revise primero la vista previa más abajo.",
                 style=SUBTITULO,
             ),
             html.Div(id="semaforo"),
@@ -332,14 +326,11 @@ def panel_preview_conciliados():
         children=[
             html.H3("Vista previa del dato conciliado", style=TITULO_SECCION),
             html.P(
-                "Un dato por dia, con la misma forma que publicaria "
-                "inventar_SpcHidr.sp_mantiene_datos_conciliados_of: tonelaje de rotopala "
-                "(ya con las correcciones de linea base, densidad y cierre de secuencia), "
-                "tonelaje de camiones, el modulo que mas avanzo ese dia con su porcentaje, "
-                "y el origen del dato. Se proyecta por CV25 unicamente los dias sin medicion "
-                "real de topografia; esos dias quedan marcados en amarillo. Leido en vivo "
-                "desde reclamo.calculo_diario, no ejecuta el SP de mantencion ni modifica "
-                "Datos_conciliados_of.",
+                "Así quedaría el dato publicado por día: tonelaje de rotopala "
+                "(con correcciones de línea base, densidad y cierre de secuencia), "
+                "tonelaje de camiones, el módulo que más avanzó ese día con su porcentaje, "
+                "y el origen del dato. Los días sin medición topográfica se proyectan con "
+                "CV25 y quedan marcados en amarillo. Esta vista no publica nada.",
                 style=SUBTITULO,
             ),
             dcc.Tabs(
@@ -444,13 +435,11 @@ def panel_avance():
         children=[
             html.H3("Avance diario por fuente", style=TITULO_SECCION),
             html.P(
-                "El dato oficial es la validacion topografica. Las barras en ambar son "
+                "El dato oficial es la validación topográfica. Las barras en ámbar son "
                 "reclamo preliminar proyectado desde CV25: se corrigen solos al cargar "
-                "la topografia y reprocesar el rango. El metodo del preliminar es "
-                "CV25_REPARTIDO_POR_HORAS_ROTOPALA: reparte el tonelaje de la correa CV25 "
-                "de ese dia entre los modulos que estan ABIERTO en esa rotopala (si hay mas "
-                "de uno, en partes iguales); no usa horas por modulo, solo las horas totales "
-                "de la rotopala para el tonelaje de la correa.",
+                "la topografía y recalcular el periodo. El preliminar reparte el tonelaje "
+                "de la correa CV25 entre los módulos abiertos de esa rotopala "
+                "(en partes iguales si hay más de uno).",
                 style=SUBTITULO,
             ),
             dcc.Tabs(
@@ -473,9 +462,8 @@ def panel_ajustes():
         children=[
             html.H3("Ajustes manuales", style=TITULO_SECCION),
             html.P(
-                "Todo ajuste nace en estado PROPUESTO y no altera ninguna cifra hasta "
-                "que se aprueba. El motivo y el antecedente son obligatorios: el "
-                "procedimiento los exige y el modelo los restringe.",
+                "Todo ajuste nace como propuesta y no altera ninguna cifra hasta "
+                "que se aprueba. El motivo y el antecedente son obligatorios.",
                 style=SUBTITULO,
             ),
             html.Div(
@@ -577,8 +565,7 @@ def layout():
                 panel_preview_conciliados(),
                 panel_ajustes(),
                 html.Div(
-                    "Los datos provienen de las vistas del esquema [reclamo]. "
-                    "Ninguna regla de negocio se reimplementa en el dashboard.",
+                    "Control de reclamo — use el semáforo y la vista previa antes de publicar.",
                     style={"fontSize": "11px", "color": GRIS, "textAlign": "center",
                            "padding": "12px 0 24px"},
                 ),
@@ -591,6 +578,16 @@ def layout():
 # ---------------------------------------------------------------------------
 # Utilidades de presentacion
 # ---------------------------------------------------------------------------
+
+_MSG_ERROR = "No se pudo completar la operación. Intente de nuevo o contacte a soporte."
+
+
+def _error_ui(exc: BaseException | None = None, prefijo: str = "Error") -> str:
+    """Mensaje seguro para la UI: no expone detalle técnico de SQL/conexión."""
+    if exc is not None:
+        log.debug("%s: %s", prefijo, exc)
+    return _MSG_ERROR
+
 
 def _layout_base(titulo: str, alto: int = 320) -> dict:
     return dict(
@@ -649,7 +646,7 @@ def cb_recalcular(n, desde, hasta):
         return html.Span(msg, style={"color": VERDE})
     except Exception as exc:
         log.exception("Error al recalcular")
-        return html.Span(f"Error: {exc}", style={"color": ROJO})
+        return html.Span(_error_ui(exc), style={"color": ROJO})
 
 
 @callback(
@@ -674,7 +671,7 @@ def cb_publicar(n, desde, hasta):
         return html.Span(msg, style={"color": VERDE, "fontWeight": 600})
     except Exception as exc:
         log.exception("Error al publicar")
-        return html.Span(f"Error al publicar: {exc}", style={"color": ROJO})
+        return html.Span(_error_ui(exc, "Error al publicar"), style={"color": ROJO})
 
 
 @callback(
@@ -688,7 +685,7 @@ def cb_automatizacion(n):
         df = db.mantener_secuencia()
     except Exception as exc:
         log.exception("Error en mantencion automatica de modulos")
-        return html.Div(f"Error: {exc}", style={"color": ROJO, "fontSize": "13px"}), dash.no_update
+        return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"}), dash.no_update
 
     if df.empty:
         return (
@@ -732,7 +729,7 @@ def cb_alertas_automatizacion(n, _):
     try:
         df = db.alertas_automatizacion()
     except Exception as exc:
-        return html.Div(f"No se pudieron leer las alertas: {exc}",
+        return html.Div(_error_ui(exc, "alertas"),
                         style={"color": ROJO, "fontSize": "12px"})
 
     if df.empty:
@@ -759,7 +756,7 @@ def cb_semaforo(n, _, desde, hasta):
     try:
         df = db.semaforo(desde, hasta)
     except Exception as exc:
-        return html.Div(f"No se pudo consultar el semaforo: {exc}",
+        return html.Div(_error_ui(exc, "semaforo"),
                         style={"color": ROJO, "fontSize": "13px"})
 
     if df.empty:
@@ -805,11 +802,11 @@ def cb_resumen_general(n, _, desde, hasta):
         df = db.avance_diario(desde, hasta)
         cv = db.diferencia_cv25(desde, hasta)
     except Exception as exc:
-        return html.Div(f"Error: {exc}", style={"color": ROJO, "fontSize": "13px"})
+        return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"})
 
     if df.empty:
         return html.Div(
-            "Sin datos calculados para el periodo. Ejecute sp_calcular_reclamo_diario.",
+            "Sin datos calculados para el periodo. Use «Recalcular reclamo».",
             style={"color": GRIS, "fontSize": "13px"},
         )
 
@@ -934,7 +931,7 @@ def cb_matriz_mensual(n, _, metrica, pad_tab, desde, hasta):
     try:
         df = db.avance_diario(desde, hasta)
     except Exception as exc:
-        return html.Div(f"Error: {exc}", style={"color": ROJO, "fontSize": "13px"})
+        return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"})
 
     pad_id = int(pad_tab)
     sub = df[df["pad_id"] == pad_id].copy()
@@ -991,7 +988,7 @@ def cb_remanente(n, _, pad_tab):
     try:
         df = db.cuadratura()
     except Exception as exc:
-        return html.Div(f"Error: {exc}", style={"color": ROJO, "fontSize": "13px"})
+        return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"})
 
     pad_id = int(pad_tab)
     sub = df[df["pad_id"] == pad_id].copy()
@@ -1038,12 +1035,11 @@ def cb_preview_conciliados(n, _, pad_tab, desde, hasta):
     try:
         df = db.avance_diario(desde, hasta)
     except Exception as exc:
-        return html.Div(f"Error: {exc}", style={"color": ROJO, "fontSize": "13px"})
+        return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"})
 
     if df.empty:
         return html.Div(
-            "Sin datos calculados para el periodo (aun no se ha corrido "
-            "sp_calcular_reclamo_diario).",
+            "Sin datos calculados para el periodo. Use «Recalcular reclamo».",
             style={"color": GRIS, "fontSize": "13px"},
         )
 
@@ -1161,7 +1157,7 @@ def cb_cv25(n, _, desde, hasta):
     try:
         df = db.diferencia_cv25(desde, hasta)
     except Exception as exc:
-        return _sin_datos(f"Error: {exc}"), _sin_datos("")
+        return _sin_datos(_error_ui(exc)), _sin_datos("")
 
     if df.empty:
         return _sin_datos(), _sin_datos()
@@ -1207,7 +1203,7 @@ def cb_rendimiento(n, _, rotopala_tab, desde, hasta):
     try:
         df = db.rendimiento(desde, hasta)
     except Exception as exc:
-        return _sin_datos(f"Error: {exc}"), _sin_datos("")
+        return _sin_datos(_error_ui(exc)), _sin_datos("")
 
     if df.empty:
         return _sin_datos(), _sin_datos()
@@ -1257,7 +1253,7 @@ def cb_cuadratura(n, _, pad_tab):
     try:
         df = db.cuadratura()
     except Exception as exc:
-        return _sin_datos(f"Error: {exc}"), None
+        return _sin_datos(_error_ui(exc)), None
 
     if df.empty:
         return _sin_datos("Sin modulos congelados"), None
@@ -1296,8 +1292,8 @@ def cb_cuadratura(n, _, pad_tab):
                 "modulo_siguiente_propuesto"]
         tabla = html.Div([
             html.Div(
-                f"{len(alerta)} modulo(s) sobre 100 %. Cada uno requiere un ajuste "
-                f"TRASPASO_MODULO documentado antes de publicar.",
+                f"{len(alerta)} módulo(s) sobre 100 %. Cada uno requiere un ajuste "
+                f"de traspaso de módulo documentado antes de publicar.",
                 style={"color": ROJO, "fontSize": "13px", "fontWeight": 600,
                        "padding": "10px 0 6px"},
             ),
@@ -1344,7 +1340,7 @@ def cb_detalle_cuadratura_modulo(seleccion):
         cuad = db.cuadratura()
         hist = db.historial_modulo(campana_id, modulo_id)
     except Exception as exc:
-        return html.Div(f"Error: {exc}", style={"color": ROJO, "fontSize": "13px"})
+        return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"})
 
     fila_cuad = cuad[(cuad["campana_id"] == campana_id) & (cuad["modulo_id"] == modulo_id)]
     resumen = None
@@ -1366,8 +1362,8 @@ def cb_detalle_cuadratura_modulo(seleccion):
 
     if hist.empty:
         tabla = html.Div(
-            "Este modulo aun no tiene filas en calculo_diario. Ejecute "
-            "sp_calcular_reclamo_diario para el rango que corresponda.",
+            "Este módulo aún no tiene historial diario. "
+            "Use «Recalcular reclamo» para el periodo que corresponda.",
             style={"color": GRIS, "fontSize": "13px"},
         )
     else:
@@ -1403,7 +1399,7 @@ def cb_avance(n, _, pad_tab, desde, hasta):
     try:
         df = db.avance_diario(desde, hasta)
     except Exception as exc:
-        return _sin_datos(f"Error: {exc}"), None
+        return _sin_datos(_error_ui(exc)), None
 
     if df.empty:
         return _sin_datos(), None
@@ -1526,7 +1522,7 @@ def cb_registrar_ajuste(n, fecha, modulo, tipo, destino, m3, tms, motivo,
         return html.Span(msg, style={"color": VERDE})
     except Exception as exc:
         log.exception("Error al registrar ajuste")
-        return html.Span(f"Error: {exc}", style={"color": ROJO})
+        return html.Span(_error_ui(exc), style={"color": ROJO})
 
 
 @callback(
@@ -1540,7 +1536,7 @@ def cb_tabla_ajustes(n, _, desde, hasta):
     try:
         df = db.ajustes(desde, hasta)
     except Exception as exc:
-        return html.Div(f"Error: {exc}", style={"color": ROJO, "fontSize": "13px"})
+        return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"})
 
     if df.empty:
         return html.Div("Sin ajustes registrados en el periodo.",

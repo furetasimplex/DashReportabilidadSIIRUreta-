@@ -4,20 +4,19 @@ Capa de acceso a datos del dashboard de reclamo.
 Todo el SQL vive aqui. Ninguna otra parte de la aplicacion escribe consultas,
 de modo que si cambia un nombre de vista solo hay que tocar este archivo.
 
-Conexion: se configura por variables de entorno o por el archivo .env, nunca
-codificada en el fuente. Ver README.md.
+Conexion: reutiliza db_connection.get_engine() (SQLSERVER_* + ENTORNO en .env).
 """
 
 from __future__ import annotations
 
-import os
 import logging
-from functools import lru_cache
 from typing import Optional
 
 import pandas as pd
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
+
+from db_connection import get_engine as _app_get_engine
 
 log = logging.getLogger(__name__)
 
@@ -26,52 +25,14 @@ log = logging.getLogger(__name__)
 # Conexion
 # ---------------------------------------------------------------------------
 
-def _connection_url() -> str:
-    """Arma la URL de conexion desde el entorno.
-
-    Variables reconocidas:
-        SQL_SERVER    host o host\\instancia   (obligatoria)
-        SQL_DATABASE  nombre de la base        (obligatoria)
-        SQL_DRIVER    driver ODBC              (por defecto ODBC Driver 17)
-        SQL_USER      usuario                  (si falta, autenticacion Windows)
-        SQL_PASSWORD  clave
-        SQL_TRUST     yes/no para certificado autofirmado
-    """
-    server = os.environ.get("SQL_SERVER")
-    database = os.environ.get("SQL_DATABASE")
-
-    if not server or not database:
-        raise RuntimeError(
-            "Faltan SQL_SERVER y/o SQL_DATABASE. "
-            "Copie .env.example a .env y complete los valores."
-        )
-
-    driver = os.environ.get("SQL_DRIVER", "ODBC Driver 17 for SQL Server")
-    user = os.environ.get("SQL_USER")
-    password = os.environ.get("SQL_PASSWORD")
-    trust = os.environ.get("SQL_TRUST", "yes")
-
-    driver_q = driver.replace(" ", "+")
-
-    if user:
-        from urllib.parse import quote_plus
-        return (
-            f"mssql+pyodbc://{quote_plus(user)}:{quote_plus(password or '')}"
-            f"@{server}/{database}"
-            f"?driver={driver_q}&TrustServerCertificate={trust}"
-        )
-
-    return (
-        f"mssql+pyodbc://@{server}/{database}"
-        f"?driver={driver_q}&trusted_connection=yes&TrustServerCertificate={trust}"
-    )
-
-
-@lru_cache(maxsize=1)
 def get_engine() -> Engine:
-    """Motor SQLAlchemy compartido. Se crea una sola vez por proceso."""
-    engine = create_engine(_connection_url(), fast_executemany=True, pool_pre_ping=True)
-    log.info("Motor de base de datos creado")
+    """Motor SQLAlchemy compartido con el resto de la app (db_connection)."""
+    engine = _app_get_engine()
+    if engine is None:
+        raise RuntimeError(
+            "No se pudo crear el engine SQL Server. "
+            "Revise SQLSERVER_* y ENTORNO en .env (ver .env.example)."
+        )
     return engine
 
 
@@ -309,7 +270,7 @@ def semaforo(desde, hasta) -> pd.DataFrame:
                    (SELECT COUNT(*) FROM reclamo.ajuste_manual
                     WHERE estado = 'PROPUESTO')
             UNION ALL
-            SELECT 10, 'Datos del ETL omitidos y aun sin congelar', 'BLOQUEANTE',
+            SELECT 10, 'Datos de sincronización omitidos y aún sin congelar', 'BLOQUEANTE',
                    (SELECT COUNT(DISTINCT CAST(l.[campaña_id] AS varchar) + '-' + CAST(l.modulo_id AS varchar))
                     FROM reclamo.log_sincronizacion l
                     WHERE l.accion = 'OMITIDO'
@@ -318,7 +279,7 @@ def semaforo(desde, hasta) -> pd.DataFrame:
                                       WHERE mc.[campaña_id] = l.[campaña_id] AND mc.modulo_id = l.modulo_id
                                         AND mc.estado = 'CONGELADO'))
             UNION ALL
-            SELECT 11, 'Valores cambiados por el ETL tras sincronizar', 'ADVERTENCIA',
+            SELECT 11, 'Valores cambiados tras sincronizar', 'ADVERTENCIA',
                    (SELECT COUNT(*) FROM reclamo.log_sincronizacion l
                     WHERE l.accion = 'ACTUALIZADO'
                       AND l.fecha_dato BETWEEN :desde AND :hasta)
@@ -412,7 +373,7 @@ def registrar_ajuste(
     }
     with get_engine().begin() as conn:
         conn.execute(sql, params)
-    return "Ajuste registrado en estado PROPUESTO. No afecta ninguna cifra hasta aprobarse."
+    return "Ajuste registrado como propuesta. No afecta ninguna cifra hasta aprobarse."
 
 
 def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
@@ -447,7 +408,7 @@ def publicar(desde, hasta, dias_reproceso: int = 7) -> str:
     )
     with get_engine().begin() as conn:
         conn.execute(sql, {"desde": desde, "hasta": hasta, "dias": dias_reproceso})
-    return f"Publicado en Datos_conciliados_of para {desde} a {hasta}."
+    return f"Dato conciliado publicado para {desde} a {hasta}."
 
 
 def mantener_secuencia(ventana_dias: int = 90, siguientes: int = 5) -> pd.DataFrame:
