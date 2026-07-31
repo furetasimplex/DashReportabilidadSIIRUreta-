@@ -21,9 +21,10 @@ from report_export.report_export import (
     fetch_estado_apilado_turno_representatividad,
     fetch_fecha_corte_representatividad,
     fetch_reporte_turno_report,
-    actualizar_reporte_turno_cache,
-    fetch_reporte_turno_cache,
-    fetch_generador_reporte_diario,
+    actualizar_factor_ajuste_camiones_v2_report,
+    actualizar_reporte_turno_cache_emision,
+    fetch_reporte_turno_cache_emision,
+    fetch_generador_reporte_diario_emision,
     export_reporte_turno_estilo_leyes_finos,
     write_reporte_torre_oficial,
     armar_paquete_reporte_torre_oficial,
@@ -6999,7 +7000,17 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         print("ENTRÓ A REPORTE TURNO")
         print("fecha fin SQL exclusiva:", fin_sql_exclusivo)
         try:
-            df_turno = fetch_reporte_turno_cache(
+            fecha_fin_factor = fin_sql_exclusivo - pd.Timedelta(days=1)
+            actualizar_factor_ajuste_camiones_v2_report(
+                start_date=ini,
+                end_date=fecha_fin_factor,
+                dias_reproceso=0,
+            )
+            actualizar_reporte_turno_cache_emision(
+                start_date=ini,
+                end_date=fin_sql_exclusivo,
+            )
+            df_turno = fetch_reporte_turno_cache_emision(
                 start_date=ini,
                 end_date=fin_sql_exclusivo
             )
@@ -7261,19 +7272,25 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # REPORTE POR TURNO + GENERADOR REPORTE
         # ------------------------------------------------------------
         if tipo == "reporte_turno":
-            actualizar_reporte_turno_cache(
+            fecha_fin_factor = fin_sql_exclusivo - pd.Timedelta(days=1)
+            actualizar_factor_ajuste_camiones_v2_report(
                 start_date=ini_d,
-                end_date=fin_d,
+                end_date=fecha_fin_factor,
+                dias_reproceso=0,
+            )
+            actualizar_reporte_turno_cache_emision(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo,
             )
             print(f"[EXCEL] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
-            df_turno = fetch_reporte_turno_cache(start_date=ini_d, end_date=fin_sql_exclusivo)
+            df_turno = fetch_reporte_turno_cache_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
             print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
 
             if df_turno.empty:
                 return no_update, "Sin datos para el rango seleccionado.", _done
 
             print(f"[EXCEL] Fetching generador_reporte_diario {ini_d} -> {fin_sql_exclusivo}")
-            df_generador = fetch_generador_reporte_diario(start_date=ini_d, end_date=fin_sql_exclusivo)
+            df_generador = fetch_generador_reporte_diario_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
             print(f"[EXCEL] generador rows={len(df_generador)}")
 
             output = io.BytesIO()
@@ -7456,8 +7473,18 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
 
         # ── REPORTE POR TURNO ─────────────────────────────────────────
         if tipo in {"reporte_turno", "reporte_turno_turno", "reporte_turno_generador"}:
+            fecha_fin_factor = fin_sql_exclusivo - pd.Timedelta(days=1)
+            actualizar_factor_ajuste_camiones_v2_report(
+                start_date=ini_d,
+                end_date=fecha_fin_factor,
+                dias_reproceso=0,
+            )
+            actualizar_reporte_turno_cache_emision(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo,
+            )
             print(f"[PDF] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
-            df_turno = fetch_reporte_turno_cache(
+            df_turno = fetch_reporte_turno_cache_emision(
                 start_date=ini_d,
                 end_date=fin_sql_exclusivo,
             )
@@ -7465,7 +7492,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
             if df_turno.empty:
                 return no_update, "Sin datos para el rango seleccionado.", _done
 
-            df_generador = fetch_generador_reporte_diario(
+            df_generador = fetch_generador_reporte_diario_emision(
                 start_date=ini_d,
                 end_date=fin_sql_exclusivo,
             )

@@ -58,6 +58,15 @@ SP_REFRESCA_HISTORICO_APILADO = (
 SP_ACTUALIZA_REPORTE_TURNO_CACHE = (
     f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_actualizar_reporte_turno_cache]"
 )
+TABLE_REPORTE_TURNO_CACHE_EMISION = (
+    f"[{DATOS_CONCILIADOS_SCHEMA}].[reporte_turno_cache_emision_test]"
+)
+SP_ACTUALIZA_REPORTE_TURNO_CACHE_EMISION = (
+    f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_actualizar_reporte_turno_cache_emision_test]"
+)
+SP_GENERADOR_REPORTE_DIARIO_EMISION = (
+    f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_generador_reporte_diario_emision_test]"
+)
 # Ruta del logo BHP
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
@@ -1038,6 +1047,44 @@ def actualizar_reporte_turno_cache(start_date: date, end_date: date) -> None:
         ) from exc
 
 
+def actualizar_factor_ajuste_camiones_v2_report(
+    start_date: date,
+    end_date: date,
+    dias_reproceso: int = 0,
+) -> None:
+    """Refresca los factores V2; ``start_date`` y ``end_date`` son inclusivos."""
+    sql = _sa_text("""
+        SET NOCOUNT ON;
+
+        EXEC [inventar_SpcHidr].[sp_mantiene_factor_ajuste_camiones_v2_test]
+            @FechaInicio   = :fecha_inicio,
+            @FechaFin      = :fecha_fin,
+            @DiasReproceso = :dias_reproceso;
+    """)
+
+    with _get_engine().begin() as conn:
+        conn.execute(
+            sql,
+            {
+                "fecha_inicio": start_date,
+                "fecha_fin": end_date,
+                "dias_reproceso": int(dias_reproceso),
+            },
+        )
+
+
+def actualizar_reporte_turno_cache_emision(start_date: date, end_date: date) -> None:
+    """Actualiza exclusivamente el cache de emision (``end_date`` exclusivo)."""
+    sql = _sa_text(f"""
+        SET NOCOUNT ON;
+        EXEC {SP_ACTUALIZA_REPORTE_TURNO_CACHE_EMISION}
+            @fecha_inicio = :fecha_inicio,
+            @fecha_fin = :fecha_fin;
+    """)
+    with _get_engine().begin() as conn:
+        conn.execute(sql, {"fecha_inicio": start_date, "fecha_fin": end_date})
+
+
 def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame:
     """
     Consulta el reporte por turno desde la tabla cache inventar_SpcHidr.reporte_turno_cache.
@@ -1104,6 +1151,34 @@ def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame:
 
     return df
 
+
+def fetch_reporte_turno_cache_emision(start_date: date, end_date: date) -> pd.DataFrame:
+    """Lee exclusivamente el cache de emision; ``end_date`` es exclusivo."""
+    sql = f"""
+    SELECT
+        Fecha, Campania, Material, Modulo, Avance, Turno,
+        Apilado_TMS_Real, Apilado_TMS_Plan_Mensual, STOCK, MINA, SRR,
+        CuT_Real, CuT_Plan_Mensual, CuT_Plan_Semanal,
+        CuS_Real, CuS_Plan_Mensual, CuS_Plan_Semanal,
+        Solubilidad_Real, Solubilidad_Plan_Mensual, Solubilidad_Plan_Semanal,
+        CO3_Real, CO3_Plan_Mensual, CO3_Plan_Semanal,
+        CuFe_Real, CuFe_Plan_Mensual, CuFe_Plan_Semanal,
+        FeT_Real, FeS_Real, ConsH_Real,
+        Malla_Menos_1_2_Real, Malla_Menos_1_2_Plan_Semanal,
+        Malla_Menos_100_Real, Malla_Menos_100_Plan_Mensual,
+        Malla_Menos_100_Plan_Semanal,
+        CaolBeta_Real, CaolBeta_Plan_Mensual, CaolBeta_Plan_Semanal,
+        Dosis_Acido_Ideal_TM, Dosis_Acido_Programa_Semanal,
+        Fuente_Info_Quimica, Fuente_Info_Fisica, Muestra_Quimica, Muestra_Fisica
+    FROM {TABLE_REPORTE_TURNO_CACHE_EMISION}
+    WHERE Fecha >= :start AND Fecha < :end
+    ORDER BY Fecha, Turno;
+    """
+    with _get_engine().connect() as conn:
+        return pd.read_sql(
+            _sa_text(sql), conn, params={"start": start_date, "end": end_date}
+        )
+
 def fetch_generador_reporte_diario(start_date: date, end_date: date) -> pd.DataFrame:
     """
     Ejecuta sp_generador_reporte_diario (consolida turnos A y B en una fila diaria).
@@ -1120,6 +1195,17 @@ def fetch_generador_reporte_diario(start_date: date, end_date: date) -> pd.DataF
             return pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
     except Exception as exc:
         raise RuntimeError(f"Error al ejecutar sp_generador_reporte_diario: {exc}") from exc
+
+
+def fetch_generador_reporte_diario_emision(start_date: date, end_date: date) -> pd.DataFrame:
+    """Ejecuta exclusivamente el generador diario de emision."""
+    sql = _sa_text(f"""
+        EXEC {SP_GENERADOR_REPORTE_DIARIO_EMISION}
+            @fecha_inicio = :start,
+            @fecha_fin = :end;
+    """)
+    with _get_engine().connect() as conn:
+        return pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
 
 
 RTO_CAB_TABLE = "inventar_SpcHidr.reporte_torre_oficial_cab"
