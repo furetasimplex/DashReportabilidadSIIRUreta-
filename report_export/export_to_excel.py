@@ -9,6 +9,7 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.views import Selection
 # Rango por defecto de la plantilla antigua de Datos conciliados.
 # La plantilla vigente se detecta dinamicamente desde el encabezado "Dia".
 PLANTILLA_DATOS_START_ROW = 16
@@ -464,6 +465,15 @@ def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
         ws.row_dimensions[row].hidden = False
 
     ws.freeze_panes = None
+    # openpyxl quita el <pane> al asignar freeze_panes = None, pero no
+    # limpia las <selection pane="topRight" .../> que la plantilla traia
+    # apuntando a ese pane inmovilizado. El archivo queda con selecciones
+    # que referencian un pane inexistente: XML valido contra el schema y
+    # abre sin problema en LibreOffice/openpyxl, pero Excel lo detecta como
+    # contenido no reconocido y ofrece "reparar" el archivo. Se reemplaza
+    # por una unica seleccion por defecto, sin pane, cada vez que se quita
+    # el freeze.
+    ws.sheet_view.selection = (Selection(),)
     ws.sheet_view.showGridLines = False
     ws.print_area = "B2:AY52"
     ws.page_setup.orientation = "landscape"
@@ -481,7 +491,26 @@ def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
 
 
 def _normalizar_y_compactar_estilos_xlsx(xlsx_bytes: bytes) -> bytes:
-    """Compacta estilos usados y normaliza todos los colores RGB a ARGB opaco."""
+    """Normaliza a ARGB opaco los colores RGB con alfa transparente (00).
+
+    Antes esta funcion tambien compactaba cellXfs/fonts/fills/borders,
+    reescribiendo sheet1.xml y styles.xml completos con
+    xml.etree.ElementTree (parse + tostring). Se detecto que ese
+    roundtrip -- aunque produce XML valido contra el schema de
+    SpreadsheetML y semanticamente identico celda a celda (se verifico
+    fuente, relleno, borde y formato de cada celda contra la version sin
+    compactar, cero diferencias) -- de todas formas dispara el aviso de
+    "contenido irrecuperable" de Excel al abrir el archivo: la
+    reserializacion de ElementTree no reproduce byte a byte la forma en
+    que openpyxl escribe el XML, y Excel es mas estricto que el XSD, que
+    LibreOffice y que el propio openpyxl al respecto.
+    La compactacion tampoco es necesaria a esta escala: un reporte
+    mensual completo genera unos pocos cientos de cellXfs (~300), muy por
+    debajo del limite real de Excel (64.000). Por eso ahora se hace
+    unicamente el reemplazo puntual del atributo rgb sobre los bytes
+    originales de styles.xml, sin tocar el resto de la estructura del
+    XML ni reserializar nada con ElementTree.
+    """
     source = io.BytesIO(xlsx_bytes)
     files = {}
     infos = {}
@@ -490,75 +519,12 @@ def _normalizar_y_compactar_estilos_xlsx(xlsx_bytes: bytes) -> bytes:
             infos[info.filename] = info
             files[info.filename] = archive.read(info.filename)
 
-    ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-    style_refs = {0}
-    worksheet_roots = {}
-    worksheet_names = [
-        name for name in files
-        if name.startswith("xl/worksheets/sheet") and name.endswith(".xml")
-    ]
-    for name in worksheet_names:
-        root = ET.fromstring(files[name])
-        worksheet_roots[name] = root
-        for cell in root.iter(f"{{{ns}}}c"):
-            if "s" in cell.attrib:
-                style_refs.add(int(cell.attrib["s"]))
-        for row in root.iter(f"{{{ns}}}row"):
-            if "s" in row.attrib:
-                style_refs.add(int(row.attrib["s"]))
-        for col in root.iter(f"{{{ns}}}col"):
-            if "style" in col.attrib:
-                style_refs.add(int(col.attrib["style"]))
-
-    styles_root = ET.fromstring(files["xl/styles.xml"])
-    cell_xfs = styles_root.find(f"{{{ns}}}cellXfs")
-    old_xfs = list(cell_xfs)
-    used_xfs = [idx for idx in sorted(style_refs) if idx < len(old_xfs)]
-    xf_remap = {old: new for new, old in enumerate(used_xfs)}
-    cell_xfs[:] = [old_xfs[idx] for idx in used_xfs]
-    cell_xfs.set("count", str(len(cell_xfs)))
-
-    for root in worksheet_roots.values():
-        for cell in root.iter(f"{{{ns}}}c"):
-            if "s" in cell.attrib:
-                cell.set("s", str(xf_remap[int(cell.attrib["s"])]))
-        for row in root.iter(f"{{{ns}}}row"):
-            if "s" in row.attrib:
-                row.set("s", str(xf_remap[int(row.attrib["s"])]))
-        for col in root.iter(f"{{{ns}}}col"):
-            if "style" in col.attrib:
-                col.set("style", str(xf_remap[int(col.attrib["style"])]))
-
-    style_xfs = styles_root.find(f"{{{ns}}}cellStyleXfs")
-    all_xfs = list(cell_xfs) + (list(style_xfs) if style_xfs is not None else [])
-    for tag, attr, keep_base in (
-        ("fonts", "fontId", {0}),
-        ("fills", "fillId", {0, 1}),
-        ("borders", "borderId", {0}),
-    ):
-        table = styles_root.find(f"{{{ns}}}{tag}")
-        old_items = list(table)
-        used = set(keep_base)
-        used.update(int(xf.attrib.get(attr, 0)) for xf in all_xfs)
-        used = {idx for idx in used if idx < len(old_items)}
-        ordered = sorted(used)
-        remap = {old: new for new, old in enumerate(ordered)}
-        table[:] = [old_items[idx] for idx in ordered]
-        table.set("count", str(len(table)))
-        for xf in all_xfs:
-            xf.set(attr, str(remap[int(xf.attrib.get(attr, 0))]))
-
-    # Algunos estilos heredados guardan RGB con alfa 00. Excel espera ARGB.
-    for element in styles_root.iter():
-        rgb = element.attrib.get("rgb")
-        if rgb and len(rgb) == 8 and rgb.startswith("00"):
-            element.set("rgb", "FF" + rgb[2:])
-
-    files["xl/styles.xml"] = ET.tostring(
-        styles_root, encoding="utf-8", xml_declaration=True,
-    )
-    for name, root in worksheet_roots.items():
-        files[name] = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+    if "xl/styles.xml" in files:
+        files["xl/styles.xml"] = re.sub(
+            rb'rgb="00([0-9A-Fa-f]{6})"',
+            rb'rgb="FF\1"',
+            files["xl/styles.xml"],
+        )
 
     output = io.BytesIO()
     with ZipFile(output, "w", ZIP_DEFLATED) as archive:

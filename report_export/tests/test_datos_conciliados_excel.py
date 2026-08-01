@@ -50,7 +50,14 @@ def test_export_datos_conciliados_replica_layout_oficial():
     assert len(ws._images) == 1
     assert ws._images[0].anchor._from.row < 17
     wb = load_workbook(BytesIO(result), keep_links=False)
-    assert len(wb._cell_styles) <= 250
+    # Ya no se compacta cellXfs con xml.etree.ElementTree (ver
+    # _normalizar_y_compactar_estilos_xlsx): ese roundtrip dejaba
+    # <selection pane="topRight"> huerfanas al quitar freeze_panes, lo que
+    # disparaba el aviso de reparacion de Excel. Sin compactar, un mes
+    # completo genera unos cientos de cellXfs -- muy por debajo del limite
+    # real de Excel (64.000) -- asi que el techo aqui es solo una guarda
+    # contra un crecimiento desmedido, no un valor de compactacion.
+    assert len(wb._cell_styles) <= 400
     assert all(ws[f"C{row}"].font.name == "Arial" for row in range(21, 52))
     assert all(ws[f"C{row}"].font.sz == 11 for row in range(21, 52))
     assert all(ws[f"C{row}"].font.color.rgb == "FF476475" for row in range(21, 52))
