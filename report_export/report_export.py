@@ -46,7 +46,16 @@ def log_db_destino_reporte_torre() -> dict:
 # Nombre completo de la tabla (ajusta si cambia)
 TABLE_FQN = "[inventar_SpcHidr].[Datos_conciliados_of]"
 TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[Datos_conciliados_of]"
-TABLE_DATOS_CONCILIADOS_EMISION = "[inventar_SpcHidr].[Datos_conciliados_of_emision_test]"
+# Decision 2026-08-01: se rompe el vinculo con la copia de prueba
+# Datos_conciliados_of_emision_test. El flujo "emision" (usado por la
+# vista previa, la exportacion a Excel y la exportacion a PDF de Datos
+# Conciliados) ahora lee y escribe directamente sobre la tabla productiva
+# Datos_conciliados_of, usando sp_mantiene_datos_conciliados_emision_test
+# (SP_MANTIENE_DATOS_CONCILIADOS_EMISION, sin cambios) como unico
+# mantenedor. La tabla Datos_conciliados_of_emision_test queda obsoleta:
+# se elimina de la base de datos solo despues de validar dias 1-26 de
+# julio 2026 contra el dashboard de reclamo.
+TABLE_DATOS_CONCILIADOS_EMISION = "[inventar_SpcHidr].[Datos_conciliados_of]"
 # Centralizado para que posteriormente pueda resolverse según ENTORNO.
 # Por requerimiento actual se mantiene el esquema existente.
 DATOS_CONCILIADOS_SCHEMA = "inventar_SpcHidr"
