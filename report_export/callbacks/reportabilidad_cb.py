@@ -15,6 +15,8 @@ from report_export.report_export import (
     refrescar_historico_apilado_report,
     actualizar_datos_conciliados_report,
     fetch_datos_conciliados_report,
+    actualizar_datos_conciliados_emision_report,
+    fetch_datos_conciliados_emision_report,
     fetch_representatividad_torres_report,
     fetch_bd_ton_report,
     fetch_gestion_representatividad_fy,
@@ -7070,6 +7072,55 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         return html.Div(), tabla, historial, no_update, no_update, no_update
 
     # ------------------------------------------------------------
+    # PRODUCCION DIARIA / DATOS CONCILIADOS DE EMISION
+    # ------------------------------------------------------------
+    if tipo == "prod":
+        ini_d = pd.to_datetime(f_ini).date()
+        fin_d = pd.to_datetime(f_fin).date()
+        try:
+            print(f"[PREVIEW][DATOS_CONCILIADOS_EMISION] Actualizando {ini_d} -> {fin_d}")
+            refrescar_historico_apilado_report(ini_d, fin_d, dias_reproceso=0)
+            actualizar_datos_conciliados_emision_report(ini_d, fin_d, dias_reproceso=0)
+            df = fetch_datos_conciliados_emision_report(ini_d, fin_d)
+            print(f"[PREVIEW][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
+        except Exception as exc:
+            return (
+                dbc.Alert(f"Error al consultar Datos Conciliados de emision: {exc}", color="danger"),
+                html.Div(), html.Div(), no_update, no_update, no_update,
+            )
+        if df.empty:
+            return (
+                dbc.Alert("Sin datos en el rango seleccionado.", color="info"),
+                html.Div(), html.Div(), no_update, no_update, no_update,
+            )
+        ycol = next((c for c in [
+            "Produccion_Catodos_Real", "ProducciÃ³n_CÃ¡todos_Real", "prod_catodos_real"
+        ] if c in df.columns), None)
+        if ycol is None:
+            return (
+                dbc.Alert("No se encuentra la columna 'Produccion_Catodos_Real' en la tabla.", color="danger"),
+                html.Div(), html.Div(), no_update, no_update, no_update,
+            )
+        fig = px.line(
+            df.sort_values("Fecha"), x="Fecha", y=ycol, markers=True,
+            title="ProducciÃ³n Diaria (CÃ¡todos)",
+        )
+        tabla = _style_table(df.sort_values("Fecha", ascending=False).head(10))
+        historial = dbc.Table(
+            [
+                html.Thead(
+                    html.Tr([html.Th("Fecha"), html.Th("Tipo"), html.Th("Usuario")]),
+                    style={"backgroundColor": "#FEEBC8"},
+                ),
+                html.Tbody([html.Tr([
+                    html.Td(pd.Timestamp.now().strftime("%d-%m-%Y")),
+                    html.Td("ProducciÃ³n Diaria"), html.Td("usuario_actual"),
+                ])]),
+            ], bordered=True, hover=True,
+        )
+        return html.Div(), tabla, historial, no_update, no_update, no_update
+
+    # ------------------------------------------------------------
     # REPORTES ANTIGUOS
     # ------------------------------------------------------------
     fecha_hasta = f_fin
@@ -7087,31 +7138,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
             no_update,
         )
 
-    if tipo == "prod":
-        ycol = None
-        for c in ["Produccion_Catodos_Real", "Producción_Cátodos_Real", "prod_catodos_real"]:
-            if c in df.columns:
-                ycol = c
-                break
-
-        if ycol is None:
-            return (
-                dbc.Alert("No se encuentra la columna 'Produccion_Catodos_Real' en la tabla.", color="danger"),
-                html.Div(),
-                html.Div(),
-                no_update,
-                no_update,
-                no_update,
-            )
-
-        plot_df = df.sort_values("Fecha")
-        fig = px.line(plot_df, x="Fecha", y=ycol, markers=True, title="Producción Diaria (Cátodos)")
-        grafico = dcc.Graph(figure=fig)
-
-        table_df = df.sort_values("Fecha", ascending=False).head(10)
-        tabla = _style_table(table_df)
-
-    elif tipo == "balance":
+    if tipo == "balance":
         ycol = "Produccion_Catodos_Real" if "Produccion_Catodos_Real" in df.columns else None
 
         if ycol:
@@ -7311,20 +7338,38 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # PRODUCCIÓN DIARIA / DATOS CONCILIADOS
         # ------------------------------------------------------------
         if tipo == "prod":
+            print(
+                f"[EXCEL][DATOS_CONCILIADOS_EMISION] "
+                f"Actualizando {ini_d} -> {fin_d}"
+            )
             refrescar_historico_apilado_report(
                 start_date=ini_d,
                 end_date=fin_d,
                 dias_reproceso=0,
             )
-            actualizar_datos_conciliados_report(
+            actualizar_datos_conciliados_emision_report(
                 start_date=ini_d,
                 end_date=fin_d,
                 dias_reproceso=0,
             )
-            df = fetch_datos_conciliados_report(
+            df = fetch_datos_conciliados_emision_report(
                 start_date=ini_d,
                 end_date=fin_d
             )
+            print(f"[EXCEL][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
+
+            columnas_control = [
+                columna for columna in [
+                    "Fecha", "Chancado_TMS_Real", "Apilado_TMS_Real", "Ley_CuT_Real_srr"
+                ] if columna in df.columns
+            ]
+            if "Fecha" in columnas_control:
+                print(df.loc[
+                    pd.to_datetime(df["Fecha"]).dt.date.isin(
+                        [date(2026, 7, 14), date(2026, 7, 21)]
+                    ),
+                    columnas_control,
+                ].to_string(index=False))
 
             if df.empty:
                 return no_update, "Sin datos para exportar en el rango seleccionado.", _done
@@ -7534,9 +7579,25 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
 
         # ── PRODUCCIÓN DIARIA / DATOS CONCILIADOS ─────────────────────
         if tipo == "prod":
-            print(f"[PDF] Fetching datos_conciliados {ini_d} -> {fin_d}")
-            df = fetch_datos_conciliados_report(start_date=ini_d, end_date=fin_d)
-            print(f"[PDF] datos_conciliados rows={len(df)}")
+            print(
+                f"[PDF][DATOS_CONCILIADOS_EMISION] "
+                f"Actualizando {ini_d} -> {fin_d}"
+            )
+            refrescar_historico_apilado_report(
+                start_date=ini_d,
+                end_date=fin_d,
+                dias_reproceso=0,
+            )
+            actualizar_datos_conciliados_emision_report(
+                start_date=ini_d,
+                end_date=fin_d,
+                dias_reproceso=0,
+            )
+            df = fetch_datos_conciliados_emision_report(
+                start_date=ini_d,
+                end_date=fin_d,
+            )
+            print(f"[PDF][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
             if df.empty:
                 return no_update, "Sin datos para generar PDF.", _done
 

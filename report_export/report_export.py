@@ -46,11 +46,15 @@ def log_db_destino_reporte_torre() -> dict:
 # Nombre completo de la tabla (ajusta si cambia)
 TABLE_FQN = "[inventar_SpcHidr].[Datos_conciliados_of]"
 TABLE_DATOS_CONCILIADOS = "[inventar_SpcHidr].[Datos_conciliados_of]"
+TABLE_DATOS_CONCILIADOS_EMISION = "[inventar_SpcHidr].[Datos_conciliados_of_emision_test]"
 # Centralizado para que posteriormente pueda resolverse según ENTORNO.
 # Por requerimiento actual se mantiene el esquema existente.
 DATOS_CONCILIADOS_SCHEMA = "inventar_SpcHidr"
 SP_MANTIENE_DATOS_CONCILIADOS = (
     f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_mantiene_datos_conciliados_of]"
+)
+SP_MANTIENE_DATOS_CONCILIADOS_EMISION = (
+    f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_mantiene_datos_conciliados_emision_test]"
 )
 SP_REFRESCA_HISTORICO_APILADO = (
     f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_refrescar_historico_apilado_test]"
@@ -372,6 +376,82 @@ def fetch_datos_conciliados_report(start_date: date, end_date: date) -> pd.DataF
 
     df = df[[c for c in COLUMNAS_DATOS_CONCILIADOS if c in df.columns]]
     return df
+
+
+def actualizar_datos_conciliados_emision_report(
+    start_date: date,
+    end_date: date,
+    dias_reproceso: int = 0,
+) -> None:
+    """Actualiza exclusivamente Datos Conciliados de emision."""
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "FechaInicio y FechaFin son obligatorias para actualizar "
+            "Datos Conciliados de emision."
+        )
+    if start_date > end_date:
+        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
+
+    sql = _sa_text(f"""
+        SET NOCOUNT ON;
+        EXEC {SP_MANTIENE_DATOS_CONCILIADOS_EMISION}
+            @FechaInicio   = :fecha_inicio,
+            @FechaFin      = :fecha_fin,
+            @DiasReproceso = :dias_reproceso;
+    """)
+    try:
+        with _get_engine().begin() as conn:
+            conn.execute(
+                sql,
+                {
+                    "fecha_inicio": start_date,
+                    "fecha_fin": end_date,
+                    "dias_reproceso": int(dias_reproceso),
+                },
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al actualizar Datos Conciliados de emision mediante "
+            f"{SP_MANTIENE_DATOS_CONCILIADOS_EMISION}: {exc}"
+        ) from exc
+
+
+def fetch_datos_conciliados_emision_report(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Consulta exclusivamente Datos Conciliados de emision."""
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "FechaInicio y FechaFin son obligatorias para consultar "
+            "Datos Conciliados de emision."
+        )
+    if start_date > end_date:
+        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
+
+    columnas = ", ".join(f"[{columna}]" for columna in COLUMNAS_DATOS_CONCILIADOS)
+    sql = _sa_text(f"""
+        SELECT {columnas}
+        FROM {TABLE_DATOS_CONCILIADOS_EMISION}
+        WHERE [Fecha] BETWEEN :start AND :end
+        ORDER BY [Fecha] ASC;
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            df = pd.read_sql(
+                sql,
+                conn,
+                params={"start": start_date, "end": end_date},
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al leer Datos Conciliados desde "
+            f"{TABLE_DATOS_CONCILIADOS_EMISION}: {exc}"
+        ) from exc
+
+    return df[
+        [columna for columna in COLUMNAS_DATOS_CONCILIADOS if columna in df.columns]
+    ]
 
 def fetch_representatividad_torres_report(start_date: date, end_date: date) -> pd.DataFrame:
     """
