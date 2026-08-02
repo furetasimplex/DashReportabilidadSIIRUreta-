@@ -377,8 +377,35 @@ def registrar_ajuste(
 
 
 def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
-    """Dispara reclamo.sp_calcular_reclamo_diario para el rango indicado."""
-    sql = text(
+    """Encadena la sincronizacion desde el ETL y el calculo de reclamo diario.
+
+    Paso 1: reclamo.sp_sincronizar_desde_etl trae lo publicado en
+    inventar_SpcHidr (control_reclamo_diario, control_reclamo_sulfuro_
+    camiones_thm_diario) hacia reclamo.topografia_avance / reclamo.
+    camiones_reclamo. Sin este paso, reclamo.calculo_diario podia quedar
+    congelado en la ultima fecha sincronizada aunque el ETL ya tuviera
+    datos mas recientes (bug detectado 2026-08-02: corte silencioso en
+    2026-07-26 con data ya publicada en inventar_SpcHidr hasta el 31,
+    porque nadie habia vuelto a correr el sync a mano).
+    Paso 2: reclamo.sp_calcular_reclamo_diario materializa reclamo.
+    calculo_diario a partir de reclamo.v_reclamo_diario, ya con la
+    sincronizacion al dia.
+    Decision 2026-08-02: se encadenan ambos pasos en un solo boton
+    ("Recalcular"), sin paso intermedio de revision -- el sync es
+    idempotente y solo toca modulos ya congelados (los que no lo estan
+    quedan OMITIDO y se pueden ver despues en reclamo.log_sincronizacion
+    si hace falta auditar).
+    """
+    sql_sync = text(
+        """
+        EXEC reclamo.sp_sincronizar_desde_etl
+             @FechaInicio        = :desde,
+             @FechaFin            = :hasta,
+             @SincronizarApilado  = 0,
+             @Confirmar           = 1
+        """
+    )
+    sql_calc = text(
         """
         EXEC reclamo.sp_calcular_reclamo_diario
              @FechaInicio   = :desde,
@@ -386,9 +413,20 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
              @DiasReproceso = :dias
         """
     )
+    sql_resumen_sync = text(
+        """
+        SELECT TOP (1) filas_afectadas
+        FROM reclamo.log_ejecucion
+        WHERE procedimiento = 'reclamo.sp_sincronizar_desde_etl'
+        ORDER BY ejecucion_id DESC
+        """
+    )
     with get_engine().begin() as conn:
-        conn.execute(sql, {"desde": desde, "hasta": hasta, "dias": dias_reproceso})
-    return f"Reclamo recalculado para {desde} a {hasta}."
+        conn.execute(sql_sync, {"desde": desde, "hasta": hasta})
+        filas_sync = conn.execute(sql_resumen_sync).scalar()
+        conn.execute(sql_calc, {"desde": desde, "hasta": hasta, "dias": dias_reproceso})
+    resumen_sync = f" ({filas_sync} filas sincronizadas desde el ETL)" if filas_sync else ""
+    return f"Reclamo recalculado para {desde} a {hasta}{resumen_sync}."
 
 
 def publicar(desde, hasta, dias_reproceso: int = 7) -> str:
