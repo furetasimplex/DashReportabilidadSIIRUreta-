@@ -134,7 +134,7 @@ def avance_diario(desde, hasta) -> pd.DataFrame:
 
 
 def vista_previa_conciliados(desde, hasta) -> pd.DataFrame:
-    """Lo que publicaria sp_mantiene_datos_conciliados_of, sin ejecutarlo.
+    """Lo que publicaria sp_mantiene_datos_conciliados_emision_test, sin ejecutarlo.
 
     reclamo.v_reclamo_para_conciliados es el contrato de consumo exacto del
     PASO 9/10 del SP de mantencion (script 04). Consultarla directamente deja
@@ -392,15 +392,24 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
 
 
 def publicar(desde, hasta, dias_reproceso: int = 7) -> str:
-    """Dispara inventar_SpcHidr.sp_mantiene_datos_conciliados_of.
+    """Dispara inventar_SpcHidr.sp_mantiene_datos_conciliados_emision_test.
 
     ESCRIBE EN PRODUCCION (inventar_SpcHidr.Datos_conciliados_of). Se llama
     solo desde el boton "Publicar" del dashboard, que exige confirmacion
     explicita del usuario antes de invocar esta funcion.
+
+    Decision 2026-08-02: se unifica sobre sp_mantiene_datos_conciliados_
+    emision_test (version 1.15), que ya incluye la capa de ajustes/factor
+    de aplicacion de Chancado (via sp_mantiene_factor_ajuste_camiones_v2_test
+    y v_ajuste_camiones_emision_test) y el calculo de Ley_CuT_Real_srr por
+    balance residual de cobre fino, ausentes en el SP viejo
+    (sp_mantiene_datos_conciliados_of v1.14). Mismo contrato de parametros
+    (@FechaInicio, @FechaFin, @DiasReproceso), swap directo. El SP viejo se
+    deja sin modificar y sin uso; no se llama mas desde este modulo.
     """
     sql = text(
         """
-        EXEC inventar_SpcHidr.sp_mantiene_datos_conciliados_of
+        EXEC inventar_SpcHidr.sp_mantiene_datos_conciliados_emision_test
              @FechaInicio   = :desde,
              @FechaFin      = :hasta,
              @DiasReproceso = :dias
