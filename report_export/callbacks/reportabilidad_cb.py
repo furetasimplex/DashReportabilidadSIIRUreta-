@@ -43,6 +43,7 @@ from report_export.report_export import (
     pad_ajustado_para,
     mes_tiene_reporte_activo,
     comentario_torres_para_tipo,
+    validar_pesos_representatividad,
 )
 from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
 from report_export.pdf_generator import (
@@ -5768,6 +5769,83 @@ def _agregar_hojas_mensuales_torres(
     return nombres
 
 
+def _agregar_hoja_trazabilidad_pesos(wb, df_pesos_turno) -> None:
+    """Agrega al final la trazabilidad publicada, preservando NULL como vacio."""
+    if df_pesos_turno is None or df_pesos_turno.empty:
+        return
+
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    df = validar_pesos_representatividad(df_pesos_turno)
+    ws = wb.create_sheet("Trazabilidad Pesos")
+    ws.sheet_view.showGridLines = False
+    ws.freeze_panes = "A2"
+
+    columnas = (
+        ("Fecha", "Fecha", "dd-mm-yyyy", 13),
+        ("Turno", "Turno", None, 10),
+        ("Torre", "Torre", None, 10),
+        ("PesoTeo_Quimico", "Peso teórico químico [kg]", "0.000", 24),
+        ("PesoReal_Quimico", "Peso real químico [kg]", "0.000", 22),
+        ("Representatividad_Quimica", "Representatividad química", "0.0%", 24),
+        ("PesoTeo_Fisico", "Peso teórico físico [kg]", "0.000", 23),
+        ("PesoReal_Fisico", "Peso real físico [kg]", "0.000", 21),
+        ("Representatividad_Fisica", "Representatividad física", "0.0%", 23),
+        ("Estado_Evaluacion", "Estado evaluación", None, 20),
+        ("Horas_Reales", "Horas reales", "0.000", 15),
+        ("Factor_Masa", "Factor masa", "0.000", 15),
+        ("Fraccion_Muestreo", "Fracción muestreo", "0.000", 19),
+        ("nombre_archivo", "Archivo de origen", None, 35),
+        ("fecha_carga", "Fecha de carga", "dd-mm-yyyy hh:mm", 20),
+    )
+    color_header, color_texto = "D7E1E7", "476475"
+    borde = Border(*(Side(style="thin", color="A6A6A6") for _ in range(4)))
+    encabezado = PatternFill("solid", fgColor=color_header)
+    alterna = PatternFill("solid", fgColor="EDF2F4")
+    blanco = PatternFill("solid", fgColor="FFFFFF")
+    fuente = Font(name="Arial", color=color_texto, size=10)
+    fuente_baja = Font(name="Arial", bold=True, color="C00000", size=10)
+    centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for col_idx, (_, titulo, _, ancho) in enumerate(columnas, 1):
+        celda = ws.cell(1, col_idx, titulo)
+        celda.fill = encabezado
+        celda.font = Font(name="Arial", bold=True, color=color_texto, size=10)
+        celda.alignment = centro
+        celda.border = borde
+        ws.column_dimensions[get_column_letter(col_idx)].width = ancho
+
+    for fila_idx, (_, fila) in enumerate(df.iterrows(), 2):
+        fill = alterna if fila_idx % 2 else blanco
+        for col_idx, (origen, _, formato, _) in enumerate(columnas, 1):
+            valor = fila.get(origen)
+            celda = ws.cell(fila_idx, col_idx)
+            if pd.notna(valor):
+                if origen in {"Fecha", "fecha_carga"}:
+                    valor = pd.to_datetime(valor).to_pydatetime()
+                elif origen in {
+                    "PesoTeo_Quimico", "PesoReal_Quimico",
+                    "Representatividad_Quimica", "PesoTeo_Fisico",
+                    "PesoReal_Fisico", "Representatividad_Fisica",
+                    "Horas_Reales", "Factor_Masa", "Fraccion_Muestreo",
+                }:
+                    valor = float(valor)
+                celda.value = valor
+            celda.number_format = formato or "General"
+            celda.fill = fill
+            celda.border = borde
+            celda.alignment = Alignment(
+                horizontal="left" if origen == "nombre_archivo" else "center",
+                vertical="center",
+            )
+            celda.font = fuente
+            if origen in {"Representatividad_Quimica", "Representatividad_Fisica"} and pd.notna(valor):
+                celda.font = fuente_baja if float(valor) < 0.75 else fuente
+
+    ws.auto_filter.ref = f"A1:O{len(df) + 1}"
+
+
 def _export_representatividad_torres_to_excel(
     df: pd.DataFrame,
     df_bd_ton_fy: pd.DataFrame,
@@ -5779,6 +5857,7 @@ def _export_representatividad_torres_to_excel(
     fecha_fin_mes=None,
     fecha_corte_operacional=None,
     mapa_comentarios: dict | None = None,
+    df_pesos_turno: pd.DataFrame | None = None,
 ) -> bytes:
     """
     Exporta el reporte de Representatividad Torres a Excel.
@@ -6107,6 +6186,8 @@ def _export_representatividad_torres_to_excel(
         mapa_comentarios=mapa_comentarios,
     )
 
+    _agregar_hoja_trazabilidad_pesos(wb, df_pesos_turno)
+
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
@@ -6137,6 +6218,7 @@ def _export_representatividad_desde_paquete(
         fecha_fin_mes=paquete.get("fecha_fin_mes"),
         fecha_corte_operacional=fecha_corte,
         mapa_comentarios=mapa_comentarios,
+        df_pesos_turno=paquete.get("pesos_turno", pd.DataFrame()),
     )
 
 
