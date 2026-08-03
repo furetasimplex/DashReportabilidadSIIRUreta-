@@ -3,9 +3,11 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import pandas as pd
+import pytest
 from openpyxl import load_workbook
 
 from report_export.export_to_excel import (
+    _obtener_fecha_corte_resumen_datos_conciliados,
     aplicar_formato_datos_conciliados,
     calcular_resumen_mtd,
     export_datos_conciliados_to_template,
@@ -39,7 +41,7 @@ def test_export_datos_conciliados_replica_layout_oficial():
     assert ws["I3"].value == "mayo"
     assert ws["I4"].value == "FY26"
     assert ws["I5"].value == pd.Timestamp("2026-05-30").to_pydatetime()
-    assert ws["Z3"].value == "MTD mayo 2026"
+    assert ws["Z3"].value == "MTD mayo 2026 al 30-05-2026"
     assert ws["C22"].value is None
     assert ws["C22"].style_id != ws["C52"].style_id
     assert ws["C22"].fill.fgColor.rgb[-6:] == "D7E1E7"
@@ -80,13 +82,8 @@ def test_fecha_actualizacion_ignora_fechas_futuras_solo_con_plan():
         row.update(Fecha=pd.Timestamp(fecha), Chancado_TMS_Real=real, Apilado_TMS_Plan=plan)
         rows.append(row)
 
-    result = export_datos_conciliados_to_template(
-        pd.DataFrame(rows, columns=COLUMNAS_DATOS_CONCILIADOS),
-        str(template),
-    )
-    ws = load_workbook(BytesIO(result), keep_links=False).active
-
-    assert ws["I5"].value == pd.Timestamp("2026-05-29").to_pydatetime()
+    df = pd.DataFrame(rows, columns=COLUMNAS_DATOS_CONCILIADOS)
+    assert obtener_fecha_actualizacion(df) == pd.Timestamp("2026-05-29").to_pydatetime()
 
 
 def test_formato_visual_no_modifica_valores_ni_formulas():
@@ -114,9 +111,14 @@ def _datos_mtd(fecha_inicio: str, dias: int, ultimo_dia_real: int):
         row = {column: None for column in COLUMNAS_DATOS_CONCILIADOS}
         row.update(
             Fecha=fecha,
+            Chancado_TMS_Real=300,
             Apilado_TMS_Plan=200,
             Ley_CuT_Plan=0.5,
+            Cobre_fino_Apilado_Plan=1,
             SRR_TMS_Plan=80,
+            Ley_CuT_Plan_srr=0.4,
+            TMS_Rotopala_1_Plan=30,
+            TMS_Rotopala_2_Plan=20,
             Camiones_TMS_plan=20,
             Total_Ripios_Incluye_Camiones_Plan=70,
             Produccion_Catodos_Plan=5,
@@ -124,14 +126,74 @@ def _datos_mtd(fecha_inicio: str, dias: int, ultimo_dia_real: int):
         if fecha.day <= ultimo_dia_real:
             row.update(
                 Apilado_TMS_Real=100,
+                Ley_CuT_Real=1,
                 Cobre_fino_Apilado_Real=1,
                 SRR_TMS_promedio_dia=50,
+                Ley_CuT_Real_srr=0.6,
+                TMS_Rotopala_1_Real=30,
+                TMS_Rotopala_2_Real=20,
                 Camiones_TMS_total=10,
                 Total_Ripios_Incluye_Camiones_Real=60,
                 Produccion_Catodos_Real=3,
             )
         rows.append(row)
     return pd.DataFrame(rows, columns=COLUMNAS_DATOS_CONCILIADOS)
+
+
+def test_fecha_corte_se_detiene_en_primera_fila_incompleta():
+    df = _datos_mtd("2026-07-01", 31, 31)
+    df.loc[30, ["Ley_CuT_Real_srr", "Cobre_fino_Apilado_Plan"]] = None
+
+    assert _obtener_fecha_corte_resumen_datos_conciliados(df) == pd.Timestamp("2026-07-30")
+
+    output = export_datos_conciliados_to_template(
+        df, "reporte/Template_DatosConcialiados.xlsx",
+    )
+    ws = load_workbook(BytesIO(output), keep_links=False).active
+    assert ws["Z3"].value == "MTD julio 2026 al 30-07-2026"
+    assert ws["AB5"].value == 3000
+    assert ws["AC5"].value == 6000
+    assert ws["C51"].value == pd.Timestamp("2026-07-31").to_pydatetime()
+
+
+def test_fecha_corte_retorna_fecha_maxima_si_todo_esta_completo():
+    df = _datos_mtd("2026-07-01", 31, 31)
+    assert _obtener_fecha_corte_resumen_datos_conciliados(df) == pd.Timestamp("2026-07-31")
+
+
+def test_fecha_corte_acepta_dependientes_vacios_con_tonelaje_cero():
+    df = _datos_mtd("2026-07-01", 1, 1)
+    df.loc[0, ["Apilado_TMS_Real", "Apilado_TMS_Plan", "SRR_TMS_promedio_dia", "SRR_TMS_Plan"]] = 0
+    df.loc[0, [
+        "Ley_CuT_Real", "Cobre_fino_Apilado_Real", "Ley_CuT_Plan",
+        "Cobre_fino_Apilado_Plan", "Ley_CuT_Real_srr", "Ley_CuT_Plan_srr",
+    ]] = None
+    assert _obtener_fecha_corte_resumen_datos_conciliados(df) == pd.Timestamp("2026-07-01")
+
+
+def test_fecha_corte_rechaza_dependiente_vacio_con_tonelaje_positivo():
+    df = _datos_mtd("2026-07-01", 2, 2)
+    df.loc[1, "Ley_CuT_Real"] = None
+    assert _obtener_fecha_corte_resumen_datos_conciliados(df) == pd.Timestamp("2026-07-01")
+
+
+def test_fecha_corte_no_salta_un_dia_incompleto():
+    df = _datos_mtd("2026-07-01", 20, 20)
+    df.loc[14, "Produccion_Catodos_Real"] = None
+    assert _obtener_fecha_corte_resumen_datos_conciliados(df) == pd.Timestamp("2026-07-14")
+
+
+def test_fecha_corte_informa_columnas_estructurales_faltantes():
+    df = _datos_mtd("2026-07-01", 1, 1).drop(columns=["Camiones_TMS_plan"])
+    with pytest.raises(ValueError, match="Camiones_TMS_plan"):
+        _obtener_fecha_corte_resumen_datos_conciliados(df)
+
+
+def test_fecha_corte_rechaza_primera_fecha_incompleta():
+    df = _datos_mtd("2026-07-01", 2, 2)
+    df.loc[0, "Produccion_Catodos_Real"] = None
+    with pytest.raises(ValueError, match="no existe un tramo consecutivo completo"):
+        _obtener_fecha_corte_resumen_datos_conciliados(df)
 
 
 def test_resumen_mtd_actualiza_corte_y_borde_inferior():
@@ -146,7 +208,7 @@ def test_resumen_mtd_actualiza_corte_y_borde_inferior():
         ws = load_workbook(BytesIO(output), keep_links=False).active
 
         assert ws["I5"].value == pd.Timestamp(2026, 7, corte).to_pydatetime()
-        assert ws["Z3"].value == "MTD julio 2026"
+        assert ws["Z3"].value == f"MTD julio 2026 al {corte:02d}-07-2026"
         assert ws["AB5"].value == 100 * corte
         assert ws["AC5"].value == 200 * corte
         assert ws["AB5"].data_type == "n"
@@ -166,7 +228,7 @@ def test_resumen_mtd_agosto_no_acumula_julio():
     ws = load_workbook(BytesIO(output), keep_links=False).active
 
     assert ws["I5"].value == pd.Timestamp("2026-08-03").to_pydatetime()
-    assert ws["Z3"].value == "MTD agosto 2026"
+    assert ws["Z3"].value == "MTD agosto 2026 al 03-08-2026"
     assert ws["AB5"].value == 300
     assert ws["AC5"].value == 600
 

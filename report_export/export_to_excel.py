@@ -67,6 +67,21 @@ COLUMNAS_FECHA_ACTUALIZACION = (
     "Produccion_Catodos_Real",
 )
 
+COLUMNAS_CORTE_RESUMEN_DATOS_CONCILIADOS = (
+    "Chancado_TMS_Real",
+    "Apilado_TMS_Real", "Apilado_TMS_Plan",
+    "Ley_CuT_Real", "Ley_CuT_Plan",
+    "Cobre_fino_Apilado_Real", "Cobre_fino_Apilado_Plan",
+    "SRR_TMS_promedio_dia", "SRR_TMS_Plan",
+    "Ley_CuT_Real_srr", "Ley_CuT_Plan_srr",
+    "TMS_Rotopala_1_Real", "TMS_Rotopala_1_Plan",
+    "TMS_Rotopala_2_Real", "TMS_Rotopala_2_Plan",
+    "Camiones_TMS_total", "Camiones_TMS_plan",
+    "Total_Ripios_Incluye_Camiones_Real",
+    "Total_Ripios_Incluye_Camiones_Plan",
+    "Produccion_Catodos_Real", "Produccion_Catodos_Plan",
+)
+
 MERGES_DATOS_CONCILIADOS = (
     "E12:F12", "Z6:AA6", "E19:G19", "Q19:S19", "O19:P19",
     "P10:Q10", "AA19:AB19", "Z3:AE3", "AU19:AV19", "AM19:AT19",
@@ -198,6 +213,72 @@ def obtener_fecha_actualizacion(df: pd.DataFrame):
     return None
 
 
+def _campos_incompletos_resumen_datos_conciliados(row: pd.Series) -> list[str]:
+    """Devuelve los insumos MTD ausentes, respetando dependencias por tonelaje."""
+    dependientes = {
+        "Ley_CuT_Real": "Apilado_TMS_Real",
+        "Cobre_fino_Apilado_Real": "Apilado_TMS_Real",
+        "Ley_CuT_Plan": "Apilado_TMS_Plan",
+        "Cobre_fino_Apilado_Plan": "Apilado_TMS_Plan",
+        "Ley_CuT_Real_srr": "SRR_TMS_promedio_dia",
+        "Ley_CuT_Plan_srr": "SRR_TMS_Plan",
+    }
+    incompletos = []
+    for columna in COLUMNAS_CORTE_RESUMEN_DATOS_CONCILIADOS:
+        if columna in dependientes:
+            tonelaje = pd.to_numeric(row[dependientes[columna]], errors="coerce")
+            if pd.notna(tonelaje) and tonelaje == 0:
+                continue
+        if pd.isna(row[columna]):
+            incompletos.append(columna)
+    return incompletos
+
+
+def _obtener_fecha_corte_resumen_datos_conciliados(df: pd.DataFrame):
+    """Obtiene el fin del primer tramo diario completo del resumen MTD."""
+    if df is None or df.empty:
+        raise ValueError("Datos Conciliados: no hay datos para determinar el corte MTD.")
+
+    requeridas = ("Fecha", *COLUMNAS_CORTE_RESUMEN_DATOS_CONCILIADOS)
+    faltantes = [columna for columna in requeridas if columna not in df.columns]
+    if faltantes:
+        raise ValueError(
+            "Datos Conciliados: faltan columnas requeridas para el corte MTD: "
+            + ", ".join(faltantes)
+        )
+
+    datos = df.copy()
+    datos["Fecha"] = pd.to_datetime(datos["Fecha"], errors="coerce").dt.normalize()
+    datos = datos.dropna(subset=["Fecha"]).sort_values("Fecha")
+    datos = datos.drop_duplicates(subset=["Fecha"], keep="last")
+    if datos.empty:
+        raise ValueError("Datos Conciliados: no existen fechas válidas para el corte MTD.")
+
+    fecha_anterior = None
+    fecha_esperada = datos.iloc[0]["Fecha"]
+    for _, row in datos.iterrows():
+        fecha = row["Fecha"]
+        if fecha != fecha_esperada:
+            print(f"[DATOS_CONCILIADOS] Primera fecha incompleta: {fecha_esperada:%Y-%m-%d}")
+            print("[DATOS_CONCILIADOS] Campos incompletos: Fecha")
+            break
+        incompletos = _campos_incompletos_resumen_datos_conciliados(row)
+        if incompletos:
+            print(f"[DATOS_CONCILIADOS] Primera fecha incompleta: {fecha:%Y-%m-%d}")
+            print("[DATOS_CONCILIADOS] Campos incompletos: " + ", ".join(incompletos))
+            break
+        fecha_anterior = fecha
+        fecha_esperada = fecha + pd.Timedelta(days=1)
+
+    if fecha_anterior is None:
+        raise ValueError(
+            "Datos Conciliados: no existe un tramo consecutivo completo desde "
+            "la primera fecha exportada."
+        )
+    print(f"[DATOS_CONCILIADOS] Fecha corte resumen MTD: {fecha_anterior:%Y-%m-%d}")
+    return fecha_anterior
+
+
 def calcular_periodo_mtd(fecha_actualizacion):
     """Devuelve el período MTD inclusivo controlado por una única fecha."""
     if fecha_actualizacion is None:
@@ -248,12 +329,13 @@ def calcular_resumen_mtd(df: pd.DataFrame, fecha_actualizacion) -> dict:
     apilado_real = _suma_mtd(datos, "Apilado_TMS_Real")
     apilado_plan = _suma_mtd(datos, "Apilado_TMS_Plan")
     cobre_real = _suma_mtd(datos, "Cobre_fino_Apilado_Real")
-
-    ley_real = (
-        None
-        if cobre_real is None or apilado_real in (None, 0)
-        else cobre_real / apilado_real * 100
-    )
+    real_ton = pd.to_numeric(datos.get("Apilado_TMS_Real"), errors="coerce")
+    real_ley = pd.to_numeric(datos.get("Ley_CuT_Real"), errors="coerce")
+    ley_real = None
+    if real_ton is not None and real_ley is not None and real_ton.notna().any():
+        denominador_real = float(real_ton.sum(skipna=True))
+        if denominador_real != 0:
+            ley_real = float((real_ton * real_ley).sum(skipna=True)) / denominador_real
     plan_ton = pd.to_numeric(datos.get("Apilado_TMS_Plan"), errors="coerce")
     plan_ley = pd.to_numeric(datos.get("Ley_CuT_Plan"), errors="coerce")
     ley_plan = None
@@ -261,25 +343,23 @@ def calcular_resumen_mtd(df: pd.DataFrame, fecha_actualizacion) -> dict:
         denominador_plan = float(plan_ton.sum(skipna=True))
         if denominador_plan != 0:
             ley_plan = float((plan_ton * plan_ley).sum(skipna=True)) / denominador_plan
-    cobre_plan = (
-        None
-        if ley_plan is None or apilado_plan is None
-        else ley_plan * apilado_plan / 100
-    )
+    cobre_plan = _suma_mtd(datos, "Cobre_fino_Apilado_Plan")
 
     total_camiones_real = _suma_mtd(datos, "Camiones_TMS_total")
     total_camiones_plan = _suma_mtd(datos, "Camiones_TMS_plan")
     total_ripios_real = _suma_mtd(datos, "Total_Ripios_Incluye_Camiones_Real")
     total_ripios_plan = _suma_mtd(datos, "Total_Ripios_Incluye_Camiones_Plan")
+    rotopala_1_real = _suma_mtd(datos, "TMS_Rotopala_1_Real")
+    rotopala_2_real = _suma_mtd(datos, "TMS_Rotopala_2_Real")
+    rotopala_1_plan = _suma_mtd(datos, "TMS_Rotopala_1_Plan")
+    rotopala_2_plan = _suma_mtd(datos, "TMS_Rotopala_2_Plan")
     rotopala_real = (
-        None
-        if total_ripios_real is None or total_camiones_real is None
-        else total_ripios_real - total_camiones_real
+        None if rotopala_1_real is None or rotopala_2_real is None
+        else rotopala_1_real + rotopala_2_real
     )
     rotopala_plan = (
-        None
-        if total_ripios_plan is None or total_camiones_plan is None
-        else total_ripios_plan - total_camiones_plan
+        None if rotopala_1_plan is None or rotopala_2_plan is None
+        else rotopala_1_plan + rotopala_2_plan
     )
 
     return {
@@ -318,7 +398,10 @@ def escribir_resumen_mtd(ws, resumen_mtd: dict, fecha_actualizacion) -> None:
         ws["Z3"] = "MTD"
     else:
         fecha = pd.Timestamp(fecha_actualizacion)
-        ws["Z3"] = f"MTD {MESES_ES[fecha.month - 1]} {fecha.year}"
+        ws["Z3"] = (
+            f"MTD {MESES_ES[fecha.month - 1]} {fecha.year} "
+            f"al {fecha:%d-%m-%Y}"
+        )
     for indicador, row in FILAS_RESUMEN_MTD.items():
         resultado = resumen_mtd[indicador]
         for col, clave in zip(("AB", "AC", "AD", "AE"), (
@@ -328,9 +411,12 @@ def escribir_resumen_mtd(ws, resumen_mtd: dict, fecha_actualizacion) -> None:
             ws[f"{col}{row}"] = None if pd.isna(valor) else float(valor)
 
 
-def _actualizar_encabezado_datos_conciliados(ws, df: pd.DataFrame):
+def _actualizar_encabezado_datos_conciliados(
+    ws, df: pd.DataFrame, fecha_reporte=None,
+):
     """Actualiza los metadatos desde la misma fecha usada por el resumen MTD."""
-    fecha_reporte = obtener_fecha_actualizacion(df)
+    if fecha_reporte is None:
+        fecha_reporte = obtener_fecha_actualizacion(df)
     if fecha_reporte is None:
         ws["I3"] = None
         ws["I4"] = None
@@ -349,7 +435,10 @@ def _actualizar_encabezado_datos_conciliados(ws, df: pd.DataFrame):
     ws["I4"] = f"FY{anio_fiscal % 100:02d}"
     ws["I5"] = fecha_reporte
     ws["I5"].number_format = "dd-mm-yyyy"
-    ws["Z3"] = f"MTD {MESES_ES[fecha_reporte.month - 1]} {fecha_reporte.year}"
+    ws["Z3"] = (
+        f"MTD {MESES_ES[fecha_reporte.month - 1]} {fecha_reporte.year} "
+        f"al {fecha_reporte:%d-%m-%Y}"
+    )
     return fecha_reporte
 
 
@@ -608,9 +697,16 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
     - Se copia el estilo (relleno, borde, fuente) de las dos primeras filas a todas
       las filas de datos para que la tabla crezca sin romper la estructura.
     """
+    df_export = df
+    fecha_corte_resumen = _obtener_fecha_corte_resumen_datos_conciliados(df_export)
+    fechas_export = pd.to_datetime(df_export["Fecha"], errors="coerce").dt.normalize()
+    df_resumen = df_export[fechas_export <= fecha_corte_resumen].copy()
+
     wb = _load_template(template_path)
     ws = wb.active
-    fecha_actualizacion = _actualizar_encabezado_datos_conciliados(ws, df)
+    fecha_actualizacion = _actualizar_encabezado_datos_conciliados(
+        ws, df_resumen, fecha_corte_resumen,
+    )
     layout = _detectar_layout_datos_conciliados(ws, len(df.columns))
     start_row = layout["start_row"]
     start_col = layout["start_col"]
@@ -714,7 +810,7 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
             cell.value = None
             cell._style = copy_module.copy(blank_styles[c])
 
-    resumen_mtd = calcular_resumen_mtd(df, fecha_actualizacion)
+    resumen_mtd = calcular_resumen_mtd(df_resumen, fecha_corte_resumen)
     escribir_resumen_mtd(ws, resumen_mtd, fecha_actualizacion)
 
     if fecha_actualizacion is not None:
