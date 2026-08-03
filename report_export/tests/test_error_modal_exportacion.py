@@ -48,6 +48,8 @@ class ErrorModalExportacionTests(unittest.TestCase):
         self.assertEqual(len(resultado), 5)
         self.assertTrue(resultado[3])
         contenido = repr(resultado[4])
+        self.assertIn("Datos disponibles hasta", contenido)
+        self.assertNotIn("Primera fecha incompleta", contenido)
         self.assertIn("01-08-2026", contenido)
         self.assertIn("Plan de apilado", contenido)
         self.assertIn("Ley de cobre plan", contenido)

@@ -7576,7 +7576,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         ]
         if pd.notna(fecha):
             contenido.append(html.P([
-                html.Strong("Primera fecha incompleta: "),
+                html.Strong("Datos disponibles hasta: "),
                 fecha.strftime("%d-%m-%Y"),
             ], className="mb-2"))
         if exc.campos:
