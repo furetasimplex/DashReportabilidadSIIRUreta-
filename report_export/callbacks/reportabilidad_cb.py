@@ -5794,7 +5794,7 @@ def _agregar_hojas_mensuales_torres(
 
 
 def _agregar_hoja_trazabilidad_pesos(wb, df_pesos_turno) -> None:
-    """Agrega al final la trazabilidad publicada, preservando NULL como vacio."""
+    """Agrega una vista ancha por Fecha/Turno sin alterar el DataFrame fuente."""
     if df_pesos_turno is None or df_pesos_turno.empty:
         return
 
@@ -5802,72 +5802,124 @@ def _agregar_hoja_trazabilidad_pesos(wb, df_pesos_turno) -> None:
     from openpyxl.utils import get_column_letter
 
     df = validar_pesos_representatividad(df_pesos_turno)
+    campos = (
+        ("PesoTeo_Quimico", "Peso teórico químico [kg]", "0.000", 22),
+        ("PesoReal_Quimico", "Peso real químico [kg]", "0.000", 20),
+        ("Representatividad_Quimica", "Representatividad química", "0.0%", 21),
+        ("PesoTeo_Fisico", "Peso teórico físico [kg]", "0.000", 21),
+        ("PesoReal_Fisico", "Peso real físico [kg]", "0.000", 19),
+        ("Representatividad_Fisica", "Representatividad física", "0.0%", 20),
+        ("Horas_Reales", "Horas reales", "0.000", 14),
+        ("Factor_Masa", "Factor masa", "0.000", 14),
+        ("fecha_carga", "Fecha de carga", "dd-mm-yyyy hh:mm", 19),
+    )
+    torres = (
+        ("T1", "Torre de muestreo #1"),
+        ("T2", "Torre de muestreo #2"),
+        ("SRR", "Torre de muestreo #3 / SRR"),
+    )
+    filas = []
+    for (fecha, turno), grupo in df.groupby(["Fecha", "Turno"], sort=False):
+        por_torre = {fila["Torre"]: fila for _, fila in grupo.iterrows()}
+        salida = {"Fecha": fecha, "Turno": turno}
+        for torre, _ in torres:
+            origen = por_torre.get(torre)
+            for campo, _, _, _ in campos:
+                salida[(torre, campo)] = None if origen is None else origen.get(campo)
+        filas.append(salida)
+
     ws = wb.create_sheet("Trazabilidad Pesos")
     ws.sheet_view.showGridLines = False
-    ws.freeze_panes = "A2"
+    ws.freeze_panes = "A3"
 
-    columnas = (
-        ("Fecha", "Fecha", "dd-mm-yyyy", 13),
-        ("Turno", "Turno", None, 10),
-        ("Torre", "Torre", None, 10),
-        ("PesoTeo_Quimico", "Peso teórico químico [kg]", "0.000", 24),
-        ("PesoReal_Quimico", "Peso real químico [kg]", "0.000", 22),
-        ("Representatividad_Quimica", "Representatividad química", "0.0%", 24),
-        ("PesoTeo_Fisico", "Peso teórico físico [kg]", "0.000", 23),
-        ("PesoReal_Fisico", "Peso real físico [kg]", "0.000", 21),
-        ("Representatividad_Fisica", "Representatividad física", "0.0%", 23),
-        ("Estado_Evaluacion", "Estado evaluación", None, 20),
-        ("Horas_Reales", "Horas reales", "0.000", 15),
-        ("Factor_Masa", "Factor masa", "0.000", 15),
-        ("Fraccion_Muestreo", "Fracción muestreo", "0.000", 19),
-        ("nombre_archivo", "Archivo de origen", None, 35),
-        ("fecha_carga", "Fecha de carga", "dd-mm-yyyy hh:mm", 20),
-    )
     color_header, color_texto = "D7E1E7", "476475"
-    borde = Border(*(Side(style="thin", color="A6A6A6") for _ in range(4)))
+    fino = Side(style="thin", color="A6A6A6")
+    medio = Side(style="medium", color=color_texto)
+    borde = Border(left=fino, right=fino, top=fino, bottom=fino)
+    borde_header = Border(left=medio, right=medio, top=medio, bottom=medio)
     encabezado = PatternFill("solid", fgColor=color_header)
-    alterna = PatternFill("solid", fgColor="EDF2F4")
+    alterna = PatternFill("solid", fgColor=color_header)
     blanco = PatternFill("solid", fgColor="FFFFFF")
     fuente = Font(name="Arial", color=color_texto, size=10)
     fuente_baja = Font(name="Arial", bold=True, color="C00000", size=10)
+    fuente_header = Font(name="Arial", bold=True, color=color_texto, size=11)
     centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    for col_idx, (_, titulo, _, ancho) in enumerate(columnas, 1):
-        celda = ws.cell(1, col_idx, titulo)
-        celda.fill = encabezado
-        celda.font = Font(name="Arial", bold=True, color=color_texto, size=10)
-        celda.alignment = centro
-        celda.border = borde
-        ws.column_dimensions[get_column_letter(col_idx)].width = ancho
+    ws.merge_cells("A1:A2")
+    ws.merge_cells("B1:B2")
+    ws["A1"], ws["B1"] = "Fecha", "Turno"
+    ws.column_dimensions["A"].width = 13
+    ws.column_dimensions["B"].width = 10
+    for col_idx in (1, 2):
+        celda = ws.cell(1, col_idx)
+        celda.fill, celda.font = encabezado, fuente_header
+        celda.alignment, celda.border = centro, borde_header
 
-    for fila_idx, (_, fila) in enumerate(df.iterrows(), 2):
-        fill = alterna if fila_idx % 2 else blanco
-        for col_idx, (origen, _, formato, _) in enumerate(columnas, 1):
-            valor = fila.get(origen)
+    for bloque_idx, (_, titulo_torre) in enumerate(torres):
+        inicio = 3 + bloque_idx * len(campos)
+        fin = inicio + len(campos) - 1
+        ws.merge_cells(start_row=1, start_column=inicio, end_row=1, end_column=fin)
+        celda = ws.cell(1, inicio, titulo_torre)
+        celda.fill, celda.font = encabezado, fuente_header
+        celda.alignment, celda.border = centro, borde_header
+        for offset, (_, titulo, _, ancho) in enumerate(campos):
+            col_idx = inicio + offset
+            subheader = ws.cell(2, col_idx, titulo)
+            subheader.fill, subheader.font = encabezado, fuente_header
+            subheader.alignment, subheader.border = centro, borde_header
+            ws.column_dimensions[get_column_letter(col_idx)].width = ancho
+
+    for fila_idx, fila in enumerate(filas, 3):
+        fill = alterna if (fila_idx - 3) % 2 else blanco
+        generales = ((fila["Fecha"], "dd-mm-yyyy"), (fila["Turno"], "General"))
+        for col_idx, (valor, formato) in enumerate(generales, 1):
             celda = ws.cell(fila_idx, col_idx)
             if pd.notna(valor):
-                if origen in {"Fecha", "fecha_carga"}:
-                    valor = pd.to_datetime(valor).to_pydatetime()
-                elif origen in {
-                    "PesoTeo_Quimico", "PesoReal_Quimico",
-                    "Representatividad_Quimica", "PesoTeo_Fisico",
-                    "PesoReal_Fisico", "Representatividad_Fisica",
-                    "Horas_Reales", "Factor_Masa", "Fraccion_Muestreo",
-                }:
-                    valor = float(valor)
-                celda.value = valor
-            celda.number_format = formato or "General"
-            celda.fill = fill
-            celda.border = borde
-            celda.alignment = Alignment(
-                horizontal="left" if origen == "nombre_archivo" else "center",
-                vertical="center",
-            )
-            celda.font = fuente
-            if origen in {"Representatividad_Quimica", "Representatividad_Fisica"} and pd.notna(valor):
-                celda.font = fuente_baja if float(valor) < 0.75 else fuente
+                celda.value = (
+                    pd.to_datetime(valor).to_pydatetime()
+                    if col_idx == 1 else valor
+                )
+            celda.number_format = formato
+            celda.fill, celda.font = fill, fuente
+            celda.alignment, celda.border = centro, borde
 
-    ws.auto_filter.ref = f"A1:O{len(df) + 1}"
+        for bloque_idx, (torre, _) in enumerate(torres):
+            inicio = 3 + bloque_idx * len(campos)
+            for offset, (origen, _, formato, _) in enumerate(campos):
+                valor = fila[(torre, origen)]
+                celda = ws.cell(fila_idx, inicio + offset)
+                if pd.notna(valor):
+                    if origen == "fecha_carga":
+                        valor = pd.to_datetime(valor).to_pydatetime()
+                    else:
+                        valor = float(valor)
+                    celda.value = valor
+                celda.number_format = formato
+                celda.fill, celda.font = fill, fuente
+                celda.alignment, celda.border = centro, borde
+                if origen in {
+                    "Representatividad_Quimica", "Representatividad_Fisica"
+                } and pd.notna(valor):
+                    celda.font = fuente_baja if float(valor) < 0.75 else fuente
+
+    ultima_fila = len(filas) + 2
+    for inicio, fin in ((1, 2), (3, 11), (12, 20), (21, 29)):
+        for fila_idx in range(1, ultima_fila + 1):
+            for col_idx in range(inicio, fin + 1):
+                celda = ws.cell(fila_idx, col_idx)
+                actual = celda.border
+                celda.border = Border(
+                    left=medio if col_idx == inicio else actual.left,
+                    right=medio if col_idx == fin else actual.right,
+                    top=medio if fila_idx == 1 else actual.top,
+                    bottom=medio if fila_idx == ultima_fila else actual.bottom,
+                )
+
+    ws.row_dimensions[1].height = 28
+    ws.row_dimensions[2].height = 46
+    for fila_idx in range(3, ultima_fila + 1):
+        ws.row_dimensions[fila_idx].height = 21
+    ws.auto_filter.ref = f"A2:AC{ultima_fila}"
 
 
 def _export_representatividad_torres_to_excel(
