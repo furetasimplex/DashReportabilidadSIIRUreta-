@@ -84,9 +84,9 @@ COLUMNAS_CORTE_RESUMEN_DATOS_CONCILIADOS = (
 
 MERGES_DATOS_CONCILIADOS = (
     "E12:F12", "Z6:AA6", "E19:G19", "Q19:S19", "O19:P19",
-    "P10:Q10", "AA19:AB19", "Z3:AE3", "AU19:AV19", "AM19:AT19",
+    "AA19:AB19", "Z3:AE3", "AU19:AV19", "AM19:AT19",
     "K19:N19", "Z7:AA7", "Z16:AA16", "AC18:AV18", "H19:J19",
-    "AH19:AL19", "P11:Q11", "Y19:Z19", "C18:C20", "AG3:AU3",
+    "AH19:AL19", "Y19:Z19", "C18:C20", "AG3:AU3",
     "Z12:AA12", "D18:D19", "E11:F11", "AC19:AG19", "Z5:AA5",
     "Z14:AA14", "Z13:AA13", "E18:AB18", "Z15:AA15",
     "T19:X19", "AW18:AX19", "Z9:AA9",
@@ -471,7 +471,7 @@ def aplicar_borde_inferior_reporte(
 
 
 def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
-    """Aplica únicamente la presentación oficial al bloque B2:AY52."""
+    """Aplica la presentación oficial al bloque B2:AY52; AY queda vacía."""
     for column, width in ANCHOS_DATOS_CONCILIADOS.items():
         ws.column_dimensions[column].width = width
 
@@ -495,6 +495,15 @@ def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
         ws.unmerge_cells(item)
     for item in target_merges - current_target_merges:
         ws.merge_cells(item)
+
+    # El bloque P10:R11 era una tabla auxiliar vacía heredada de la plantilla.
+    # Se elimina por completo para que no deje combinaciones, bordes ni rellenos
+    # dentro de la salida oficial.
+    default_style = copy_module.copy(ws["A1"]._style)
+    for row in ws["P10:R11"]:
+        for cell in row:
+            cell.value = None
+            cell._style = copy_module.copy(default_style)
 
     # Extender el aspecto del ancla a todas las celdas de cada combinación
     # evita bloques discontinuos; los bordes individuales se conservan.
@@ -564,6 +573,9 @@ def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
     # el freeze.
     ws.sheet_view.selection = (Selection(),)
     ws.sheet_view.showGridLines = False
+    # AY se mantiene con su ancho original para no alterar la escala ni la
+    # posición visual del logo, pero el estado no se imprime en sus celdas.
+    ws.column_dimensions["AY"].hidden = False
     ws.print_area = "B2:AY52"
     ws.page_setup.orientation = "landscape"
     ws.page_setup.paperSize = "17"
@@ -760,12 +772,10 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
         )
         for j, col in enumerate(cols):
             val = row[col]
-            # Columna de estado: 1 -> vacío, 0 o NULL -> "*"
+            # Estado es un dato de control interno y no se muestra en la salida
+            # oficial. Antes, 0/NULL se convertía en "*" dentro de AY.
             if col == "Estado":
-                if pd.isna(val) or val in (0, 0.0, "0", "0.0"):
-                    val = "*"
-                elif val in (1, 1.0, "1"):
-                    val = None
+                val = None
             elif col in COLUMNAS_AVANCE_DIVIDE_100 and not pd.isna(val):
                 try:
                     v = float(val)

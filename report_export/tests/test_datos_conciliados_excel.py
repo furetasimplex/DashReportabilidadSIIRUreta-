@@ -30,6 +30,7 @@ def test_export_datos_conciliados_replica_layout_oficial():
 
     assert ws.title == "Datos Conciliados"
     assert ws.print_area == "'Datos Conciliados'!$B$2:$AY$52"
+    assert not ws.column_dimensions["AY"].hidden
     assert ws.freeze_panes is None
     assert ws.max_row <= 52
     assert ws["C18"].value == "Día"
@@ -37,7 +38,16 @@ def test_export_datos_conciliados_replica_layout_oficial():
     assert ws["C21"].value == pd.Timestamp("2026-05-30").to_pydatetime()
     assert ws["D21"].value == COLUMNAS_DATOS_CONCILIADOS.index("Chancado_TMS_Real")
     assert ws["AX21"].value == COLUMNAS_DATOS_CONCILIADOS.index("Produccion_Catodos_Plan")
-    assert ws["AY21"].value == "*"
+    assert ws["AY21"].value is None
+    assert not any(
+        merged.min_row <= 11 and merged.max_row >= 10
+        and merged.min_col <= 18 and merged.max_col >= 16
+        for merged in ws.merged_cells.ranges
+    )
+    assert all(
+        cell.value is None and not cell.has_style
+        for row_cells in ws["P10:R11"] for cell in row_cells
+    )
     assert ws["I3"].value == "mayo"
     assert ws["I4"].value == "FY26"
     assert ws["I5"].value == pd.Timestamp("2026-05-30").to_pydatetime()
