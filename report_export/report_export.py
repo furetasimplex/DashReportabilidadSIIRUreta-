@@ -508,6 +508,122 @@ def fetch_representatividad_torres_report(start_date: date, end_date: date) -> p
     return df
 
 
+PESOS_REPRESENTATIVIDAD_COLUMNAS = (
+    "Fecha", "Turno", "Torre", "Horas_Reales", "Factor_Masa",
+    "Fraccion_Muestreo", "PesoTeo_Quimico", "PesoReal_Quimico",
+    "Representatividad_Quimica", "PesoTeo_Fisico", "PesoReal_Fisico",
+    "Representatividad_Fisica", "Estado_Evaluacion", "nombre_archivo",
+    "fecha_carga",
+)
+
+
+def validar_pesos_representatividad(df: pd.DataFrame) -> pd.DataFrame:
+    """Normaliza y valida la trazabilidad sin sustituir valores ausentes."""
+    if df is None:
+        raise ValueError("La trazabilidad de pesos no puede ser None.")
+    if df.empty:
+        return df.copy()
+
+    faltantes = [col for col in PESOS_REPRESENTATIVIDAD_COLUMNAS if col not in df]
+    if faltantes:
+        raise RuntimeError(
+            "Trazabilidad de pesos sin columnas obligatorias: "
+            + ", ".join(faltantes)
+        )
+
+    resultado = df.copy()
+    resultado["Fecha"] = pd.to_datetime(resultado["Fecha"], errors="coerce").dt.normalize()
+    for col in ("Turno", "Torre"):
+        resultado[col] = resultado[col].astype("string").str.strip().str.upper()
+
+    if resultado["Fecha"].isna().any():
+        raise RuntimeError("Trazabilidad de pesos contiene fechas invalidas o NULL.")
+    mascara_turno = ~resultado["Turno"].isin({"A", "B"})
+    invalidos_turno = sorted(set(resultado.loc[mascara_turno, "Turno"].dropna()))
+    if mascara_turno.any():
+        raise RuntimeError(f"Turnos invalidos en trazabilidad de pesos: {invalidos_turno}")
+    mascara_torre = ~resultado["Torre"].isin({"T1", "T2", "SRR"})
+    invalidos_torre = sorted(set(resultado.loc[mascara_torre, "Torre"].dropna()))
+    if mascara_torre.any():
+        raise RuntimeError(f"Torres invalidas en trazabilidad de pesos: {invalidos_torre}")
+
+    duplicadas = resultado.duplicated(["Fecha", "Turno", "Torre"], keep=False)
+    if duplicadas.any():
+        llaves = resultado.loc[duplicadas, ["Fecha", "Turno", "Torre"]].drop_duplicates()
+        raise RuntimeError(
+            "Llaves duplicadas Fecha + Turno + Torre en trazabilidad de pesos: "
+            + llaves.to_dict(orient="records").__repr__()
+        )
+
+    for col in ("Representatividad_Quimica", "Representatividad_Fisica"):
+        valores = pd.to_numeric(resultado[col], errors="coerce")
+        fuera = valores.notna() & ~valores.between(0, 1)
+        if fuera.any():
+            raise RuntimeError(f"{col} debe estar entre 0 y 1.")
+    for col in ("PesoTeo_Quimico", "PesoTeo_Fisico", "PesoReal_Quimico", "PesoReal_Fisico"):
+        valores = pd.to_numeric(resultado[col], errors="coerce")
+        if (valores.dropna() < 0).any():
+            raise RuntimeError(f"{col} no puede contener valores negativos.")
+
+    resultado = resultado.assign(
+        _orden_turno=resultado["Turno"].map({"A": 1, "B": 2}),
+        _orden_torre=resultado["Torre"].map({"T1": 1, "T2": 2, "SRR": 3}),
+    )
+    return (
+        resultado.sort_values(["Fecha", "_orden_turno", "_orden_torre"])
+        .drop(columns=["_orden_turno", "_orden_torre"])
+        .reset_index(drop=True)
+    )
+
+
+def fetch_pesos_representatividad_report(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Lee los pesos teoricos y reales usados por representatividad."""
+    if start_date is None or end_date is None:
+        raise ValueError("FechaInicio y FechaFin son obligatorias para consultar pesos.")
+    if start_date > end_date:
+        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
+
+    sql = _sa_text("""
+        SELECT teo.Fecha, teo.Turno, teo.Torre, teo.Horas_Reales,
+               teo.Factor_Masa, teo.Fraccion_Muestreo,
+               teo.PesoTeo_Quimico, real.PesoReal_Quimico,
+               CASE WHEN teo.PesoTeo_Quimico > 0 AND real.PesoReal_Quimico IS NOT NULL
+                    THEN CASE WHEN CAST(real.PesoReal_Quimico AS float) / CAST(teo.PesoTeo_Quimico AS float) >= 1
+                              THEN 1.0 ELSE CAST(real.PesoReal_Quimico AS float) / CAST(teo.PesoTeo_Quimico AS float) END
+                    ELSE NULL END AS Representatividad_Quimica,
+               teo.PesoTeo_Fisico, real.PesoReal_Fisico,
+               CASE WHEN teo.PesoTeo_Fisico > 0 AND real.PesoReal_Fisico IS NOT NULL
+                    THEN CASE WHEN CAST(real.PesoReal_Fisico AS float) / CAST(teo.PesoTeo_Fisico AS float) >= 1
+                              THEN 1.0 ELSE CAST(real.PesoReal_Fisico AS float) / CAST(teo.PesoTeo_Fisico AS float) END
+                    ELSE NULL END AS Representatividad_Fisica,
+               CASE WHEN ISNULL(teo.PesoTeo_Quimico, 0) <= 0 AND ISNULL(teo.PesoTeo_Fisico, 0) <= 0 THEN 'NO EVALUABLE'
+                    WHEN real.PesoReal_Quimico IS NULL AND real.PesoReal_Fisico IS NULL THEN 'SIN PESO REAL'
+                    ELSE 'EVALUABLE' END AS Estado_Evaluacion,
+               real.nombre_archivo, real.fecha_carga
+        FROM inventar_SpcHidr.v_peso_teorico_turno_torre_excel AS teo
+        OUTER APPLY (
+            SELECT TOP (1) r.PesoReal_Quimico, r.PesoReal_Fisico,
+                   r.nombre_archivo, r.fecha_carga
+            FROM inventar_SpcHidr.peso_real_torre_turno AS r
+            WHERE r.Fecha = teo.Fecha AND r.Turno = teo.Turno AND r.Torre = teo.Torre
+            ORDER BY r.fecha_carga DESC, r.ID_Registro DESC
+        ) AS real
+        WHERE teo.Fecha >= :start AND teo.Fecha <= :end
+        ORDER BY teo.Fecha,
+                 CASE teo.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
+                 CASE teo.Torre WHEN 'T1' THEN 1 WHEN 'T2' THEN 2 WHEN 'SRR' THEN 3 ELSE 4 END;
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            df = pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
+    except Exception as exc:
+        raise RuntimeError(f"Error al leer trazabilidad de pesos: {exc}") from exc
+    return validar_pesos_representatividad(df)
+
+
 def fetch_fecha_corte_representatividad(
     start_date: date,
     end_date: date,
@@ -1363,6 +1479,7 @@ RTO_SNAPSHOT_BLOQUES = (
     "turno_mes",
     "gestion_fy_quimico",
     "gestion_fy_fisico",
+    "pesos_turno",
 )
 
 RTO_DETALLE_COLUMNAS = (
@@ -1392,8 +1509,9 @@ def _dataframe_a_snapshot_json(df: pd.DataFrame) -> str:
     copia = df.copy()
     for col in copia.columns:
         if pd.api.types.is_datetime64_any_dtype(copia[col]):
-            copia[col] = copia[col].dt.strftime("%Y-%m-%d")
-    return copia.to_json(orient="records", date_format="iso")
+            formato = "%Y-%m-%dT%H:%M:%S.%f" if col == "fecha_carga" else "%Y-%m-%d"
+            copia[col] = copia[col].dt.strftime(formato)
+    return copia.to_json(orient="records", date_format="iso", double_precision=15)
 
 
 def _snapshot_json_a_dataframe(payload: str) -> pd.DataFrame:
@@ -1401,7 +1519,7 @@ def _snapshot_json_a_dataframe(payload: str) -> pd.DataFrame:
         return pd.DataFrame()
     df = pd.read_json(io.StringIO(payload), orient="records")
     for col in df.columns:
-        if col.lower() in {"dia", "fecha"}:
+        if col.lower() in {"dia", "fecha", "fecha_carga"}:
             df[col] = pd.to_datetime(df[col], errors="coerce")
     return df
 
@@ -1522,6 +1640,12 @@ def armar_paquete_reporte_torre_oficial(
     if df_rep_real.empty:
         raise RuntimeError("Sin datos de representatividad para el rango seleccionado.")
 
+    df_pesos_turno = fetch_pesos_representatividad_report(
+        start_date=periodo_inicio,
+        end_date=fecha_corte_operacional,
+    )
+    print(f"[RTO] Filas trazabilidad pesos: {len(df_pesos_turno)}")
+
     df_rep = _completar_calendario_representatividad(
         df=df_rep_real,
         fecha_inicio=periodo_inicio,
@@ -1548,6 +1672,7 @@ def armar_paquete_reporte_torre_oficial(
         "turno_mes": fuentes["df_turno_mes"],
         "gestion_fy_quimico": fuentes["df_gestion_fy_quimico"],
         "gestion_fy_fisico": fuentes["df_gestion_fy_fisico"],
+        "pesos_turno": df_pesos_turno,
         "fecha_corte_operacional": fecha_corte_operacional,
         "anio_fiscal": rango_fy["anio_fiscal"],
         "fecha_inicio_mes": fuentes["fecha_inicio_mes"],
@@ -1652,7 +1777,7 @@ def write_reporte_torre_oficial(
     paquete: dict,
 ) -> int:
     """
-    Persiste snapshot oficial: cab + 6 bloques JSON + detalle.
+    Persiste snapshot oficial: cab + bloques JSON + detalle.
     Reemplaza el reporte activo del mes (soft-delete cab anterior).
     """
     if df_detalle is None or df_detalle.empty:
