@@ -82,6 +82,15 @@ COLUMNAS_CORTE_RESUMEN_DATOS_CONCILIADOS = (
     "Produccion_Catodos_Real", "Produccion_Catodos_Plan",
 )
 
+
+class DependenciaDatosExportError(ValueError):
+    """Error de datos con contexto seguro para presentar en la interfaz."""
+
+    def __init__(self, mensaje, fecha=None, campos=None):
+        super().__init__(mensaje)
+        self.fecha = fecha
+        self.campos = tuple(campos or ())
+
 MERGES_DATOS_CONCILIADOS = (
     "E12:F12", "Z6:AA6", "E19:G19", "Q19:S19", "O19:P19",
     "AA19:AB19", "Z3:AE3", "AU19:AV19", "AM19:AT19",
@@ -237,14 +246,16 @@ def _campos_incompletos_resumen_datos_conciliados(row: pd.Series) -> list[str]:
 def _obtener_fecha_corte_resumen_datos_conciliados(df: pd.DataFrame):
     """Obtiene el fin del primer tramo diario completo del resumen MTD."""
     if df is None or df.empty:
-        raise ValueError("Datos Conciliados: no hay datos para determinar el corte MTD.")
+        raise DependenciaDatosExportError(
+            "No hay datos disponibles para determinar el corte del resumen MTD."
+        )
 
     requeridas = ("Fecha", *COLUMNAS_CORTE_RESUMEN_DATOS_CONCILIADOS)
     faltantes = [columna for columna in requeridas if columna not in df.columns]
     if faltantes:
-        raise ValueError(
-            "Datos Conciliados: faltan columnas requeridas para el corte MTD: "
-            + ", ".join(faltantes)
+        raise DependenciaDatosExportError(
+            "Faltan columnas requeridas para construir el resumen MTD.",
+            campos=faltantes,
         )
 
     datos = df.copy()
@@ -252,28 +263,39 @@ def _obtener_fecha_corte_resumen_datos_conciliados(df: pd.DataFrame):
     datos = datos.dropna(subset=["Fecha"]).sort_values("Fecha")
     datos = datos.drop_duplicates(subset=["Fecha"], keep="last")
     if datos.empty:
-        raise ValueError("Datos Conciliados: no existen fechas válidas para el corte MTD.")
+        raise DependenciaDatosExportError(
+            "No existen fechas validas para determinar el corte del resumen MTD.",
+            campos=["Fecha"],
+        )
 
     fecha_anterior = None
     fecha_esperada = datos.iloc[0]["Fecha"]
+    primera_fecha_incompleta = None
+    primeros_campos_incompletos = []
     for _, row in datos.iterrows():
         fecha = row["Fecha"]
         if fecha != fecha_esperada:
             print(f"[DATOS_CONCILIADOS] Primera fecha incompleta: {fecha_esperada:%Y-%m-%d}")
             print("[DATOS_CONCILIADOS] Campos incompletos: Fecha")
+            primera_fecha_incompleta = fecha_esperada
+            primeros_campos_incompletos = ["Fecha"]
             break
         incompletos = _campos_incompletos_resumen_datos_conciliados(row)
         if incompletos:
             print(f"[DATOS_CONCILIADOS] Primera fecha incompleta: {fecha:%Y-%m-%d}")
             print("[DATOS_CONCILIADOS] Campos incompletos: " + ", ".join(incompletos))
+            primera_fecha_incompleta = fecha
+            primeros_campos_incompletos = incompletos
             break
         fecha_anterior = fecha
         fecha_esperada = fecha + pd.Timedelta(days=1)
 
     if fecha_anterior is None:
-        raise ValueError(
+        raise DependenciaDatosExportError(
             "Datos Conciliados: no existe un tramo consecutivo completo desde "
-            "la primera fecha exportada."
+            "la primera fecha exportada.",
+            fecha=primera_fecha_incompleta,
+            campos=primeros_campos_incompletos,
         )
     print(f"[DATOS_CONCILIADOS] Fecha corte resumen MTD: {fecha_anterior:%Y-%m-%d}")
     return fecha_anterior

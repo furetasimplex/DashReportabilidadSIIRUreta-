@@ -388,6 +388,27 @@ def layout():
                 backdrop=True,
                 keyboard=False,
             ),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(
+                        dbc.ModalTitle("No se puede generar el reporte"),
+                        close_button=False,
+                    ),
+                    dbc.ModalBody(id="report-error-modal-body"),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Entendido",
+                            id="report-error-modal-close",
+                            color="primary",
+                            n_clicks=0,
+                        )
+                    ),
+                ],
+                id="report-error-modal",
+                is_open=False,
+                centered=True,
+                backdrop="static",
+            ),
             dcc.Download(id="report-download-xlsx"),
             dcc.Download(id="report-download-pdf"),
             html.Div(id="report-status", className="mt-2 text-muted small"),

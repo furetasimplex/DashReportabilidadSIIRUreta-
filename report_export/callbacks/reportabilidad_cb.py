@@ -45,7 +45,11 @@ from report_export.report_export import (
     comentario_torres_para_tipo,
     validar_pesos_representatividad,
 )
-from report_export.export_to_excel import export_dataframe_with_template, export_datos_conciliados_to_template
+from report_export.export_to_excel import (
+    DependenciaDatosExportError,
+    export_dataframe_with_template,
+    export_datos_conciliados_to_template,
+)
 from report_export.pdf_generator import (
     generar_pdf_datos_conciliados,
 )
@@ -98,6 +102,26 @@ _COLUMNAS_OBLIGATORIAS_TM3 = (
     "Comentario_TM3_Quimico",
     "Comentario_TM3_Fisico",
 )
+
+_ETIQUETAS_DEPENDENCIAS_DATOS = {
+    "Fecha": "Fecha", "Chancado_TMS_Real": "Chancado real",
+    "Apilado_TMS_Real": "Apilado real", "Apilado_TMS_Plan": "Plan de apilado",
+    "Ley_CuT_Real": "Ley de cobre real", "Ley_CuT_Plan": "Ley de cobre plan",
+    "Cobre_fino_Apilado_Real": "Cobre fino apilado real",
+    "Cobre_fino_Apilado_Plan": "Cobre fino apilado plan",
+    "SRR_TMS_promedio_dia": "SRR real", "SRR_TMS_Plan": "Plan SRR",
+    "Ley_CuT_Real_srr": "Ley de cobre SRR real",
+    "Ley_CuT_Plan_srr": "Ley de cobre SRR plan",
+    "TMS_Rotopala_1_Real": "Rotopala 1 real",
+    "TMS_Rotopala_1_Plan": "Rotopala 1 plan",
+    "TMS_Rotopala_2_Real": "Rotopala 2 real",
+    "TMS_Rotopala_2_Plan": "Rotopala 2 plan",
+    "Camiones_TMS_total": "Camiones real", "Camiones_TMS_plan": "Camiones plan",
+    "Total_Ripios_Incluye_Camiones_Real": "Ripios total real",
+    "Total_Ripios_Incluye_Camiones_Plan": "Ripios total plan",
+    "Produccion_Catodos_Real": "Producción de cátodos real",
+    "Produccion_Catodos_Plan": "Producción de cátodos plan",
+}
 
 
 def _usuario_sesion() -> str:
@@ -7317,6 +7341,8 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
     Output("report-download-xlsx", "data"),
     Output("report-status", "children", allow_duplicate=True),
     Output("report-progress", "children", allow_duplicate=True),
+    Output("report-error-modal", "is_open", allow_duplicate=True),
+    Output("report-error-modal-body", "children", allow_duplicate=True),
     Input({"type": "report-export-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
@@ -7338,9 +7364,9 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
     print(f"[RTO] periodo_fin={f_fin}")
     print("[RTO] modo=descargar")
     if not triggered or not isinstance(triggered, dict):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, False, no_update
     if not any(n for n in n_clicks_list if n):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, False, no_update
 
     tipo = triggered["tipo"]
     _done = html.Div()
@@ -7349,7 +7375,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
 
     if not f_ini or not f_fin:
         print("[EXCEL] Sin fechas - abortando")
-        return no_update, "Debe seleccionar rango de fechas.", _done
+        return no_update, "Debe seleccionar rango de fechas.", _done, False, no_update
 
     ini_d = pd.to_datetime(f_ini).date()
     fin_d = pd.to_datetime(f_fin).date()
@@ -7373,6 +7399,8 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                     "No existe un reporte oficial activo para descargar "
                     "en el período seleccionado.",
                     _done,
+                    False,
+                    no_update,
                 )
             id_reporte = int(activo["id_reporte"])
             fecha_corte_operacional = pd.to_datetime(
@@ -7408,6 +7436,8 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 _enviar_descarga(xbytes, filename),
                 status,
                 _done,
+                False,
+                no_update,
             )
 
             
@@ -7430,7 +7460,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
 
             if df_turno.empty:
-                return no_update, "Sin datos para el rango seleccionado.", _done
+                return no_update, "Sin datos para el rango seleccionado.", _done, False, no_update
 
             print(f"[EXCEL] Fetching generador_reporte_diario {ini_d} -> {fin_sql_exclusivo}")
             df_generador = fetch_generador_reporte_diario_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
@@ -7448,7 +7478,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
             )
             status = f"Exportado: {filename} (turno={len(df_turno)}, generador={len(df_generador)})"
-            return _enviar_descarga(xbytes, filename), status, _done
+            return _enviar_descarga(xbytes, filename), status, _done, False, no_update
 
         # ------------------------------------------------------------
         # PRODUCCIÓN DIARIA / DATOS CONCILIADOS
@@ -7488,7 +7518,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 ].to_string(index=False))
 
             if df.empty:
-                return no_update, "Sin datos para exportar en el rango seleccionado.", _done
+                return no_update, "Sin datos para exportar en el rango seleccionado.", _done, False, no_update
 
             template_path = (
                 TEMPLATE_XLSX_PATH
@@ -7507,7 +7537,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             )
 
             status = f"Exportado: {filename} — Registros: {len(df)}"
-            return _enviar_descarga(xbytes, filename), status, _done
+            return _enviar_descarga(xbytes, filename), status, _done, False, no_update
 
         # ------------------------------------------------------------
         # BALANCE / CONCILIACIÓN U OTROS REPORTES ANTIGUOS
@@ -7521,7 +7551,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         print(f"[EXCEL] report_data rows={len(df)}")
 
         if df.empty:
-            return no_update, "Sin datos para exportar en el rango seleccionado.", _done
+            return no_update, "Sin datos para exportar en el rango seleccionado.", _done, False, no_update
 
         xbytes = export_dataframe_with_template(df, TEMPLATE_XLSX_PATH)
         print(f"[EXCEL] {tipo} excel size={len(xbytes)} bytes")
@@ -7531,7 +7561,47 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
             f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
         )
-        return _enviar_descarga(xbytes, filename), f"Exportado: {filename} ({len(df)} registros)", _done
+        return _enviar_descarga(xbytes, filename), f"Exportado: {filename} ({len(df)} registros)", _done, False, no_update
+
+    except DependenciaDatosExportError as exc:
+        import traceback
+        traceback.print_exc()
+        fecha = pd.to_datetime(exc.fecha, errors="coerce")
+        contenido = [
+            html.P(
+                "No fue posible generar el Excel porque faltan datos "
+                "necesarios para completar el reporte.",
+                className="mb-3",
+            ),
+        ]
+        if pd.notna(fecha):
+            contenido.append(html.P([
+                html.Strong("Primera fecha incompleta: "),
+                fecha.strftime("%d-%m-%Y"),
+            ], className="mb-2"))
+        if exc.campos:
+            contenido.extend([
+                html.P("Campos pendientes:", className="fw-semibold mb-1"),
+                html.Ul(
+                    [
+                        html.Li(_ETIQUETAS_DEPENDENCIAS_DATOS.get(campo, campo))
+                        for campo in exc.campos
+                    ],
+                    className="mb-3",
+                ),
+            ])
+        contenido.append(html.P(
+            "Complete o actualice los datos de origen y vuelva a intentar "
+            "la exportación.",
+            className="mb-0 text-muted",
+        ))
+        return (
+            no_update,
+            "No se generó el Excel: existen datos de origen incompletos.",
+            html.Div(),
+            True,
+            contenido,
+        )
 
     except Exception as e:
         import traceback
@@ -7541,7 +7611,18 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             no_update,
             f"❌ Error al exportar: {e}",
             html.Div(),
+            False,
+            no_update,
         )
+
+
+@callback(
+    Output("report-error-modal", "is_open", allow_duplicate=True),
+    Input("report-error-modal-close", "n_clicks"),
+    prevent_initial_call=True,
+)
+def cerrar_modal_error_exportacion(n_clicks):
+    return False if n_clicks else no_update
 
 # Clear the progress bar once report-grafico updates (covers the generar_reporte callback)
 @callback(
