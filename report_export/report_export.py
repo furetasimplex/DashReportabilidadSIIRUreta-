@@ -3,7 +3,7 @@ import io
 import calendar
 import pandas as pd
 import numpy as np
-from datetime import date
+from datetime import date, timedelta
 try:
     from db_connection import get_engine
 except Exception as e:
@@ -77,6 +77,10 @@ TABLE_REPORTE_TURNO_CACHE_EMISION = (
 SP_ACTUALIZA_REPORTE_TURNO_CACHE_EMISION = (
     f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_actualizar_reporte_turno_cache_emision_test]"
 )
+SP_REFRESCA_CLAYS_CUFE = (
+    f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_refrescar_clays_cufe]"
+)
+FECHA_CORTE_CLAYS_CUFE = date(2026, 8, 1)
 SP_GENERADOR_REPORTE_DIARIO_EMISION = (
     f"[{DATOS_CONCILIADOS_SCHEMA}].[sp_generador_reporte_diario_emision_test]"
 )
@@ -1162,16 +1166,67 @@ def actualizar_factor_ajuste_camiones_v2_report(
         )
 
 
-def actualizar_reporte_turno_cache_emision(start_date: date, end_date: date) -> None:
-    """Actualiza exclusivamente el cache de emision (``end_date`` exclusivo)."""
-    sql = _sa_text(f"""
+def actualizar_reporte_turno_cache_emision(
+    start_date: date,
+    end_date: date,
+) -> None:
+    """
+    Actualiza Clays_CuFe y luego el cache de emision.
+
+    ``start_date`` es inclusiva y ``end_date`` es exclusiva.
+    """
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "FechaInicio y FechaFin son obligatorias para actualizar "
+            "el cache del Reporte por Turno."
+        )
+    if start_date >= end_date:
+        raise ValueError(
+            "FechaInicio debe ser anterior a FechaFin; FechaFin es exclusiva."
+        )
+
+    fecha_fin_clays = end_date - timedelta(days=1)
+    if fecha_fin_clays >= FECHA_CORTE_CLAYS_CUFE:
+        fecha_inicio_clays = max(start_date, FECHA_CORTE_CLAYS_CUFE)
+        sql_clays = _sa_text(f"""
+            SET NOCOUNT ON;
+            EXEC {SP_REFRESCA_CLAYS_CUFE}
+                @FechaInicio = :fecha_inicio,
+                @FechaFin = :fecha_fin,
+                @SoloVistaPrevia = 0;
+        """)
+        try:
+            with _get_engine().begin() as conn:
+                conn.execute(
+                    sql_clays,
+                    {
+                        "fecha_inicio": fecha_inicio_clays,
+                        "fecha_fin": fecha_fin_clays,
+                    },
+                )
+        except Exception as exc:
+            raise RuntimeError(
+                "Error al actualizar Clays/CuFe mediante "
+                f"{SP_REFRESCA_CLAYS_CUFE}: {exc}"
+            ) from exc
+
+    sql_cache = _sa_text(f"""
         SET NOCOUNT ON;
         EXEC {SP_ACTUALIZA_REPORTE_TURNO_CACHE_EMISION}
             @fecha_inicio = :fecha_inicio,
             @fecha_fin = :fecha_fin;
     """)
-    with _get_engine().begin() as conn:
-        conn.execute(sql, {"fecha_inicio": start_date, "fecha_fin": end_date})
+    try:
+        with _get_engine().begin() as conn:
+            conn.execute(
+                sql_cache,
+                {"fecha_inicio": start_date, "fecha_fin": end_date},
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al actualizar el cache del Reporte por Turno mediante "
+            f"{SP_ACTUALIZA_REPORTE_TURNO_CACHE_EMISION}: {exc}"
+        ) from exc
 
 
 def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame:
