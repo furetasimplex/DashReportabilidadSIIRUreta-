@@ -771,15 +771,8 @@ def _cargar_detalle_representatividad_periodo(
         # realmente muestra (_fetch_fuentes_mensuales_torres trabaja el mes de
         # `fin`). Sin esto el editor mostraba el estado que dejo la ultima
         # publicacion o PDF, y ademas cortaba por una fecha distinta a la que
-        # despues usa el reporte final.
-        #
-        # ponytail: sin lock. Estos tres SP escriben tablas compartidas y ahora
-        # los dispara cada apertura del editor, no solo publicar/PDF: dos
-        # usuarios sobre el mismo mes pueden entrelazarlos (uno reescribe
-        # representatividad_torres_resultado mientras el otro sincroniza BD Ton
-        # desde esa misma tabla) sin error ni log. Deuda aceptada 2026-08-03.
-        # Upgrade: sp_getapplock por mes, ver
-        # agents/FIX_refresco_representatividad_concurrencia.md
+        # despues usa el reporte final. El refresco serializa por mes con
+        # sp_getapplock (ver refrescar_representatividad_para_exportacion).
         fecha_corte_operacional = refrescar_representatividad_para_exportacion(
             start_date=pd.to_datetime(fin).date().replace(day=1),
             end_date=fin,

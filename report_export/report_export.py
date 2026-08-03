@@ -631,6 +631,32 @@ def fetch_fecha_corte_operacional_representatividad(
     return None if pd.isna(fecha_corte) else fecha_corte.date()
 
 
+# ponytail: applock de SQL Server en vez de tabla de estado o lock en Python.
+# gunicorn corre 2 workers: un lock de proceso no sirve.
+LOCK_REFRESCO_REP_TIMEOUT_MS = 180_000
+
+SQL_GETAPPLOCK_REFRESCO_REP = """
+    SET NOCOUNT ON;
+    DECLARE @rc int;
+    EXEC @rc = sp_getapplock
+        @Resource = :recurso,
+        @LockMode = 'Exclusive',
+        @LockOwner = 'Session',
+        @LockTimeout = :timeout;
+    SELECT @rc AS rc;
+"""
+
+SQL_RELEASEAPPLOCK_REFRESCO_REP = """
+    SET NOCOUNT ON;
+    EXEC sp_releaseapplock @Resource = :recurso, @LockOwner = 'Session';
+"""
+
+
+def _recurso_lock_representatividad(end_date: date) -> str:
+    """Un lock por mes de reporte: la grilla y la publicacion usan el mismo."""
+    return f"rep_torres_refresco:{end_date:%Y-%m}"
+
+
 def refrescar_representatividad_para_exportacion(
     start_date: date,
     end_date: date,
@@ -638,6 +664,11 @@ def refrescar_representatividad_para_exportacion(
     """
     Calcula el corte operacional y refresca, en orden, las capas requeridas
     antes de que el exportador realice cualquier lectura.
+
+    Serializado por mes con un applock de sesion: dos refrescos del mismo
+    periodo no pueden entrelazarse (uno reescribiendo
+    representatividad_torres_resultado mientras el otro sincroniza BD Ton
+    desde esa misma tabla).
     """
     fecha_corte = fetch_fecha_corte_operacional_representatividad(
         start_date=start_date,
@@ -680,19 +711,41 @@ def refrescar_representatividad_para_exportacion(
         ),
     )
 
+    recurso = _recurso_lock_representatividad(end_date)
     engine = _get_engine()
-    for nombre_sp, mensaje, sql in pasos:
-        print(mensaje)
-        try:
-            with engine.begin() as conn:
-                conn.execute(
-                    _sa_text(sql),
-                    {"start": start_date, "end": fecha_corte},
-                )
-        except Exception as exc:
+    with engine.connect() as conn:
+        rc = conn.execute(
+            _sa_text(SQL_GETAPPLOCK_REFRESCO_REP),
+            {"recurso": recurso, "timeout": LOCK_REFRESCO_REP_TIMEOUT_MS},
+        ).scalar()
+        conn.commit()  # el lock de sesion sobrevive al commit
+        if rc is None or int(rc) < 0:
             raise RuntimeError(
-                f"Error al ejecutar {nombre_sp}: {exc}"
-            ) from exc
+                "Otro proceso esta actualizando la representatividad de "
+                f"{recurso.split(':')[1]}. Espere a que termine y reintente."
+            )
+        print(f"[RTO] Lock {recurso} tomado (rc={rc})")
+        try:
+            for nombre_sp, mensaje, sql in pasos:
+                print(mensaje)
+                try:
+                    with conn.begin():
+                        conn.execute(
+                            _sa_text(sql),
+                            {"start": start_date, "end": fecha_corte},
+                        )
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Error al ejecutar {nombre_sp}: {exc}"
+                    ) from exc
+        finally:
+            # Sin este release el lock viaja de vuelta al pool y bloquea al
+            # resto hasta pool_recycle (30 min).
+            conn.execute(
+                _sa_text(SQL_RELEASEAPPLOCK_REFRESCO_REP),
+                {"recurso": recurso},
+            )
+            conn.commit()
 
     return fecha_corte
 

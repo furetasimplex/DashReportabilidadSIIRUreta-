@@ -2,15 +2,9 @@
 
 | Parte | Estado |
 |---|---|
-| §3.2 — disparar el refresco al abrir la grilla | ✅ **APLICADA** 2026-08-03 (`reportabilidad_cb.py:768`), 78 tests verdes |
-| §3.1 — `sp_getapplock` (concurrencia) | 🔴 **DEUDA TÉCNICA ABIERTA** — decisión explícita del usuario: aplicar el fix sin concurrencia |
-| §3.3 — tests | ✅ dos tests nuevos del camino de la grilla; los del lock quedan pendientes con §3.1 |
-
-**Se aplicó la parte que aumenta el riesgo antes que la que lo contiene.** El
-entrelazado descrito en §1.3 ya no requiere que dos usuarios publiquen a la vez:
-basta con que dos abran el editor del mismo mes. El patch del lock está listo
-para pegar (§3.1) y su flujo está validado contra un motor falso (3 escenarios);
-lo que falta verificar contra la base sigue en §4.
+| §3.2 — disparar el refresco al abrir la grilla | ✅ **APLICADA** 2026-08-03 (`reportabilidad_cb.py`), tests verdes |
+| §3.1 — `sp_getapplock` (concurrencia) | ✅ **APLICADA** 2026-08-03 (`report_export.py`) |
+| §3.3 — tests | ✅ camino de grilla + 3 escenarios de lock (motor falso) |
 
 > Redactado 2026-08-03 · Contexto completo en [PROJECT_MEMORY.md](PROJECT_MEMORY.md) §5.
 
@@ -363,49 +357,24 @@ WHERE o.name IN ('sp_calcular_resumen_intervalo_totTM',
 
 ## 6. Estado real de aplicación
 
-El orden sugerido era lock primero, disparo después. Se hizo al revés por
-decisión explícita: **§3.2 aplicada el 2026-08-03, §3.1 pendiente como deuda.**
+Orden original: lock primero, disparo después. Se aplicó al revés el
+2026-08-03 (disparo sin lock) y el mismo día se cerró la deuda con §3.1.
 
-### Lo que ya está en el código
+### Lo que está en el código
 
-`reportabilidad_cb.py:768`, rama `paquete=None` de
-`_cargar_detalle_representatividad_periodo`, con el marcador de deuda:
+- `reportabilidad_cb.py`: rama `paquete=None` de
+  `_cargar_detalle_representatividad_periodo` llama a
+  `refrescar_representatividad_para_exportacion`.
+- `report_export.py`: esa función toma `sp_getapplock` Exclusive/Session por
+  mes (`rep_torres_refresco:YYYY-MM`), ejecuta los tres SP en la misma conexión
+  y libera el lock en `finally`.
 
-```python
-# ponytail: sin lock. Estos tres SP escriben tablas compartidas y ahora
-# los dispara cada apertura del editor, no solo publicar/PDF: dos
-# usuarios sobre el mismo mes pueden entrelazarlos ... Deuda aceptada
-# 2026-08-03. Upgrade: sp_getapplock por mes, ver
-# agents/FIX_refresco_representatividad_concurrencia.md
-```
+Tests en `test_refresco_representatividad.py`: grilla al abrir, publicar no
+duplica, orden de SP, y los tres escenarios de lock (toma/libera, `rc < 0`
+aborta, release aunque falle un SP).
 
-Tests agregados en `test_refresco_representatividad.py`:
+### Pendiente fuera del repo (§4)
 
-| Test | Afirma |
-|---|---|
-| `test_abrir_la_grilla_refresca_el_mes_de_la_fecha_final` | la apertura llama al refresco con `(día 1 del mes de fin, fin)` |
-| `test_publicar_no_vuelve_a_refrescar` | con `paquete` armado **no** se refresca de nuevo (evita duplicar la cadena al publicar) |
-
-Suite completa: **78 passed** (76 previos + 2).
-
-### Qué cambia para el usuario, ya en producción al desplegar
-
-- Abrir "Editar comentarios" pasó a **escribir** en tres tablas compartidas y a
-  tardar lo que tarde la cadena de refresco (sin medición previa, ver §4.2).
-- El editor puede mostrar **otros días** que antes: ahora corta por `tot_TM` +
-  `v_bitacora_rangos_norm`, igual que la publicación, y no por
-  `v_datos_apilado_tmh_v2`. Conviene avisar a los usuarios del reporte.
-
-### Cómo saldar la deuda
-
-1. Correr la consulta de §4 y confirmar los tres supuestos.
-2. Pegar §3.1 en `report_export.py` + los tres tests de lock de §3.3.
-3. Borrar el comentario `# ponytail:` de `reportabilidad_cb.py:768` y la
-   entrada §10.6b de `PROJECT_MEMORY.md`.
-
-### Señales de que la deuda se está cobrando
-
-Un mes cuyo Excel oficial no cuadra con lo que mostraba el editor, o valores de
-BD Ton que no corresponden a la representatividad del mismo día. No hay log que
-lo delate: los SP no dejan rastro de ejecución concurrente. Si aparece, subir la
-prioridad del lock antes de buscar el error en el cálculo.
+Confirmar contra la base: idempotencia/alcance de los SP, duración real del
+refresco vs `LOCK_REFRESCO_REP_TIMEOUT_MS`, y si alguno abre `BEGIN TRAN`
+propio.

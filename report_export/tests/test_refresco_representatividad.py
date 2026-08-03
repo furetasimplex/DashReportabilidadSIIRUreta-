@@ -12,6 +12,14 @@ class _Alto(Exception):
     """Corta la ejecucion apenas se llega al punto que interesa medir."""
 
 
+class _Result:
+    def __init__(self, valor):
+        self.valor = valor
+
+    def scalar(self):
+        return self.valor
+
+
 class _Contexto:
     def __init__(self, conexion):
         self.conexion = conexion
@@ -24,15 +32,25 @@ class _Contexto:
 
 
 class _Conexion:
-    def __init__(self, ejecuciones=None, falla_en=None):
+    """Registra cada sentencia; devuelve rc para sp_getapplock."""
+
+    def __init__(self, ejecuciones=None, falla_en=None, rc=0):
         self.ejecuciones = ejecuciones if ejecuciones is not None else []
         self.falla_en = falla_en
+        self.rc = rc
 
-    def execute(self, sentencia, parametros):
+    def execute(self, sentencia, parametros=None):
         sql = str(sentencia)
         if self.falla_en and self.falla_en in sql:
             raise Exception("fallo simulado")
         self.ejecuciones.append((sql, parametros))
+        return _Result(self.rc if "sp_getapplock" in sql else None)
+
+    def commit(self):
+        pass
+
+    def begin(self):
+        return _Contexto(self)
 
 
 class _Motor:
@@ -44,6 +62,18 @@ class _Motor:
 
     def begin(self):
         return _Contexto(self.conexion)
+
+
+def _sps_en(ejecuciones):
+    """Ignora las sentencias de lock y deja solo los tres SP de refresco."""
+    out = []
+    for sql, params in ejecuciones:
+        if "sp_getapplock" in sql or "sp_releaseapplock" in sql:
+            continue
+        if "EXEC " not in sql:
+            continue
+        out.append((sql.split("EXEC ", 1)[1].split()[0], params))
+    return out
 
 
 class RefrescoRepresentatividadTests(unittest.TestCase):
@@ -102,11 +132,9 @@ class RefrescoRepresentatividadTests(unittest.TestCase):
             )
 
         self.assertEqual(resultado, corte)
+        sps = _sps_en(ejecuciones)
         self.assertEqual(
-            [
-                sql.split("EXEC ", 1)[1].split()[0]
-                for sql, _ in ejecuciones
-            ],
+            [nombre for nombre, _ in sps],
             [
                 "inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM",
                 "inventar_SpcHidr.sp_refrescar_representatividad_torres",
@@ -116,7 +144,7 @@ class RefrescoRepresentatividadTests(unittest.TestCase):
         self.assertTrue(
             all(
                 parametros == {"start": inicio, "end": corte}
-                for _, parametros in ejecuciones
+                for _, parametros in sps
             )
         )
 
@@ -152,6 +180,83 @@ class RefrescoRepresentatividadTests(unittest.TestCase):
                     date(2026, 7, 1),
                     date(2026, 7, 31),
                 )
+
+    def test_toma_y_libera_el_applock_del_mes(self):
+        ejecuciones = []
+        motor = _Motor(_Conexion(ejecuciones))
+
+        with (
+            patch.object(
+                repo,
+                "fetch_fecha_corte_operacional_representatividad",
+                return_value=date(2026, 7, 23),
+            ),
+            patch.object(repo, "_get_engine", return_value=motor),
+        ):
+            repo.refrescar_representatividad_para_exportacion(
+                date(2026, 7, 1),
+                date(2026, 7, 31),
+            )
+
+        self.assertIn("sp_getapplock", ejecuciones[0][0])
+        self.assertEqual(
+            ejecuciones[0][1],
+            {
+                "recurso": "rep_torres_refresco:2026-07",
+                "timeout": repo.LOCK_REFRESCO_REP_TIMEOUT_MS,
+            },
+        )
+        self.assertIn("@LockOwner = 'Session'", ejecuciones[0][0])
+        self.assertIn("sp_releaseapplock", ejecuciones[-1][0])
+        self.assertEqual(
+            ejecuciones[-1][1],
+            {"recurso": "rep_torres_refresco:2026-07"},
+        )
+
+    def test_lock_no_obtenido_aborta_sin_ejecutar_sp(self):
+        ejecuciones = []
+        motor = _Motor(_Conexion(ejecuciones, rc=-1))
+
+        with (
+            patch.object(
+                repo,
+                "fetch_fecha_corte_operacional_representatividad",
+                return_value=date(2026, 7, 23),
+            ),
+            patch.object(repo, "_get_engine", return_value=motor),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "2026-07"):
+                repo.refrescar_representatividad_para_exportacion(
+                    date(2026, 7, 1),
+                    date(2026, 7, 31),
+                )
+
+        self.assertEqual(_sps_en(ejecuciones), [])
+        self.assertEqual(len(ejecuciones), 1)
+        self.assertIn("sp_getapplock", ejecuciones[0][0])
+
+    def test_libera_el_lock_aunque_falle_un_sp(self):
+        nombre = "inventar_SpcHidr.sp_refrescar_representatividad_torres"
+        ejecuciones = []
+        motor = _Motor(_Conexion(ejecuciones, falla_en=nombre))
+
+        with (
+            patch.object(
+                repo,
+                "fetch_fecha_corte_operacional_representatividad",
+                return_value=date(2026, 7, 23),
+            ),
+            patch.object(repo, "_get_engine", return_value=motor),
+        ):
+            with self.assertRaisesRegex(RuntimeError, nombre):
+                repo.refrescar_representatividad_para_exportacion(
+                    date(2026, 7, 1),
+                    date(2026, 7, 31),
+                )
+
+        self.assertTrue(
+            any("sp_releaseapplock" in sql for sql, _ in ejecuciones)
+        )
 
 
 class GrillaRefrescaAlAbrirTests(unittest.TestCase):

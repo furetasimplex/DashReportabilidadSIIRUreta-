@@ -142,7 +142,9 @@ Con eso el editor comparte fecha de corte con lo que se va a publicar (antes
 cortaba por `v_datos_apilado_tmh_v2` y la publicación por `tot_TM`, y podían
 diferir). **`fetch_fecha_corte_representatividad` quedó sin uso en el código vivo.**
 
-⚠️ **Sin lock**: ver deuda §10.6b. Después del refresco, todo lo demás es lectura:
+⚠️ Serializado por mes con `sp_getapplock` (Exclusive, Session) dentro de
+`refrescar_representatividad_para_exportacion`. Después del refresco, todo lo
+demás es lectura:
 
 | Llamada | Objeto BD | Tipo |
 |---|---|---|
@@ -249,7 +251,7 @@ sácalo del **historial**, no del botón "vigente".
 
 | Acción | SP de escritura | SP de lectura | Fuente |
 |---|---|---|---|
-| Editar comentarios (grilla) | `sp_calcular_resumen_intervalo_totTM`, `sp_refrescar_representatividad_torres`, `sp_sincronizar_bd_ton` (desde 2026-08-03, **sin lock**) | `sp_gestion_representatividad_fy` ×2 | vivo, recién refrescado |
+| Editar comentarios (grilla) | `sp_calcular_resumen_intervalo_totTM`, `sp_refrescar_representatividad_torres`, `sp_sincronizar_bd_ton` (desde 2026-08-03, serializado con `sp_getapplock` por mes) | `sp_gestion_representatividad_fy` ×2 | vivo, recién refrescado |
 | Generar reporte final | `sp_calcular_resumen_intervalo_totTM`, `sp_refrescar_representatividad_torres`, `sp_sincronizar_bd_ton` | `sp_reporte_representatividad_torres`, `sp_gestion_representatividad_fy` ×2 | vivo → **escribe snapshot** |
 | Excel oficial vigente | — | — | snapshot publicado |
 | PDF vigente | los mismos 3 de publicar | los mismos de publicar | vivo (**no** snapshot) |
@@ -399,22 +401,12 @@ de openpyxl (`Style.copy()`), inofensivo.
    hoy+1 exclusiva, por el arrastre de leyes/humedad).
 6. **PDF "vigente" ≠ Excel "vigente"** (§5.4). Es la inconsistencia más
    probable de aparecer como bug reportado por usuario.
-6b. 🔴 **DEUDA ABIERTA — el refresco de representatividad no tiene lock.**
-   `refrescar_representatividad_para_exportacion` son tres `EXEC` sueltos sin
-   serializar. Dos ejecuciones concurrentes sobre el mismo mes se entrelazan
-   (una reescribe `representatividad_torres_resultado` mientras la otra
-   sincroniza BD Ton **desde esa misma tabla**) y dejan una foto inconsistente
-   sin error ni log; si además se publica, esa foto queda congelada en el
-   snapshot oficial.
-   **La exposición creció el 2026-08-03**: antes lo disparaban solo publicar y
-   "PDF vigente"; ahora también cada apertura del editor (§5.1). Deuda aceptada
-   a conciencia al aplicar ese cambio.
-   Mitigado a medias: el `running=` de `generar_reporte` deshabilita el botón
-   mientras corre, así que **el doble clic de un mismo usuario ya no lanza dos
-   refrescos**. Falta el caso real: dos usuarios distintos sobre el mismo mes.
-   Fix diseñado y listo para pegar (`sp_getapplock` por mes, alcance `Session`):
-   [FIX_refresco_representatividad_concurrencia.md](FIX_refresco_representatividad_concurrencia.md) §3.1.
-   Marcado en el código con `# ponytail:` en `reportabilidad_cb.py:768`.
+6b. ✅ **Cerrada 2026-08-03 — applock de refresco de representatividad.**
+   `refrescar_representatividad_para_exportacion` serializa por mes con
+   `sp_getapplock` Exclusive/Session (`rep_torres_refresco:YYYY-MM`). Detalle:
+   [FIX_refresco_representatividad_concurrencia.md](FIX_refresco_representatividad_concurrencia.md).
+   Pendiente de verificación contra la base: idempotencia/alcance de los tres
+   SP y duración real vs timeout de 180 s (§4 del fix).
 7. **`FECHA_CORTE_CLAYS_CUFE = 2026-08-01`** hardcodeada (§6).
 8. Prints de depuración por todos lados (`[RTO]`, `[EXCEL]`, `[PDF]`, `[DEBUG]`),
    incluido uno con fechas fijas de julio 2026. Son el log de facto en producción.
