@@ -37,7 +37,9 @@ def test_password_correcta_crea_sesion(monkeypatch, hash_valido):
     assert res.headers["Location"] == "/"
     with client.session_transaction() as s:
         assert s["user"] == "u"
-    assert "DEV_SIIR.dbo.auth_user" in str(conn.execute.call_args[0][0])
+    # Contra auth.LOGIN_TABLE y no contra un literal: el nombre sale de
+    # LOGIN_DATABASE (.env), asi que el valor cambia segun el entorno del dev.
+    assert auth.LOGIN_TABLE in str(conn.execute.call_args[0][0])
 
 
 def test_password_incorrecta_no_crea_sesion(monkeypatch, hash_valido):

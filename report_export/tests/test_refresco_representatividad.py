@@ -5,6 +5,11 @@ from unittest.mock import patch
 import pandas as pd
 
 from report_export import report_export as repo
+from report_export.callbacks import reportabilidad_cb as cb
+
+
+class _Alto(Exception):
+    """Corta la ejecucion apenas se llega al punto que interesa medir."""
 
 
 class _Contexto:
@@ -147,6 +152,69 @@ class RefrescoRepresentatividadTests(unittest.TestCase):
                     date(2026, 7, 1),
                     date(2026, 7, 31),
                 )
+
+
+class GrillaRefrescaAlAbrirTests(unittest.TestCase):
+    """La grilla dejo de leer el estado que dejo la ultima publicacion."""
+
+    def test_abrir_la_grilla_refresca_el_mes_de_la_fecha_final(self):
+        llamadas = []
+
+        def _refresco(start_date, end_date):
+            llamadas.append((start_date, end_date))
+            return date(2026, 7, 23)
+
+        def _corta(*args, **kwargs):
+            raise _Alto
+
+        with (
+            patch.object(
+                cb, "refrescar_representatividad_para_exportacion", _refresco
+            ),
+            patch.object(cb, "_fetch_fuentes_mensuales_torres", _corta),
+        ):
+            with self.assertRaises(_Alto):
+                cb._cargar_detalle_representatividad_periodo(
+                    date(2026, 7, 10),
+                    date(2026, 7, 28),
+                )
+
+        # Rango = mes de `fin`, que es el que la grilla realmente muestra.
+        self.assertEqual(llamadas, [(date(2026, 7, 1), date(2026, 7, 28))])
+
+    def test_publicar_no_vuelve_a_refrescar(self):
+        """Con paquete armado el refresco ya corrio: repetirlo es costo puro."""
+        llamadas = []
+
+        def _refresco(start_date, end_date):
+            llamadas.append((start_date, end_date))
+            return date(2026, 7, 23)
+
+        def _corta(*args, **kwargs):
+            raise _Alto
+
+        paquete = {
+            "fecha_corte_operacional": date(2026, 7, 23),
+            "fecha_inicio_mes": date(2026, 7, 1),
+            "fecha_fin_mes": date(2026, 7, 31),
+            "bd_ton_mes": pd.DataFrame({"Fecha": [pd.Timestamp("2026-07-01")]}),
+            "turno_mes": pd.DataFrame({"Fecha": [pd.Timestamp("2026-07-01")]}),
+        }
+
+        with (
+            patch.object(
+                cb, "refrescar_representatividad_para_exportacion", _refresco
+            ),
+            patch.object(cb, "_preparar_material_por_turno", _corta),
+        ):
+            with self.assertRaises(_Alto):
+                cb._cargar_detalle_representatividad_periodo(
+                    date(2026, 7, 1),
+                    date(2026, 7, 31),
+                    paquete=paquete,
+                )
+
+        self.assertEqual(llamadas, [])
 
 
 if __name__ == "__main__":

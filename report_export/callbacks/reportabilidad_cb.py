@@ -22,6 +22,7 @@ from report_export.report_export import (
     fetch_gestion_representatividad_fy,
     fetch_estado_apilado_turno_representatividad,
     fetch_fecha_corte_representatividad,
+    refrescar_representatividad_para_exportacion,
     fetch_reporte_turno_report,
     actualizar_factor_ajuste_camiones_v2_report,
     actualizar_reporte_turno_cache_emision,
@@ -766,14 +767,23 @@ def _cargar_detalle_representatividad_periodo(
                 "necesarias para construir el detalle."
             )
     else:
-        fecha_corte_operacional = fetch_fecha_corte_representatividad(
-            start_date=ini,
+        # Mismo refresco que usa la publicacion, sobre el mes que la grilla
+        # realmente muestra (_fetch_fuentes_mensuales_torres trabaja el mes de
+        # `fin`). Sin esto el editor mostraba el estado que dejo la ultima
+        # publicacion o PDF, y ademas cortaba por una fecha distinta a la que
+        # despues usa el reporte final.
+        #
+        # ponytail: sin lock. Estos tres SP escriben tablas compartidas y ahora
+        # los dispara cada apertura del editor, no solo publicar/PDF: dos
+        # usuarios sobre el mismo mes pueden entrelazarlos (uno reescribe
+        # representatividad_torres_resultado mientras el otro sincroniza BD Ton
+        # desde esa misma tabla) sin error ni log. Deuda aceptada 2026-08-03.
+        # Upgrade: sp_getapplock por mes, ver
+        # agents/FIX_refresco_representatividad_concurrencia.md
+        fecha_corte_operacional = refrescar_representatividad_para_exportacion(
+            start_date=pd.to_datetime(fin).date().replace(day=1),
             end_date=fin,
         )
-        if fecha_corte_operacional is None:
-            raise RuntimeError(
-                "Sin datos operacionales cerrados para el rango seleccionado."
-            )
         fuentes = _fetch_fuentes_mensuales_torres(
             fin,
             fecha_corte_operacional,
@@ -6889,6 +6899,24 @@ def cargar_historial_representatividad_torres(subtab):
     return _tabla_historial_representatividad(df_hist)
 
 
+# Espeja los pasos de refrescar_representatividad_para_exportacion
+# (report_export.py): si cambian alla, cambian aca.
+_AVISO_REFRESCO_EDITOR = html.Div(
+    [
+        html.Strong("Actualizando datos antes de abrir el editor…"),
+        html.Ol(
+            [
+                html.Li("Peso de torres (totalizador de 10 s)"),
+                html.Li("Representatividad por torre"),
+                html.Li("BD Ton"),
+            ],
+            className="mb-0 mt-2",
+        ),
+    ],
+    className="text-muted small",
+)
+
+
 @callback(
     Output("report-grafico", "children"),
     Output("report-tabla", "children"),
@@ -6900,7 +6928,20 @@ def cargar_historial_representatividad_torres(subtab):
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
     State("report-fecha-modo", "value"),
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    running=[
+        # Abrir el editor dejo de ser instantaneo: refresca tres capas antes de
+        # leer. Sin este aviso la espera no tiene explicacion en pantalla.
+        (Output("report-progress", "children"), _AVISO_REFRESCO_EDITOR, ""),
+        # Ademas bloquea el doble clic, que hoy lanzaria dos refrescos en
+        # paralelo sobre las mismas tablas (no hay lock todavia, ver
+        # agents/FIX_refresco_representatividad_concurrencia.md).
+        (
+            Output({"type": "report-gen-btn", "tipo": MATCH}, "disabled"),
+            True,
+            False,
+        ),
+    ],
 )
 def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
     triggered = ctx.triggered_id
