@@ -8,6 +8,7 @@ from datetime import datetime
 from tabs import tab_report
 import report_export.callbacks.reportabilidad_cb
 from reclamo import panel as reclamo_panel  # registra sus @callback al importarse
+from powerbi_camiones import panel as powerbi_panel  # registra sus @callback al importarse
 
 # === Utilidades ===
 project_folder = os.path.dirname(os.path.realpath(__file__))
@@ -60,6 +61,10 @@ def render_sidebar():
                     html.I(className="bi bi-truck me-2"),
                     "Administración de Reclamo",
                 ], href="#", id="nav-reclamo", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-cloud-upload me-2"),
+                    "Carga PowerBI Camiones",
+                ], href="#", id="nav-powerbi", className="siir-nav-link", n_clicks=0),
             ], vertical=True, pills=False),
         ]
     )
@@ -133,6 +138,11 @@ subtabs = html.Div(
             style={"display": "none"},
             children=reclamo_panel.layout(),
         ),
+        html.Div(
+            id="subtabs-powerbi",
+            style={"display": "none"},
+            children=powerbi_panel.layout(),
+        ),
     ]
 )
 
@@ -152,28 +162,40 @@ def register_callbacks(app):
     @app.callback(
         Output("subtabs-report", "style"),
         Output("subtabs-reclamo", "style"),
+        Output("subtabs-powerbi", "style"),
         Output("nav-reportabilidad", "className"),
         Output("nav-reclamo", "className"),
+        Output("nav-powerbi", "className"),
         Input("nav-reportabilidad", "n_clicks"),
         Input("nav-reclamo", "n_clicks"),
+        Input("nav-powerbi", "n_clicks"),
         prevent_initial_call=False,
     )
-    def toggle_subtabs(n_rep, n_rec):
+    def toggle_subtabs(n_rep, n_rec, n_pbc):
         # dash.ctx.triggered_id es None en la carga inicial -> por defecto
         # se muestra Reportabilidad, igual que antes.
         triggered = dash.ctx.triggered_id
-        if triggered == "nav-reclamo":
-            return (
-                {"display": "none"},
-                {"display": "block"},
-                "siir-nav-link",
-                "siir-nav-link active",
-            )
+
+        secciones = {
+            "nav-reportabilidad": "reportabilidad",
+            "nav-reclamo": "reclamo",
+            "nav-powerbi": "powerbi",
+        }
+        activa = secciones.get(triggered, "reportabilidad")
+
+        def estilo(nombre):
+            return {"display": "block"} if nombre == activa else {"display": "none"}
+
+        def clase(nombre):
+            return "siir-nav-link active" if nombre == activa else "siir-nav-link"
+
         return (
-            {"display": "block"},
-            {"display": "none"},
-            "siir-nav-link active",
-            "siir-nav-link",
+            estilo("reportabilidad"),
+            estilo("reclamo"),
+            estilo("powerbi"),
+            clase("reportabilidad"),
+            clase("reclamo"),
+            clase("powerbi"),
         )
 
     @app.callback(
