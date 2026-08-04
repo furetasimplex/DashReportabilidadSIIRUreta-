@@ -48,13 +48,50 @@ class TrazabilidadPesosTests(unittest.TestCase):
         cb._agregar_hoja_trazabilidad_pesos(wb, _pesos_muestra())
         self.assertEqual(wb.sheetnames, ["Existente", "Trazabilidad Pesos"])
         ws = wb["Trazabilidad Pesos"]
-        self.assertEqual(ws.max_column, 15)
-        self.assertEqual(ws["E3"].value, 0.0)
-        self.assertEqual(ws["H3"].value, None)
-        self.assertEqual(ws["I3"].value, None)
-        self.assertIsInstance(ws["F2"].value, float)
-        self.assertEqual(ws["F2"].number_format, "0.0%")
-        self.assertEqual(ws["I3"].number_format, "0.0%")
+        self.assertEqual(ws.max_column, 29)
+        self.assertEqual(ws.max_row, 3)
+        self.assertEqual(ws["C1"].value, "Torre de muestreo #1")
+        self.assertEqual(ws["L1"].value, "Torre de muestreo #2")
+        self.assertEqual(ws["U1"].value, "Torre de muestreo #3 / SRR")
+        self.assertEqual(ws["D3"].value, 3.5)
+        self.assertAlmostEqual(ws["E3"].value, 0.282202602)
+        self.assertEqual(ws["M3"].value, 0.0)
+        self.assertEqual(ws["N3"].value, 0.0)
+        self.assertEqual(ws["P3"].value, None)
+        self.assertEqual(ws["Q3"].value, None)
+        self.assertEqual(ws["E3"].number_format, "0.0%")
+        self.assertEqual(ws["N3"].number_format, "0.0%")
+        self.assertEqual(ws["C3"].number_format, "0.000")
+        self.assertEqual(ws["K3"].number_format, "dd-mm-yyyy hh:mm")
+        encabezados = [ws.cell(fila, col).value for fila in (1, 2) for col in range(1, 30)]
+        self.assertNotIn("Estado evaluación", encabezados)
+        self.assertNotIn("Fracción muestreo", encabezados)
+        self.assertNotIn("Archivo de origen", encabezados)
+
+    def test_orden_fechas_turnos_y_asignacion_srr(self):
+        base = _pesos_muestra().iloc[[0]].copy()
+        filas = []
+        for fecha, turno, torre, peso in (
+            ("2026-08-02", "B", "T1", 20.0),
+            ("2026-08-01", "B", "SRR", 30.0),
+            ("2026-08-01", "A", "SRR", 40.0),
+        ):
+            fila = base.copy()
+            fila["Fecha"], fila["Turno"], fila["Torre"] = fecha, turno, torre
+            fila["PesoTeo_Quimico"] = peso
+            filas.append(fila)
+
+        wb = Workbook()
+        cb._agregar_hoja_trazabilidad_pesos(wb, pd.concat(filas, ignore_index=True))
+        ws = wb["Trazabilidad Pesos"]
+        self.assertEqual(
+            [(ws.cell(f, 1).value.strftime("%Y-%m-%d"), ws.cell(f, 2).value) for f in range(3, 6)],
+            [("2026-08-01", "A"), ("2026-08-01", "B"), ("2026-08-02", "B")],
+        )
+        self.assertEqual(ws["U3"].value, 40.0)
+        self.assertEqual(ws["U4"].value, 30.0)
+        self.assertEqual(ws["C5"].value, 20.0)
+        self.assertIsNone(ws["C3"].value)
 
     def test_duplicados_generan_runtime_error(self):
         df = pd.concat([_pesos_muestra().iloc[[0]], _pesos_muestra().iloc[[0]]])
