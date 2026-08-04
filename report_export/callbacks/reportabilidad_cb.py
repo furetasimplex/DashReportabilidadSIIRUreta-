@@ -2,6 +2,7 @@
 
 import os
 import io
+import time
 import calendar
 from datetime import date
 import pandas as pd
@@ -24,6 +25,7 @@ from report_export.report_export import (
     fetch_fecha_corte_representatividad,
     refrescar_representatividad_para_exportacion,
     fetch_reporte_turno_report,
+    actualizar_apilado_tmh_v2_report,
     actualizar_factor_ajuste_camiones_v2_report,
     actualizar_reporte_turno_cache_emision,
     fetch_reporte_turno_cache_emision,
@@ -7497,32 +7499,63 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
         # REPORTE POR TURNO + GENERADOR REPORTE
         # ------------------------------------------------------------
         if tipo == "reporte_turno":
+            # ------------------------------------------------------------
+            # Instrumentacion temporal de tiempo por etapa (diagnostico de
+            # exportacion lenta). Cada etapa imprime su propio [EXCEL-T]
+            # con segundos transcurridos, para ver cual paso concentra el
+            # tiempo total (no solo el SP de reporte_turno). Quitar cuando
+            # ya no se necesite el diagnostico.
+            # ------------------------------------------------------------
+            _t_export_ini = time.perf_counter()
+
             fecha_fin_factor = fin_sql_exclusivo - pd.Timedelta(days=1)
+
+            _t0 = time.perf_counter()
+            actualizar_apilado_tmh_v2_report(
+                start_date=ini_d,
+                end_date=fecha_fin_factor,
+                dias_reproceso=7,
+            )
+            print(f"[EXCEL-T] sp_mantiene_apilado_tmh_v2_test: {time.perf_counter() - _t0:.2f}s")
+
+            _t0 = time.perf_counter()
             actualizar_factor_ajuste_camiones_v2_report(
                 start_date=ini_d,
                 end_date=fecha_fin_factor,
                 dias_reproceso=0,
             )
+            print(f"[EXCEL-T] sp_mantiene_factor_ajuste_camiones_v2_test: {time.perf_counter() - _t0:.2f}s")
+
+            _t0 = time.perf_counter()
             actualizar_reporte_turno_cache_emision(
                 start_date=ini_d,
                 end_date=fin_sql_exclusivo,
             )
+            print(f"[EXCEL-T] actualizar_reporte_turno_cache_emision (clays_cufe + sp_actualizar_reporte_turno_cache_emision_test): {time.perf_counter() - _t0:.2f}s")
+
             print(f"[EXCEL] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
+            _t0 = time.perf_counter()
             df_turno = fetch_reporte_turno_cache_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
+            print(f"[EXCEL-T] SELECT reporte_turno_cache_emision_test: {time.perf_counter() - _t0:.2f}s")
             print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
 
             if df_turno.empty:
                 return no_update, "Sin datos para el rango seleccionado.", _done, False, no_update
 
             print(f"[EXCEL] Fetching generador_reporte_diario {ini_d} -> {fin_sql_exclusivo}")
+            _t0 = time.perf_counter()
             df_generador = fetch_generador_reporte_diario_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
+            print(f"[EXCEL-T] sp_generador_reporte_diario_emision_test: {time.perf_counter() - _t0:.2f}s")
             print(f"[EXCEL] generador rows={len(df_generador)}")
 
+            _t0 = time.perf_counter()
             output = io.BytesIO()
             export_reporte_turno_estilo_leyes_finos(df=df_turno, output=output, df_generador=df_generador)
             output.seek(0)
             xbytes = output.getvalue()
+            print(f"[EXCEL-T] formateo openpyxl (export_reporte_turno_estilo_leyes_finos): {time.perf_counter() - _t0:.2f}s")
             print(f"[EXCEL] reporte_turno excel size={len(xbytes)} bytes")
+            print(f"[EXCEL-T] TOTAL exportar_excel(reporte_turno): {time.perf_counter() - _t_export_ini:.2f}s")
 
             filename = (
                 f"Analisis_Torres_de_Muestreo_"

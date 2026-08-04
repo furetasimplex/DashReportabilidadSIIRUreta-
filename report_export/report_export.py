@@ -1309,6 +1309,41 @@ def actualizar_reporte_turno_cache(start_date: date, end_date: date) -> None:
         ) from exc
 
 
+def actualizar_apilado_tmh_v2_report(
+    start_date: date,
+    end_date: date,
+    dias_reproceso: int = 7,
+) -> None:
+    """
+    Refresca la tabla congelada Control_Apilado_TMH_v2_test (TMH bruto de
+    los totalizadores CV008/CV108). Debe llamarse ANTES de
+    actualizar_factor_ajuste_camiones_v2_report, ya que ese calculo depende
+    en cadena de v_datos_apilado_tmh_v2. dias_reproceso=7 por defecto: solo
+    recalcula los ultimos 7 dias del rango pedido, mas cualquier fecha que
+    todavia no tenga fila en la tabla -- ver encabezado de
+    sp_mantiene_apilado_tmh_v2_test para el detalle de esa ventana.
+    ``start_date`` y ``end_date`` son inclusivos.
+    """
+    sql = _sa_text("""
+        SET NOCOUNT ON;
+
+        EXEC [inventar_SpcHidr].[sp_mantiene_apilado_tmh_v2_test]
+            @FechaInicio   = :fecha_inicio,
+            @FechaFin      = :fecha_fin,
+            @DiasReproceso = :dias_reproceso;
+    """)
+
+    with _get_engine().begin() as conn:
+        conn.execute(
+            sql,
+            {
+                "fecha_inicio": start_date,
+                "fecha_fin": end_date,
+                "dias_reproceso": int(dias_reproceso),
+            },
+        )
+
+
 def actualizar_factor_ajuste_camiones_v2_report(
     start_date: date,
     end_date: date,
