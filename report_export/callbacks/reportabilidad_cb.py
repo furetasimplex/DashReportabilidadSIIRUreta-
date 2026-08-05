@@ -826,14 +826,12 @@ def _cargar_detalle_representatividad_periodo(
         fecha_corte_operacional=fecha_corte_operacional,
     )
     detalle = _fusionar_detalle_representatividad(df_quimico, df_fisico)
-    fuente_tm3_editor = (
-        fuentes["df_bd_ton_mes"]
-        if paquete is not None
-        else fetch_bd_ton_report(start_date=ini, end_date=fin)
-    )
+    # Misma fuente que las hojas mensuales del XLSX/PDF: [dia1, corte
+    # operacional]. Antes el editor releia BD Ton con [ini, fin] y mostraba TM3
+    # de dias posteriores al corte que el reporte no incluye.
     detalle = _completar_tm3_editor_desde_fuente_viva(
         detalle,
-        fuente_tm3_editor,
+        fuentes["df_bd_ton_mes"],
     )
 
     try:
@@ -7059,6 +7057,7 @@ _AVISO_REFRESCO_EDITOR = html.Div(
         html.Strong("Actualizando datos antes de abrir el editor…"),
         html.Ol(
             [
+                html.Li("Apilado por turno (evaluabilidad RN-046)"),
                 html.Li("Peso de torres (totalizador de 10 s)"),
                 html.Li("Representatividad por torre"),
                 html.Li("BD Ton"),
@@ -7083,12 +7082,13 @@ _AVISO_REFRESCO_EDITOR = html.Div(
     State("report-fecha-modo", "value"),
     prevent_initial_call=True,
     running=[
-        # Abrir el editor dejo de ser instantaneo: refresca tres capas antes de
-        # leer. Sin este aviso la espera no tiene explicacion en pantalla.
+        # Abrir el editor dejo de ser instantaneo: refresca cuatro capas antes
+        # de leer. Sin este aviso la espera no tiene explicacion en pantalla.
         (Output("report-progress", "children"), _AVISO_REFRESCO_EDITOR, ""),
-        # Ademas bloquea el doble clic, que hoy lanzaria dos refrescos en
-        # paralelo sobre las mismas tablas (no hay lock todavia, ver
-        # agents/FIX_refresco_representatividad_concurrencia.md).
+        # Ademas evita el doble clic: el segundo refresco no corrompe nada
+        # (sp_getapplock lo serializa, ver
+        # agents/FIX_refresco_representatividad_concurrencia.md) pero abortaria
+        # con "otro proceso esta actualizando" en la cara del usuario.
         (
             Output({"type": "report-gen-btn", "tipo": MATCH}, "disabled"),
             True,

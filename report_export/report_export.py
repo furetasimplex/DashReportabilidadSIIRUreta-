@@ -779,7 +779,10 @@ def refrescar_representatividad_para_exportacion(
 ) -> date:
     """
     Calcula el corte operacional y refresca, en orden, las capas requeridas
-    antes de que el exportador realice cualquier lectura.
+    antes de que el exportador realice cualquier lectura:
+    apilado TMH v2 (Turno_Evaluable) -> resumen intervalo -> representatividad
+    -> BD Ton. El apilado va primero porque los otros tres no lo tocan y la
+    grilla decide con su flag si el dia se muestra.
 
     Serializado por mes con un applock de sesion: dos refrescos del mismo
     periodo no pueden entrelazarse (uno reescribiendo
@@ -798,6 +801,25 @@ def refrescar_representatividad_para_exportacion(
 
     print(f"[RTO] Fecha corte operacional: {fecha_corte:%Y-%m-%d}")
     pasos = (
+        (
+            # Primero: Control_Apilado_TMH_v2_test alimenta, via
+            # v_datos_apilado_tmh_v2, el Turno_Evaluable que
+            # _preparar_material_por_turno usa como flag oficial desde 2026.
+            # Sin este paso un dia congelado antes del cierre de turno queda
+            # con Flag_Apilado_Valido=0 para siempre: BD Ton se refresca y
+            # muestra tonelaje, pero la grilla oculta el dia igual.
+            # ponytail: @DiasReproceso fijo en 7 (mismo valor que ya usa el
+            # flujo de reporte_turno); parametrizar solo si hace falta
+            # reprocesar ventanas mas largas.
+            "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test",
+            "[RTO] Refrescando Control_Apilado_TMH_v2_test (Turno_Evaluable)...",
+            """
+                EXEC inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test
+                    @FechaInicio = :start,
+                    @FechaFin = :end,
+                    @DiasReproceso = 7
+            """,
+        ),
         (
             "inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM",
             "[RTO] Recalculando Resumen_Intervalo_TotTM...",

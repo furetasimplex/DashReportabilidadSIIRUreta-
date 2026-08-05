@@ -112,7 +112,7 @@ class RefrescoRepresentatividadTests(unittest.TestCase):
             },
         )
 
-    def test_refresco_ejecuta_los_tres_sp_en_orden_con_corte_inclusivo(self):
+    def test_refresco_ejecuta_los_sp_en_orden_con_corte_inclusivo(self):
         ejecuciones = []
         motor = _Motor(_Conexion(ejecuciones))
         inicio = date(2026, 7, 1)
@@ -136,6 +136,10 @@ class RefrescoRepresentatividadTests(unittest.TestCase):
         self.assertEqual(
             [nombre for nombre, _ in sps],
             [
+                # Primero el apilado: alimenta Turno_Evaluable, del que
+                # dependen las tres capas siguientes para decidir que dias
+                # son evaluables.
+                "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test",
                 "inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM",
                 "inventar_SpcHidr.sp_refrescar_representatividad_torres",
                 "inventar_SpcHidr.sp_sincronizar_bd_ton",
@@ -147,6 +151,31 @@ class RefrescoRepresentatividadTests(unittest.TestCase):
                 for _, parametros in sps
             )
         )
+
+    def test_apilado_reprocesa_dias_ya_congelados(self):
+        """Con @DiasReproceso=0 un dia congelado antes del cierre de turno
+        se quedaria con Flag_Apilado_Valido=0 para siempre."""
+        ejecuciones = []
+        motor = _Motor(_Conexion(ejecuciones))
+
+        with (
+            patch.object(
+                repo,
+                "fetch_fecha_corte_operacional_representatividad",
+                return_value=date(2026, 7, 23),
+            ),
+            patch.object(repo, "_get_engine", return_value=motor),
+        ):
+            repo.refrescar_representatividad_para_exportacion(
+                date(2026, 7, 1),
+                date(2026, 7, 31),
+            )
+
+        sql_apilado = next(
+            sql for sql, _ in ejecuciones
+            if "sp_mantiene_apilado_tmh_v2_test" in sql
+        )
+        self.assertIn("@DiasReproceso = 7", sql_apilado)
 
     def test_refresco_informa_si_no_hay_fecha_operacional_cerrada(self):
         with patch.object(
