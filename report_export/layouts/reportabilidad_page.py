@@ -385,7 +385,9 @@ def layout():
                 is_open=False,
                 centered=True,
                 size="sm",
-                backdrop=True,
+                # static: ahora el modal dura toda la publicacion, y un clic
+                # afuera no debe hacer creer que se cancelo (no se cancela).
+                backdrop="static",
                 keyboard=False,
             ),
             dbc.Modal(

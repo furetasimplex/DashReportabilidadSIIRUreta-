@@ -8051,14 +8051,10 @@ clientside_callback(
             }
         }, 120);
 
-        setTimeout(function() {
-            if (window.dash_clientside && window.dash_clientside.set_props) {
-                window.dash_clientside.set_props(
-                    'rep-publicar-modal',
-                    {is_open: false}
-                );
-            }
-        }, 1000);
+        // El modal solo se abre aca. Cerrarlo es cosa del callback de
+        // publicacion (running=), que tarda lo que tarden los 4 SP de
+        // refresco mas la escritura del snapshot. Antes se cerraba con un
+        // setTimeout de 1 s y el spinner mentia sobre el progreso real.
         return true;
     }
     """,
@@ -8082,6 +8078,13 @@ clientside_callback(
     prevent_initial_call=True,
     running=[
         (Output("rep-generar-final-btn", "disabled"), True, False),
+        # Cierra el modal "Publicando…" al terminar, exito o error. Con un
+        # Output normal una excepcion dejaria el spinner girando para siempre.
+        (
+            Output("rep-publicar-modal", "is_open", allow_duplicate=True),
+            True,
+            False,
+        ),
     ],
 )
 def publicar_reporte_representatividad(

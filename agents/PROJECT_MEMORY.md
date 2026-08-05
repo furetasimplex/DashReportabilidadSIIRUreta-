@@ -4,8 +4,9 @@ Contexto operativo para agentes/desarrolladores que entran frío al repo.
 Lo que el código **no** dice solo: qué está vivo, qué está muerto, qué
 dispara escrituras en producción y dónde están las trampas.
 
-> Investigado: 2026-08-03 · Rama `main` (limpia) · último commit `fb3003c`
-> Verificado corriendo: `python -m pytest report_export/tests -q` → **76 passed** (18 s).
+> Investigado: 2026-08-03 · Actualizado: 2026-08-05 (commit `62807ce`)
+> Verificado corriendo: `python -m pytest report_export/tests -q` → **92 passed,
+> 1 failed** (17 s). El fallo es previo y ajeno a Representatividad, ver §10.10.
 
 ---
 
@@ -84,15 +85,16 @@ siempre `report_export/callbacks/reportabilidad_cb.py`.**
    `fin_sql_exclusivo = f_fin + 1 día` — no lo borres.
 4. **Año fiscal = julio–junio** (`_obtener_rango_fiscal_hasta_mes`).
 5. **Fecha de corte operacional**: nunca se reporta hasta "hoy", se reporta
-   hasta el último día operacionalmente cerrado. Hay **dos definiciones
-   distintas y ambas están en uso**:
-   - `fetch_fecha_corte_representatividad` → vista `v_datos_apilado_tmh_v2`,
-     día con CV-008 A/B y CV-108 A/B no nulos. **La usa la grilla.**
-   - `fetch_fecha_corte_operacional_representatividad` → `tot_TM` +
+   hasta el último día operacionalmente cerrado. Existen **dos definiciones**,
+   pero hoy **solo una está en uso**:
+   - ✅ `fetch_fecha_corte_operacional_representatividad` → `tot_TM` +
      `v_bitacora_rangos_norm` (T1/T2/SRR cubiertos por el totalizador de 10 s).
-     **La usa la publicación/exportación.**
-     Pueden dar días distintos: es una fuente conocida de "el Excel no coincide
-     con la pantalla".
+     **La usan grilla, publicación y exportación por igual**, desde que el
+     refresco se centralizó en `refrescar_representatividad_para_exportacion`.
+   - ⚰️ `fetch_fecha_corte_representatividad` → vista `v_datos_apilado_tmh_v2`.
+     **Sin uso en el código vivo** desde 2026-08-03. Antes la usaba la grilla y
+     era la causa de "el Excel no coincide con la pantalla". No la revivas: si
+     necesitas el corte, usa la de arriba.
 
 ---
 
@@ -133,10 +135,15 @@ mostraba el estado que había dejado la última publicación o PDF):
 ```
 refrescar_representatividad_para_exportacion(mes_de_fin_día1, fin)   ⚠️ ESCRIBE
    → fetch_fecha_corte_operacional_representatividad   (tot_TM + v_bitacora_rangos_norm)
+   → EXEC sp_mantiene_apilado_tmh_v2_test  @DiasReproceso=7   ← desde 2026-08-05
    → EXEC sp_calcular_resumen_intervalo_totTM
    → EXEC sp_refrescar_representatividad_torres
    → EXEC sp_sincronizar_bd_ton
 ```
+
+⚠️ **El primer paso es nuevo y es el que faltaba** — ver §5.7. El aviso en
+pantalla (`_AVISO_REFRESCO_EDITOR`) lista los cuatro; si agregas un paso,
+actualiza también esa lista.
 
 Con eso el editor comparte fecha de corte con lo que se va a publicar (antes
 cortaba por `v_datos_apilado_tmh_v2` y la publicación por `tot_TM`, y podían
@@ -165,9 +172,21 @@ veces aunque el editor no muestre el indicador FY** — viene de reusar
 (lanza `RuntimeError` si viene vacío). Es la causa más probable de un "no puedo
 abrir el editor" que en realidad es un problema de FY, no de comentarios.
 
-Edición de la grilla (`alternar_pad_rep` 7656, `sincronizar_comentarios_desde_grilla`
-7693, `cambiar_tab_comentarios_rep` 7719): **100 % en memoria**, sobre
+Edición de la grilla (`alternar_pad_rep`, `sincronizar_comentarios_desde_grilla`,
+`cambiar_tab_comentarios_rep`, ~7930–8010): **100 % en memoria**, sobre
 `dcc.Store`. No hay autosave. Nada se persiste hasta "Generar reporte final".
+
+**Publicar es lento y el spinner tiene que decir la verdad.** El modal
+`rep-publicar-modal` lo *abre* un `clientside_callback` y lo *cierra*
+`running=` del callback servidor `publicar_reporte_representatividad`. Hasta
+2026-08-05 se cerraba con un `setTimeout` de 1 s: el spinner desaparecía y la
+publicación seguía corriendo minutos. Dos cosas que no hay que deshacer:
+- El cierre va en `running=`, **no** en un `Output` normal — `running` se apaga
+  también cuando el callback lanza excepción; un `Output` dejaría el spinner
+  girando para siempre ante cualquier error.
+- El `Output` del modal en `running` necesita `allow_duplicate=True` porque el
+  clientside ya es dueño de esa prop. Verificado que Dash 4.2 lo registra
+  (`runningOff` incluye `rep-publicar-modal.is_open: False`).
 
 ### 5.2 "Generar reporte final" → publicar (`publicar_reporte_representatividad`)
 
@@ -183,8 +202,11 @@ armar_paquete_reporte_torre_oficial(ini, fin)              [report_export.py:149
     (los 3 se ejecutan con rango [inicio, fecha_corte], cada uno en su propia
      transacción; si uno falla se aborta con RuntimeError)
  ├─ fetch_representatividad_torres_report → SP sp_reporte_representatividad_torres
+ ├─ fetch_pesos_representatividad_report  → SELECT v_peso_teorico_turno_torre_excel
+ │     + peso_real_torre_turno (hoja trazabilidad pesos, desde 777a4bc; la
+ │       grilla no la tiene)
  ├─ fetch_bd_ton_report (FY completo) + _fetch_fuentes_mensuales_torres_oficial
- └─ devuelve 6 bloques + fecha_corte_operacional + anio_fiscal
+ └─ devuelve 7 bloques + fecha_corte_operacional + anio_fiscal
 → _cargar_detalle_representatividad_periodo(paquete=paquete)   ← detalle "vivo", NO la grilla
 → _fusionar_solo_comentarios_en_detalle_vivo(detalle, registros)
 → write_reporte_torre_oficial()   soft-delete del activo del mes + INSERT en 3 tablas
@@ -249,13 +271,99 @@ sácalo del **historial**, no del botón "vigente".
 
 ### 5.6 Resumen en una tabla
 
-| Acción | SP de escritura | SP de lectura | Fuente |
+Los 4 SP de escritura son siempre los mismos y en el mismo orden, porque viven
+en `refrescar_representatividad_para_exportacion`:
+`sp_mantiene_apilado_tmh_v2_test` → `sp_calcular_resumen_intervalo_totTM` →
+`sp_refrescar_representatividad_torres` → `sp_sincronizar_bd_ton`.
+
+| Acción | Escribe | SP de lectura | Fuente |
 |---|---|---|---|
-| Editar comentarios (grilla) | `sp_calcular_resumen_intervalo_totTM`, `sp_refrescar_representatividad_torres`, `sp_sincronizar_bd_ton` (desde 2026-08-03, serializado con `sp_getapplock` por mes) | `sp_gestion_representatividad_fy` ×2 | vivo, recién refrescado |
-| Generar reporte final | `sp_calcular_resumen_intervalo_totTM`, `sp_refrescar_representatividad_torres`, `sp_sincronizar_bd_ton` | `sp_reporte_representatividad_torres`, `sp_gestion_representatividad_fy` ×2 | vivo → **escribe snapshot** |
+| Editar comentarios (grilla) | los 4 (desde 2026-08-03, serializados con `sp_getapplock` por mes) | `sp_gestion_representatividad_fy` ×2 | vivo, recién refrescado |
+| Generar reporte final | los 4 | `sp_reporte_representatividad_torres`, `sp_gestion_representatividad_fy` ×2 | vivo → **escribe snapshot** |
 | Excel oficial vigente | — | — | snapshot publicado |
-| PDF vigente | los mismos 3 de publicar | los mismos de publicar | vivo (**no** snapshot) |
+| PDF vigente | los 4 | los mismos de publicar | vivo (**no** snapshot) |
 | Historial XLSX/PDF | — | — | snapshot de esa versión |
+
+### 5.7 🔥 La cadena del apilado: por qué un día con tonelaje desaparecía
+
+**El bug más caro de este módulo, cerrado 2026-08-05 (`62807ce`).** Síntoma:
+BD Ton muestra tonelaje para un día, y la grilla (y por lo tanto el XLSX/PDF)
+lo oculta entero.
+
+La cadena, verificada contra la base leyendo `sys.sql_modules` — **ninguna de
+estas dos vistas tiene DDL en el repo**:
+
+```
+sp_mantiene_apilado_tmh_v2_test        (SP de mantención, congela por día)
+  → Control_Apilado_TMH_v2_test        (tabla congelada)
+  → v_datos_apilado_tmh_v2             (SELECT * de la tabla, nada más)
+  → v_estado_apilado_turno_representatividad   (UNION ALL turno A / turno B)
+        Turno_Evaluable = Flag_Apilado_Valido_X = 1 AND TMH_Apilado_Total_X > 0
+  → fetch_estado_apilado_turno_representatividad
+  → _preparar_material_por_turno  →  Turno_Activo_Oficial
+  → _preparar_detalle_mensual_torres  →  TMH_CV08 / TMH_CV108 = None si inactivo
+```
+
+**El detonante**: `_preparar_material_por_turno` (`reportabilidad_cb.py:1981`)
+calcula `Turno_Activo_Oficial = Apilado_TMS_Real_Turno > 0`, pero acto seguido,
+**para toda fecha ≥ 2026-01-01**, lo sobrescribe con `Turno_Evaluable == 1`.
+Es decir, desde 2026 el tonelaje deja de importar: manda el flag. Si el flag
+está viejo, el día se oculta aunque BD Ton tenga cifras.
+
+**Cómo se envenena el flag**: `Control_Apilado_TMH_v2_test` es *congelada*. Si
+alguien la puebla para el día D antes de que existan las lecturas de D 20:00 y
+D+1 08:00, la fila queda con totalizadores `NULL` → `Flag_Apilado_Valido = 0` →
+`Turno_Evaluable = 0`, **y nadie la reprocesa nunca**. Caso real del 2026-08-04:
+
+| Fecha | CV008_Tot_20 | CV008_Tot_08_día_sig | Flag_A | Flag_B |
+|---|---|---|---|---|
+| 2026-08-03 | 16.078.168 | 16.102.657 | 1 | 1 |
+| 2026-08-04 | **NULL** | **NULL** | **0** | **0** |
+
+Mientras tanto pesos/representatividad/BD Ton **sí** se recalcularon al día
+siguiente. Resultado: BD Ton nueva, `Turno_Evaluable` viejo, día invisible.
+
+**El arreglo**: `sp_mantiene_apilado_tmh_v2_test` se agregó como **primer paso**
+de `refrescar_representatividad_para_exportacion`, dentro del applock, mismo
+rango `[inicio, corte]` que los otros tres.
+
+⚠️ **`@DiasReproceso` tiene que ser > 0.** Con `0` el SP solo procesa fechas que
+*no tienen fila*; una fila congelada mala se quedaría mala para siempre. Está
+hardcodeado en `7` (mismo valor que el flujo de reporte por turno).
+
+⚠️ **No confundir con `sp_refrescar_historico_apilado_test`**
+(`refrescar_historico_apilado_report`). Ese alimenta **Datos Conciliados** y no
+participa en esta cadena. Es el candidato obvio por el nombre y es el
+equivocado: correrlo es caro y no arregla nada acá.
+
+El DDL de `v_datos_apilado_tmh_v2` ya traía esto anotado como deuda desde que se
+migró de cálculo en vivo a tabla congelada — *"alguien tiene que llamar a
+sp_mantiene_apilado_tmh_v2_test para que la vista vea dias nuevos… queda
+pendiente de tu confirmacion"*. Se hizo para reporte por turno
+(`exportar_excel`) y se olvidó para Representatividad.
+
+### 5.8 Lo que la grilla y el reporte SÍ comparten (no son dos cálculos)
+
+Malentendido fácil: creer que la grilla y el XLSX/PDF calculan la
+representatividad por caminos distintos. **No.** Las hojas mensuales
+Químico/Físico/SRR salen de `_agregar_hojas_mensuales_torres` →
+`_preparar_detalle_mensual_torres(df_bd_ton_mes, df_turno_mes)`, que son
+**exactamente las funciones que usa la grilla**.
+
+`paquete["rep_torres"]` (lo que devuelve `sp_reporte_representatividad_torres`)
+alimenta **solo la hoja diaria "Representatividad Torres"**, no las mensuales.
+Por eso la grilla nunca ejecuta ese SP y aun así coincide.
+
+La regla vigente: **grilla == reporte, más comentarios y Pad encima**. Si
+divergen, el problema está en las *entradas* (rango, fecha de corte, capa sin
+refrescar), no en la lógica. Corolario práctico: cualquier refresco nuevo va en
+`refrescar_representatividad_para_exportacion` y no en un callback, o vuelve la
+asimetría.
+
+Divergencia cerrada el 2026-08-05: el editor releía BD Ton con `[ini, fin]` solo
+para el TM3 y mostraba días posteriores al corte operacional que el reporte no
+incluye. Ahora usa `fuentes["df_bd_ton_mes"]` = `[día1, corte]`, igual que las
+hojas.
 
 ---
 
@@ -366,14 +474,14 @@ objetos que esa base no tiene desplegados. El síntoma es siempre el mismo,
 
 ## 9. Tests
 
-`report_export/tests/` — 76 tests, pytest puro, **todos con la BD mockeada**
-(`MagicMock` sobre el engine). Corren en ~18 s sin conexión.
+`report_export/tests/` — 93 tests, pytest puro, **todos con la BD mockeada**
+(`MagicMock` sobre el engine). Corren en ~17 s sin conexión.
 
 | Test | Protege |
 |---|---|
 | `test_login.py` | verificación de hash Django, cuentas inactivas |
 | `test_datos_conciliados_excel.py` | plantilla, formato, resumen MTD (el más grande) |
-| `test_refresco_representatividad.py` | **orden y parámetros de los 3 SP de §5.2** |
+| `test_refresco_representatividad.py` | **orden y parámetros de los 4 SP de §5.2**, y que el apilado lleve `@DiasReproceso=7` (§5.7) |
 | `test_comentarios_tm3.py`, `test_borrar_comentarios.py`, `test_pad_editable.py` | reglas de la grilla |
 | `test_pdf_torres_python.py`, `test_pdf_representatividad_layout.py` | layout del PDF |
 
@@ -407,11 +515,25 @@ de openpyxl (`Style.copy()`), inofensivo.
    [FIX_refresco_representatividad_concurrencia.md](FIX_refresco_representatividad_concurrencia.md).
    Pendiente de verificación contra la base: idempotencia/alcance de los tres
    SP y duración real vs timeout de 180 s (§4 del fix).
+6c. ✅ **Cerrada 2026-08-05 — `Turno_Evaluable` desactualizado ocultaba días
+   con tonelaje.** Ver §5.7. Pendiente de verificar contra la base que el
+   2026-08-04 quedó con `Flag_Apilado_Valido = 1` tras el primer refresco.
 7. **`FECHA_CORTE_CLAYS_CUFE = 2026-08-01`** hardcodeada (§6).
 8. Prints de depuración por todos lados (`[RTO]`, `[EXCEL]`, `[PDF]`, `[DEBUG]`),
    incluido uno con fechas fijas de julio 2026. Son el log de facto en producción.
-9. Commits con mensajes de una palabra ("eso", "cambios", "estetica"): el
-   historial de git no sirve como memoria. De ahí este archivo.
+9. Commits con mensajes de una palabra ("eso", "cambios", "estetica",
+   "PARCHE MUNDIAL"): el historial de git no sirve como memoria. De ahí este
+   archivo.
+10. **Test rojo heredado**: `test_datos_conciliados_excel.py::
+   test_fecha_corte_informa_columnas_estructurales_faltantes` falla en `main`
+   desde antes del 2026-08-05 (`AssertionError` en la línea 198). No tiene
+   relación con Representatividad. Si tu suite marca 92/1, es este; si marca
+   otra cosa, rompiste algo.
+11. **`v_datos_apilado_tmh_v2` y `v_estado_apilado_turno_representatividad` no
+   tienen DDL en `docs/views/`** (solo hay dos vistas de chancado ahí), pese a
+   decidir la evaluabilidad de todo el reporte. Para leerlas:
+   `SELECT m.definition FROM sys.sql_modules m JOIN sys.objects o
+   ON o.object_id = m.object_id WHERE o.name = '<vista>'`.
 
 ---
 
