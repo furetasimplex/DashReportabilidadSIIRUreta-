@@ -387,10 +387,16 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
     datos mas recientes (bug detectado 2026-08-02: corte silencioso en
     2026-07-26 con data ya publicada en inventar_SpcHidr hasta el 31,
     porque nadie habia vuelto a correr el sync a mano).
-    Paso 2: reclamo.sp_calcular_reclamo_diario materializa reclamo.
+    Paso 2: reclamo.sp_cargar_cv25_horas alimenta reclamo.cv25_diario y
+    reclamo.rotopala_horas_turno (base de reclamo.v_cv25_diario y del
+    grafico "Rendimiento de rotopala"). Bug detectado 2026-08-05: este
+    SP nunca estuvo encadenado a ningun boton del Dash, solo se corria
+    a mano -- el grafico quedaba en "Sin datos" para fechas recientes
+    aunque topografia y camiones ya estuvieran sincronizados.
+    Paso 3: reclamo.sp_calcular_reclamo_diario materializa reclamo.
     calculo_diario a partir de reclamo.v_reclamo_diario, ya con la
     sincronizacion al dia.
-    Decision 2026-08-02: se encadenan ambos pasos en un solo boton
+    Decision 2026-08-02: se encadenan estos pasos en un solo boton
     ("Recalcular"), sin paso intermedio de revision -- el sync es
     idempotente y solo toca modulos ya congelados (los que no lo estan
     quedan OMITIDO y se pueden ver despues en reclamo.log_sincronizacion
@@ -403,6 +409,13 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
              @FechaFin            = :hasta,
              @SincronizarApilado  = 0,
              @Confirmar           = 1
+        """
+    )
+    sql_cv25 = text(
+        """
+        EXEC reclamo.sp_cargar_cv25_horas
+             @FechaInicio = :desde,
+             @FechaFin    = :hasta
         """
     )
     sql_calc = text(
@@ -424,6 +437,7 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
     with get_engine().begin() as conn:
         conn.execute(sql_sync, {"desde": desde, "hasta": hasta})
         filas_sync = conn.execute(sql_resumen_sync).scalar()
+        conn.execute(sql_cv25, {"desde": desde, "hasta": hasta})
         conn.execute(sql_calc, {"desde": desde, "hasta": hasta, "dias": dias_reproceso})
     resumen_sync = f" ({filas_sync} filas sincronizadas desde el ETL)" if filas_sync else ""
     return f"Reclamo recalculado para {desde} a {hasta}{resumen_sync}."
