@@ -73,7 +73,12 @@ COLUMNAS_CORTE_RESUMEN_DATOS_CONCILIADOS = (
     "Ley_CuT_Real", "Ley_CuT_Plan",
     "Cobre_fino_Apilado_Real", "Cobre_fino_Apilado_Plan",
     "SRR_TMS_promedio_dia", "SRR_TMS_Plan",
-    "Ley_CuT_Real_srr", "Ley_CuT_Plan_srr",
+    # Ley_CuT_Real_srr queda fuera del corte a proposito: se calcula por
+    # balance residual y depende de un insumo de laboratorio (mov_cam.CuTG00
+    # para Destino=CH01) que puede atrasarse varios dias respecto al resto
+    # del reporte. Si el dato no esta listo, la celda queda vacia pero ya
+    # NO bloquea ni recorta el resto del resumen MTD.
+    "Ley_CuT_Plan_srr",
     "TMS_Rotopala_1_Real", "TMS_Rotopala_1_Plan",
     "TMS_Rotopala_2_Real", "TMS_Rotopala_2_Plan",
     "Camiones_TMS_total", "Camiones_TMS_plan",
@@ -229,7 +234,9 @@ def _campos_incompletos_resumen_datos_conciliados(row: pd.Series) -> list[str]:
         "Cobre_fino_Apilado_Real": "Apilado_TMS_Real",
         "Ley_CuT_Plan": "Apilado_TMS_Plan",
         "Cobre_fino_Apilado_Plan": "Apilado_TMS_Plan",
-        "Ley_CuT_Real_srr": "SRR_TMS_promedio_dia",
+        # Ley_CuT_Real_srr ya no esta en COLUMNAS_CORTE_RESUMEN_DATOS_CONCILIADOS
+        # (ver comentario ahi), asi que esta entrada no se evalua para esa
+        # columna. Se deja Plan por si el dia todavia no tiene tonelaje SRR.
         "Ley_CuT_Plan_srr": "SRR_TMS_Plan",
     }
     incompletos = []
