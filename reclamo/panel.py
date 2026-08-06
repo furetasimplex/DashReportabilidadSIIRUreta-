@@ -456,6 +456,171 @@ def panel_avance():
     )
 
 
+_CAMPOS_DR = [
+    ("tms", "TMS"),
+    ("m3_totales", "M3 totales"),
+    ("densidad", "Densidad"),
+    ("m3_apilado", "M3 apilado"),
+    ("tmh_apilado", "TMH apilado"),
+    ("remanente_m3", "Remanente m3"),
+    ("remanente_tms", "Remanente TMS"),
+]
+
+
+_CAMPOS_DR_UPD = [c for c in _CAMPOS_DR if c[0] != "densidad"]
+
+
+def _grid_campos_dr(prefijo: str, campos=None):
+    campos = campos if campos is not None else _CAMPOS_DR
+    return html.Div(
+        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(120px, 1fr))",
+               "gap": "10px"},
+        children=[
+            html.Div([
+                html.Label(etiqueta, style={"fontSize": "12px", "color": GRIS}),
+                dcc.Input(id=f"{prefijo}-{campo}", type="number", style={"width": "100%"}),
+            ])
+            for campo, etiqueta in campos
+        ],
+    )
+
+
+def panel_disponible_rotopalas():
+    return html.Div(
+        style=CARD,
+        children=[
+            html.H3("Disponible para rotopalas — peso, volumen y densidad", style=TITULO_SECCION),
+            html.P(
+                "inventar_SpcHidr.disponible_rotopalas: tabla fuente que leen DIRECTO "
+                "sp_congelar_modulo y sp_auto_congelar_modulos_nuevos para el peso, volumen "
+                "y densidad de cada modulo. Un modulo sin m3_totales o densidad no se congela "
+                "solo (queda como ALERTA_SIN_BASE). Los cambios de aqui se escriben directo "
+                "sobre la tabla fuente, sin capa de aprobacion.",
+                style=SUBTITULO,
+            ),
+            html.Div(
+                style={"display": "flex", "alignItems": "flex-end", "gap": "14px",
+                       "flexWrap": "wrap", "marginBottom": "14px"},
+                children=[
+                    html.Div([
+                        html.Label("Campaña", style={"fontSize": "12px", "color": GRIS}),
+                        dcc.Dropdown(id="dr-filtro-campana", placeholder="Todas",
+                                     style={"width": "200px"}),
+                    ]),
+                    html.Div([
+                        html.Label("PAD", style={"fontSize": "12px", "color": GRIS}),
+                        dcc.Dropdown(
+                            id="dr-filtro-pad",
+                            options=[
+                                {"label": "Ambos", "value": 0},
+                                {"label": "PAD 1 — Oxido", "value": 1},
+                                {"label": "PAD 2 — Sulfuro", "value": 2},
+                            ],
+                            value=0, clearable=False, style={"width": "180px"},
+                        ),
+                    ]),
+                    html.Div([
+                        html.Label("Modulo (numero)", style={"fontSize": "12px", "color": GRIS}),
+                        dcc.Input(id="dr-filtro-modulo", type="number", placeholder="Todos",
+                                  style={"width": "110px"}),
+                    ]),
+                    html.Div([
+                        html.Label("Fecha conformacion desde",
+                                   style={"fontSize": "12px", "color": GRIS}),
+                        dcc.DatePickerSingle(id="dr-filtro-fecha-desde", display_format="DD-MM-YYYY"),
+                    ]),
+                    html.Div([
+                        html.Label("hasta", style={"fontSize": "12px", "color": GRIS}),
+                        dcc.DatePickerSingle(id="dr-filtro-fecha-hasta", display_format="DD-MM-YYYY"),
+                    ]),
+                    html.Button(
+                        "Buscar", id="btn-buscar-dr", n_clicks=0,
+                        style={"backgroundColor": AZUL, "color": "white", "border": "none",
+                               "padding": "9px 22px", "borderRadius": "5px", "cursor": "pointer",
+                               "fontSize": "13px"},
+                    ),
+                ],
+            ),
+            html.Div(id="tabla-disponible-rotopalas"),
+            dcc.Store(id="store-disponible-rotopalas"),
+            html.Hr(style={"border": "none", "borderTop": "1px solid #E0E0E0", "margin": "18px 0"}),
+            html.Div(
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(340px, 1fr))",
+                       "gap": "24px"},
+                children=[
+                    html.Div([
+                        html.H4("Actualizar registro existente",
+                               style={"fontSize": "14px", "color": AZUL, "marginBottom": "8px"}),
+                        html.P(
+                            "Al elegir el registro se precargan sus valores actuales. Solo se "
+                            "cambian los campos que modifique; el resto conserva su valor. La "
+                            "densidad no se edita a mano: se recalcula sola como TMS / volumen "
+                            "(m3 totales) cada vez que guarde.",
+                            style={"fontSize": "12px", "color": GRIS, "marginTop": 0},
+                        ),
+                        html.Div([
+                            html.Label("Registro (busque primero arriba)",
+                                       style={"fontSize": "12px", "color": GRIS}),
+                            dcc.Dropdown(id="dr-upd-id", placeholder="Seleccione un ID"),
+                        ], style={"marginBottom": "10px"}),
+                        _grid_campos_dr("dr-upd", _CAMPOS_DR_UPD),
+                        html.Div(id="dr-upd-densidad-info",
+                                style={"fontSize": "12px", "color": AZUL, "marginTop": "8px"}),
+                        html.Button(
+                            "Actualizar", id="btn-dr-actualizar", n_clicks=0,
+                            style={"backgroundColor": AMBAR, "color": "white", "border": "none",
+                                   "padding": "9px 22px", "borderRadius": "5px", "cursor": "pointer",
+                                   "fontSize": "13px", "marginTop": "10px"},
+                        ),
+                        html.Div(id="mensaje-dr-actualizar", style={"fontSize": "13px", "marginTop": "10px"}),
+                    ]),
+                    html.Div([
+                        html.H4("Insertar nuevo registro",
+                               style={"fontSize": "14px", "color": AZUL, "marginBottom": "8px"}),
+                        html.P(
+                            "Se rechaza si ya existe una fila para ese PAD, modulo y campaña "
+                            "(use actualizar en ese caso). Si deja Densidad en blanco, se "
+                            "calcula sola como TMS / m3 totales.",
+                            style={"fontSize": "12px", "color": GRIS, "marginTop": 0},
+                        ),
+                        html.Div(
+                            style={"display": "grid", "gridTemplateColumns": "1fr 1fr 1fr",
+                                   "gap": "10px", "marginBottom": "10px"},
+                            children=[
+                                html.Div([
+                                    html.Label("PAD", style={"fontSize": "12px", "color": GRIS}),
+                                    dcc.Dropdown(
+                                        id="dr-ins-pad",
+                                        options=[{"label": "PAD 1 — Oxido", "value": 1},
+                                                 {"label": "PAD 2 — Sulfuro", "value": 2}],
+                                        placeholder="Seleccione",
+                                    ),
+                                ]),
+                                html.Div([
+                                    html.Label("Modulo", style={"fontSize": "12px", "color": GRIS}),
+                                    dcc.Dropdown(id="dr-ins-modulo", placeholder="Elija PAD primero"),
+                                ]),
+                                html.Div([
+                                    html.Label("Campaña", style={"fontSize": "12px", "color": GRIS}),
+                                    dcc.Dropdown(id="dr-ins-campana", placeholder="Seleccione"),
+                                ]),
+                            ],
+                        ),
+                        _grid_campos_dr("dr-ins"),
+                        html.Button(
+                            "Insertar", id="btn-dr-insertar", n_clicks=0,
+                            style={"backgroundColor": AZUL, "color": "white", "border": "none",
+                                   "padding": "9px 22px", "borderRadius": "5px", "cursor": "pointer",
+                                   "fontSize": "13px", "marginTop": "10px"},
+                        ),
+                        html.Div(id="mensaje-dr-insertar", style={"fontSize": "13px", "marginTop": "10px"}),
+                    ]),
+                ],
+            ),
+        ],
+    )
+
+
 def panel_ajustes():
     return html.Div(
         style=CARD,
@@ -563,6 +728,7 @@ def layout():
                 panel_remanente(),
                 panel_avance(),
                 panel_preview_conciliados(),
+                panel_disponible_rotopalas(),
                 panel_ajustes(),
                 html.Div(
                     "Control de reclamo — use el semáforo y la vista previa antes de publicar.",
@@ -1552,4 +1718,258 @@ def cb_tabla_ajustes(n, _, desde, hasta):
          "backgroundColor": "#FDECEA", "color": ROJO},
     ]
     return _tabla(df[cols], "t-ajustes", cond)
+
+
+# ---------------------------------------------------------------------------
+# Disponible para rotopalas — peso, volumen y densidad por modulo
+# ---------------------------------------------------------------------------
+
+@callback(
+    Output("dr-filtro-campana", "options"),
+    Output("dr-ins-campana", "options"),
+    Input("btn-actualizar", "n_clicks"),
+)
+def cb_opciones_dr_campana(n):
+    try:
+        df = db.campanas_disponible_rotopalas()
+    except Exception:
+        return [], []
+    if df.empty:
+        return [], []
+    opts = [
+        {"label": f"Campaña {int(r.campana)} (id {int(r.campana_id)})", "value": int(r.campana_id)}
+        for r in df.itertuples() if pd.notna(r.campana_id)
+    ]
+    return opts, opts
+
+
+@callback(
+    Output("dr-ins-modulo", "options"),
+    Input("dr-ins-pad", "value"),
+)
+def cb_opciones_dr_modulo(pad_id):
+    if not pad_id:
+        return []
+    try:
+        df = db.catalogo_modulos(pad_id)
+    except Exception:
+        return []
+    return [
+        {"label": f"M{int(r.modulo_numero)} (parcela {int(r.parcela_numero)})",
+         "value": int(r.modulo_id)}
+        for r in df.itertuples()
+    ]
+
+
+@callback(
+    Output("tabla-disponible-rotopalas", "children"),
+    Output("dr-upd-id", "options"),
+    Output("store-disponible-rotopalas", "data"),
+    Input("btn-buscar-dr", "n_clicks"),
+    Input("btn-actualizar", "n_clicks"),
+    Input("mensaje-dr-actualizar", "children"),
+    Input("mensaje-dr-insertar", "children"),
+    State("dr-filtro-campana", "value"),
+    State("dr-filtro-pad", "value"),
+    State("dr-filtro-modulo", "value"),
+    State("dr-filtro-fecha-desde", "date"),
+    State("dr-filtro-fecha-hasta", "date"),
+)
+def cb_tabla_disponible_rotopalas(n1, n2, _m1, _m2, campana_id, pad, modulo, fdesde, fhasta):
+    try:
+        df = db.disponible_rotopalas(
+            campana_id=campana_id,
+            pad_id=pad if pad else None,
+            modulo_numero=modulo,
+            fecha_desde=fdesde,
+            fecha_hasta=fhasta,
+        )
+    except Exception as exc:
+        return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"}), [], None
+
+    if df.empty:
+        return html.Div("Sin registros para el filtro seleccionado.",
+                        style={"color": GRIS, "fontSize": "13px"}), [], None
+
+    sin_base = int((df["m3_totales"].isna() | df["densidad"].isna()).sum())
+    aviso = None
+    if sin_base:
+        aviso = html.Div(
+            f"{sin_base} registro(s) sin m3_totales o densidad: esos modulos no se pueden "
+            "congelar automaticamente hasta completarlos.",
+            style={"color": ROJO, "fontSize": "12px", "fontWeight": 600, "marginBottom": "8px"},
+        )
+
+    opciones_id = [
+        {"label": f"ID {int(r.id_disponible_rotopalas)} · M{int(r.modulo_numero)} · "
+                  f"PAD {int(r.pad_id)} · campaña {int(r.campana_id)}",
+         "value": int(r.id_disponible_rotopalas)}
+        for r in df.itertuples()
+    ]
+
+    tabla_df = df.copy()
+    tabla_df["estado_congelado"] = tabla_df["estado_congelado"].fillna("PENDIENTE")
+    tabla_df["fecha_conformacion"] = pd.to_datetime(
+        tabla_df["fecha_conformacion"], errors="coerce"
+    ).dt.strftime("%Y-%m-%d").fillna("")
+
+    cols = ["id_disponible_rotopalas", "pad_id", "modulo_numero", "campana", "campana_id",
+            "tms", "m3_totales", "densidad", "m3_apilado", "tmh_apilado",
+            "remanente_m3", "remanente_tms", "estado_congelado", "fecha_conformacion"]
+    ren = {
+        "id_disponible_rotopalas": "ID", "pad_id": "PAD", "modulo_numero": "Modulo",
+        "campana": "Campaña", "campana_id": "Campaña ID",
+        "tms": "TMS", "m3_totales": "M3 totales", "densidad": "Densidad",
+        "m3_apilado": "M3 apilado", "tmh_apilado": "TMH apilado",
+        "remanente_m3": "Remanente m3", "remanente_tms": "Remanente TMS",
+        "estado_congelado": "Estado", "fecha_conformacion": "Fecha conformacion",
+    }
+    tabla = tabla_df[cols].rename(columns=ren).round(3)
+
+    contenido = [html.Div(f"{len(df)} registro(s).",
+                          style={"fontSize": "12px", "color": GRIS, "marginBottom": "6px"})]
+    if aviso is not None:
+        contenido.append(aviso)
+    contenido.append(_tabla(tabla, "t-disponible-rotopalas", page_size=15))
+
+    # df crudo (columnas originales, sin renombrar) para precargar el
+    # formulario de actualizacion sin volver a consultar la base.
+    return html.Div(contenido), opciones_id, df.to_dict("records")
+
+
+@callback(
+    Output("dr-upd-tms", "value"),
+    Output("dr-upd-m3_totales", "value"),
+    Output("dr-upd-m3_apilado", "value"),
+    Output("dr-upd-tmh_apilado", "value"),
+    Output("dr-upd-remanente_m3", "value"),
+    Output("dr-upd-remanente_tms", "value"),
+    Input("dr-upd-id", "value"),
+    State("store-disponible-rotopalas", "data"),
+)
+def cb_dr_prefill(id_dr, data):
+    """Al elegir un registro, precarga sus valores actuales en el
+    formulario -- se ve que hay antes de decidir que cambiar. Usa los
+    datos ya traidos por la busqueda de arriba, sin otra consulta."""
+    vacio = (None, None, None, None, None, None)
+    if not id_dr or not data:
+        return vacio
+    df = pd.DataFrame(data)
+    fila = df[df["id_disponible_rotopalas"] == id_dr]
+    if fila.empty:
+        return vacio
+    r = fila.iloc[0]
+
+    def _v(campo):
+        val = r.get(campo)
+        return None if val is None or pd.isna(val) else float(val)
+
+    return (_v("tms"), _v("m3_totales"), _v("m3_apilado"),
+            _v("tmh_apilado"), _v("remanente_m3"), _v("remanente_tms"))
+
+
+@callback(
+    Output("dr-upd-densidad-info", "children"),
+    Input("dr-upd-tms", "value"),
+    Input("dr-upd-m3_totales", "value"),
+    Input("dr-upd-id", "value"),
+    State("store-disponible-rotopalas", "data"),
+)
+def cb_dr_densidad_preview(tms, m3_totales, id_dr, data):
+    """Densidad de solo lectura: nunca se edita a mano, se recalcula como
+    TMS/volumen. Este texto muestra la densidad actual guardada y la que
+    quedaria si se guarda con los valores que hay ahora en el formulario."""
+    if not id_dr:
+        return ""
+    densidad_actual = None
+    if data:
+        df = pd.DataFrame(data)
+        fila = df[df["id_disponible_rotopalas"] == id_dr]
+        if not fila.empty and pd.notna(fila.iloc[0].get("densidad")):
+            densidad_actual = float(fila.iloc[0]["densidad"])
+
+    partes = []
+    if densidad_actual is not None:
+        partes.append(f"Densidad actual: {densidad_actual:.4f}")
+    else:
+        partes.append("Densidad actual: sin dato")
+
+    if tms is not None and m3_totales:
+        partes.append(f"quedara en {tms / m3_totales:.4f} al guardar")
+    elif tms is not None or m3_totales is not None:
+        partes.append("complete TMS y volumen para ver la densidad recalculada")
+
+    return " · ".join(partes)
+
+
+@callback(
+    Output("mensaje-dr-actualizar", "children"),
+    Input("btn-dr-actualizar", "n_clicks"),
+    State("dr-upd-id", "value"),
+    State("dr-upd-tms", "value"),
+    State("dr-upd-m3_totales", "value"),
+    State("dr-upd-m3_apilado", "value"),
+    State("dr-upd-tmh_apilado", "value"),
+    State("dr-upd-remanente_m3", "value"),
+    State("dr-upd-remanente_tms", "value"),
+    prevent_initial_call=True,
+)
+def cb_dr_actualizar(n, id_dr, tms, m3_totales, m3_apilado, tmh_apilado,
+                      remanente_m3, remanente_tms):
+    if not id_dr:
+        return html.Span("Seleccione un registro (ID) para actualizar.", style={"color": ROJO})
+    campos = (tms, m3_totales, m3_apilado, tmh_apilado, remanente_m3, remanente_tms)
+    if all(v is None for v in campos):
+        return html.Span("Informe al menos un campo para actualizar.", style={"color": ROJO})
+    try:
+        # densidad=None a proposito: el SP la recalcula sola desde TMS/m3_totales.
+        msg = db.actualizar_disponible_rotopala(
+            id_disponible_rotopalas=int(id_dr),
+            tms=tms, m3_totales=m3_totales, densidad=None,
+            m3_apilado=m3_apilado, tmh_apilado=tmh_apilado,
+            remanente_m3=remanente_m3, remanente_tms=remanente_tms,
+        )
+        return html.Span(msg, style={"color": VERDE})
+    except Exception as exc:
+        log.exception("Error al actualizar disponible_rotopalas")
+        return html.Span(_error_ui(exc), style={"color": ROJO})
+
+
+@callback(
+    Output("mensaje-dr-insertar", "children"),
+    Input("btn-dr-insertar", "n_clicks"),
+    State("dr-ins-pad", "value"),
+    State("dr-ins-modulo", "value"),
+    State("dr-ins-campana", "value"),
+    State("dr-ins-tms", "value"),
+    State("dr-ins-m3_totales", "value"),
+    State("dr-ins-densidad", "value"),
+    State("dr-ins-m3_apilado", "value"),
+    State("dr-ins-tmh_apilado", "value"),
+    State("dr-ins-remanente_m3", "value"),
+    State("dr-ins-remanente_tms", "value"),
+    prevent_initial_call=True,
+)
+def cb_dr_insertar(n, pad_id, modulo_id, campana_id, tms, m3_totales, densidad,
+                    m3_apilado, tmh_apilado, remanente_m3, remanente_tms):
+    faltantes = []
+    if not pad_id:
+        faltantes.append("PAD")
+    if not modulo_id:
+        faltantes.append("modulo")
+    if not campana_id:
+        faltantes.append("campaña")
+    if faltantes:
+        return html.Span("Falta completar: " + ", ".join(faltantes), style={"color": ROJO})
+    try:
+        msg = db.insertar_disponible_rotopala(
+            pad_id=int(pad_id), modulo_id=int(modulo_id), campana_id=int(campana_id),
+            tms=tms, m3_totales=m3_totales, densidad=densidad,
+            m3_apilado=m3_apilado, tmh_apilado=tmh_apilado,
+            remanente_m3=remanente_m3, remanente_tms=remanente_tms,
+        )
+        return html.Span(msg, style={"color": VERDE})
+    except Exception as exc:
+        log.exception("Error al insertar en disponible_rotopalas")
+        return html.Span(_error_ui(exc), style={"color": ROJO})
 

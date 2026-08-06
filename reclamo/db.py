@@ -208,6 +208,89 @@ def modulos_disponibles() -> pd.DataFrame:
     )
 
 
+def disponible_rotopalas(campana_id=None, pad_id=None, modulo_numero=None,
+                          fecha_desde=None, fecha_hasta=None) -> pd.DataFrame:
+    """inventar_SpcHidr.disponible_rotopalas -- peso/volumen/densidad por
+    modulo. Es la tabla que leen DIRECTO reclamo.sp_congelar_modulo y
+    reclamo.sp_auto_congelar_modulos_nuevos: una fila con m3_totales o
+    densidad en NULL bloquea el congelamiento automatico (queda como
+    ALERTA_SIN_BASE en reclamo.log_automatizacion). Esta seccion del
+    dashboard existe para poder completar/corregir esos valores sin
+    depender de la carga manual via Excel.
+
+    fecha_desde/fecha_hasta filtran por reclamo.modulo_congelado.
+    fecha_conformacion -- la tabla fuente no tiene columna de fecha
+    propia, asi que el filtro solo aplica a modulos ya congelados; uno
+    que todavia no se congela sigue apareciendo (con fecha en blanco)
+    salvo que se filtre explicitamente por fecha.
+    """
+    filtros = []
+    params: dict = {}
+    if campana_id is not None:
+        filtros.append("dr.[campaña_id] = :campana_id")
+        params["campana_id"] = campana_id
+    if pad_id is not None:
+        filtros.append("dr.pad_id = :pad_id")
+        params["pad_id"] = pad_id
+    if modulo_numero is not None:
+        filtros.append("dr.modulo = :modulo_numero")
+        params["modulo_numero"] = modulo_numero
+    if fecha_desde is not None:
+        filtros.append("mc.fecha_conformacion >= :fecha_desde")
+        params["fecha_desde"] = fecha_desde
+    if fecha_hasta is not None:
+        filtros.append("mc.fecha_conformacion <= :fecha_hasta")
+        params["fecha_hasta"] = fecha_hasta
+    where = ("WHERE " + " AND ".join(filtros)) if filtros else ""
+    return _read(
+        f"""
+        SELECT dr.id_disponible_rotopalas, dr.pad_id, dr.modulo AS modulo_numero,
+               dr.modulo_id, dr.[campaña] AS campana, dr.[campaña_id] AS campana_id,
+               dr.tms, dr.m3_totales, dr.densidad,
+               dr.m3_apilado, dr.tmh_apilado, dr.remanente_m3, dr.remanente_tms,
+               mc.fecha_conformacion, mc.estado AS estado_congelado
+        FROM inventar_SpcHidr.disponible_rotopalas dr
+        LEFT JOIN reclamo.modulo_congelado mc
+            ON mc.[campaña_id] = dr.[campaña_id] AND mc.modulo_id = dr.modulo_id
+        {where}
+        ORDER BY dr.pad_id, dr.[campaña_id] DESC, dr.modulo
+        """,
+        params,
+    )
+
+
+def catalogo_modulos(pad_id=None) -> pd.DataFrame:
+    """Catalogo completo de modulos (inventar_SpcHidr.modulo + parcela + pad),
+    para el desplegable de "insertar nuevo registro" -- incluye modulos que
+    todavia no tienen fila en disponible_rotopalas."""
+    filtro = "WHERE p.id_pad = :pad_id" if pad_id else ""
+    params = {"pad_id": pad_id} if pad_id else {}
+    return _read(
+        f"""
+        SELECT m.id_modulo AS modulo_id, m.numero AS modulo_numero,
+               p.id_parcela AS parcela_id, p.numero AS parcela_numero,
+               p.id_pad AS pad_id
+        FROM inventar_SpcHidr.modulo m
+        INNER JOIN inventar_SpcHidr.parcela p ON p.id_parcela = m.id_parcela
+        {filtro}
+        ORDER BY p.id_pad, m.numero
+        """,
+        params,
+    )
+
+
+def campanas_disponible_rotopalas() -> pd.DataFrame:
+    """Campañas ya presentes en disponible_rotopalas (id + numero visible),
+    para poblar los desplegables de filtro e insercion."""
+    return _read(
+        """
+        SELECT DISTINCT dr.[campaña_id] AS campana_id, dr.[campaña] AS campana
+        FROM inventar_SpcHidr.disponible_rotopalas dr
+        ORDER BY dr.[campaña_id] DESC
+        """
+    )
+
+
 def semaforo(desde, hasta) -> pd.DataFrame:
     """Semaforo consolidado. Replica la seccion 9 del script de validacion."""
     return _read(
@@ -376,9 +459,112 @@ def registrar_ajuste(
     return "Ajuste registrado como propuesta. No afecta ninguna cifra hasta aprobarse."
 
 
-def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
-    """Encadena la sincronizacion desde el ETL y el calculo de reclamo diario.
+def actualizar_disponible_rotopala(
+    id_disponible_rotopalas: int,
+    tms=None, m3_totales=None, densidad=None,
+    m3_apilado=None, tmh_apilado=None, remanente_m3=None, remanente_tms=None,
+    observacion=None,
+) -> str:
+    """Llama a reclamo.sp_actualizar_disponible_rotopala (v2). Solo los
+    campos que vengan con valor se actualizan; el resto conserva lo que ya
+    tenia. Si no se informa densidad, el SP la recalcula sola desde TMS/
+    m3_totales. Si el modulo ya estaba CONGELADO, el SP tambien actualiza
+    reclamo.modulo_congelado y deja registro en reclamo.log_sincronizacion
+    -- el SELECT final trae propagado_a_modulo_congelado para avisarlo aca."""
+    sql = text(
+        """
+        EXEC reclamo.sp_actualizar_disponible_rotopala
+             @IdDisponibleRotopalas = :id,
+             @Tms           = :tms,
+             @M3Totales     = :m3_totales,
+             @Densidad      = :densidad,
+             @M3Apilado     = :m3_apilado,
+             @TmhApilado    = :tmh_apilado,
+             @RemanenteM3   = :remanente_m3,
+             @RemanenteTms  = :remanente_tms,
+             @Observacion   = :observacion
+        """
+    )
+    params = {
+        "id": id_disponible_rotopalas,
+        "tms": tms, "m3_totales": m3_totales, "densidad": densidad,
+        "m3_apilado": m3_apilado, "tmh_apilado": tmh_apilado,
+        "remanente_m3": remanente_m3, "remanente_tms": remanente_tms,
+        "observacion": observacion,
+    }
+    with get_engine().begin() as conn:
+        result = conn.execute(sql, params)
+        fila = result.fetchone()
+    propagado = bool(fila._mapping.get("propagado_a_modulo_congelado")) if fila is not None else False
+    msg = f"disponible_rotopalas actualizado (id {id_disponible_rotopalas})."
+    if propagado:
+        msg += (" El modulo ya estaba CONGELADO: se actualizaron tambien tms_conformado, "
+                "m3_totales y densidad_oficial en modulo_congelado, con registro en "
+                "reclamo.log_sincronizacion.")
+    return msg
 
+
+def insertar_disponible_rotopala(
+    pad_id: int, modulo_id: int, campana_id: int, campana=None,
+    tms=None, m3_totales=None, densidad=None,
+    m3_apilado=None, tmh_apilado=None, remanente_m3=None, remanente_tms=None,
+    observacion=None,
+) -> str:
+    """Llama a reclamo.sp_insertar_disponible_rotopala (v2). El procedimiento
+    rechaza duplicados de (pad_id, modulo_id, campaña_id) -- si ya existe,
+    hay que usar actualizar_disponible_rotopala en su lugar. Si no se
+    informa densidad, se calcula sola desde TMS/m3_totales."""
+    sql = text(
+        """
+        EXEC reclamo.sp_insertar_disponible_rotopala
+             @PadId         = :pad_id,
+             @ModuloId      = :modulo_id,
+             @CampañaId     = :campana_id,
+             @Campaña       = :campana,
+             @Tms           = :tms,
+             @M3Totales     = :m3_totales,
+             @Densidad      = :densidad,
+             @M3Apilado     = :m3_apilado,
+             @TmhApilado    = :tmh_apilado,
+             @RemanenteM3   = :remanente_m3,
+             @RemanenteTms  = :remanente_tms,
+             @Observacion   = :observacion
+        """
+    )
+    params = {
+        "pad_id": pad_id, "modulo_id": modulo_id, "campana_id": campana_id, "campana": campana,
+        "tms": tms, "m3_totales": m3_totales, "densidad": densidad,
+        "m3_apilado": m3_apilado, "tmh_apilado": tmh_apilado,
+        "remanente_m3": remanente_m3, "remanente_tms": remanente_tms,
+        "observacion": observacion,
+    }
+    with get_engine().begin() as conn:
+        result = conn.execute(sql, params)
+        fila = result.fetchone()
+    propagado = bool(fila._mapping.get("propagado_a_modulo_congelado")) if fila is not None else False
+    msg = f"disponible_rotopalas: nuevo registro insertado (PAD {pad_id}, modulo_id {modulo_id}, campaña_id {campana_id})."
+    if propagado:
+        msg += (" El modulo ya estaba CONGELADO: se actualizaron tambien tms_conformado, "
+                "m3_totales y densidad_oficial en modulo_congelado, con registro en "
+                "reclamo.log_sincronizacion.")
+    return msg
+
+
+def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
+    """Encadena el congelamiento automatico, la sincronizacion desde el ETL
+    y el calculo de reclamo diario.
+
+    Paso 0: reclamo.sp_auto_mantener_secuencia congela los modulos nuevos
+    que ya aparecen en topografia o camiones. Bug detectado 2026-08-05:
+    modulo 39 (PAD Oxido) tenia datos de origen en
+    inventar_SpcHidr.control_reclamo_diario para el 02 y 03-ago, pero el
+    sync los omitio (log_sincronizacion: "Modulo no congelado. No se
+    sincroniza: violaria la regla R1") porque el usuario habia corrido
+    "Recalcular" ANTES de que el boton separado "Mantener secuencia"
+    congelara el modulo -- dependia del orden en que se apretaran los dos
+    botones. Encadenarlo aqui, primero, elimina esa dependencia: un modulo
+    recien aparecido queda congelado y disponible para sincronizar en el
+    mismo click.
     Paso 1: reclamo.sp_sincronizar_desde_etl trae lo publicado en
     inventar_SpcHidr (control_reclamo_diario, control_reclamo_sulfuro_
     camiones_thm_diario) hacia reclamo.topografia_avance / reclamo.
@@ -387,15 +573,30 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
     datos mas recientes (bug detectado 2026-08-02: corte silencioso en
     2026-07-26 con data ya publicada en inventar_SpcHidr hasta el 31,
     porque nadie habia vuelto a correr el sync a mano).
-    Paso 2: reclamo.sp_calcular_reclamo_diario materializa reclamo.
+    Paso 2: reclamo.sp_cargar_cv25_horas alimenta reclamo.cv25_diario y
+    reclamo.rotopala_horas_turno (base de reclamo.v_cv25_diario y del
+    grafico "Rendimiento de rotopala"). Bug detectado 2026-08-05: este
+    SP nunca estuvo encadenado a ningun boton del Dash, solo se corria
+    a mano -- el grafico quedaba en "Sin datos" para fechas recientes
+    aunque topografia y camiones ya estuvieran sincronizados.
+    Paso 3: reclamo.sp_calcular_reclamo_diario materializa reclamo.
     calculo_diario a partir de reclamo.v_reclamo_diario, ya con la
     sincronizacion al dia.
-    Decision 2026-08-02: se encadenan ambos pasos en un solo boton
+    Decision 2026-08-02: se encadenan estos pasos en un solo boton
     ("Recalcular"), sin paso intermedio de revision -- el sync es
     idempotente y solo toca modulos ya congelados (los que no lo estan
     quedan OMITIDO y se pueden ver despues en reclamo.log_sincronizacion
-    si hace falta auditar).
+    si hace falta auditar). El boton "Mantener secuencia" sigue existiendo
+    aparte para que el usuario revise ALERTA_FIN_DE_PAD / ALERTA_FIN_DE_
+    CAMPANA con calma, pero ya no es un prerrequisito manual de Recalcular.
     """
+    sql_mantener = text(
+        """
+        EXEC reclamo.sp_auto_mantener_secuencia
+             @VentanaDias = 90,
+             @Siguientes  = 5
+        """
+    )
     sql_sync = text(
         """
         EXEC reclamo.sp_sincronizar_desde_etl
@@ -403,6 +604,13 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
              @FechaFin            = :hasta,
              @SincronizarApilado  = 0,
              @Confirmar           = 1
+        """
+    )
+    sql_cv25 = text(
+        """
+        EXEC reclamo.sp_cargar_cv25_horas
+             @FechaInicio = :desde,
+             @FechaFin    = :hasta
         """
     )
     sql_calc = text(
@@ -422,8 +630,10 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
         """
     )
     with get_engine().begin() as conn:
+        conn.execute(sql_mantener)
         conn.execute(sql_sync, {"desde": desde, "hasta": hasta})
         filas_sync = conn.execute(sql_resumen_sync).scalar()
+        conn.execute(sql_cv25, {"desde": desde, "hasta": hasta})
         conn.execute(sql_calc, {"desde": desde, "hasta": hasta, "dias": dias_reproceso})
     resumen_sync = f" ({filas_sync} filas sincronizadas desde el ETL)" if filas_sync else ""
     return f"Reclamo recalculado para {desde} a {hasta}{resumen_sync}."
