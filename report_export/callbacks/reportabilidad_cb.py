@@ -18,6 +18,7 @@ from report_export.report_export import (
     fetch_datos_conciliados_report,
     actualizar_datos_conciliados_emision_report,
     fetch_datos_conciliados_emision_report,
+    fetch_factor_ajuste_camiones_report,
     fetch_representatividad_torres_report,
     fetch_bd_ton_report,
     fetch_gestion_representatividad_fy,
@@ -7587,6 +7588,10 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 start_date=ini_d,
                 end_date=fin_d
             )
+            df_factor = fetch_factor_ajuste_camiones_report(
+                start_date=ini_d,
+                end_date=fin_d,
+            )
             print(f"[EXCEL][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
 
             columnas_control = [
@@ -7611,9 +7616,15 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 else _find_plantilla_propuesta()
             )
             if os.path.isfile(template_path):
-                xbytes = export_datos_conciliados_to_template(df, template_path)
+                xbytes = export_datos_conciliados_to_template(
+                    df,
+                    template_path,
+                    df_factor_ajuste=df_factor,
+                )
             else:
-                xbytes = _export_dataframe_simple_to_excel(df, sheet_name="Datos Conciliados")
+                xbytes = _export_dataframe_simple_to_excel(
+                    df, sheet_name="Generador Reporte Diario"
+                )
 
             filename = (
                 f"Reporte_DatosConciliados_"

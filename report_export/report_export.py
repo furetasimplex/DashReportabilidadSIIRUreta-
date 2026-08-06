@@ -466,6 +466,98 @@ def fetch_datos_conciliados_emision_report(
         [columna for columna in COLUMNAS_DATOS_CONCILIADOS if columna in df.columns]
     ]
 
+
+def fetch_factor_ajuste_camiones_report(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Lee el factor oficial de camiones ya calculado por el mantenedor."""
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "FechaInicio y FechaFin son obligatorias para consultar el factor "
+            "de ajuste de camiones."
+        )
+    if start_date > end_date:
+        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
+
+    sql = _sa_text("""
+        SELECT
+            Fecha,
+            Chancado_TMH_Sin_Ajuste,
+            Chancado_TMS_Sin_Ajuste,
+            CASE
+                WHEN KOM_TMH_Corregido IS NOT NULL
+                 AND CAT_TMH_Corregido IS NOT NULL
+                THEN KOM_TMH_Corregido + CAT_TMH_Corregido
+                ELSE NULL
+            END AS Chancado_TMH_Con_Ajuste,
+            Chancado_TMS_Ajustado AS Chancado_TMS_Con_Ajuste,
+            Carga_KOM_TMH_Viaje_Sin_Ajuste,
+            Carga_CAT_TMH_Viaje_Sin_Ajuste,
+            CASE
+                WHEN Vueltas_KOM > 0 AND KOM_TMH_Corregido IS NOT NULL
+                THEN KOM_TMH_Corregido / Vueltas_KOM
+                ELSE NULL
+            END AS Carga_KOM_TMH_Viaje_Con_Ajuste,
+            CASE
+                WHEN Vueltas_CAT > 0 AND CAT_TMH_Corregido IS NOT NULL
+                THEN CAT_TMH_Corregido / Vueltas_CAT
+                ELSE NULL
+            END AS Carga_CAT_TMH_Viaje_Con_Ajuste,
+            Factor_Ajuste_Calculado,
+            Factor_Aplicacion_Reportes,
+            Vueltas_KOM,
+            Vueltas_CAT,
+            Flag_Factor_Ajuste_Valido,
+            Estado_Calculo,
+            Regla_Aplicacion,
+            SRR_TMS_Dia,
+            Produccion_KOM_TMH,
+            Produccion_CAT_TMH,
+            Metodo,
+            Fuente_Camiones,
+            Fecha_Calculo
+        FROM inventar_SpcHidr.v_ajuste_camiones_emision_test
+        WHERE Fecha >= :fecha_inicio
+          AND Fecha < DATEADD(DAY, 1, :fecha_fin)
+        ORDER BY Fecha;
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            df = pd.read_sql(
+                sql,
+                conn,
+                params={"fecha_inicio": start_date, "fecha_fin": end_date},
+            )
+    except Exception as exc:
+        raise RuntimeError(
+            "Error al leer el factor de ajuste de camiones desde "
+            "inventar_SpcHidr.v_ajuste_camiones_emision_test: "
+            f"{exc}"
+        ) from exc
+
+    if "Fecha" in df.columns:
+        df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce").dt.normalize()
+        if df["Fecha"].isna().any():
+            raise ValueError(
+                "La vista del factor de ajuste contiene fechas nulas o inválidas."
+            )
+        if df["Fecha"].duplicated().any():
+            duplicadas = df.loc[df["Fecha"].duplicated(keep=False), "Fecha"]
+            fechas = ", ".join(
+                duplicadas.dropna().dt.strftime("%d-%m-%Y").unique()
+            )
+            raise ValueError(
+                "La vista del factor de ajuste contiene fechas duplicadas"
+                + (f": {fechas}" if fechas else ".")
+            )
+        df = df.sort_values("Fecha", kind="stable").reset_index(drop=True)
+    if "Fecha_Calculo" in df.columns:
+        df["Fecha_Calculo"] = pd.to_datetime(
+            df["Fecha_Calculo"], errors="coerce"
+        )
+    return df
+
 def fetch_representatividad_torres_report(start_date: date, end_date: date) -> pd.DataFrame:
     """
     Consulta representatividad de torres via sp_reporte_representatividad_torres.
