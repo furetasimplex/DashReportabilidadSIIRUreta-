@@ -81,6 +81,27 @@ def test_export_datos_conciliados_replica_layout_oficial():
     assert 'rgb="00' not in styles_xml
 
 
+def test_rango_personalizado_compacta_tabla_y_area_impresion():
+    df = _datos_mtd("2026-08-01", 4, 4)
+    result = export_datos_conciliados_to_template(
+        df,
+        "reporte/Template_DatosConcialiados.xlsx",
+        rango_personalizado=True,
+    )
+    ws = load_workbook(BytesIO(result), keep_links=False).active
+
+    assert ws.print_area == "'Generador Reporte Diario'!$B$2:$AY$25"
+    assert ws["C21"].value == pd.Timestamp("2026-08-01").to_pydatetime()
+    assert ws["C24"].value == pd.Timestamp("2026-08-04").to_pydatetime()
+    assert ws["C25"].value is None
+    assert not ws.row_dimensions[25].hidden
+    assert all(ws.row_dimensions[row].hidden for row in range(26, 52))
+    assert all(
+        ws.cell(25, col).border.bottom.style == "medium"
+        for col in range(2, 52)
+    )
+
+
 def test_fecha_actualizacion_ignora_fechas_futuras_solo_con_plan():
     template = Path("reporte/Template_DatosConcialiados.xlsx")
     rows = []
@@ -358,6 +379,63 @@ def test_resumen_mtd_agosto_no_acumula_julio():
     assert ws["Z3"].value == "MTD agosto 2026 al 03-08-2026"
     assert ws["AB5"].value == 300
     assert ws["AC5"].value == 600
+
+
+def test_resumen_mtd_rotopala_usa_ripios_menos_camiones():
+    df = _datos_mtd("2026-08-01", 1, 1)
+    df.loc[0, "Total_Ripios_Incluye_Camiones_Real"] = 325000
+    df.loc[0, "Camiones_TMS_total"] = 48000
+    df.loc[0, "Total_Ripios_Incluye_Camiones_Plan"] = 330000
+    df.loc[0, "Camiones_TMS_plan"] = 50000
+    df.loc[0, ["TMS_Rotopala_1_Real", "TMS_Rotopala_2_Real"]] = [1, 2]
+    df.loc[0, ["TMS_Rotopala_1_Plan", "TMS_Rotopala_2_Plan"]] = [3, 4]
+
+    resumen = calcular_resumen_mtd(df, pd.Timestamp("2026-08-01"))
+
+    assert resumen["Rotopala"]["real"] == 277000
+    assert resumen["Rotopala"]["plan"] == 280000
+
+
+def test_rango_visible_parcial_usa_fuente_mtd_desde_dia_uno():
+    df_mtd = _datos_mtd("2026-08-01", 7, 7)
+    df_visible = df_mtd.loc[
+        pd.to_datetime(df_mtd["Fecha"]) >= pd.Timestamp("2026-08-03")
+    ].copy()
+
+    output = export_datos_conciliados_to_template(
+        df_visible,
+        "reporte/Template_DatosConcialiados.xlsx",
+        rango_personalizado=True,
+        df_resumen_mtd=df_mtd,
+    )
+    ws = load_workbook(BytesIO(output), keep_links=False).active
+
+    assert ws["C21"].value == pd.Timestamp("2026-08-03").to_pydatetime()
+    assert ws["C25"].value == pd.Timestamp("2026-08-07").to_pydatetime()
+    assert ws["I5"].value == pd.Timestamp("2026-08-07").to_pydatetime()
+    assert ws["Z3"].value == "MTD agosto 2026 al 07-08-2026"
+    assert ws["AB5"].value == 700
+    assert ws["AC5"].value == 1400
+    assert ws["AB9"].value == 350
+    assert ws["AC9"].value == 350
+
+
+def test_fuente_mtd_mantiene_corte_consecutivo_ante_dia_incompleto():
+    df_mtd = _datos_mtd("2026-08-01", 5, 5)
+    df_mtd.loc[3, "Produccion_Catodos_Real"] = None
+    df_visible = df_mtd.iloc[2:].copy()
+
+    output = export_datos_conciliados_to_template(
+        df_visible,
+        "reporte/Template_DatosConcialiados.xlsx",
+        rango_personalizado=True,
+        df_resumen_mtd=df_mtd,
+    )
+    ws = load_workbook(BytesIO(output), keep_links=False).active
+
+    assert ws["I5"].value == pd.Timestamp("2026-08-03").to_pydatetime()
+    assert ws["Z3"].value == "MTD agosto 2026 al 03-08-2026"
+    assert ws["AB5"].value == 300
 
 
 def test_marco_inferior_dinamico_30_y_28_dias():

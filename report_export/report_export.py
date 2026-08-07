@@ -2522,6 +2522,77 @@ def soft_delete_representatividad_generado(id_reporte: int, usuario: str) -> Non
     soft_delete_reporte_torre_oficial(id_reporte, usuario)
 
 
+def _semana_mes_lunes_domingo(fecha) -> int:
+    """Semana del mes con semanas calendario de lunes a domingo."""
+    fecha = pd.Timestamp(fecha)
+    if pd.isna(fecha):
+        raise ValueError("La fecha es obligatoria para calcular la semana del mes.")
+    primer_dia = fecha.replace(day=1).normalize()
+    return int(((fecha.normalize() - primer_dia).days + primer_dia.weekday()) // 7 + 1)
+
+
+def _filtrar_periodo_resumen(
+    df_src: pd.DataFrame,
+    fecha_ref,
+    solo_semana: bool = False,
+) -> pd.DataFrame:
+    """Filtra desde el inicio del mes hasta la fecha de referencia."""
+    if df_src is None or df_src.empty or "Fecha" not in df_src.columns:
+        return pd.DataFrame(columns=df_src.columns if df_src is not None else None)
+
+    fecha_ref = pd.Timestamp(fecha_ref).normalize()
+    data = df_src.copy()
+    fechas = pd.to_datetime(data["Fecha"], errors="coerce").dt.normalize()
+    mascara = (
+        fechas.notna()
+        & fechas.ge(fecha_ref.replace(day=1))
+        & fechas.le(fecha_ref)
+    )
+    if solo_semana:
+        semana_ref = _semana_mes_lunes_domingo(fecha_ref)
+        semanas = fechas.map(
+            lambda fecha: (
+                _semana_mes_lunes_domingo(fecha)
+                if pd.notna(fecha) and fecha.month == fecha_ref.month and fecha.year == fecha_ref.year
+                else np.nan
+            )
+        )
+        mascara &= semanas.eq(semana_ref)
+    return data.loc[mascara].copy()
+
+
+def _promedio_ponderado_periodo(
+    df_src: pd.DataFrame,
+    fecha_ref,
+    valor_col: str,
+    peso_col: str,
+    solo_semana: bool = False,
+):
+    """Promedio ponderado por TMS, excluyendo valores/pesos inválidos."""
+    if (
+        not valor_col
+        or not peso_col
+        or df_src is None
+        or df_src.empty
+        or valor_col not in df_src.columns
+        or peso_col not in df_src.columns
+    ):
+        return ""
+
+    data = _filtrar_periodo_resumen(df_src, fecha_ref, solo_semana=solo_semana)
+    if data.empty:
+        return ""
+    valores = pd.to_numeric(data[valor_col], errors="coerce")
+    pesos = pd.to_numeric(data[peso_col], errors="coerce")
+    validos = valores.notna() & pesos.notna() & pesos.gt(0)
+    if not validos.any():
+        return ""
+    denominador = pesos.loc[validos].sum()
+    if not np.isfinite(denominador) or denominador <= 0:
+        return ""
+    return float((valores.loc[validos] * pesos.loc[validos]).sum() / denominador)
+
+
 def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
@@ -2536,7 +2607,12 @@ def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
 
     if "Fecha" in df.columns:
         df["Fecha_Turno"] = df["Fecha"].dt.strftime("%d-%m-%Y") + " " + df["Turno_excel"]
-        df["Semana"] = "Semana " + (((df["Fecha"].dt.day - 1) // 7) + 1).astype(str)
+        semanas = df["Fecha"].map(
+            lambda fecha: _semana_mes_lunes_domingo(fecha) if pd.notna(fecha) else np.nan
+        )
+        df["Semana"] = semanas.map(
+            lambda semana: f"Semana {int(semana)}" if pd.notna(semana) else ""
+        )
     else:
         df["Fecha_Turno"] = ""
         df["Semana"] = ""
@@ -2671,6 +2747,7 @@ def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
         "Turno",
         "Turno_excel",
         "Fecha_Turno",
+        "Semana",
         "Material",
         "Fuente_Info_Quimica",
         "Fuente_Info_Fisica",
@@ -2941,6 +3018,7 @@ def agregar_hoja_generador_reporte(
     writer: pd.ExcelWriter,
     df_diario: pd.DataFrame,
     df_turno_resumen: pd.DataFrame = None,
+    df_diario_resumen: pd.DataFrame = None,
 ) -> None:
     """
     Agrega la hoja diaria "Generador Reporte" al mismo archivo Excel
@@ -2949,6 +3027,11 @@ def agregar_hoja_generador_reporte(
     No modifica el DataFrame ni el diseño de la hoja por turno.
     """
 
+    df_resumen = (
+        df_diario.copy()
+        if df_diario_resumen is None
+        else df_diario_resumen.copy()
+    )
     df_export = preparar_df_generador_reporte_excel(df_diario)
 
     sheet_name = "Generador Reporte"
@@ -3218,21 +3301,6 @@ def agregar_hoja_generador_reporte(
         value = data.iloc[-1][col_name]
         return "" if pd.isna(value) else value
 
-    def _promedio_periodo(df_src, fecha_ref, col_name, solo_semana=False):
-        if not col_name or df_src is None or df_src.empty or col_name not in df_src.columns or "Fecha" not in df_src.columns:
-            return ""
-        data = df_src.copy()
-        fechas = pd.to_datetime(data["Fecha"], errors="coerce")
-        data = data.loc[fechas.notna()].copy()
-        fechas = pd.to_datetime(data["Fecha"], errors="coerce")
-        data = data.loc[(fechas.dt.month == fecha_ref.month) & (fechas.dt.year == fecha_ref.year)]
-        if solo_semana:
-            semana = ((fecha_ref.day - 1) // 7) + 1
-            fechas = pd.to_datetime(data["Fecha"], errors="coerce")
-            data = data.loc[(((fechas.dt.day - 1) // 7) + 1) == semana]
-        valores = pd.to_numeric(data[col_name], errors="coerce").dropna()
-        return "" if valores.empty else float(valores.mean())
-
     def _escribir_resumen_ultimo_dia():
         if df_export.empty or "Fecha" not in df_export.columns:
             return
@@ -3241,7 +3309,7 @@ def agregar_hoja_generador_reporte(
             return
 
         fecha_ref = fechas.max()
-        semana = ((fecha_ref.day - 1) // 7) + 1
+        semana = _semana_mes_lunes_domingo(fecha_ref)
 
         worksheet.merge_range("V3:AE3", "Reporte Diario Análisis Torre de Muestreo", fmt_resumen_titulo)
         worksheet.merge_range("V4:W4", fecha_ref.to_pydatetime(), fmt_resumen_fecha)
@@ -3286,10 +3354,22 @@ def agregar_hoja_generador_reporte(
                 _valor_turno(fecha_ref, "TB", turno_col),
                 _valor_ultimo_dia(df_export, fecha_ref, dia_col),
                 _valor_ultimo_dia(df_export, fecha_ref, programa_col),
-                _promedio_periodo(df_export, fecha_ref, dia_col, solo_semana=True),
-                _valor_ultimo_dia(df_export, fecha_ref, programa_col),
-                _promedio_periodo(df_export, fecha_ref, dia_col, solo_semana=False),
-                _valor_ultimo_dia(df_export, fecha_ref, plan_col),
+                _promedio_ponderado_periodo(
+                    df_resumen, fecha_ref, dia_col,
+                    "Apilado_TMS_Real_Dia", solo_semana=True,
+                ),
+                _promedio_ponderado_periodo(
+                    df_resumen, fecha_ref, programa_col,
+                    "Apilado_TMS_Programa", solo_semana=True,
+                ),
+                _promedio_ponderado_periodo(
+                    df_resumen, fecha_ref, dia_col,
+                    "Apilado_TMS_Real_Dia", solo_semana=False,
+                ),
+                _promedio_ponderado_periodo(
+                    df_resumen, fecha_ref, plan_col,
+                    "Apilado_TMS_Plan", solo_semana=False,
+                ),
             ]
             for col_idx, value in enumerate(valores, start=23):
                 if value == "":
@@ -3509,6 +3589,7 @@ def export_reporte_turno_estilo_leyes_finos(
     df: pd.DataFrame,
     output,
     df_generador: pd.DataFrame = None,
+    df_generador_resumen: pd.DataFrame = None,
 ):
     """
     Exporta el reporte por turno con formato visual similar al archivo:
@@ -4087,4 +4168,5 @@ def export_reporte_turno_estilo_leyes_finos(
                 writer=writer,
                 df_diario=df_generador,
                 df_turno_resumen=df_export,
+                df_diario_resumen=df_generador_resumen,
             )

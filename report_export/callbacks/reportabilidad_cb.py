@@ -7401,6 +7401,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
     Input({"type": "report-export-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
+    State("report-fecha-modo", "value"),
     prevent_initial_call=True,
     running=[
         (
@@ -7410,7 +7411,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         ),
     ],
 )
-def exportar_excel(n_clicks_list, f_ini, f_fin):
+def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
     triggered = ctx.triggered_id
     print("[RTO] Callback generación Excel disparado")
     print(f"[RTO] n_clicks={n_clicks_list}")
@@ -7549,9 +7550,27 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
             print(f"[EXCEL-T] sp_generador_reporte_diario_emision_test: {time.perf_counter() - _t0:.2f}s")
             print(f"[EXCEL] generador rows={len(df_generador)}")
 
+            inicio_mes_resumen = ini_d.replace(day=1)
+            if inicio_mes_resumen < ini_d:
+                print(
+                    f"[EXCEL] Fetching generador resumen mensual "
+                    f"{inicio_mes_resumen} -> {fin_sql_exclusivo}"
+                )
+                df_generador_resumen = fetch_generador_reporte_diario_emision(
+                    start_date=inicio_mes_resumen,
+                    end_date=fin_sql_exclusivo,
+                )
+            else:
+                df_generador_resumen = df_generador
+
             _t0 = time.perf_counter()
             output = io.BytesIO()
-            export_reporte_turno_estilo_leyes_finos(df=df_turno, output=output, df_generador=df_generador)
+            export_reporte_turno_estilo_leyes_finos(
+                df=df_turno,
+                output=output,
+                df_generador=df_generador,
+                df_generador_resumen=df_generador_resumen,
+            )
             output.seek(0)
             xbytes = output.getvalue()
             print(f"[EXCEL-T] formateo openpyxl (export_reporte_turno_estilo_leyes_finos): {time.perf_counter() - _t0:.2f}s")
@@ -7588,6 +7607,14 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                 start_date=ini_d,
                 end_date=fin_d
             )
+            fecha_inicio_mtd = fin_d.replace(day=1)
+            if ini_d <= fecha_inicio_mtd:
+                df_mtd = df
+            else:
+                df_mtd = fetch_datos_conciliados_emision_report(
+                    start_date=fecha_inicio_mtd,
+                    end_date=fin_d,
+                )
             df_factor = fetch_factor_ajuste_camiones_report(
                 start_date=ini_d,
                 end_date=fin_d,
@@ -7620,6 +7647,8 @@ def exportar_excel(n_clicks_list, f_ini, f_fin):
                     df,
                     template_path,
                     df_factor_ajuste=df_factor,
+                    rango_personalizado=modo_fecha == "rango",
+                    df_resumen_mtd=df_mtd,
                 )
             else:
                 xbytes = _export_dataframe_simple_to_excel(
