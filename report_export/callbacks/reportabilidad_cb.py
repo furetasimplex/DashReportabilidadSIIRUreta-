@@ -3153,7 +3153,10 @@ def _agregar_grafico_gestion_fy(
     chart.dLbls.showPercent = False
     chart.dLbls.showBubbleSize = False
     chart.dLbls.numFmt = "0.0%"
-    chart.dLbls.position = "ctr"
+    # Las representatividades bajas no tienen altura suficiente para alojar
+    # una etiqueta blanca centrada: Excel/LibreOffice la omiten al renderizar.
+    # Ubicarla sobre la barra mantiene visibles los porcentajes pequeños.
+    chart.dLbls.position = "outEnd"
     chart.dLbls.txPr = RichText(
         bodyPr=RichTextProperties(anchor="ctr"),
         p=[
@@ -3162,7 +3165,7 @@ def _agregar_grafico_gestion_fy(
                     defRPr=CharacterProperties(
                         sz=1000,
                         b=True,
-                        solidFill="FFFFFF",
+                        solidFill="595959",
                     )
                 ),
                 endParaRPr=CharacterProperties(lang="es-CL"),
