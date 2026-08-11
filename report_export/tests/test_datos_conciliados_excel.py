@@ -7,6 +7,7 @@ import pytest
 from openpyxl import load_workbook
 
 from report_export.export_to_excel import (
+    _validar_factor_ajuste_camiones,
     _obtener_fecha_corte_resumen_datos_conciliados,
     aplicar_formato_datos_conciliados,
     calcular_resumen_mtd,
@@ -28,8 +29,8 @@ def test_export_datos_conciliados_replica_layout_oficial():
     )
     ws = load_workbook(BytesIO(result), keep_links=False).active
 
-    assert ws.title == "Datos Conciliados"
-    assert ws.print_area == "'Datos Conciliados'!$B$2:$AY$52"
+    assert ws.title == "Generador Reporte Diario"
+    assert ws.print_area == "'Generador Reporte Diario'!$B$2:$AY$52"
     assert not ws.column_dimensions["AY"].hidden
     assert ws.freeze_panes is None
     assert ws.max_row <= 52
@@ -78,6 +79,27 @@ def test_export_datos_conciliados_replica_layout_oficial():
     with ZipFile(BytesIO(result)) as archive:
         styles_xml = archive.read("xl/styles.xml").decode("utf-8")
     assert 'rgb="00' not in styles_xml
+
+
+def test_rango_personalizado_compacta_tabla_y_area_impresion():
+    df = _datos_mtd("2026-08-01", 4, 4)
+    result = export_datos_conciliados_to_template(
+        df,
+        "reporte/Template_DatosConcialiados.xlsx",
+        rango_personalizado=True,
+    )
+    ws = load_workbook(BytesIO(result), keep_links=False).active
+
+    assert ws.print_area == "'Generador Reporte Diario'!$B$2:$AY$25"
+    assert ws["C21"].value == pd.Timestamp("2026-08-01").to_pydatetime()
+    assert ws["C24"].value == pd.Timestamp("2026-08-04").to_pydatetime()
+    assert ws["C25"].value is None
+    assert not ws.row_dimensions[25].hidden
+    assert all(ws.row_dimensions[row].hidden for row in range(26, 52))
+    assert all(
+        ws.cell(25, col).border.bottom.style == "medium"
+        for col in range(2, 52)
+    )
 
 
 def test_fecha_actualizacion_ignora_fechas_futuras_solo_con_plan():
@@ -148,6 +170,122 @@ def _datos_mtd(fecha_inicio: str, dias: int, ultimo_dia_real: int):
             )
         rows.append(row)
     return pd.DataFrame(rows, columns=COLUMNAS_DATOS_CONCILIADOS)
+
+
+def _datos_factor_ajuste():
+    rows = []
+    for fecha in pd.date_range("2026-08-01", periods=5):
+        fallback = fecha.day == 5
+        rows.append({
+            "Fecha": fecha,
+            "Chancado_TMH_Sin_Ajuste": 1000.0,
+            "Chancado_TMS_Sin_Ajuste": 900.0,
+            "Chancado_TMH_Con_Ajuste": 1000.0,
+            "Chancado_TMS_Con_Ajuste": 900.0,
+            "Carga_KOM_TMH_Viaje_Sin_Ajuste": 50.0,
+            "Carga_CAT_TMH_Viaje_Sin_Ajuste": None if fallback else 45.0,
+            "Carga_KOM_TMH_Viaje_Con_Ajuste": 50.0,
+            "Carga_CAT_TMH_Viaje_Con_Ajuste": None if fallback else 45.0,
+            "Factor_Ajuste_Calculado": None if fallback else 1.0,
+            "Factor_Aplicacion_Reportes": 1.0,
+            "Vueltas_KOM": 20,
+            "Vueltas_CAT": 0 if fallback else 10,
+            "Flag_Factor_Ajuste_Valido": 0 if fallback else 1,
+            "Estado_Calculo": "SIN_INVENTARIO" if fallback else "OK_SIN_AJUSTE",
+            "Regla_Aplicacion": (
+                "FALLBACK_SIN_INVENTARIO" if fallback
+                else "APLICA_AJUSTE_VALIDADO"
+            ),
+            "Fecha_Calculo": fecha + pd.Timedelta(hours=8),
+        })
+    return pd.DataFrame(rows)
+
+
+def test_export_agrega_hoja_factor_sin_alterar_hoja_principal():
+    df = _datos_mtd("2026-08-01", 5, 5)
+    template = "reporte/Template_DatosConcialiados.xlsx"
+    sin_factor = export_datos_conciliados_to_template(df, template)
+    con_factor = export_datos_conciliados_to_template(
+        df, template, df_factor_ajuste=_datos_factor_ajuste(),
+    )
+
+    wb_sin_factor = load_workbook(BytesIO(sin_factor), keep_links=False)
+    wb_con_factor = load_workbook(BytesIO(con_factor), keep_links=False)
+    assert "Factor ajuste camiones" in wb_con_factor.sheetnames
+
+    ws_base = wb_sin_factor["Generador Reporte Diario"]
+    ws_nueva = wb_con_factor["Generador Reporte Diario"]
+    assert [
+        [cell.value for cell in row]
+        for row in ws_base.iter_rows(min_row=1, max_row=ws_base.max_row)
+    ] == [
+        [cell.value for cell in row]
+        for row in ws_nueva.iter_rows(min_row=1, max_row=ws_nueva.max_row)
+    ]
+
+    ws = wb_con_factor["Factor ajuste camiones"]
+    assert ws.sheet_view.showGridLines is False
+    assert ws.freeze_panes == "A2"
+    assert ws.max_column == 12
+    assert [ws.cell(1, col).value for col in range(1, 13)] == [
+        "Fecha", "TMH Sin ajuste", "TMS Sin ajuste", "TMH Con ajuste",
+        "TMS Con ajuste", "Factor de Carga KOM Sin ajuste",
+        "Factor de Carga CAT Sin ajuste", "Factor de Carga KOM con ajuste",
+        "Factor de Carga CAT con ajuste", "Factor ajuste",
+        "n° vueltas KOM", "n° vueltas CAT",
+    ]
+    assert ws["A6"].value == pd.Timestamp("2026-08-05").to_pydatetime()
+    assert ws["G6"].value is None
+    assert ws["I6"].value is None
+    assert ws["J6"].value is None
+    assert ws["K6"].value == 20
+    assert ws["L6"].value == 0
+    assert ws["A1"].font.name == "Arial"
+    assert ws["A1"].font.bold
+    assert ws["A1"].font.color.rgb == "FF476475"
+    assert ws["B2"].font.name == "Arial"
+    assert ws["B2"].font.sz == 10
+    assert ws["B2"].font.color.rgb == "FF476475"
+    assert ws["B2"].fill.fgColor.rgb == "FFFFFFFF"
+    assert ws["B3"].fill.fgColor.rgb == "FFD7E1E7"
+    valores_visibles = {
+        ws.cell(row, col).value
+        for row in range(1, ws.max_row + 1)
+        for col in range(1, ws.max_column + 1)
+    }
+    assert "Factor aplicado" not in valores_visibles
+    assert "Factor válido" not in valores_visibles
+    assert "Estado cálculo" not in valores_visibles
+    assert "Regla aplicación" not in valores_visibles
+
+
+def test_validar_factor_acepta_fechas_futuras_y_factor_calculado_null():
+    df = _datos_mtd("2026-08-01", 5, 5)
+    factor = _datos_factor_ajuste()
+    _validar_factor_ajuste_camiones(df, factor)
+
+    df_mes_completo = _datos_mtd("2026-08-01", 31, 5)
+    _validar_factor_ajuste_camiones(df_mes_completo, factor)
+
+
+def test_validar_factor_rechaza_huecos_dentro_del_periodo_calculado():
+    df = _datos_mtd("2026-08-01", 5, 5)
+    factor = _datos_factor_ajuste().drop(index=2)
+    with pytest.raises(ValueError, match="03-08-2026"):
+        _validar_factor_ajuste_camiones(df, factor)
+
+
+def test_validar_factor_rechaza_duplicados_y_trazabilidad_null():
+    df = _datos_mtd("2026-08-01", 5, 5)
+    factor = _datos_factor_ajuste()
+    with pytest.raises(ValueError, match="más de una fila"):
+        _validar_factor_ajuste_camiones(
+            df, pd.concat([factor, factor.iloc[[0]]], ignore_index=True),
+        )
+
+    factor.loc[0, "Estado_Calculo"] = None
+    with pytest.raises(ValueError, match="Estado_Calculo"):
+        _validar_factor_ajuste_camiones(df, factor)
 
 
 def test_fecha_corte_se_detiene_en_primera_fila_incompleta():
@@ -241,6 +379,63 @@ def test_resumen_mtd_agosto_no_acumula_julio():
     assert ws["Z3"].value == "MTD agosto 2026 al 03-08-2026"
     assert ws["AB5"].value == 300
     assert ws["AC5"].value == 600
+
+
+def test_resumen_mtd_rotopala_usa_ripios_menos_camiones():
+    df = _datos_mtd("2026-08-01", 1, 1)
+    df.loc[0, "Total_Ripios_Incluye_Camiones_Real"] = 325000
+    df.loc[0, "Camiones_TMS_total"] = 48000
+    df.loc[0, "Total_Ripios_Incluye_Camiones_Plan"] = 330000
+    df.loc[0, "Camiones_TMS_plan"] = 50000
+    df.loc[0, ["TMS_Rotopala_1_Real", "TMS_Rotopala_2_Real"]] = [1, 2]
+    df.loc[0, ["TMS_Rotopala_1_Plan", "TMS_Rotopala_2_Plan"]] = [3, 4]
+
+    resumen = calcular_resumen_mtd(df, pd.Timestamp("2026-08-01"))
+
+    assert resumen["Rotopala"]["real"] == 277000
+    assert resumen["Rotopala"]["plan"] == 280000
+
+
+def test_rango_visible_parcial_usa_fuente_mtd_desde_dia_uno():
+    df_mtd = _datos_mtd("2026-08-01", 7, 7)
+    df_visible = df_mtd.loc[
+        pd.to_datetime(df_mtd["Fecha"]) >= pd.Timestamp("2026-08-03")
+    ].copy()
+
+    output = export_datos_conciliados_to_template(
+        df_visible,
+        "reporte/Template_DatosConcialiados.xlsx",
+        rango_personalizado=True,
+        df_resumen_mtd=df_mtd,
+    )
+    ws = load_workbook(BytesIO(output), keep_links=False).active
+
+    assert ws["C21"].value == pd.Timestamp("2026-08-03").to_pydatetime()
+    assert ws["C25"].value == pd.Timestamp("2026-08-07").to_pydatetime()
+    assert ws["I5"].value == pd.Timestamp("2026-08-07").to_pydatetime()
+    assert ws["Z3"].value == "MTD agosto 2026 al 07-08-2026"
+    assert ws["AB5"].value == 700
+    assert ws["AC5"].value == 1400
+    assert ws["AB9"].value == 350
+    assert ws["AC9"].value == 350
+
+
+def test_fuente_mtd_mantiene_corte_consecutivo_ante_dia_incompleto():
+    df_mtd = _datos_mtd("2026-08-01", 5, 5)
+    df_mtd.loc[3, "Produccion_Catodos_Real"] = None
+    df_visible = df_mtd.iloc[2:].copy()
+
+    output = export_datos_conciliados_to_template(
+        df_visible,
+        "reporte/Template_DatosConcialiados.xlsx",
+        rango_personalizado=True,
+        df_resumen_mtd=df_mtd,
+    )
+    ws = load_workbook(BytesIO(output), keep_links=False).active
+
+    assert ws["I5"].value == pd.Timestamp("2026-08-03").to_pydatetime()
+    assert ws["Z3"].value == "MTD agosto 2026 al 03-08-2026"
+    assert ws["AB5"].value == 300
 
 
 def test_marco_inferior_dinamico_30_y_28_dias():

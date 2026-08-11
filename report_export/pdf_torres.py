@@ -253,9 +253,12 @@ def _grafico_gestion_fy(df_fy, titulo, ancho_pt, alto_pt):
             label="Target")
 
     for indice, valor in enumerate(valores):
-        if valor > 0.08:
-            ax.text(indice, valor / 2, _pct(valor), ha="center", va="center",
-                    color="white", fontsize=6.5, fontweight="bold")
+        # Sobre la barra, igual que en el Excel: así los porcentajes bajos y
+        # el 0,0% no desaparecen por falta de espacio dentro de la columna.
+        posicion_y = min(valor + 0.015, 0.985)
+        alineacion_y = "bottom" if valor < 0.97 else "top"
+        ax.text(indice, posicion_y, _pct(valor), ha="center", va=alineacion_y,
+                color="#595959", fontsize=6.5, fontweight="bold")
 
     ax.set_ylim(0, 1)
     ax.set_xticks(list(x))

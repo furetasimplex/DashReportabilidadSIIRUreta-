@@ -378,17 +378,13 @@ def calcular_resumen_mtd(df: pd.DataFrame, fecha_actualizacion) -> dict:
     total_camiones_plan = _suma_mtd(datos, "Camiones_TMS_plan")
     total_ripios_real = _suma_mtd(datos, "Total_Ripios_Incluye_Camiones_Real")
     total_ripios_plan = _suma_mtd(datos, "Total_Ripios_Incluye_Camiones_Plan")
-    rotopala_1_real = _suma_mtd(datos, "TMS_Rotopala_1_Real")
-    rotopala_2_real = _suma_mtd(datos, "TMS_Rotopala_2_Real")
-    rotopala_1_plan = _suma_mtd(datos, "TMS_Rotopala_1_Plan")
-    rotopala_2_plan = _suma_mtd(datos, "TMS_Rotopala_2_Plan")
     rotopala_real = (
-        None if rotopala_1_real is None or rotopala_2_real is None
-        else rotopala_1_real + rotopala_2_real
+        None if total_ripios_real is None or total_camiones_real is None
+        else total_ripios_real - total_camiones_real
     )
     rotopala_plan = (
-        None if rotopala_1_plan is None or rotopala_2_plan is None
-        else rotopala_1_plan + rotopala_2_plan
+        None if total_ripios_plan is None or total_camiones_plan is None
+        else total_ripios_plan - total_camiones_plan
     )
 
     return {
@@ -499,16 +495,32 @@ def aplicar_borde_inferior_reporte(
         cell.border = cache[key]
 
 
-def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
-    """Aplica la presentación oficial al bloque B2:AY52; AY queda vacía."""
+def aplicar_formato_datos_conciliados(
+    ws,
+    cantidad_dias_mes: int,
+    *,
+    rango_personalizado: bool = False,
+    cantidad_filas_reporte: int | None = None,
+) -> None:
+    """Aplica la presentación oficial, compactando solo rangos personalizados."""
     for column, width in ANCHOS_DATOS_CONCILIADOS.items():
         ws.column_dimensions[column].width = width
 
     for row, height in ALTURAS_DATOS_CONCILIADOS.items():
         ws.row_dimensions[row].height = height
+    filas_visibles = (
+        max(int(cantidad_filas_reporte or 0), 0)
+        if rango_personalizado
+        else min(max(cantidad_dias_mes, 0), 31)
+    )
+    ultima_fila_datos = 20 + filas_visibles
+    fila_cierre = max(21, ultima_fila_datos + 1)
+
     for row in range(21, 52):
         ws.row_dimensions[row].height = 13.8
-        ws.row_dimensions[row].hidden = False
+        ws.row_dimensions[row].hidden = bool(
+            rango_personalizado and row > fila_cierre
+        )
     for row in range(10, 14):
         ws.row_dimensions[row].hidden = True
 
@@ -548,7 +560,8 @@ def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
     # Fila 21 mantiene su apertura especial. Desde la 22 se alternan solo dos
     # rellenos compartidos, sin crear estilos según el valor de la celda.
     border_cache = {}
-    for row in range(21, 52):
+    ultima_fila_formato = ultima_fila_datos if rango_personalizado else 51
+    for row in range(21, ultima_fila_formato + 1):
         fill = None
         if row >= 22:
             fill = RELLENO_BANDA_AZUL if row % 2 == 0 else RELLENO_BANDA_BLANCA
@@ -587,8 +600,9 @@ def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
                 bottom=copy_module.copy(cell.border.bottom),
             )
 
-    # Siempre se mantienen visibles los 31 espacios diarios, incluido julio 31.
-    for row in range(21, 21 + min(max(cantidad_dias_mes, 0), 31)):
+    # Mes completo conserva los 31 espacios oficiales. Un rango personalizado
+    # muestra solo sus datos y la fila de cierre inmediatamente inferior.
+    for row in range(21, min(fila_cierre, 51) + 1):
         ws.row_dimensions[row].hidden = False
 
     ws.freeze_panes = None
@@ -605,7 +619,11 @@ def aplicar_formato_datos_conciliados(ws, cantidad_dias_mes: int) -> None:
     # AY se mantiene con su ancho original para no alterar la escala ni la
     # posición visual del logo, pero el estado no se imprime en sus celdas.
     ws.column_dimensions["AY"].hidden = False
-    ws.print_area = "B2:AY52"
+    ws.print_area = (
+        f"B2:AY{fila_cierre}"
+        if rango_personalizado
+        else "B2:AY52"
+    )
     ws.page_setup.orientation = "landscape"
     ws.page_setup.paperSize = "17"
     ws.page_setup.scale = 23
@@ -730,7 +748,150 @@ def export_dataframe_with_template(df: pd.DataFrame, template_path: str) -> byte
     return out.getvalue()
 
 
-def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -> bytes:
+def _validar_factor_ajuste_camiones(
+    df_datos_conciliados: pd.DataFrame,
+    df_factor: pd.DataFrame,
+) -> None:
+    """Valida la cobertura y trazabilidad del factor oficial a exportar."""
+    if df_factor is None:
+        raise ValueError("El DataFrame del factor de ajuste no puede ser None.")
+    if df_factor.empty:
+        raise ValueError("No existen datos del factor de ajuste para el reporte.")
+
+    requeridas = {
+        "Fecha", "Factor_Aplicacion_Reportes", "Flag_Factor_Ajuste_Valido",
+        "Estado_Calculo", "Regla_Aplicacion",
+    }
+    faltantes = sorted(requeridas.difference(df_factor.columns))
+    if faltantes:
+        raise ValueError(
+            "Faltan columnas indispensables del factor de ajuste: "
+            + ", ".join(faltantes)
+        )
+
+    fechas_factor = pd.to_datetime(df_factor["Fecha"], errors="coerce").dt.normalize()
+    if fechas_factor.isna().any():
+        raise ValueError("El factor de ajuste contiene fechas nulas o inválidas.")
+    if fechas_factor.duplicated().any():
+        raise ValueError("El factor de ajuste contiene más de una fila por Fecha.")
+
+    if "Fecha" not in df_datos_conciliados.columns:
+        raise ValueError("Datos Conciliados no contiene la columna Fecha.")
+    fechas_reporte = pd.to_datetime(
+        df_datos_conciliados["Fecha"], errors="coerce"
+    ).dt.normalize()
+    if fechas_reporte.isna().any():
+        raise ValueError("Datos Conciliados contiene fechas nulas o inválidas.")
+    # Datos Conciliados puede incluir el resto del mes con valores planificados,
+    # mientras que la vista del factor solo publica días ya calculados. Se exige
+    # cobertura hasta el último día efectivamente disponible en esa vista; las
+    # fechas posteriores no deben bloquear el Excel ni recibir factores ficticios.
+    fecha_maxima_factor = fechas_factor.max()
+    fechas_operacionales = fechas_reporte[fechas_reporte <= fecha_maxima_factor]
+    faltan_fechas = fechas_operacionales[
+        ~fechas_operacionales.isin(fechas_factor)
+    ].drop_duplicates()
+    if not faltan_fechas.empty:
+        raise ValueError(
+            "Falta el factor de ajuste para las fechas: "
+            + ", ".join(faltan_fechas.dt.strftime("%d-%m-%Y"))
+        )
+
+    filas_reporte = df_factor.loc[fechas_factor.isin(fechas_operacionales)]
+    for columna in (
+        "Factor_Aplicacion_Reportes", "Estado_Calculo", "Regla_Aplicacion",
+    ):
+        if filas_reporte[columna].isna().any():
+            raise ValueError(
+                f"{columna} contiene valores NULL para fechas del reporte."
+            )
+
+
+def _agregar_hoja_factor_ajuste_camiones(
+    wb,
+    df_factor: pd.DataFrame,
+) -> None:
+    """Agrega el factor de camiones con el formato operacional de referencia."""
+    nombre_hoja = "Factor ajuste camiones"
+    if nombre_hoja in wb.sheetnames:
+        del wb[nombre_hoja]
+    ws = wb.create_sheet(nombre_hoja)
+    ws.sheet_view.showGridLines = False
+    ws.freeze_panes = "A2"
+
+    columnas = (
+        ("Fecha", "Fecha"),
+        ("TMH Sin ajuste", "Chancado_TMH_Sin_Ajuste"),
+        ("TMS Sin ajuste", "Chancado_TMS_Sin_Ajuste"),
+        ("TMH Con ajuste", "Chancado_TMH_Con_Ajuste"),
+        ("TMS Con ajuste", "Chancado_TMS_Con_Ajuste"),
+        ("Factor de Carga KOM Sin ajuste", "Carga_KOM_TMH_Viaje_Sin_Ajuste"),
+        ("Factor de Carga CAT Sin ajuste", "Carga_CAT_TMH_Viaje_Sin_Ajuste"),
+        ("Factor de Carga KOM con ajuste", "Carga_KOM_TMH_Viaje_Con_Ajuste"),
+        ("Factor de Carga CAT con ajuste", "Carga_CAT_TMH_Viaje_Con_Ajuste"),
+        ("Factor ajuste", "Factor_Ajuste_Calculado"),
+        ("n° vueltas KOM", "Vueltas_KOM"),
+        ("n° vueltas CAT", "Vueltas_CAT"),
+    )
+    borde_fino = Side(style="thin", color="000000")
+    borde_tabla = Border(
+        left=borde_fino, right=borde_fino,
+        top=borde_fino, bottom=borde_fino,
+    )
+    color_texto = "476475"
+    relleno_blanco = PatternFill("solid", fgColor="FFFFFF")
+    relleno_alterno = PatternFill("solid", fgColor="D7E1E7")
+    for indice, (encabezado, _) in enumerate(columnas, start=1):
+        celda = ws.cell(1, indice, encabezado)
+        celda.font = Font(name="Arial", size=11, bold=True, color=color_texto)
+        celda.fill = relleno_blanco
+        celda.alignment = Alignment(
+            horizontal="center", vertical="center", wrap_text=True
+        )
+        celda.border = borde_tabla
+    ws.row_dimensions[1].height = 57.6
+
+    for fila_excel, (_, fila) in enumerate(df_factor.iterrows(), start=2):
+        for col_excel, (_, columna_fuente) in enumerate(columnas, start=1):
+            valor = fila[columna_fuente] if columna_fuente in df_factor.columns else None
+            if pd.isna(valor):
+                valor = None
+            elif columna_fuente in {"Fecha", "Fecha_Calculo"} and hasattr(valor, "to_pydatetime"):
+                valor = valor.to_pydatetime()
+            celda = ws.cell(fila_excel, col_excel, valor)
+            celda.font = Font(
+                name="Arial",
+                size=11 if col_excel == 1 else 10,
+                color=color_texto,
+            )
+            celda.fill = (
+                relleno_blanco if fila_excel % 2 == 0 else relleno_alterno
+            )
+            celda.alignment = Alignment(horizontal="center", vertical="center")
+            celda.border = borde_tabla
+
+    ultima_fila = max(2, 1 + len(df_factor))
+    for fila in range(2, ultima_fila + 1):
+        ws.cell(fila, 1).alignment = Alignment(horizontal="center", vertical="center")
+        ws.cell(fila, 1).number_format = "dd/mm/yyyy"
+        for col in range(2, 10):
+            ws.cell(fila, col).number_format = "#,##0"
+        ws.cell(fila, 10).number_format = "0.00"
+        for col in (11, 12):
+            ws.cell(fila, col).number_format = "0"
+
+    anchos = (13.8, 12, 12, 12, 12, 15, 15, 15, 15, 10, 9, 9)
+    for indice, ancho in enumerate(anchos, start=1):
+        ws.column_dimensions[get_column_letter(indice)].width = ancho
+
+
+def export_datos_conciliados_to_template(
+    df: pd.DataFrame,
+    template_path: str,
+    df_factor_ajuste: pd.DataFrame | None = None,
+    rango_personalizado: bool = False,
+    df_resumen_mtd: pd.DataFrame | None = None,
+) -> bytes:
     """
     Escribe los datos del reporte 'Datos conciliados' en la plantilla Excel.
     - Datos desde el inicio de la tabla detectado en la plantilla.
@@ -739,12 +900,20 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
       las filas de datos para que la tabla crezca sin romper la estructura.
     """
     df_export = df
-    fecha_corte_resumen = _obtener_fecha_corte_resumen_datos_conciliados(df_export)
-    fechas_export = pd.to_datetime(df_export["Fecha"], errors="coerce").dt.normalize()
-    df_resumen = df_export[fechas_export <= fecha_corte_resumen].copy()
+    df_base_resumen = df_resumen_mtd if df_resumen_mtd is not None else df_export
+    fecha_corte_resumen = _obtener_fecha_corte_resumen_datos_conciliados(
+        df_base_resumen
+    )
+    fechas_resumen = pd.to_datetime(
+        df_base_resumen["Fecha"], errors="coerce"
+    ).dt.normalize()
+    df_resumen = df_base_resumen[
+        fechas_resumen <= fecha_corte_resumen
+    ].copy()
 
     wb = _load_template(template_path)
     ws = wb.active
+    ws.title = "Generador Reporte Diario"
     fecha_actualizacion = _actualizar_encabezado_datos_conciliados(
         ws, df_resumen, fecha_corte_resumen,
     )
@@ -858,14 +1027,24 @@ def export_datos_conciliados_to_template(df: pd.DataFrame, template_path: str) -
         )[1]
     else:
         cantidad_dias_mes = min(len(df), 31)
-    aplicar_formato_datos_conciliados(ws, cantidad_dias_mes)
-    aplicar_borde_inferior_reporte(
+    aplicar_formato_datos_conciliados(
         ws,
-        fila_inicio_datos=start_row,
-        fila_fin_mes=start_row + cantidad_dias_mes - 1,
-        columna_inicio=start_col,
-        columna_fin=start_col + num_cols - 2,  # C:AX; AY es indicador lateral.
+        cantidad_dias_mes,
+        rango_personalizado=rango_personalizado,
+        cantidad_filas_reporte=len(df),
     )
+    if not rango_personalizado:
+        aplicar_borde_inferior_reporte(
+            ws,
+            fila_inicio_datos=start_row,
+            fila_fin_mes=start_row + cantidad_dias_mes - 1,
+            columna_inicio=start_col,
+            columna_fin=start_col + num_cols - 2,  # C:AX; AY es indicador lateral.
+        )
+
+    if df_factor_ajuste is not None:
+        _validar_factor_ajuste_camiones(df, df_factor_ajuste)
+        _agregar_hoja_factor_ajuste_camiones(wb, df_factor_ajuste)
 
     out = io.BytesIO()
     wb.save(out)

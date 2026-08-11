@@ -13,6 +13,90 @@ from report_export.export_to_excel import (
 
 
 class ErrorModalExportacionTests(unittest.TestCase):
+    def test_datos_conciliados_conserva_orden_oficial_y_factor_es_lectura_posterior(self):
+        eventos = []
+        datos = pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]})
+        factor = pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]})
+
+        with (
+            patch.object(
+                cb, "ctx",
+                SimpleNamespace(triggered_id={"type": "report-export-btn", "tipo": "prod"}),
+            ),
+            patch.object(
+                cb, "refrescar_historico_apilado_report",
+                side_effect=lambda **_: eventos.append("refrescar_historico"),
+            ),
+            patch.object(
+                cb, "actualizar_datos_conciliados_emision_report",
+                side_effect=lambda **_: eventos.append("mantenedor_oficial"),
+            ),
+            patch.object(
+                cb, "fetch_datos_conciliados_emision_report",
+                side_effect=lambda **_: eventos.append("leer_datos") or datos,
+            ),
+            patch.object(
+                cb, "fetch_factor_ajuste_camiones_report",
+                side_effect=lambda **_: eventos.append("leer_factor") or factor,
+            ),
+            patch.object(cb.os.path, "isfile", return_value=True),
+            patch.object(
+                cb, "export_datos_conciliados_to_template",
+                side_effect=lambda *_, **kwargs: (
+                    eventos.append("exportar") or b"xlsx"
+                ),
+            ) as exportador,
+        ):
+            cb.exportar_excel(
+                [1], "2026-08-01", "2026-08-01", modo_fecha="rango"
+            )
+
+        self.assertEqual(eventos, [
+            "refrescar_historico", "mantenedor_oficial", "leer_datos",
+            "leer_factor", "exportar",
+        ])
+        self.assertIs(exportador.call_args.kwargs["df_factor_ajuste"], factor)
+        self.assertTrue(exportador.call_args.kwargs["rango_personalizado"])
+        self.assertIs(exportador.call_args.kwargs["df_resumen_mtd"], datos)
+
+    def test_datos_conciliados_rango_parcial_lee_mtd_desde_dia_uno(self):
+        visible = pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-03")]})
+        mtd = pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]})
+
+        with (
+            patch.object(
+                cb, "ctx",
+                SimpleNamespace(triggered_id={"type": "report-export-btn", "tipo": "prod"}),
+            ),
+            patch.object(cb, "refrescar_historico_apilado_report"),
+            patch.object(cb, "actualizar_datos_conciliados_emision_report"),
+            patch.object(
+                cb, "fetch_datos_conciliados_emision_report",
+                side_effect=[visible, mtd],
+            ) as lector,
+            patch.object(
+                cb, "fetch_factor_ajuste_camiones_report",
+                return_value=pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-03")]}),
+            ),
+            patch.object(cb.os.path, "isfile", return_value=True),
+            patch.object(
+                cb, "export_datos_conciliados_to_template", return_value=b"xlsx",
+            ) as exportador,
+        ):
+            cb.exportar_excel(
+                [1], "2026-08-03", "2026-08-07", modo_fecha="rango"
+            )
+
+        self.assertEqual(lector.call_count, 2)
+        self.assertEqual(
+            lector.call_args_list[1].kwargs,
+            {
+                "start_date": pd.Timestamp("2026-08-01").date(),
+                "end_date": pd.Timestamp("2026-08-07").date(),
+            },
+        )
+        self.assertIs(exportador.call_args.kwargs["df_resumen_mtd"], mtd)
+
     def test_dependencia_datos_abre_modal_con_contexto_ux(self):
         error = DependenciaDatosExportError(
             "Datos Conciliados incompletos",
@@ -35,6 +119,11 @@ class ErrorModalExportacionTests(unittest.TestCase):
                 cb,
                 "fetch_datos_conciliados_emision_report",
                 return_value=datos,
+            ),
+            patch.object(
+                cb,
+                "fetch_factor_ajuste_camiones_report",
+                return_value=pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]}),
             ),
             patch.object(cb.os.path, "isfile", return_value=True),
             patch.object(
