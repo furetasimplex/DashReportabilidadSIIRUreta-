@@ -1,6 +1,6 @@
--- Fuente: definición vigente en DEV_SIIR (sys.sql_modules).
+-- Fuente: definición vigente en PROD_SIIR (sys.sql_modules).
 -- Extraída: 2026-08-05 16:42:45.363000
-USE [DEV_SIIR];
+USE [PROD_SIIR];
 GO
 
 CREATE   VIEW [hidro].[v_imp_conciliacion_chancado]

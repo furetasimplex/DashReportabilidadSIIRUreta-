@@ -7,7 +7,7 @@ import pytest
 from flask import Flask
 from passlib.hash import django_pbkdf2_sha256
 
-os.environ.setdefault("LOGIN_DATABASE", "DEV_SIIR.dbo.auth_user")
+os.environ.setdefault("LOGIN_DATABASE", "PROD_SIIR.dbo.auth_user")
 import auth  # noqa: E402  (LOGIN_DATABASE se lee al importar)
 
 

@@ -1,4 +1,4 @@
-"""Inspecciona dos vistas hidro en la BD actual y DEV_SIIR (solo lectura)."""
+"""Inspecciona dos vistas hidro en la BD actual y PROD_SIIR (solo lectura)."""
 
 from pathlib import Path
 import hashlib
@@ -12,14 +12,15 @@ from db_connection import get_engine
 
 VIEWS = ("v_imp_chancado_normalizado", "v_imp_conciliacion_chancado")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+HIDRO_DB = "PROD_SIIR"
 
 
 def script_sql(definition: str, modified_at) -> str:
     definition = definition.replace("\r\n", "\n").strip()
     return (
-        "-- Fuente: definición vigente en DEV_SIIR (sys.sql_modules).\n"
+        f"-- Fuente: definición vigente en {HIDRO_DB} (sys.sql_modules).\n"
         f"-- Extraída: {modified_at}\n"
-        "USE [DEV_SIIR];\n"
+        f"USE [{HIDRO_DB}];\n"
         "GO\n\n"
         f"{definition}\n"
         "GO\n"
@@ -30,10 +31,10 @@ def main() -> None:
     engine = get_engine()
     with engine.connect() as conn:
         databases = [conn.scalar(text("SELECT DB_NAME()"))]
-        if conn.scalar(text("SELECT DB_ID('DEV_SIIR')")) is not None:
-            databases.append("DEV_SIIR")
+        if conn.scalar(text(f"SELECT DB_ID('{HIDRO_DB}')")) is not None:
+            databases.append(HIDRO_DB)
 
-        dev_definitions = {}
+        hidro_definitions = {}
         for database in dict.fromkeys(databases):
             sql = text(
                 f"""
@@ -58,22 +59,22 @@ def main() -> None:
                     f"{database}.hidro.{name}: caracteres={len(row.definition)} "
                     f"sha256={digest} modificada={row.modify_date}"
                 )
-                if database == "DEV_SIIR":
-                    dev_definitions[name] = row
+                if database == HIDRO_DB:
+                    hidro_definitions[name] = row
 
     if "--write" not in sys.argv:
         return
-    missing = [name for name in VIEWS if name not in dev_definitions]
+    missing = [name for name in VIEWS if name not in hidro_definitions]
     if missing:
         raise RuntimeError(f"No se exportarán archivos; faltan vistas: {missing}")
 
     combined = [
         "-- Vistas hidro vigentes utilizadas por Análisis TM.",
-        "-- Fuente: DEV_SIIR.sys.sql_modules.",
+        f"-- Fuente: {HIDRO_DB}.sys.sql_modules.",
         "",
     ]
     for name in VIEWS:
-        row = dev_definitions[name]
+        row = hidro_definitions[name]
         content = script_sql(row.definition, row.modify_date)
         for folder in ("docs/views", "docs/stored_procedures"):
             target = PROJECT_ROOT / folder / f"{name}.sql"
@@ -82,7 +83,7 @@ def main() -> None:
         combined.extend(
             [
                 "-- " + "=" * 76,
-                f"-- DEV_SIIR.hidro.{name}",
+                f"-- {HIDRO_DB}.hidro.{name}",
                 "-- " + "=" * 76,
                 "",
                 content,
@@ -95,7 +96,10 @@ def main() -> None:
     )
     report_target.parent.mkdir(parents=True, exist_ok=True)
     report_target.write_text("\n".join(combined), encoding="utf-8")
-    print("Definiciones actualizadas en docs/views, docs/stored_procedures y reporte Análisis TM")
+    print(
+        "Definiciones actualizadas en docs/views, docs/stored_procedures "
+        "y reporte Análisis TM"
+    )
 
 
 if __name__ == "__main__":

@@ -225,7 +225,7 @@ inventar_SpcHidr.sp_generador_reporte_diario_emision_test [SQL_STORED_PROCEDURE]
 
 - `definiciones_bd.sql`: definiciones textuales vigentes de procedimientos, vistas y funciones alcanzadas.
 - `definiciones_hidro_imp_chancado.sql`: definiciones vigentes extraídas de
-  `DEV_SIIR` para `hidro.v_imp_chancado_normalizado` y
+  `PROD_SIIR` para `hidro.v_imp_chancado_normalizado` y
   `hidro.v_imp_conciliacion_chancado`. Se mantienen aparte porque son
   dependencias entre bases y `sys.sql_expression_dependencies` no entrega su
   `object_id` desde `inventar_SpcHidr`.

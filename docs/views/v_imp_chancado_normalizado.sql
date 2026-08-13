@@ -1,6 +1,6 @@
--- Fuente: definición vigente en DEV_SIIR (sys.sql_modules).
+-- Fuente: definición vigente en PROD_SIIR (sys.sql_modules).
 -- Extraída: 2026-08-06 21:49:46.930000
-USE [DEV_SIIR];
+USE [PROD_SIIR];
 GO
 
 CREATE VIEW [hidro].[v_imp_chancado_normalizado] AS WITH tipado AS

@@ -3,6 +3,16 @@
 Se ejecuta al importar main (tambien via wsgi). Por defecto solo reporta;
 con DB_STARTUP_CHECK_STRICT=1 aborta si falta algo critico.
 Desactivar: DB_STARTUP_CHECK=0.
+
+Segun SQLSERVER_DB elige el ambiente de dependencias cross-DB:
+  inventar_SpcHidr_PROD -> espera PROD_SIIR (prohibe DEV_SIIR en modulos)
+  inventar_SpcHidr      -> espera DEV_SIIR  (prohibe PROD_SIIR en modulos)
+Override: HIDRO_SIIR_DB=PROD_SIIR|DEV_SIIR.
+
+Ademas, si el ambiente es DEV y existe inventar_SpcHidr_PROD, chequea el
+peer via OBJECT_ID de tres partes. En PROD no se revisa la otra inventar_*.
+Fallos del peer son avisos por defecto; DB_STARTUP_CHECK_PEER_STRICT=1 los
+trata como requeridos. Omitir peer: DB_STARTUP_CHECK_BOTH_INVENTAR=0.
 """
 from __future__ import annotations
 
@@ -17,6 +27,30 @@ logger = logging.getLogger(__name__)
 # Schema de negocio hardcodeado en el SQL vivo (no es SQLSERVER_DB).
 SCHEMA_HIDRO = "inventar_SpcHidr"
 SCHEMA_RECLAMO = "reclamo"
+
+# Par de bases de negocio en el mismo servidor.
+INVENTAR_DB_DEV = "inventar_SpcHidr"
+INVENTAR_DB_PROD = "inventar_SpcHidr_PROD"
+INVENTAR_DBS = (INVENTAR_DB_DEV, INVENTAR_DB_PROD)
+
+# Dependencias cross-DB (schema.hidro) que los SP/vistas de inventar_* referencian.
+# El prefijo de base (DEV_SIIR / PROD_SIIR) se elige segun SQLSERVER_DB.
+CROSS_DB_HIDRO_OBJECTS = (
+    "hidro.imp_csv",
+    "hidro.v_imp_chancado_normalizado",
+    "hidro.v_imp_conciliacion_chancado",
+)
+
+
+@dataclass(frozen=True)
+class AmbientePerfil:
+    """Perfil de referencias esperado segun la DB de conexion."""
+
+    nombre: str
+    sqlserver_db: str
+    siir_db: str  # base Django/hidro esperada en los modulos SQL
+    siir_db_prohibida: str  # no debe aparecer en defs si este ambiente esta activo
+    login_db_esperada: str  # prefijo tipico de LOGIN_DATABASE
 
 
 @dataclass(frozen=True)
@@ -160,6 +194,232 @@ def _login_tabla_existe(conn, login_database: str) -> tuple[bool, str]:
     return oid is not None, destino
 
 
+def _resolver_ambiente(db_efectiva: str | None) -> AmbientePerfil:
+    """Elige el perfil de dependencias segun SQLSERVER_DB / DB_NAME().
+
+    Override opcional: HIDRO_SIIR_DB=PROD_SIIR|DEV_SIIR fuerza la base hidro
+    sin cambiar el resto del perfil.
+    """
+    nombre = (db_efectiva or "").strip()
+    override = (os.getenv("HIDRO_SIIR_DB") or "").strip()
+
+    if nombre.endswith("_PROD") or nombre == "inventar_SpcHidr_PROD":
+        perfil = AmbientePerfil(
+            nombre="prod",
+            sqlserver_db=nombre or "inventar_SpcHidr_PROD",
+            siir_db="PROD_SIIR",
+            siir_db_prohibida="DEV_SIIR",
+            login_db_esperada="PROD_SIIR",
+        )
+    else:
+        # inventar_SpcHidr (sin sufijo) u otras = ambiente de desarrollo.
+        perfil = AmbientePerfil(
+            nombre="dev",
+            sqlserver_db=nombre or "inventar_SpcHidr",
+            siir_db="DEV_SIIR",
+            siir_db_prohibida="PROD_SIIR",
+            login_db_esperada="DEV_SIIR",
+        )
+
+    if override in {"DEV_SIIR", "PROD_SIIR"}:
+        prohibida = "PROD_SIIR" if override == "DEV_SIIR" else "DEV_SIIR"
+        perfil = AmbientePerfil(
+            nombre=perfil.nombre,
+            sqlserver_db=perfil.sqlserver_db,
+            siir_db=override,
+            siir_db_prohibida=prohibida,
+            login_db_esperada=override,
+        )
+    return perfil
+
+
+def _modulos_con_patron(conn, patron: str) -> list[str]:
+    """Objetos cuyo texto SQL contiene el patron (p.ej. DEV_SIIR / PROD_SIIR)."""
+    rows = conn.execute(
+        text(
+            """
+            SELECT s.name + '.' + o.name AS fqn
+            FROM sys.sql_modules AS m
+            JOIN sys.objects AS o ON o.object_id = m.object_id
+            JOIN sys.schemas AS s ON s.schema_id = o.schema_id
+            WHERE m.definition LIKE :patron
+            ORDER BY 1
+            """
+        ),
+        {"patron": f"%{patron}%"},
+    ).scalars().all()
+    return list(rows)
+
+
+def _cross_db_objeto_existe(conn, fqn_tres_partes: str) -> bool:
+    """OBJECT_ID de un objeto en otra base del mismo servidor (db.schema.objeto)."""
+    oid = conn.execute(
+        text("SELECT OBJECT_ID(:fqn)"),
+        {"fqn": fqn_tres_partes},
+    ).scalar()
+    return oid is not None
+
+
+def _db_existe(conn, database: str) -> bool:
+    return conn.execute(
+        text("SELECT DB_ID(:db)"),
+        {"db": database},
+    ).scalar() is not None
+
+
+def _peer_inventar_db(db_actual: str | None) -> str | None:
+    """La otra base inventar_* del par dev/prod, si aplica."""
+    nombre = (db_actual or "").strip()
+    if nombre == INVENTAR_DB_PROD:
+        return INVENTAR_DB_DEV
+    if nombre == INVENTAR_DB_DEV:
+        return INVENTAR_DB_PROD
+    return None
+
+
+def _objetos_requeridos_unicos() -> list[DbObject]:
+    """Lista deduplicada de objetos required (sin opcionales)."""
+    vistos: set[str] = set()
+    out: list[DbObject] = []
+    for objetos in SECCIONES.values():
+        for obj in objetos:
+            if not obj.required or obj.fqn in vistos:
+                continue
+            vistos.add(obj.fqn)
+            out.append(obj)
+    return out
+
+
+def _modulos_con_patron_en_db(conn, database: str, patron: str) -> list[str]:
+    """Igual que _modulos_con_patron pero contra sys.sql_modules de otra DB."""
+    # Identificadores de catalogo no se parametrizan; database viene de constante.
+    if database not in INVENTAR_DBS:
+        raise ValueError(f"DB no permitida para scan de modulos: {database}")
+    rows = conn.execute(
+        text(
+            f"""
+            SELECT s.name + '.' + o.name AS fqn
+            FROM [{database}].sys.sql_modules AS m
+            JOIN [{database}].sys.objects AS o ON o.object_id = m.object_id
+            JOIN [{database}].sys.schemas AS s ON s.schema_id = o.schema_id
+            WHERE m.definition LIKE :patron
+            ORDER BY 1
+            """
+        ),
+        {"patron": f"%{patron}%"},
+    ).scalars().all()
+    return list(rows)
+
+
+def _chequear_peer_inventar(
+    conn,
+    peer_db: str,
+    *,
+    lineas: list[str],
+    faltantes_required: list[str],
+    faltantes_optional: list[str],
+    peer_strict: bool,
+) -> None:
+    """Inventario + deps cross-DB + refs SIIR sobre la otra inventar_*."""
+    destino = "required" if peer_strict else "optional"
+    bucket = faltantes_required if peer_strict else faltantes_optional
+
+    lineas.append("-" * 72)
+    lineas.append(
+        f"Seccion: Peer inventar ({peer_db}) "
+        f"[{'STRICT' if peer_strict else 'aviso'}]"
+    )
+
+    if not _db_existe(conn, peer_db):
+        lineas.append(f"  [FALTA] base {peer_db} no existe en el servidor")
+        bucket.append(f"peer:{peer_db} (DB inexistente)")
+        return
+
+    lineas.append(f"  [OK] base {peer_db} existe")
+
+    # Schemas
+    for schema in (SCHEMA_HIDRO, SCHEMA_RECLAMO):
+        # SCHEMA_ID es de la DB actual; usar OBJECT_ID de un objeto tipico no.
+        # Comprobar via catalogo de la peer.
+        ok = conn.execute(
+            text(
+                f"""
+                SELECT 1
+                FROM [{peer_db}].sys.schemas
+                WHERE name = :schema
+                """
+            ),
+            {"schema": schema},
+        ).scalar() is not None
+        marca = "OK" if ok else "FALTA"
+        lineas.append(f"  [{marca}] schema {peer_db}.{schema}")
+        if not ok:
+            bucket.append(f"peer:{peer_db}.{schema}")
+
+    perfil_peer = _resolver_ambiente(peer_db)
+    lineas.append(
+        f"  Ambiente peer={perfil_peer.nombre} | "
+        f"hidro esperado={perfil_peer.siir_db} | "
+        f"prohibido={perfil_peer.siir_db_prohibida}"
+    )
+
+    faltan_objs: list[str] = []
+    for obj in _objetos_requeridos_unicos():
+        fqn3 = f"{peer_db}.{obj.fqn}"
+        if not _cross_db_objeto_existe(conn, fqn3):
+            faltan_objs.append(fqn3)
+            bucket.append(f"peer:{fqn3}")
+    total_req = len(_objetos_requeridos_unicos())
+    if not faltan_objs:
+        lineas.append(f"  [OK] {total_req} objetos requeridos presentes")
+    else:
+        lineas.append(
+            f"  [FALTA] {len(faltan_objs)}/{total_req} objetos requeridos "
+            f"ausentes en {peer_db}"
+        )
+        for fqn3 in faltan_objs[:12]:
+            lineas.append(f"  [FALTA] {fqn3}")
+        if len(faltan_objs) > 12:
+            lineas.append(f"  ... y {len(faltan_objs) - 12} mas")
+
+    # Cross-DB hidro del peer
+    for relativo in CROSS_DB_HIDRO_OBJECTS:
+        fqn = f"{perfil_peer.siir_db}.{relativo}"
+        ok = _cross_db_objeto_existe(conn, fqn)
+        marca = "OK" if ok else "FALTA"
+        lineas.append(f"  [{marca}] dep {fqn}")
+        if not ok:
+            bucket.append(f"peer-cross-db:{fqn}")
+
+    # Modulos con SIIR prohibido en el peer
+    try:
+        mods_mal = _modulos_con_patron_en_db(
+            conn, peer_db, perfil_peer.siir_db_prohibida
+        )
+    except Exception as exc:
+        lineas.append(f"  [AVISO] no se pudo leer modulos de {peer_db}: {exc}")
+        faltantes_optional.append(f"peer-modulos:{peer_db}")
+        return
+
+    if not mods_mal:
+        lineas.append(
+            f"  [OK] ningun modulo en {peer_db} contiene "
+            f"{perfil_peer.siir_db_prohibida}"
+        )
+    else:
+        lineas.append(
+            f"  [FALTA] {len(mods_mal)} modulo(s) en {peer_db} apuntan a "
+            f"{perfil_peer.siir_db_prohibida}"
+        )
+        for fqn in mods_mal[:8]:
+            lineas.append(f"  [FALTA] {peer_db}.{fqn}")
+            bucket.append(
+                f"peer:{peer_db}.{fqn} ({perfil_peer.siir_db_prohibida})"
+            )
+        if len(mods_mal) > 8:
+            lineas.append(f"  ... y {len(mods_mal) - 8} mas")
+
+
 def run_startup_db_check(*, strict: bool | None = None) -> bool:
     """Ejecuta el chequeo. True si todo lo required esta OK."""
     from dotenv import load_dotenv
@@ -238,6 +498,11 @@ def run_startup_db_check(*, strict: bool | None = None) -> bool:
             # --- Auth (puede ser otra DB) ---
             lineas.append("-" * 72)
             lineas.append("Seccion: Auth / Login")
+            perfil = _resolver_ambiente(db_actual)
+            lineas.append(
+                f"  Ambiente={perfil.nombre} | hidro/SIIR esperado={perfil.siir_db} "
+                f"| prohibido en modulos={perfil.siir_db_prohibida}"
+            )
             if not login_database:
                 lineas.append("  FALTA LOGIN_DATABASE en .env")
                 faltantes_required.append("LOGIN_DATABASE")
@@ -248,6 +513,17 @@ def run_startup_db_check(*, strict: bool | None = None) -> bool:
                     f"  [{estado}] tabla={destino_login} "
                     f"(LOGIN_DATABASE={login_database})"
                 )
+                login_db, _, _ = _parse_login_fqn(login_database)
+                if login_db and login_db != perfil.login_db_esperada:
+                    lineas.append(
+                        f"  [AVISO] LOGIN_DATABASE apunta a {login_db}, "
+                        f"pero el ambiente {perfil.nombre} espera "
+                        f"{perfil.login_db_esperada}.*"
+                    )
+                    faltantes_optional.append(
+                        f"LOGIN_DATABASE={login_db} "
+                        f"(esperado {perfil.login_db_esperada})"
+                    )
                 lineas.append(
                     "  Nota: Auth puede leer otra DB (DEV_SIIR/PROD_SIIR) "
                     "con el mismo engine; Reportabilidad/Reclamo/PowerBI "
@@ -271,6 +547,83 @@ def run_startup_db_check(*, strict: bool | None = None) -> bool:
                             faltantes_required.append(etiqueta)
                         else:
                             faltantes_optional.append(etiqueta)
+
+            # --- Dependencias cross-DB segun ambiente ---
+            lineas.append("-" * 72)
+            lineas.append(
+                f"Seccion: Dependencias cross-DB ({perfil.siir_db})"
+            )
+            for relativo in CROSS_DB_HIDRO_OBJECTS:
+                fqn = f"{perfil.siir_db}.{relativo}"
+                ok = _cross_db_objeto_existe(conn, fqn)
+                marca = "OK" if ok else "FALTA"
+                lineas.append(f"  [{marca}] {fqn}")
+                if not ok:
+                    faltantes_required.append(f"cross-db:{fqn}")
+
+            # Texto SQL: no debe apuntar a la base SIIR del otro ambiente.
+            lineas.append("-" * 72)
+            lineas.append(
+                f"Seccion: Referencias en modulos SQL "
+                f"(esperado {perfil.siir_db}, prohibido {perfil.siir_db_prohibida})"
+            )
+            mods_ok = _modulos_con_patron(conn, perfil.siir_db)
+            mods_mal = _modulos_con_patron(conn, perfil.siir_db_prohibida)
+            if mods_ok:
+                lineas.append(
+                    f"  [OK] {len(mods_ok)} modulo(s) referencian {perfil.siir_db}"
+                )
+            else:
+                lineas.append(
+                    f"  [AVISO] ningun modulo menciona {perfil.siir_db} "
+                    "(puede ser normal si no hay cruces en texto)"
+                )
+            if not mods_mal:
+                lineas.append(
+                    f"  [OK] ningun modulo contiene {perfil.siir_db_prohibida}"
+                )
+            else:
+                lineas.append(
+                    f"  [FALTA] {len(mods_mal)} modulo(s) apuntan a "
+                    f"{perfil.siir_db_prohibida} (ambiente {perfil.nombre} "
+                    f"requiere {perfil.siir_db}; ver "
+                    "docs/migrations/patch_dev_siir_to_prod_siir.sql)"
+                )
+                for fqn in mods_mal:
+                    lineas.append(f"  [FALTA] {fqn}")
+                    faltantes_required.append(
+                        f"{perfil.siir_db_prohibida} en {fqn}"
+                    )
+
+            # --- Peer inventar_* (solo desde DEV; en PROD no se revisa la otra base) ---
+            check_both = os.getenv(
+                "DB_STARTUP_CHECK_BOTH_INVENTAR", "1"
+            ).strip().lower() not in {"0", "false", "no"}
+            peer_strict = os.getenv(
+                "DB_STARTUP_CHECK_PEER_STRICT", "0"
+            ).strip().lower() in {"1", "true", "yes"}
+            peer_db = _peer_inventar_db(db_actual)
+            if perfil.nombre == "prod":
+                lineas.append("-" * 72)
+                lineas.append(
+                    "Seccion: Peer inventar (omitido: ambiente prod "
+                    "no revisa inventar_SpcHidr)"
+                )
+            elif check_both and peer_db:
+                _chequear_peer_inventar(
+                    conn,
+                    peer_db,
+                    lineas=lineas,
+                    faltantes_required=faltantes_required,
+                    faltantes_optional=faltantes_optional,
+                    peer_strict=peer_strict,
+                )
+            elif check_both and not peer_db:
+                lineas.append("-" * 72)
+                lineas.append(
+                    "Seccion: Peer inventar (omitido: DB actual no es "
+                    f"{INVENTAR_DB_DEV} ni {INVENTAR_DB_PROD})"
+                )
     except Exception as exc:
         msg = f"[DB-CHECK] Error al consultar SQL Server: {exc}"
         logger.exception(msg)

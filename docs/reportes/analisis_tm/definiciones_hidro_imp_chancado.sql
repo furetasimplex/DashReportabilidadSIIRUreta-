@@ -1,13 +1,13 @@
 -- Vistas hidro vigentes utilizadas por Análisis TM.
--- Fuente: DEV_SIIR.sys.sql_modules.
+-- Fuente: PROD_SIIR.sys.sql_modules.
 
 -- ============================================================================
--- DEV_SIIR.hidro.v_imp_chancado_normalizado
+-- PROD_SIIR.hidro.v_imp_chancado_normalizado
 -- ============================================================================
 
--- Fuente: definición vigente en DEV_SIIR (sys.sql_modules).
+-- Fuente: definición vigente en PROD_SIIR (sys.sql_modules).
 -- Extraída: 2026-08-06 21:49:46.930000
-USE [DEV_SIIR];
+USE [PROD_SIIR];
 GO
 
 CREATE VIEW [hidro].[v_imp_chancado_normalizado] AS WITH tipado AS
@@ -254,12 +254,12 @@ WHERE rn_registro = 1;
 GO
 
 -- ============================================================================
--- DEV_SIIR.hidro.v_imp_conciliacion_chancado
+-- PROD_SIIR.hidro.v_imp_conciliacion_chancado
 -- ============================================================================
 
--- Fuente: definición vigente en DEV_SIIR (sys.sql_modules).
+-- Fuente: definición vigente en PROD_SIIR (sys.sql_modules).
 -- Extraída: 2026-08-05 16:42:45.363000
-USE [DEV_SIIR];
+USE [PROD_SIIR];
 GO
 
 CREATE   VIEW [hidro].[v_imp_conciliacion_chancado]
