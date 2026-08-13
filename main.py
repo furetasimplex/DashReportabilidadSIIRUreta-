@@ -9,6 +9,11 @@ from report_export.callbacks.reportabilidad_cb import setup_download_route
 
 load_dotenv()
 
+# Chequeo de DB/objetos SQL al arranque (main y wsgi). Ver db_startup_check.py
+from db_startup_check import run_startup_db_check
+
+run_startup_db_check()
+
 external_stylesheets = [
     dbc.themes.FLATLY,
     "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css",
