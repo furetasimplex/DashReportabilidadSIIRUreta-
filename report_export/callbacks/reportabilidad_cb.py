@@ -19,6 +19,7 @@ from report_export.report_export import (
     actualizar_datos_conciliados_emision_report,
     fetch_datos_conciliados_emision_report,
     fetch_factor_ajuste_camiones_report,
+    fetch_balance_chancado_report,
     fetch_representatividad_torres_report,
     fetch_bd_ton_report,
     fetch_gestion_representatividad_fy,
@@ -7650,6 +7651,14 @@ def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
                 start_date=ini_d,
                 end_date=fin_d,
             )
+            df_balance_chancado = fetch_balance_chancado_report(
+                start_date=ini_d,
+                end_date=fin_d,
+            )
+            print(
+                "[EXCEL][BALANCE_CHANCADO] "
+                f"rows={len(df_balance_chancado)}"
+            )
             print(f"[EXCEL][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
 
             columnas_control = [
@@ -7678,6 +7687,7 @@ def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
                     df,
                     template_path,
                     df_factor_ajuste=df_factor,
+                    df_balance_chancado=df_balance_chancado,
                     rango_personalizado=modo_fecha == "rango",
                     df_resumen_mtd=df_mtd,
                 )

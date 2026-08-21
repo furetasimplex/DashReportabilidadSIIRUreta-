@@ -7,6 +7,7 @@ import pytest
 from openpyxl import load_workbook
 
 from report_export.export_to_excel import (
+    _validar_balance_chancado,
     _validar_factor_ajuste_camiones,
     _obtener_fecha_corte_resumen_datos_conciliados,
     aplicar_formato_datos_conciliados,
@@ -15,6 +16,70 @@ from report_export.export_to_excel import (
     obtener_fecha_actualizacion,
 )
 from report_export.report_export import COLUMNAS_DATOS_CONCILIADOS
+
+
+def test_balance_chancado_no_bloquea_diferencia_srr_conocida():
+    fila = {
+        "Fecha": pd.Timestamp("2026-08-05"),
+        "Humedad": 2.95,
+        "Mineral_Apilado_TMH_Original": 6776.0,
+        "Factor_Ajuste": 1.0,
+        "Mineral_Apilado_TMH_Ajustado": 6776.0,
+        "Delta_Ajuste_TMH": 0.0,
+        "Mineral_Chancado_Balance": 6067.95148623553,
+        "Material": "OXIDOS",
+        "Nivel_Promedio_Chancado": 57.3783866882324,
+        "Nivel_Promedio_Harneros": 50.2582168579102,
+        "Nivel_Promedio_Silo": 51.4628429412842,
+        "Bin_Chancado": 1775.94037697714,
+        "Bin_Harneros": 1535.96756156049,
+        "Tolva_Compensacion": 1200.0,
+        "Silo": 1600.58536424012,
+        "Total_TMH": 6112.49330277774,
+        "Inventario_Chancado_TMH": 4511.90793853762,
+        "Inventario_Silo_TMH": 1600.58536424012,
+        "Inventario_Chancado_TMS": 4378.80665435076,
+        "Inventario_Silo_TMS": 1553.36809599504,
+        "Total_TMS": 5932.1747503458,
+        "Diferencia_vs_Datos_Conciliados": 0.0628917435,
+    }
+    fila.update({f"Nivel_Harnero_{letra}": None for letra in "ABCDE"})
+    fila.update({f"Nivel_Chancado_{letra}": None for letra in "ABCDE"})
+    fila.update({"Nivel_Silo_A": None, "Nivel_Silo_B": None})
+
+    _validar_balance_chancado(pd.DataFrame([fila]))
+
+
+def test_balance_chancado_bloquea_delta_ajuste_inconsistente():
+    fila = {
+        "Fecha": pd.Timestamp("2026-08-09"),
+        "Humedad": 2.95,
+        "Mineral_Apilado_TMH_Original": 76951.0,
+        "Factor_Ajuste": 0.97335748749593,
+        "Mineral_Apilado_TMH_Ajustado": 74900.8320202993,
+        "Delta_Ajuste_TMH": -2000.0,
+        "Mineral_Chancado_Balance": 72966.991171,
+        "Material": "SULFUROS",
+        "Nivel_Promedio_Chancado": 1.0,
+        "Nivel_Promedio_Harneros": 1.0,
+        "Nivel_Promedio_Silo": 1.0,
+        "Bin_Chancado": 1.0,
+        "Bin_Harneros": 1.0,
+        "Tolva_Compensacion": 1.0,
+        "Silo": 1.0,
+        "Inventario_Chancado_TMH": 1.0,
+        "Inventario_Silo_TMH": 1.0,
+        "Total_TMH": 2.0,
+        "Inventario_Chancado_TMS": 1.0,
+        "Inventario_Silo_TMS": 1.0,
+        "Total_TMS": 2.0,
+    }
+    fila.update({f"Nivel_Harnero_{letra}": None for letra in "ABCDE"})
+    fila.update({f"Nivel_Chancado_{letra}": None for letra in "ABCDE"})
+    fila.update({"Nivel_Silo_A": None, "Nivel_Silo_B": None})
+
+    with pytest.raises(ValueError, match="09-08-2026"):
+        _validar_balance_chancado(pd.DataFrame([fila]))
 
 
 def test_export_datos_conciliados_replica_layout_oficial():

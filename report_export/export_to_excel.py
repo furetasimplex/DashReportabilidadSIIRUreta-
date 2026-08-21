@@ -885,10 +885,184 @@ def _agregar_hoja_factor_ajuste_camiones(
         ws.column_dimensions[get_column_letter(indice)].width = ancho
 
 
+def _validar_balance_chancado(df_balance: pd.DataFrame) -> None:
+    """Valida estructura, fechas y unicidad del balance."""
+    if df_balance is None:
+        raise ValueError("El DataFrame de Balance Chancado no puede ser None.")
+    if df_balance.empty:
+        raise ValueError("No existen datos de Balance Chancado para el reporte.")
+
+    requeridas = {
+        "Fecha", "Humedad", "Mineral_Apilado_TMH_Original", "Factor_Ajuste",
+        "Mineral_Apilado_TMH_Ajustado", "Delta_Ajuste_TMH",
+        "Mineral_Chancado_Balance",
+        "Material", "Nivel_Promedio_Chancado", "Nivel_Promedio_Harneros",
+        "Nivel_Promedio_Silo", "Bin_Chancado", "Bin_Harneros",
+        "Tolva_Compensacion", "Silo", "Inventario_Chancado_TMH",
+        "Inventario_Silo_TMH", "Total_TMH", "Inventario_Chancado_TMS",
+        "Inventario_Silo_TMS", "Total_TMS",
+        "Nivel_Harnero_A", "Nivel_Harnero_B", "Nivel_Harnero_C",
+        "Nivel_Harnero_D", "Nivel_Harnero_E", "Nivel_Chancado_A",
+        "Nivel_Chancado_B", "Nivel_Chancado_C", "Nivel_Chancado_D",
+        "Nivel_Chancado_E", "Nivel_Silo_A", "Nivel_Silo_B",
+    }
+    faltantes = sorted(requeridas.difference(df_balance.columns))
+    if faltantes:
+        raise ValueError(
+            "Faltan columnas indispensables de Balance Chancado: "
+            + ", ".join(faltantes)
+        )
+
+    fechas = pd.to_datetime(df_balance["Fecha"], errors="coerce").dt.normalize()
+    if fechas.isna().any():
+        raise ValueError("Balance Chancado contiene fechas nulas o inválidas.")
+    if fechas.duplicated().any():
+        raise ValueError("Balance Chancado contiene más de una fila por Fecha.")
+    df_balance["Fecha"] = fechas
+    df_balance.sort_values("Fecha", kind="stable", inplace=True)
+    df_balance.reset_index(drop=True, inplace=True)
+
+    originales = pd.to_numeric(
+        df_balance["Mineral_Apilado_TMH_Original"], errors="coerce"
+    )
+    ajustados = pd.to_numeric(
+        df_balance["Mineral_Apilado_TMH_Ajustado"], errors="coerce"
+    )
+    deltas = pd.to_numeric(df_balance["Delta_Ajuste_TMH"], errors="coerce")
+    comparables = originales.notna() & ajustados.notna() & deltas.notna()
+    diferencias = (deltas - (ajustados - originales)).abs()
+    inconsistentes = comparables & diferencias.gt(0.01)
+    if inconsistentes.any():
+        indice = inconsistentes[inconsistentes].index[0]
+        raise ValueError(
+            "Delta_Ajuste_TMH no coincide con ajustado menos original para "
+            f"{df_balance.loc[indice, 'Fecha']:%d-%m-%Y}."
+        )
+
+
+def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
+    """Agrega las tablas superiores diarias de Balance Chancado."""
+    nombre_hoja = "Balance Chancado"
+    if nombre_hoja in wb.sheetnames:
+        del wb[nombre_hoja]
+    ws = wb.create_sheet(title=nombre_hoja, index=1)
+    ws.sheet_view.showGridLines = False
+    ws.freeze_panes = None
+
+    columnas = (
+        ("Fecha", "Fecha"), ("Humedad", "Humedad"),
+        ("Mineral Apilado TMH Original", "Mineral_Apilado_TMH_Original"),
+        ("Factor Ajuste", "Factor_Ajuste"),
+        ("Mineral Apilado TMH Ajustado", "Mineral_Apilado_TMH_Ajustado"),
+        ("Delta Ajuste TMH", "Delta_Ajuste_TMH"),
+        ("Mineral Chancado", "Mineral_Chancado_Balance"),
+        ("Material", "Material"),
+        ("Nivel promedio Chancado", "Nivel_Promedio_Chancado"),
+        ("Nivel promedio Harneros", "Nivel_Promedio_Harneros"),
+        ("Nivel promedio Silo", "Nivel_Promedio_Silo"),
+        ("Bin Chancado", "Bin_Chancado"), ("Bin Harneros", "Bin_Harneros"),
+        ("Tolva Compensación", "Tolva_Compensacion"), ("Silo", "Silo"),
+        ("Inventario Chancado TMH", "Inventario_Chancado_TMH"),
+        ("Inventario Silo TMH", "Inventario_Silo_TMH"),
+        ("Total TMH", "Total_TMH"),
+        ("Inventario Chancado TMS", "Inventario_Chancado_TMS"),
+        ("Inventario Silo TMS", "Inventario_Silo_TMS"),
+        ("Total TMS", "Total_TMS"),
+        ("Harnero A", "Nivel_Harnero_A"), ("Harnero B", "Nivel_Harnero_B"),
+        ("Harnero C", "Nivel_Harnero_C"), ("Harnero D", "Nivel_Harnero_D"),
+        ("Harnero E", "Nivel_Harnero_E"),
+        ("Chancado A", "Nivel_Chancado_A"),
+        ("Chancado B", "Nivel_Chancado_B"),
+        ("Chancado C", "Nivel_Chancado_C"),
+        ("Chancado D", "Nivel_Chancado_D"),
+        ("Chancado E", "Nivel_Chancado_E"),
+        ("Silo A", "Nivel_Silo_A"), ("Silo B", "Nivel_Silo_B"),
+    )
+    grupos = (
+        ("A4:H4", "Balance diario"), ("I4:K4", "Niveles promedio"),
+        ("L4:U4", "Inventarios"), ("V4:Z4", "Niveles Harneros"),
+        ("AA4:AE4", "Niveles Chancado"), ("AF4:AG4", "Niveles Silo"),
+    )
+    color_texto = "476475"
+    relleno_azul = PatternFill("solid", fgColor="D7E1E7")
+    relleno_blanco = PatternFill("solid", fgColor="FFFFFF")
+    lado = Side(style="thin", color="808080")
+    borde = Border(left=lado, right=lado, top=lado, bottom=lado)
+
+    ws.merge_cells("A1:AG1")
+    ws["A1"] = "Balance Chancado"
+    ws["A1"].font = Font(name="Arial", size=14, bold=True, color=color_texto)
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.merge_cells("A2:AG2")
+    ws["A2"] = "Balance diario de apilado, inventarios y mineral chancado"
+    ws["A2"].font = Font(name="Arial", size=9, italic=True, color=color_texto)
+    ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
+
+    for rango, etiqueta in grupos:
+        ws.merge_cells(rango)
+        celda = ws[rango.split(":")[0]]
+        celda.value = etiqueta
+        celda.font = Font(name="Arial", bold=True, color=color_texto)
+        celda.fill = relleno_azul
+        celda.alignment = Alignment(horizontal="center", vertical="center")
+        for fila in ws[rango]:
+            for item in fila:
+                item.fill = relleno_azul
+                item.border = borde
+
+    for col_excel, (encabezado, _) in enumerate(columnas, start=1):
+        celda = ws.cell(5, col_excel, encabezado)
+        celda.font = Font(name="Arial", bold=True, color=color_texto)
+        celda.fill = relleno_azul
+        celda.alignment = Alignment(
+            horizontal="center", vertical="center", wrap_text=True
+        )
+        celda.border = borde
+
+    for fila_excel, (_, fila) in enumerate(df_balance.iterrows(), start=6):
+        for col_excel, (_, fuente) in enumerate(columnas, start=1):
+            valor = fila[fuente]
+            if pd.isna(valor):
+                valor = None
+            elif fuente == "Fecha" and hasattr(valor, "to_pydatetime"):
+                valor = valor.to_pydatetime()
+            celda = ws.cell(fila_excel, col_excel, valor)
+            celda.font = Font(name="Arial", size=10, color=color_texto)
+            celda.fill = relleno_blanco if fila_excel % 2 == 0 else relleno_azul
+            celda.alignment = Alignment(horizontal="center", vertical="center")
+            celda.border = borde
+        ws.row_dimensions[fila_excel].height = 20
+
+    ultima_fila = 5 + len(df_balance)
+    for fila in range(6, ultima_fila + 1):
+        ws.cell(fila, 1).number_format = "dd-mm-yyyy"
+        ws.cell(fila, 2).number_format = "0.000"
+        ws.cell(fila, 4).number_format = "0.000000"
+        for col in (3, 5, 6, 7, *range(12, 22)):
+            ws.cell(fila, col).number_format = "#,##0.00"
+        for col in (*range(9, 12), *range(22, 34)):
+            ws.cell(fila, col).number_format = "0.00"
+
+    anchos = (13, 10, 20, 14, 20, 16, 17, 12) + (17,) * 3 + (16,) * 10 + (12,) * 12
+    for indice, ancho in enumerate(anchos, start=1):
+        ws.column_dimensions[get_column_letter(indice)].width = ancho
+    ws.row_dimensions[1].height = 24
+    ws.row_dimensions[2].height = 18
+    ws.row_dimensions[4].height = 28
+    ws.row_dimensions[5].height = 42
+    ws.auto_filter.ref = f"A5:AG{ultima_fila}"
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.print_area = f"A1:AG{ultima_fila}"
+
+
 def export_datos_conciliados_to_template(
     df: pd.DataFrame,
     template_path: str,
     df_factor_ajuste: pd.DataFrame | None = None,
+    df_balance_chancado: pd.DataFrame | None = None,
     rango_personalizado: bool = False,
     df_resumen_mtd: pd.DataFrame | None = None,
 ) -> bytes:
@@ -1041,6 +1215,10 @@ def export_datos_conciliados_to_template(
             columna_inicio=start_col,
             columna_fin=start_col + num_cols - 2,  # C:AX; AY es indicador lateral.
         )
+
+    if df_balance_chancado is not None:
+        _validar_balance_chancado(df_balance_chancado)
+        _agregar_hoja_balance_chancado(wb, df_balance_chancado)
 
     if df_factor_ajuste is not None:
         _validar_factor_ajuste_camiones(df, df_factor_ajuste)

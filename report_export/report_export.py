@@ -558,6 +558,216 @@ def fetch_factor_ajuste_camiones_report(
         )
     return df
 
+
+def fetch_balance_chancado_report(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Lee el balance diario de chancado sin ejecutar mantenedores."""
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "FechaInicio y FechaFin son obligatorias para consultar Balance Chancado."
+        )
+    if start_date > end_date:
+        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
+
+    sql = _sa_text("""
+        ;WITH Niveles08 AS
+        (
+            SELECT
+                CAST(df.fecha_inicial AS date) AS Fecha,
+                COUNT(*) AS Cantidad_Registros_08,
+                AVG(TRY_CONVERT(float, df.nivel_harnero_a)) AS Nivel_Harnero_A,
+                AVG(TRY_CONVERT(float, df.nivel_harnero_b)) AS Nivel_Harnero_B,
+                AVG(TRY_CONVERT(float, df.nivel_harnero_c)) AS Nivel_Harnero_C,
+                AVG(TRY_CONVERT(float, df.nivel_harnero_d)) AS Nivel_Harnero_D,
+                AVG(TRY_CONVERT(float, df.nivel_harnero_e)) AS Nivel_Harnero_E,
+                AVG(TRY_CONVERT(float, df.nivel_chancado_a)) AS Nivel_Chancado_A,
+                AVG(TRY_CONVERT(float, df.nivel_chancado_b)) AS Nivel_Chancado_B,
+                AVG(TRY_CONVERT(float, df.nivel_chancado_c)) AS Nivel_Chancado_C,
+                AVG(TRY_CONVERT(float, df.nivel_chancado_d)) AS Nivel_Chancado_D,
+                AVG(TRY_CONVERT(float, df.nivel_chancado_e)) AS Nivel_Chancado_E,
+                AVG(TRY_CONVERT(float, df.nivel_silo_a)) AS Nivel_Silo_A,
+                AVG(TRY_CONVERT(float, df.nivel_silo_b)) AS Nivel_Silo_B
+            FROM inventar_SpcHidr.datos_filtrados AS df
+            WHERE df.fecha_inicial >= :fecha_inicio
+              AND df.fecha_inicial < DATEADD(DAY, 1, :fecha_fin)
+              AND DATEPART(HOUR, df.fecha_inicial) = 8
+              AND DATEPART(MINUTE, df.fecha_inicial) = 0
+            GROUP BY CAST(df.fecha_inicial AS date)
+        ),
+        GeneradorRaw AS
+        (
+            SELECT
+                CAST(g.Fecha AS date) AS Fecha,
+                g.Material_Operacion,
+                ROW_NUMBER() OVER
+                (
+                    PARTITION BY CAST(g.Fecha AS date)
+                    ORDER BY
+                        CASE WHEN g.Material_Operacion IS NULL THEN 1 ELSE 0 END,
+                        g.Material_Operacion
+                ) AS rn
+            FROM inventar_SpcHidr.fn_generador_reporte_diario_emision_test
+            (
+                :fecha_inicio,
+                DATEADD(DAY, 1, :fecha_fin)
+            ) AS g
+        ),
+        Generador AS
+        (
+            SELECT Fecha, Material_Operacion
+            FROM GeneradorRaw
+            WHERE rn = 1
+        ),
+        Base AS
+        (
+            SELECT
+                i.Fecha,
+                h.Humedad_Inventario AS Humedad,
+                aj.Apilado_TMH_Bruto_Original AS Mineral_Apilado_TMH_Original,
+                aj.Factor_Aplicacion_Reportes AS Factor_Ajuste,
+                aj.Apilado_TMH_Bruto_Ajustado AS Mineral_Apilado_TMH_Ajustado,
+                (aj.Apilado_TMH_Bruto_Ajustado - aj.Apilado_TMH_Bruto_Original)
+                    AS Delta_Ajuste_TMH,
+                g.Material_Operacion AS Material,
+                i.Nivel_Inventario_Chancado AS Nivel_Promedio_Chancado,
+                i.Nivel_Inventario_Harnero AS Nivel_Promedio_Harneros,
+                i.Nivel_Inventario_Silo AS Nivel_Promedio_Silo,
+                i.TMH_Chancado AS Bin_Chancado,
+                i.TMH_Harnero AS Bin_Harneros,
+                i.Tolva_Compensacion_TMH AS Tolva_Compensacion,
+                i.TMH_Silo AS Silo,
+                (i.TMH_Chancado + i.TMH_Harnero + i.Tolva_Compensacion_TMH)
+                    AS Inventario_Chancado_TMH,
+                i.TMH_Silo AS Inventario_Silo_TMH,
+                i.Total_Inventario_Chancado_TMH AS Total_TMH,
+                CASE
+                    WHEN h.Humedad_Inventario IS NOT NULL
+                     AND i.TMH_Chancado IS NOT NULL
+                     AND i.TMH_Harnero IS NOT NULL
+                     AND i.Tolva_Compensacion_TMH IS NOT NULL
+                    THEN (i.TMH_Chancado + i.TMH_Harnero
+                          + i.Tolva_Compensacion_TMH)
+                         * (1.0 - h.Humedad_Inventario / 100.0)
+                END AS Inventario_Chancado_TMS,
+                CASE
+                    WHEN h.Humedad_Inventario IS NOT NULL
+                     AND i.TMH_Silo IS NOT NULL
+                    THEN i.TMH_Silo * (1.0 - h.Humedad_Inventario / 100.0)
+                END AS Inventario_Silo_TMS,
+                i.Total_Inventario_Chancado_TMS AS Total_TMS,
+                n.Nivel_Harnero_A, n.Nivel_Harnero_B, n.Nivel_Harnero_C,
+                n.Nivel_Harnero_D, n.Nivel_Harnero_E,
+                n.Nivel_Chancado_A, n.Nivel_Chancado_B, n.Nivel_Chancado_C,
+                n.Nivel_Chancado_D, n.Nivel_Chancado_E,
+                n.Nivel_Silo_A, n.Nivel_Silo_B,
+                i.Fecha_Inventario_Anterior,
+                i.Inventario_Chancado_TMS_Anterior,
+                i.Delta_Inventario_Chancado_TMS,
+                TRY_CONVERT(float, a.Sal_promedio_dia) AS Sal_TMH_Dia,
+                dc.SRR_TMS_promedio_dia,
+                dc.Chancado_TMS_Real,
+                i.Flag_Continuidad_Diaria,
+                i.Flag_Inventario_Valido,
+                h.Flag_Humedad_Inventario_Valida
+            FROM inventar_SpcHidr.v_inventario_chancado_test AS i
+            LEFT JOIN inventar_SpcHidr.v_humedad_inventario_test AS h
+                ON h.Fecha = i.Fecha
+            LEFT JOIN inventar_SpcHidr.Historico_Apilado_Diario AS a
+                ON CAST(a.Fecha AS date) = i.Fecha
+            LEFT JOIN Niveles08 AS n ON n.Fecha = i.Fecha
+            LEFT JOIN Generador AS g ON g.Fecha = i.Fecha
+            LEFT JOIN inventar_SpcHidr.v_ajuste_camiones_emision_test AS aj
+                ON aj.Fecha = i.Fecha
+            LEFT JOIN inventar_SpcHidr.Datos_conciliados_of AS dc
+                ON dc.Fecha = i.Fecha
+            WHERE i.Fecha >= :fecha_inicio
+              AND i.Fecha <= :fecha_fin
+        )
+        SELECT
+            Fecha, Humedad,
+            Mineral_Apilado_TMH_Original,
+            Factor_Ajuste,
+            Mineral_Apilado_TMH_Ajustado,
+            Delta_Ajuste_TMH,
+            CASE
+                WHEN Mineral_Apilado_TMH_Ajustado IS NOT NULL
+                 AND Humedad IS NOT NULL
+                 AND Delta_Inventario_Chancado_TMS IS NOT NULL
+                THEN Mineral_Apilado_TMH_Ajustado * (1.0 - Humedad / 100.0)
+                     + Delta_Inventario_Chancado_TMS
+            END AS Mineral_Chancado_Balance,
+            Material,
+            Nivel_Promedio_Chancado, Nivel_Promedio_Harneros,
+            Nivel_Promedio_Silo,
+            Bin_Chancado, Bin_Harneros, Tolva_Compensacion, Silo,
+            Inventario_Chancado_TMH, Inventario_Silo_TMH, Total_TMH,
+            Inventario_Chancado_TMS, Inventario_Silo_TMS, Total_TMS,
+            Nivel_Harnero_A, Nivel_Harnero_B, Nivel_Harnero_C,
+            Nivel_Harnero_D, Nivel_Harnero_E,
+            Nivel_Chancado_A, Nivel_Chancado_B, Nivel_Chancado_C,
+            Nivel_Chancado_D, Nivel_Chancado_E,
+            Nivel_Silo_A, Nivel_Silo_B,
+            Fecha_Inventario_Anterior, Inventario_Chancado_TMS_Anterior,
+            Delta_Inventario_Chancado_TMS,
+            Sal_TMH_Dia, SRR_TMS_promedio_dia,
+            CASE
+                WHEN Mineral_Apilado_TMH_Ajustado IS NOT NULL
+                 AND Humedad IS NOT NULL
+                 AND Delta_Inventario_Chancado_TMS IS NOT NULL
+                 AND Sal_TMH_Dia IS NOT NULL
+                 AND SRR_TMS_promedio_dia IS NOT NULL
+                THEN Mineral_Apilado_TMH_Ajustado * (1.0 - Humedad / 100.0)
+                     + Delta_Inventario_Chancado_TMS
+                     - Sal_TMH_Dia - SRR_TMS_promedio_dia
+            END AS Chancado_TMS_Reconstruido,
+            Chancado_TMS_Real,
+            CASE
+                WHEN Chancado_TMS_Real IS NOT NULL
+                 AND Mineral_Apilado_TMH_Ajustado IS NOT NULL
+                 AND Humedad IS NOT NULL
+                 AND Delta_Inventario_Chancado_TMS IS NOT NULL
+                 AND Sal_TMH_Dia IS NOT NULL
+                 AND SRR_TMS_promedio_dia IS NOT NULL
+                THEN Mineral_Apilado_TMH_Ajustado * (1.0 - Humedad / 100.0)
+                     + Delta_Inventario_Chancado_TMS
+                     - Sal_TMH_Dia - SRR_TMS_promedio_dia
+                     - Chancado_TMS_Real
+            END AS Diferencia_vs_Datos_Conciliados,
+            Flag_Humedad_Inventario_Valida,
+            Flag_Continuidad_Diaria,
+            Flag_Inventario_Valido
+        FROM Base
+        ORDER BY Fecha;
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            df = pd.read_sql(
+                sql,
+                conn,
+                params={"fecha_inicio": start_date, "fecha_fin": end_date},
+            )
+    except Exception as exc:
+        raise RuntimeError(f"Error al leer Balance Chancado: {exc}") from exc
+
+    if "Fecha" not in df.columns:
+        raise ValueError("Balance Chancado no contiene la columna Fecha.")
+    df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce").dt.normalize()
+    if df["Fecha"].isna().any():
+        raise ValueError("Balance Chancado contiene fechas nulas o inválidas.")
+    if df["Fecha"].duplicated().any():
+        fechas = df.loc[df["Fecha"].duplicated(keep=False), "Fecha"]
+        raise ValueError(
+            "Balance Chancado contiene fechas duplicadas: "
+            + ", ".join(fechas.dt.strftime("%d-%m-%Y").unique())
+        )
+    if "Fecha_Inventario_Anterior" in df.columns:
+        df["Fecha_Inventario_Anterior"] = pd.to_datetime(
+            df["Fecha_Inventario_Anterior"], errors="coerce"
+        ).dt.normalize()
+    return df.sort_values("Fecha", kind="stable").reset_index(drop=True)
+
 def fetch_representatividad_torres_report(start_date: date, end_date: date) -> pd.DataFrame:
     """
     Consulta representatividad de torres via sp_reporte_representatividad_torres.

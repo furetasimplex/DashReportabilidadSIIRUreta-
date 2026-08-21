@@ -17,6 +17,7 @@ class ErrorModalExportacionTests(unittest.TestCase):
         eventos = []
         datos = pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]})
         factor = pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]})
+        balance = pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]})
 
         with (
             patch.object(
@@ -43,6 +44,10 @@ class ErrorModalExportacionTests(unittest.TestCase):
                 cb, "fetch_factor_ajuste_camiones_report",
                 side_effect=lambda **_: eventos.append("leer_factor") or factor,
             ),
+            patch.object(
+                cb, "fetch_balance_chancado_report",
+                side_effect=lambda **_: eventos.append("leer_balance") or balance,
+            ),
             patch.object(cb.os.path, "isfile", return_value=True),
             patch.object(
                 cb, "export_datos_conciliados_to_template",
@@ -58,7 +63,7 @@ class ErrorModalExportacionTests(unittest.TestCase):
         self.assertEqual(eventos, [
             "refrescar_historico", "refrescar_cache_turno",
             "mantenedor_oficial", "leer_datos",
-            "leer_factor", "exportar",
+            "leer_factor", "leer_balance", "exportar",
         ])
         self.assertEqual(
             refrescar_cache.call_args.kwargs,
@@ -68,6 +73,7 @@ class ErrorModalExportacionTests(unittest.TestCase):
             },
         )
         self.assertIs(exportador.call_args.kwargs["df_factor_ajuste"], factor)
+        self.assertIs(exportador.call_args.kwargs["df_balance_chancado"], balance)
         self.assertTrue(exportador.call_args.kwargs["rango_personalizado"])
         self.assertIs(exportador.call_args.kwargs["df_resumen_mtd"], datos)
 
@@ -89,6 +95,10 @@ class ErrorModalExportacionTests(unittest.TestCase):
             ) as lector,
             patch.object(
                 cb, "fetch_factor_ajuste_camiones_report",
+                return_value=pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-03")]}),
+            ),
+            patch.object(
+                cb, "fetch_balance_chancado_report",
                 return_value=pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-03")]}),
             ),
             patch.object(cb.os.path, "isfile", return_value=True),
@@ -137,6 +147,11 @@ class ErrorModalExportacionTests(unittest.TestCase):
             patch.object(
                 cb,
                 "fetch_factor_ajuste_camiones_report",
+                return_value=pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]}),
+            ),
+            patch.object(
+                cb,
+                "fetch_balance_chancado_report",
                 return_value=pd.DataFrame({"Fecha": [pd.Timestamp("2026-08-01")]}),
             ),
             patch.object(cb.os.path, "isfile", return_value=True),
