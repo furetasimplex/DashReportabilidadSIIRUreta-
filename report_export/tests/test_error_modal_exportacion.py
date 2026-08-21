@@ -32,6 +32,10 @@ class ErrorModalExportacionTests(unittest.TestCase):
                 side_effect=lambda **_: eventos.append("mantenedor_oficial"),
             ),
             patch.object(
+                cb, "actualizar_reporte_turno_cache_emision",
+                side_effect=lambda **_: eventos.append("refrescar_cache_turno"),
+            ) as refrescar_cache,
+            patch.object(
                 cb, "fetch_datos_conciliados_emision_report",
                 side_effect=lambda **_: eventos.append("leer_datos") or datos,
             ),
@@ -52,9 +56,17 @@ class ErrorModalExportacionTests(unittest.TestCase):
             )
 
         self.assertEqual(eventos, [
-            "refrescar_historico", "mantenedor_oficial", "leer_datos",
+            "refrescar_historico", "refrescar_cache_turno",
+            "mantenedor_oficial", "leer_datos",
             "leer_factor", "exportar",
         ])
+        self.assertEqual(
+            refrescar_cache.call_args.kwargs,
+            {
+                "start_date": pd.Timestamp("2026-08-01").date(),
+                "end_date": pd.Timestamp("2026-08-02").date(),
+            },
+        )
         self.assertIs(exportador.call_args.kwargs["df_factor_ajuste"], factor)
         self.assertTrue(exportador.call_args.kwargs["rango_personalizado"])
         self.assertIs(exportador.call_args.kwargs["df_resumen_mtd"], datos)
@@ -69,6 +81,7 @@ class ErrorModalExportacionTests(unittest.TestCase):
                 SimpleNamespace(triggered_id={"type": "report-export-btn", "tipo": "prod"}),
             ),
             patch.object(cb, "refrescar_historico_apilado_report"),
+            patch.object(cb, "actualizar_reporte_turno_cache_emision"),
             patch.object(cb, "actualizar_datos_conciliados_emision_report"),
             patch.object(
                 cb, "fetch_datos_conciliados_emision_report",
@@ -114,6 +127,7 @@ class ErrorModalExportacionTests(unittest.TestCase):
                 ),
             ),
             patch.object(cb, "refrescar_historico_apilado_report"),
+            patch.object(cb, "actualizar_reporte_turno_cache_emision"),
             patch.object(cb, "actualizar_datos_conciliados_emision_report"),
             patch.object(
                 cb,

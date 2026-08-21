@@ -10,6 +10,8 @@ from report_export.report_export import (
     _promedio_ponderado_periodo,
     _semana_mes_lunes_domingo,
     agregar_hoja_generador_reporte,
+    export_reporte_turno_estilo_leyes_finos,
+    preparar_df_generador_reporte_excel,
     preparar_df_reporte_turno_excel,
 )
 
@@ -40,6 +42,38 @@ def test_preparar_reporte_turno_usa_semana_calendario():
     })
     resultado = preparar_df_reporte_turno_excel(df)
     assert resultado["Semana"].tolist() == ["Semana 1", "Semana 2", "Semana 6"]
+
+
+def test_campana_se_normaliza_y_exporta_como_entero_en_ambos_reportes():
+    turno = pd.DataFrame({
+        "Fecha": pd.to_datetime(["2026-08-03"]),
+        "Turno": ["A"],
+        "Campania": [11.0],
+        "Modulo": [7.0],
+    })
+    diario = pd.DataFrame({
+        "Fecha": pd.to_datetime(["2026-08-03"]),
+        "Campania": [11.0],
+        "Modulo": [7.0],
+    })
+
+    assert preparar_df_reporte_turno_excel(turno)["Campania"].iloc[0] == 11
+    assert preparar_df_generador_reporte_excel(diario)["Campaña"].iloc[0] == 11
+
+    output = io.BytesIO()
+    export_reporte_turno_estilo_leyes_finos(
+        turno,
+        output,
+        df_generador=diario,
+    )
+    workbook = load_workbook(io.BytesIO(output.getvalue()), data_only=True)
+
+    celda_turno = workbook["Reporte por Turno"]["D23"]
+    celda_generador = workbook["Generador Reporte"]["D22"]
+    assert celda_turno.value == 11
+    assert celda_turno.number_format == "#,##0"
+    assert celda_generador.value == 11
+    assert celda_generador.number_format == "#,##0"
 
 
 def test_promedio_ponderado_no_es_promedio_simple():

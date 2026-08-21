@@ -80,6 +80,11 @@ def qname(schema: str, name: str) -> str:
     return f"{schema}.{name}"
 
 
+def normalize_definition(definition: str) -> str:
+    normalized = definition.rstrip().replace("\r\n", "\n").replace("\r", "\n")
+    return "\n".join(line.rstrip() for line in normalized.splitlines())
+
+
 def main(profile_name: str = "datos_conciliados") -> None:
     if profile_name not in PROFILES:
         raise SystemExit(
@@ -202,7 +207,7 @@ def main(profile_name: str = "datos_conciliados") -> None:
                 f"-- {qname(obj['schema_name'], obj['object_name'])} ({obj['type_desc']})",
                 f"-- Ultima modificacion: {obj['modify_date']}",
                 "-- " + "=" * 76,
-                definition.rstrip(),
+                normalize_definition(definition),
                 "GO",
                 "",
             ]
@@ -214,8 +219,8 @@ def main(profile_name: str = "datos_conciliados") -> None:
     lines = [
         f"# {profile['title']}: dependencias SQL",
         "",
-        f"> Extraccion de solo lectura: `{context['extracted_at']}`  ",
-        f"> Servidor: `{context['server_name']}`  ",
+        f"> Extraccion de solo lectura: `{context['extracted_at']}`",
+        f"> Servidor: `{context['server_name']}`",
         f"> Base de datos: `{context['database_name']}`",
         "",
         "## Flujo ejecutado por la aplicacion",

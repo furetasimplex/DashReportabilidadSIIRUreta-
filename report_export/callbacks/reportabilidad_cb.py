@@ -106,6 +106,36 @@ _COLUMNAS_OBLIGATORIAS_TM3 = (
     "Comentario_TM3_Fisico",
 )
 
+
+def _refrescar_dependencias_datos_conciliados(
+    ini_d: date,
+    fin_d: date,
+    fin_sql_exclusivo: date,
+) -> None:
+    refrescar_historico_apilado_report(
+        start_date=ini_d, end_date=fin_d, dias_reproceso=0,
+    )
+    print(
+        "[DATOS-CONCILIADOS] 1/3 Histórico apilado actualizado "
+        f"({ini_d} -> {fin_d}, fin inclusivo)"
+    )
+
+    actualizar_reporte_turno_cache_emision(
+        start_date=ini_d, end_date=fin_sql_exclusivo,
+    )
+    print(
+        "[DATOS-CONCILIADOS] 2/3 Cache reporte turno actualizado "
+        f"({ini_d} -> {fin_sql_exclusivo}, fin exclusivo)"
+    )
+
+    actualizar_datos_conciliados_emision_report(
+        start_date=ini_d, end_date=fin_d, dias_reproceso=0,
+    )
+    print(
+        "[DATOS-CONCILIADOS] 3/3 Datos conciliados actualizados "
+        f"({ini_d} -> {fin_d}, fin inclusivo)"
+    )
+
 _ETIQUETAS_DEPENDENCIAS_DATOS = {
     "Fecha": "Fecha", "Chancado_TMS_Real": "Chancado real",
     "Apilado_TMS_Real": "Apilado real", "Apilado_TMS_Plan": "Plan de apilado",
@@ -7277,8 +7307,11 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         fin_d = pd.to_datetime(f_fin).date()
         try:
             print(f"[PREVIEW][DATOS_CONCILIADOS_EMISION] Actualizando {ini_d} -> {fin_d}")
-            refrescar_historico_apilado_report(ini_d, fin_d, dias_reproceso=0)
-            actualizar_datos_conciliados_emision_report(ini_d, fin_d, dias_reproceso=0)
+            _refrescar_dependencias_datos_conciliados(
+                ini_d=ini_d,
+                fin_d=fin_d,
+                fin_sql_exclusivo=fin_sql_exclusivo,
+            )
             df = fetch_datos_conciliados_emision_report(ini_d, fin_d)
             print(f"[PREVIEW][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
         except Exception as exc:
@@ -7596,15 +7629,10 @@ def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
                 f"[EXCEL][DATOS_CONCILIADOS_EMISION] "
                 f"Actualizando {ini_d} -> {fin_d}"
             )
-            refrescar_historico_apilado_report(
-                start_date=ini_d,
-                end_date=fin_d,
-                dias_reproceso=0,
-            )
-            actualizar_datos_conciliados_emision_report(
-                start_date=ini_d,
-                end_date=fin_d,
-                dias_reproceso=0,
+            _refrescar_dependencias_datos_conciliados(
+                ini_d=ini_d,
+                fin_d=fin_d,
+                fin_sql_exclusivo=fin_sql_exclusivo,
             )
             df = fetch_datos_conciliados_emision_report(
                 start_date=ini_d,
@@ -7908,15 +7936,10 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"[PDF][DATOS_CONCILIADOS_EMISION] "
                 f"Actualizando {ini_d} -> {fin_d}"
             )
-            refrescar_historico_apilado_report(
-                start_date=ini_d,
-                end_date=fin_d,
-                dias_reproceso=0,
-            )
-            actualizar_datos_conciliados_emision_report(
-                start_date=ini_d,
-                end_date=fin_d,
-                dias_reproceso=0,
+            _refrescar_dependencias_datos_conciliados(
+                ini_d=ini_d,
+                fin_d=fin_d,
+                fin_sql_exclusivo=fin_sql_exclusivo,
             )
             df = fetch_datos_conciliados_emision_report(
                 start_date=ini_d,

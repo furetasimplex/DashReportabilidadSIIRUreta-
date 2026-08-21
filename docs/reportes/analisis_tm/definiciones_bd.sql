@@ -1,7 +1,7 @@
 -- Definiciones actuales extraidas desde SQL Server.
 -- Servidor: VPS-5347319-X
 -- Base: inventar_SpcHidr
--- Fecha de extraccion: 2026-08-06 19:24:12.876465-03:00
+-- Fecha de extraccion: 2026-08-21 14:13:53.510616-03:00
 -- Archivo informativo: no ejecutar completo sin revision.
 
 -- ============================================================================
@@ -593,26 +593,26 @@ GO
 -- inventar_SpcHidr.resumen_mina (VIEW)
 -- Ultima modificacion: 2026-02-11 13:13:03.167000
 -- ============================================================================
-CREATE VIEW [inventar_SpcHidr].[resumen_mina] AS 
+CREATE VIEW [inventar_SpcHidr].[resumen_mina] AS
 SELECT
    mov_cam.Fecha AS Fecha,
    mov_cam.Turno AS Turno,
    mov_cam.Origen AS Origen,
    mov_cam.Fase AS Fase,
-   
+
    -- Tonelaje
    SUM(mov_cam.Ton) AS Ton,
-   
+
    -- Leyes Ponderadas
    SUM(mov_cam.Ton * mov_cam.CuTG00) / NULLIF(SUM(mov_cam.Ton),0) AS PONDCuTG00,
    SUM(mov_cam.Ton * mov_cam.CusG01) / NULLIF(SUM(mov_cam.Ton),0) AS PONDCusG01,
    SUM(mov_cam.Ton * mov_cam.RS) / NULLIF(SUM(mov_cam.Ton),0) AS PONDRS,
    SUM(mov_cam.Ton * mov_cam.C03G02) / NULLIF(SUM(mov_cam.Ton),0) AS PONDC03G02,
    SUM(mov_cam.Ton * mov_cam.RecLixG03) / NULLIF(SUM(mov_cam.Ton),0) AS PONDRecLixG03,
-   
+
    -- Granulometría Ponderada
    SUM(mov_cam.Ton * mov_cam.[100G07]) / NULLIF(SUM(mov_cam.Ton),0) AS POND100G07,
-   
+
    -- Mineralogía Ponderada
    SUM(mov_cam.Ton * mov_cam.ClayBG10) / NULLIF(SUM(mov_cam.Ton),0) AS PONDClayBG10,
    SUM(mov_cam.Ton * mov_cam.CUFE) / NULLIF(SUM(mov_cam.Ton),0) AS PONDCUFE,
@@ -720,7 +720,7 @@ GO
 
 -- ============================================================================
 -- inventar_SpcHidr.sp_factor_ajuste_camiones_test (SQL_STORED_PROCEDURE)
--- Ultima modificacion: 2026-08-03 22:31:57.337000
+-- Ultima modificacion: 2026-08-21 13:33:37.403000
 -- ============================================================================
 /* ================================================================
    ALTER inventar_SpcHidr.sp_factor_ajuste_camiones_test -- v2
@@ -784,7 +784,7 @@ GO
    cualquier fecha cambiando @FechaTest).
 ================================================================ */
 
-CREATE PROCEDURE [inventar_SpcHidr].[sp_factor_ajuste_camiones_test]
+CREATE   PROCEDURE [inventar_SpcHidr].[sp_factor_ajuste_camiones_test]
     @FechaInicio date,
     @FechaFin    date
 AS
@@ -805,61 +805,14 @@ BEGIN
     ;WITH SRR_Diario AS
     (
         SELECT
-            CAST(r.Fecha AS date) AS Fecha,
-            SUM
-            (
-                CASE
-                    WHEN UPPER(LTRIM(RTRIM(r.Turno))) = 'A'
-                    THEN
-                        COALESCE(
-                            TRY_CONVERT(float, r.Apilado_TMS_Real),
-                            0.0
-                        )
-                        *
-                        COALESCE(
-                            TRY_CONVERT(float, r.SRR),
-                            0.0
-                        )
-                        / 100.0
-                    ELSE 0.0
-                END
-            ) AS SRR_TMS_Turno_A,
-            SUM
-            (
-                CASE
-                    WHEN UPPER(LTRIM(RTRIM(r.Turno))) = 'B'
-                    THEN
-                        COALESCE(
-                            TRY_CONVERT(float, r.Apilado_TMS_Real),
-                            0.0
-                        )
-                        *
-                        COALESCE(
-                            TRY_CONVERT(float, r.SRR),
-                            0.0
-                        )
-                        / 100.0
-                    ELSE 0.0
-                END
-            ) AS SRR_TMS_Turno_B,
-            SUM
-            (
-                COALESCE(
-                    TRY_CONVERT(float, r.Apilado_TMS_Real),
-                    0.0
-                )
-                *
-                COALESCE(
-                    TRY_CONVERT(float, r.SRR),
-                    0.0
-                )
-                / 100.0
-            ) AS SRR_TMS_Dia,
+            s.Fecha,
+            SUM(CASE WHEN UPPER(LTRIM(RTRIM(s.Turno))) = 'A' THEN COALESCE(TRY_CONVERT(float, s.Ton_SRR_Usado_Actual), 0.0) ELSE 0.0 END) AS SRR_TMS_Turno_A,
+            SUM(CASE WHEN UPPER(LTRIM(RTRIM(s.Turno))) = 'B' THEN COALESCE(TRY_CONVERT(float, s.Ton_SRR_Usado_Actual), 0.0) ELSE 0.0 END) AS SRR_TMS_Turno_B,
+            SUM(COALESCE(TRY_CONVERT(float, s.Ton_SRR_Usado_Actual), 0.0)) AS SRR_TMS_Dia,
             COUNT(*) AS Cantidad_Registros_SRR
-        FROM [inventar_SpcHidr].[reporte_turno_cache_emision_test] AS r
-        WHERE CAST(r.Fecha AS date)
-              BETWEEN @FechaInicio AND @FechaFin
-        GROUP BY CAST(r.Fecha AS date)
+        FROM [inventar_SpcHidr].[v_srr_tms_origen_turno_emision_test] AS s
+        WHERE s.Fecha BETWEEN @FechaInicio AND @FechaFin
+        GROUP BY s.Fecha
     ),
     Base AS
     (
@@ -1768,11 +1721,10 @@ GO
 
 -- ============================================================================
 -- inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test (SQL_STORED_PROCEDURE)
--- Ultima modificacion: 2026-08-02 20:56:20.490000
+-- Ultima modificacion: 2026-08-21 13:33:37.463000
 -- ============================================================================
 
-CREATE   PROCEDURE
-    [inventar_SpcHidr].[sp_mantiene_factor_ajuste_camiones_v2_test]
+CREATE   PROCEDURE [inventar_SpcHidr].[sp_mantiene_factor_ajuste_camiones_v2_test]
 (
     @FechaInicio   date,
     @FechaFin      date,
@@ -1896,54 +1848,13 @@ BEGIN
         DROP TABLE #SRRTurnos;
 
     SELECT
-        CAST(r.Fecha AS date) AS Fecha,
-
-        SUM
-        (
-            CASE
-                WHEN UPPER(LTRIM(RTRIM(r.Turno))) = 'A'
-                THEN
-                    COALESCE(
-                        TRY_CONVERT(float, r.Apilado_TMS_Real),
-                        0.0
-                    )
-                    *
-                    COALESCE(
-                        TRY_CONVERT(float, r.SRR),
-                        0.0
-                    )
-                    / 100.0
-                ELSE 0.0
-            END
-        ) AS SRR_TMS_Turno_A,
-
-        SUM
-        (
-            CASE
-                WHEN UPPER(LTRIM(RTRIM(r.Turno))) = 'B'
-                THEN
-                    COALESCE(
-                        TRY_CONVERT(float, r.Apilado_TMS_Real),
-                        0.0
-                    )
-                    *
-                    COALESCE(
-                        TRY_CONVERT(float, r.SRR),
-                        0.0
-                    )
-                    / 100.0
-                ELSE 0.0
-            END
-        ) AS SRR_TMS_Turno_B
-
+        s.Fecha,
+        SUM(CASE WHEN UPPER(LTRIM(RTRIM(s.Turno))) = 'A' THEN COALESCE(TRY_CONVERT(float, s.Ton_SRR_Usado_Actual), 0.0) ELSE 0.0 END) AS SRR_TMS_Turno_A,
+        SUM(CASE WHEN UPPER(LTRIM(RTRIM(s.Turno))) = 'B' THEN COALESCE(TRY_CONVERT(float, s.Ton_SRR_Usado_Actual), 0.0) ELSE 0.0 END) AS SRR_TMS_Turno_B
     INTO #SRRTurnos
-
-    FROM [inventar_SpcHidr].[reporte_turno_cache_emision_test] AS r
-
-    WHERE CAST(r.Fecha AS date)
-          BETWEEN @FechaInicioProceso AND @FechaFin
-
-    GROUP BY CAST(r.Fecha AS date);
+    FROM [inventar_SpcHidr].[v_srr_tms_origen_turno_emision_test] AS s
+    WHERE s.Fecha BETWEEN @FechaInicioProceso AND @FechaFin
+    GROUP BY s.Fecha;
 
     CREATE UNIQUE CLUSTERED INDEX IX_SRRTurnos_Fecha
         ON #SRRTurnos(Fecha);
@@ -5552,7 +5463,7 @@ SELECT
         )
         AS decimal(38,10)
     ) AS Ton_IMP_Camiones,
-		
+
 		  CAST
     (
         SUM
@@ -5576,7 +5487,7 @@ SELECT
 
 INTO #imp_origen_turno
 
-FROM PROD_SIIR.hidro.v_imp_chancado_normalizado AS i
+FROM DEV_SIIR.hidro.v_imp_chancado_normalizado AS i
 
 WHERE i.Fecha >= @fecha_inicio
   AND i.Fecha <  @fecha_fin
@@ -5657,7 +5568,7 @@ ON #imp_origen_turno (Fecha, Turno);
             ISNULL(i.Ton_IMP_Camiones, 0)
             AS decimal(38,10)
         ) AS Ton_IMP_Camiones,
-				
+
 				CAST
         (
             ISNULL(i.Ton_IMP_mina, 0)
@@ -5806,10 +5717,10 @@ origen_calculado AS
                     THEN 0
 
                 ELSE
-                   
+
 									((s.Apilado_TMS_Real- s.Ton_SRR_Usado)*
 										s.Prop_Stock_Camiones_Usada)/s.Apilado_TMS_Real
-                    
+
             END
             AS decimal(18,8)
         ) AS Prop_Final_Stock,
@@ -5823,8 +5734,8 @@ origen_calculado AS
                 ELSE
 								((s.Apilado_TMS_Real- s.Ton_SRR_Usado)*
 										s.Prop_Mina_Camiones_Usada)/s.Apilado_TMS_Real
-                     
-                  
+
+
             END
             AS decimal(18,8)
         ) AS Prop_Final_Mina,
@@ -5950,7 +5861,7 @@ SELECT
 
     /* Dosis / consumo ácido */
     r.ConsH_Real,
-  
+
     /* Granulometrías */
     r.Malla_Menos_1_2_Real,
     ps.Malla_Menos_1_2_Plan_Semanal,
@@ -6294,8 +6205,8 @@ WITH base AS (
         END AS Turno,
 
         SUM(
-            CASE 
-                WHEN Origen = 'Stock' 
+            CASE
+                WHEN Origen = 'Stock'
                  AND Fase <> 'SRR'
                     THEN COALESCE(Ton, 0)
                 ELSE 0
@@ -6303,7 +6214,7 @@ WITH base AS (
         ) AS Ton_Stock_Camiones,
 
         SUM(
-            CASE 
+            CASE
                 WHEN Origen = 'Mina'
                     THEN COALESCE(Ton, 0)
                 ELSE 0
@@ -6311,7 +6222,7 @@ WITH base AS (
         ) AS Ton_Mina_Camiones,
 
         SUM(
-            CASE 
+            CASE
                 WHEN Origen = 'Stock'
                  AND Fase = 'SRR'
                     THEN COALESCE(Ton, 0)
@@ -6342,7 +6253,7 @@ SELECT
 
     CASE
         WHEN Ton_Stock_Camiones + Ton_Mina_Camiones = 0 THEN 0
-        ELSE Ton_Stock_Camiones 
+        ELSE Ton_Stock_Camiones
              / NULLIF(Ton_Stock_Camiones + Ton_Mina_Camiones, 0)
     END AS Prop_Stock_Camiones,
 
@@ -7087,32 +6998,32 @@ GO
 CREATE   VIEW
 [inventar_SpcHidr].[v_apilado_tms_sin_sal_con_srr_reporte_test]
 AS
-WITH base AS (SELECT t.Fecha, t.Flag_Apilado_Valido, t.Flag_TMS_Valido, t.Observacion_TMS, t.Factor_Ajuste_Camiones_Usado, t.Humedad_TM1, t.Humedad_TM2, t.Humedad_Equivalente_Dia, t.Fecha_Humedad_TM1, t.Torre_Humedad_TM1, t.Turno_Humedad_TM1, 
-                                     t.Fuente_Humedad_TM1, t.Fecha_Humedad_TM2, t.Torre_Humedad_TM2, t.Turno_Humedad_TM2, t.Fuente_Humedad_TM2, t.TMH_TM1_Con_Sal_SRR_A, t.TMH_TM1_Con_Sal_SRR_B, t.TMH_TM2_Con_Sal_SRR_A, t.TMH_TM2_Con_Sal_SRR_B, 
-                                     t.TMH_Total_Con_Sal_SRR_A, t.TMH_Total_Con_Sal_SRR_B, t.TMH_Total_Con_Sal_SRR_Dia, t.TMS_TM1_Con_Sal_SRR_A, t.TMS_TM1_Con_Sal_SRR_B, t.TMS_TM2_Con_Sal_SRR_A, t.TMS_TM2_Con_Sal_SRR_B, t.TMS_Total_Con_Sal_SRR_A, 
-                                     t.TMS_Total_Con_Sal_SRR_B, t.TMS_Total_Con_Sal_SRR_Dia, s.Sal_Pesometros_TA, s.Sal_Pesometros_TB, s.Sal_Pesometros_Dia, s.Sal_Topografia_Dia, s.Flag_Sal_Basica_Valida, s.Flag_Sal_Ajuste_Valido, s.Sal_Ajustada_TA, s.Sal_Ajustada_TB, 
-                                     s.Sal_Ajustada_Dia, CASE WHEN t .TMS_Total_Con_Sal_SRR_A IS NULL THEN NULL WHEN t .TMS_Total_Con_Sal_SRR_A = 0 THEN 0 ELSE COALESCE (s.Sal_Ajustada_TA, 0) * t .TMS_TM1_Con_Sal_SRR_A / NULLIF (t .TMS_Total_Con_Sal_SRR_A, 0) 
-                                     END AS Sal_Asignada_TM1_A, CASE WHEN t .TMS_Total_Con_Sal_SRR_A IS NULL THEN NULL WHEN t .TMS_Total_Con_Sal_SRR_A = 0 THEN 0 ELSE COALESCE (s.Sal_Ajustada_TA, 0) * t .TMS_TM2_Con_Sal_SRR_A / NULLIF (t .TMS_Total_Con_Sal_SRR_A, 0) 
-                                     END AS Sal_Asignada_TM2_A, CASE WHEN t .TMS_Total_Con_Sal_SRR_B IS NULL THEN NULL WHEN t .TMS_Total_Con_Sal_SRR_B = 0 THEN 0 ELSE COALESCE (s.Sal_Ajustada_TB, 0) * t .TMS_TM1_Con_Sal_SRR_B / NULLIF (t .TMS_Total_Con_Sal_SRR_B, 0) 
-                                     END AS Sal_Asignada_TM1_B, CASE WHEN t .TMS_Total_Con_Sal_SRR_B IS NULL THEN NULL WHEN t .TMS_Total_Con_Sal_SRR_B = 0 THEN 0 ELSE COALESCE (s.Sal_Ajustada_TB, 0) * t .TMS_TM2_Con_Sal_SRR_B / NULLIF (t .TMS_Total_Con_Sal_SRR_B, 0) 
+WITH base AS (SELECT t.Fecha, t.Flag_Apilado_Valido, t.Flag_TMS_Valido, t.Observacion_TMS, t.Factor_Ajuste_Camiones_Usado, t.Humedad_TM1, t.Humedad_TM2, t.Humedad_Equivalente_Dia, t.Fecha_Humedad_TM1, t.Torre_Humedad_TM1, t.Turno_Humedad_TM1,
+                                     t.Fuente_Humedad_TM1, t.Fecha_Humedad_TM2, t.Torre_Humedad_TM2, t.Turno_Humedad_TM2, t.Fuente_Humedad_TM2, t.TMH_TM1_Con_Sal_SRR_A, t.TMH_TM1_Con_Sal_SRR_B, t.TMH_TM2_Con_Sal_SRR_A, t.TMH_TM2_Con_Sal_SRR_B,
+                                     t.TMH_Total_Con_Sal_SRR_A, t.TMH_Total_Con_Sal_SRR_B, t.TMH_Total_Con_Sal_SRR_Dia, t.TMS_TM1_Con_Sal_SRR_A, t.TMS_TM1_Con_Sal_SRR_B, t.TMS_TM2_Con_Sal_SRR_A, t.TMS_TM2_Con_Sal_SRR_B, t.TMS_Total_Con_Sal_SRR_A,
+                                     t.TMS_Total_Con_Sal_SRR_B, t.TMS_Total_Con_Sal_SRR_Dia, s.Sal_Pesometros_TA, s.Sal_Pesometros_TB, s.Sal_Pesometros_Dia, s.Sal_Topografia_Dia, s.Flag_Sal_Basica_Valida, s.Flag_Sal_Ajuste_Valido, s.Sal_Ajustada_TA, s.Sal_Ajustada_TB,
+                                     s.Sal_Ajustada_Dia, CASE WHEN t .TMS_Total_Con_Sal_SRR_A IS NULL THEN NULL WHEN t .TMS_Total_Con_Sal_SRR_A = 0 THEN 0 ELSE COALESCE (s.Sal_Ajustada_TA, 0) * t .TMS_TM1_Con_Sal_SRR_A / NULLIF (t .TMS_Total_Con_Sal_SRR_A, 0)
+                                     END AS Sal_Asignada_TM1_A, CASE WHEN t .TMS_Total_Con_Sal_SRR_A IS NULL THEN NULL WHEN t .TMS_Total_Con_Sal_SRR_A = 0 THEN 0 ELSE COALESCE (s.Sal_Ajustada_TA, 0) * t .TMS_TM2_Con_Sal_SRR_A / NULLIF (t .TMS_Total_Con_Sal_SRR_A, 0)
+                                     END AS Sal_Asignada_TM2_A, CASE WHEN t .TMS_Total_Con_Sal_SRR_B IS NULL THEN NULL WHEN t .TMS_Total_Con_Sal_SRR_B = 0 THEN 0 ELSE COALESCE (s.Sal_Ajustada_TB, 0) * t .TMS_TM1_Con_Sal_SRR_B / NULLIF (t .TMS_Total_Con_Sal_SRR_B, 0)
+                                     END AS Sal_Asignada_TM1_B, CASE WHEN t .TMS_Total_Con_Sal_SRR_B IS NULL THEN NULL WHEN t .TMS_Total_Con_Sal_SRR_B = 0 THEN 0 ELSE COALESCE (s.Sal_Ajustada_TB, 0) * t .TMS_TM2_Con_Sal_SRR_B / NULLIF (t .TMS_Total_Con_Sal_SRR_B, 0)
                                      END AS Sal_Asignada_TM2_B
                         FROM    inventar_SpcHidr.v_apilado_tms_con_sal_srr_reporte_test AS t LEFT OUTER JOIN
                                      inventar_SpcHidr.v_sal_ajustada_operacional_test AS s ON s.Fecha = t.Fecha), tms_sin_sal AS
-    (SELECT Fecha, Flag_Apilado_Valido, Flag_TMS_Valido, Observacion_TMS, Factor_Ajuste_Camiones_Usado, Humedad_TM1, Humedad_TM2, Humedad_Equivalente_Dia, Fecha_Humedad_TM1, Torre_Humedad_TM1, Turno_Humedad_TM1, Fuente_Humedad_TM1, Fecha_Humedad_TM2, 
-                 Torre_Humedad_TM2, Turno_Humedad_TM2, Fuente_Humedad_TM2, TMH_TM1_Con_Sal_SRR_A, TMH_TM1_Con_Sal_SRR_B, TMH_TM2_Con_Sal_SRR_A, TMH_TM2_Con_Sal_SRR_B, TMH_Total_Con_Sal_SRR_A, TMH_Total_Con_Sal_SRR_B, TMH_Total_Con_Sal_SRR_Dia, 
-                 TMS_TM1_Con_Sal_SRR_A, TMS_TM1_Con_Sal_SRR_B, TMS_TM2_Con_Sal_SRR_A, TMS_TM2_Con_Sal_SRR_B, TMS_Total_Con_Sal_SRR_A, TMS_Total_Con_Sal_SRR_B, TMS_Total_Con_Sal_SRR_Dia, Sal_Pesometros_TA, Sal_Pesometros_TB, Sal_Pesometros_Dia, 
-                 Sal_Topografia_Dia, Flag_Sal_Basica_Valida, Flag_Sal_Ajuste_Valido, Sal_Ajustada_TA, Sal_Ajustada_TB, Sal_Ajustada_Dia, Sal_Asignada_TM1_A, Sal_Asignada_TM2_A, Sal_Asignada_TM1_B, Sal_Asignada_TM2_B, CASE WHEN b.TMS_TM1_Con_Sal_SRR_A IS NULL THEN NULL 
-                 ELSE b.TMS_TM1_Con_Sal_SRR_A - COALESCE (b.Sal_Asignada_TM1_A, 0) END AS TMS_TM1_Sin_Sal_Con_SRR_A, CASE WHEN b.TMS_TM1_Con_Sal_SRR_B IS NULL THEN NULL ELSE b.TMS_TM1_Con_Sal_SRR_B - COALESCE (b.Sal_Asignada_TM1_B, 0) 
-                 END AS TMS_TM1_Sin_Sal_Con_SRR_B, CASE WHEN b.TMS_TM2_Con_Sal_SRR_A IS NULL THEN NULL ELSE b.TMS_TM2_Con_Sal_SRR_A - COALESCE (b.Sal_Asignada_TM2_A, 0) END AS TMS_TM2_Sin_Sal_Con_SRR_A, CASE WHEN b.TMS_TM2_Con_Sal_SRR_B IS NULL 
+    (SELECT Fecha, Flag_Apilado_Valido, Flag_TMS_Valido, Observacion_TMS, Factor_Ajuste_Camiones_Usado, Humedad_TM1, Humedad_TM2, Humedad_Equivalente_Dia, Fecha_Humedad_TM1, Torre_Humedad_TM1, Turno_Humedad_TM1, Fuente_Humedad_TM1, Fecha_Humedad_TM2,
+                 Torre_Humedad_TM2, Turno_Humedad_TM2, Fuente_Humedad_TM2, TMH_TM1_Con_Sal_SRR_A, TMH_TM1_Con_Sal_SRR_B, TMH_TM2_Con_Sal_SRR_A, TMH_TM2_Con_Sal_SRR_B, TMH_Total_Con_Sal_SRR_A, TMH_Total_Con_Sal_SRR_B, TMH_Total_Con_Sal_SRR_Dia,
+                 TMS_TM1_Con_Sal_SRR_A, TMS_TM1_Con_Sal_SRR_B, TMS_TM2_Con_Sal_SRR_A, TMS_TM2_Con_Sal_SRR_B, TMS_Total_Con_Sal_SRR_A, TMS_Total_Con_Sal_SRR_B, TMS_Total_Con_Sal_SRR_Dia, Sal_Pesometros_TA, Sal_Pesometros_TB, Sal_Pesometros_Dia,
+                 Sal_Topografia_Dia, Flag_Sal_Basica_Valida, Flag_Sal_Ajuste_Valido, Sal_Ajustada_TA, Sal_Ajustada_TB, Sal_Ajustada_Dia, Sal_Asignada_TM1_A, Sal_Asignada_TM2_A, Sal_Asignada_TM1_B, Sal_Asignada_TM2_B, CASE WHEN b.TMS_TM1_Con_Sal_SRR_A IS NULL THEN NULL
+                 ELSE b.TMS_TM1_Con_Sal_SRR_A - COALESCE (b.Sal_Asignada_TM1_A, 0) END AS TMS_TM1_Sin_Sal_Con_SRR_A, CASE WHEN b.TMS_TM1_Con_Sal_SRR_B IS NULL THEN NULL ELSE b.TMS_TM1_Con_Sal_SRR_B - COALESCE (b.Sal_Asignada_TM1_B, 0)
+                 END AS TMS_TM1_Sin_Sal_Con_SRR_B, CASE WHEN b.TMS_TM2_Con_Sal_SRR_A IS NULL THEN NULL ELSE b.TMS_TM2_Con_Sal_SRR_A - COALESCE (b.Sal_Asignada_TM2_A, 0) END AS TMS_TM2_Sin_Sal_Con_SRR_A, CASE WHEN b.TMS_TM2_Con_Sal_SRR_B IS NULL
                  THEN NULL ELSE b.TMS_TM2_Con_Sal_SRR_B - COALESCE (b.Sal_Asignada_TM2_B, 0) END AS TMS_TM2_Sin_Sal_Con_SRR_B
     FROM    base AS b)
-    SELECT Fecha, Flag_Apilado_Valido, Flag_TMS_Valido, Observacion_TMS, Factor_Ajuste_Camiones_Usado, Humedad_TM1, Humedad_TM2, Humedad_Equivalente_Dia, Fecha_Humedad_TM1, Torre_Humedad_TM1, Turno_Humedad_TM1, Fuente_Humedad_TM1, Fecha_Humedad_TM2, 
-                Torre_Humedad_TM2, Turno_Humedad_TM2, Fuente_Humedad_TM2, TMH_TM1_Con_Sal_SRR_A, TMH_TM1_Con_Sal_SRR_B, TMH_TM2_Con_Sal_SRR_A, TMH_TM2_Con_Sal_SRR_B, TMH_Total_Con_Sal_SRR_A, TMH_Total_Con_Sal_SRR_B, TMH_Total_Con_Sal_SRR_Dia, 
-                TMS_TM1_Con_Sal_SRR_A, TMS_TM1_Con_Sal_SRR_B, TMS_TM2_Con_Sal_SRR_A, TMS_TM2_Con_Sal_SRR_B, TMS_Total_Con_Sal_SRR_A, TMS_Total_Con_Sal_SRR_B, TMS_Total_Con_Sal_SRR_Dia, Sal_Pesometros_TA, Sal_Pesometros_TB, Sal_Pesometros_Dia, 
-                Sal_Topografia_Dia, Flag_Sal_Basica_Valida, Flag_Sal_Ajuste_Valido, Sal_Ajustada_TA, Sal_Ajustada_TB, Sal_Ajustada_Dia, Sal_Asignada_TM1_A, Sal_Asignada_TM2_A, Sal_Asignada_TM1_B, Sal_Asignada_TM2_B, 
-                Sal_Asignada_TM1_A + Sal_Asignada_TM2_A AS Sal_Distribuida_A, Sal_Asignada_TM1_B + Sal_Asignada_TM2_B AS Sal_Distribuida_B, TMS_TM1_Sin_Sal_Con_SRR_A, TMS_TM1_Sin_Sal_Con_SRR_B, TMS_TM2_Sin_Sal_Con_SRR_A, TMS_TM2_Sin_Sal_Con_SRR_B, 
-                TMS_TM1_Sin_Sal_Con_SRR_A + TMS_TM2_Sin_Sal_Con_SRR_A AS TMS_Total_Sin_Sal_Con_SRR_A, TMS_TM1_Sin_Sal_Con_SRR_B + TMS_TM2_Sin_Sal_Con_SRR_B AS TMS_Total_Sin_Sal_Con_SRR_B, 
-                TMS_TM1_Sin_Sal_Con_SRR_A + TMS_TM1_Sin_Sal_Con_SRR_B + TMS_TM2_Sin_Sal_Con_SRR_A + TMS_TM2_Sin_Sal_Con_SRR_B AS TMS_Total_Sin_Sal_Con_SRR_Dia, TMS_Total_Con_Sal_SRR_Dia - COALESCE (Sal_Ajustada_Dia, 0) 
+    SELECT Fecha, Flag_Apilado_Valido, Flag_TMS_Valido, Observacion_TMS, Factor_Ajuste_Camiones_Usado, Humedad_TM1, Humedad_TM2, Humedad_Equivalente_Dia, Fecha_Humedad_TM1, Torre_Humedad_TM1, Turno_Humedad_TM1, Fuente_Humedad_TM1, Fecha_Humedad_TM2,
+                Torre_Humedad_TM2, Turno_Humedad_TM2, Fuente_Humedad_TM2, TMH_TM1_Con_Sal_SRR_A, TMH_TM1_Con_Sal_SRR_B, TMH_TM2_Con_Sal_SRR_A, TMH_TM2_Con_Sal_SRR_B, TMH_Total_Con_Sal_SRR_A, TMH_Total_Con_Sal_SRR_B, TMH_Total_Con_Sal_SRR_Dia,
+                TMS_TM1_Con_Sal_SRR_A, TMS_TM1_Con_Sal_SRR_B, TMS_TM2_Con_Sal_SRR_A, TMS_TM2_Con_Sal_SRR_B, TMS_Total_Con_Sal_SRR_A, TMS_Total_Con_Sal_SRR_B, TMS_Total_Con_Sal_SRR_Dia, Sal_Pesometros_TA, Sal_Pesometros_TB, Sal_Pesometros_Dia,
+                Sal_Topografia_Dia, Flag_Sal_Basica_Valida, Flag_Sal_Ajuste_Valido, Sal_Ajustada_TA, Sal_Ajustada_TB, Sal_Ajustada_Dia, Sal_Asignada_TM1_A, Sal_Asignada_TM2_A, Sal_Asignada_TM1_B, Sal_Asignada_TM2_B,
+                Sal_Asignada_TM1_A + Sal_Asignada_TM2_A AS Sal_Distribuida_A, Sal_Asignada_TM1_B + Sal_Asignada_TM2_B AS Sal_Distribuida_B, TMS_TM1_Sin_Sal_Con_SRR_A, TMS_TM1_Sin_Sal_Con_SRR_B, TMS_TM2_Sin_Sal_Con_SRR_A, TMS_TM2_Sin_Sal_Con_SRR_B,
+                TMS_TM1_Sin_Sal_Con_SRR_A + TMS_TM2_Sin_Sal_Con_SRR_A AS TMS_Total_Sin_Sal_Con_SRR_A, TMS_TM1_Sin_Sal_Con_SRR_B + TMS_TM2_Sin_Sal_Con_SRR_B AS TMS_Total_Sin_Sal_Con_SRR_B,
+                TMS_TM1_Sin_Sal_Con_SRR_A + TMS_TM1_Sin_Sal_Con_SRR_B + TMS_TM2_Sin_Sal_Con_SRR_A + TMS_TM2_Sin_Sal_Con_SRR_B AS TMS_Total_Sin_Sal_Con_SRR_Dia, TMS_Total_Con_Sal_SRR_Dia - COALESCE (Sal_Ajustada_Dia, 0)
                 AS TMS_Total_Sin_Sal_Con_SRR_Dia_Check, Sal_Asignada_TM1_A + Sal_Asignada_TM2_A - COALESCE (Sal_Ajustada_TA, 0) AS Check_Sal_A, Sal_Asignada_TM1_B + Sal_Asignada_TM2_B - COALESCE (Sal_Ajustada_TB, 0) AS Check_Sal_B
    FROM    tms_sin_sal
 GO
@@ -8107,7 +8018,7 @@ imp AS
         Clay_Beta,
         Cuarzo,
         Caolinita
-    FROM PROD_SIIR.hidro.v_imp_conciliacion_chancado
+    FROM DEV_SIIR.hidro.v_imp_conciliacion_chancado
 ),
 
 combinado AS
@@ -8609,7 +8520,7 @@ WITH B AS (
     SELECT
         l.ID_Registro,
         -- Estandarización de Nombres de Torre
-        Torre = CASE 
+        Torre = CASE
             WHEN UPPER(LTRIM(RTRIM(l.Torre))) IN ('T1', 'TM1', 'TORRE 1') THEN 'T1'
             WHEN UPPER(LTRIM(RTRIM(l.Torre))) IN ('T2', 'TM2', 'TORRE 2') THEN 'T2'
             WHEN UPPER(LTRIM(RTRIM(l.Torre))) IN ('SRR', 'TM3', 'TORRE 3', 'CV-01') THEN 'SRR'
@@ -9139,7 +9050,7 @@ WITH base AS (
     SELECT
         Fecha,
         Turno,
-        CASE 
+        CASE
             WHEN Turno = 'A' THEN 'B'
             WHEN Turno = 'B' THEN 'A'
         END AS Otro_Turno,
@@ -11742,6 +11653,126 @@ SELECT
     Regla_Distribucion
 
 FROM calculo;
+GO
+
+-- ============================================================================
+-- inventar_SpcHidr.v_srr_tms_origen_turno_emision_test (VIEW)
+-- Ultima modificacion: 2026-08-21 12:39:40.797000
+-- ============================================================================
+
+CREATE   VIEW [inventar_SpcHidr].[v_srr_tms_origen_turno_emision_test]
+AS
+WITH turnos_cache AS
+(
+    SELECT DISTINCT
+        CAST(Fecha AS date) AS Fecha,
+        UPPER(LTRIM(RTRIM(Turno))) COLLATE DATABASE_DEFAULT AS Turno
+    FROM [inventar_SpcHidr].[reporte_turno_cache_emision_test]
+),
+imp_origen_turno AS
+(
+    SELECT
+        CAST(i.Fecha AS date) AS Fecha,
+        CASE
+            WHEN i.Turno IN ('TA', 'A') THEN 'A'
+            WHEN i.Turno IN ('TB', 'B') THEN 'B'
+            ELSE i.Turno
+        END COLLATE DATABASE_DEFAULT AS Turno,
+        CAST(SUM(CASE WHEN ISNULL(i.Es_SRR, 0) = 1
+                      THEN ISNULL(i.Ton, 0) ELSE 0 END) AS decimal(38,10)) AS Ton_SRR_IMP,
+        CAST(SUM(ISNULL(i.Ton, 0)) AS decimal(38,10)) AS Ton_IMP_Total
+    FROM [DEV_SIIR].[hidro].[v_imp_chancado_normalizado] AS i
+    INNER JOIN turnos_cache AS tc
+      ON tc.Fecha = CAST(i.Fecha AS date)
+     AND tc.Turno = CASE
+            WHEN i.Turno IN ('TA', 'A') THEN 'A'
+            WHEN i.Turno IN ('TB', 'B') THEN 'B'
+            ELSE i.Turno
+        END COLLATE DATABASE_DEFAULT
+    WHERE ISNULL(i.Ton, 0) > 0
+    GROUP BY
+        CAST(i.Fecha AS date),
+        CASE
+            WHEN i.Turno IN ('TA', 'A') THEN 'A'
+            WHEN i.Turno IN ('TB', 'B') THEN 'B'
+            ELSE i.Turno
+        END COLLATE DATABASE_DEFAULT
+),
+origen_base AS
+(
+    SELECT
+        CAST(r.Fecha AS date) AS Fecha,
+        UPPER(LTRIM(RTRIM(r.Turno))) AS Turno,
+        CAST(ISNULL(r.Apilado_TMS_Real, 0) AS decimal(38,10)) AS Apilado_TMS_Real,
+        CAST(ISNULL(p.Ton_Stock_Camiones, 0) AS decimal(38,10)) AS Ton_Stock_Oficial,
+        CAST(ISNULL(p.Ton_Mina_Camiones, 0) AS decimal(38,10)) AS Ton_Mina_Oficial,
+        CAST(ISNULL(p.Ton_SRR, 0) AS decimal(38,10)) AS Ton_SRR_Oficial,
+        CAST(ISNULL(i.Ton_SRR_IMP, 0) AS decimal(38,10)) AS Ton_SRR_IMP,
+        CAST(ISNULL(i.Ton_IMP_Total, 0) AS decimal(38,10)) AS Ton_IMP_Total,
+        c.Fuente_Dato,
+        CASE
+            WHEN ISNULL(p.Ton_Stock_Camiones, 0) > 0
+              OR ISNULL(p.Ton_Mina_Camiones, 0) > 0
+              OR ISNULL(p.Ton_SRR, 0) > 0 THEN 'OFICIAL'
+            WHEN UPPER(LTRIM(RTRIM(ISNULL(c.Fuente_Dato, '')))) = 'IMP'
+             AND ISNULL(i.Ton_IMP_Total, 0) > 0 THEN 'IMP'
+            ELSE 'SIN_ORIGEN'
+        END AS Fuente_SRR
+    FROM [inventar_SpcHidr].[reporte_turno_cache_emision_test] AS r
+    LEFT JOIN [inventar_SpcHidr].[v_apilado_base_mina_stock_srr] AS p
+      ON p.Fecha = CAST(r.Fecha AS date)
+     AND p.Turno = UPPER(LTRIM(RTRIM(r.Turno)))
+    LEFT JOIN imp_origen_turno AS i
+      ON i.Fecha = CAST(r.Fecha AS date)
+     AND i.Turno = UPPER(LTRIM(RTRIM(r.Turno))) COLLATE DATABASE_DEFAULT
+    LEFT JOIN [inventar_SpcHidr].[v_conciliacion_chancado_v2] AS c
+      ON c.Fecha = CAST(r.Fecha AS date)
+     AND c.Turno = UPPER(LTRIM(RTRIM(r.Turno)))
+),
+origen_raw AS
+(
+    SELECT
+        b.*,
+        CAST(CASE
+            WHEN b.Fuente_SRR = 'OFICIAL' THEN b.Ton_SRR_Oficial
+            WHEN b.Fuente_SRR = 'IMP' THEN b.Ton_SRR_IMP
+            ELSE 0
+        END AS decimal(38,10)) AS Ton_SRR_Origen_Raw
+    FROM origen_base AS b
+)
+SELECT
+    Fecha,
+    Turno,
+    Fuente_SRR,
+    Ton_SRR_Oficial,
+    Ton_SRR_IMP,
+    Ton_SRR_Origen_Raw,
+    CAST(CASE
+        WHEN Apilado_TMS_Real <= 0 THEN 0
+        WHEN Ton_SRR_Origen_Raw <= 0 THEN 0
+        WHEN Ton_SRR_Origen_Raw > Apilado_TMS_Real THEN Apilado_TMS_Real
+        ELSE Ton_SRR_Origen_Raw
+    END AS decimal(38,10)) AS Ton_SRR_Usado_Actual,
+    CAST(CASE WHEN Apilado_TMS_Real > 0
+                   AND Ton_SRR_Origen_Raw > Apilado_TMS_Real
+              THEN 1 ELSE 0 END AS bit) AS Flag_SRR_Capeado_Por_Apilado,
+    CAST(CASE WHEN Fuente_SRR <> 'SIN_ORIGEN'
+                   AND Apilado_TMS_Real > 0
+                   AND Ton_SRR_Origen_Raw > 0
+              THEN 1 ELSE 0 END AS bit) AS Flag_SRR_Valido,
+    CAST(CASE
+        WHEN Fuente_SRR = 'SIN_ORIGEN' THEN 'SIN_ORIGEN'
+        WHEN Apilado_TMS_Real <= 0 THEN 'SIN_APILADO'
+        WHEN Ton_SRR_Origen_Raw <= 0 THEN 'SIN_SRR_POSITIVO'
+        WHEN Ton_SRR_Origen_Raw > Apilado_TMS_Real THEN 'OK_CAP_APILADO'
+        ELSE 'OK'
+    END AS varchar(40)) AS Estado_SRR,
+    Apilado_TMS_Real,
+    Ton_Stock_Oficial,
+    Ton_Mina_Oficial,
+    Ton_IMP_Total,
+    Fuente_Dato AS Fuente_Dato_Conciliacion
+FROM origen_raw;
 GO
 
 -- ============================================================================

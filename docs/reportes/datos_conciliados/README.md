@@ -1,7 +1,7 @@
 # Datos Conciliados: dependencias SQL
 
-> Extraccion de solo lectura: `2026-08-06 19:22:19.318067-03:00`  
-> Servidor: `VPS-5347319-X`  
+> Extraccion de solo lectura: `2026-08-21 14:14:23.707883-03:00`
+> Servidor: `VPS-5347319-X`
 > Base de datos: `inventar_SpcHidr`
 
 ## Flujo ejecutado por la aplicacion
@@ -76,19 +76,25 @@ inventar_SpcHidr.sp_mantiene_datos_conciliados_emision_test [SQL_STORED_PROCEDUR
 ├── [catalogo] inventar_SpcHidr.reporte_turno_cache_emision_test [USER_TABLE]
 ├── [catalogo] inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test [SQL_STORED_PROCEDURE]
 │       ├── [catalogo] inventar_SpcHidr.Control_Factor_Ajuste_Camiones_v2_test [USER_TABLE]
-│       ├── [catalogo] inventar_SpcHidr.reporte_turno_cache_emision_test [USER_TABLE]
-│       └── [catalogo] inventar_SpcHidr.sp_factor_ajuste_camiones_test [SQL_STORED_PROCEDURE]
-│               ├── [catalogo] inventar_SpcHidr.Historico_Apilado_Diario [USER_TABLE]
-│               ├── [texto] inventar_SpcHidr.mov_cam [USER_TABLE]
-│               ├── [catalogo] inventar_SpcHidr.mov_cam_powerbi [USER_TABLE]
-│               ├── [catalogo] inventar_SpcHidr.reporte_turno_cache_emision_test [USER_TABLE]
-│               ├── [catalogo] inventar_SpcHidr.v_humedad_inventario_test [VIEW]
-│               │       └── [catalogo] inventar_SpcHidr.v_reporte_diario_humedad_test [VIEW] (dependencias ya mostradas)
-│               └── [catalogo] inventar_SpcHidr.v_inventario_chancado_test [VIEW]
-│                       └── [catalogo] inventar_SpcHidr.v_inventario_chancado_archive_test [VIEW]
-│                               ├── [catalogo] inventar_SpcHidr.datos_filtrados [USER_TABLE]
-│                               ├── [catalogo] inventar_SpcHidr.semilla_inventario_chancado [USER_TABLE]
-│                               └── [catalogo] inventar_SpcHidr.v_humedad_inventario_test [VIEW] (dependencias ya mostradas)
+│       ├── [catalogo] inventar_SpcHidr.sp_factor_ajuste_camiones_test [SQL_STORED_PROCEDURE]
+│       │       ├── [catalogo] inventar_SpcHidr.Historico_Apilado_Diario [USER_TABLE]
+│       │       ├── [texto] inventar_SpcHidr.mov_cam [USER_TABLE]
+│       │       ├── [catalogo] inventar_SpcHidr.mov_cam_powerbi [USER_TABLE]
+│       │       ├── [catalogo] inventar_SpcHidr.v_humedad_inventario_test [VIEW]
+│       │       │       └── [catalogo] inventar_SpcHidr.v_reporte_diario_humedad_test [VIEW] (dependencias ya mostradas)
+│       │       ├── [catalogo] inventar_SpcHidr.v_inventario_chancado_test [VIEW]
+│       │       │       └── [catalogo] inventar_SpcHidr.v_inventario_chancado_archive_test [VIEW]
+│       │       │               ├── [catalogo] inventar_SpcHidr.datos_filtrados [USER_TABLE]
+│       │       │               ├── [catalogo] inventar_SpcHidr.semilla_inventario_chancado [USER_TABLE]
+│       │       │               └── [catalogo] inventar_SpcHidr.v_humedad_inventario_test [VIEW] (dependencias ya mostradas)
+│       │       └── [catalogo] inventar_SpcHidr.v_srr_tms_origen_turno_emision_test [VIEW]
+│       │               ├── [catalogo] inventar_SpcHidr.reporte_turno_cache_emision_test [USER_TABLE]
+│       │               ├── [catalogo] inventar_SpcHidr.v_apilado_base_mina_stock_srr [VIEW]
+│       │               │       └── [catalogo] inventar_SpcHidr.mov_cam [USER_TABLE]
+│       │               └── [catalogo] inventar_SpcHidr.v_conciliacion_chancado_v2 [VIEW]
+│       │                       └── [catalogo] inventar_SpcHidr.resumen_mina [VIEW]
+│       │                               └── [catalogo] inventar_SpcHidr.mov_cam [USER_TABLE]
+│       └── [catalogo] inventar_SpcHidr.v_srr_tms_origen_turno_emision_test [VIEW] (dependencias ya mostradas)
 ├── [catalogo] inventar_SpcHidr.v_ajuste_camiones_emision_test [VIEW]
 │       └── [catalogo] inventar_SpcHidr.Control_Factor_Ajuste_Camiones_v2_test [USER_TABLE]
 ├── [catalogo] inventar_SpcHidr.v_planes_mensuales_diarios_test [VIEW]
@@ -134,7 +140,7 @@ reclamo.v_reclamo_para_conciliados [VIEW] (ver definición anterior)
 | `inventar_SpcHidr.Control_Factor_Ajuste_Camiones_v2_test` | USER_TABLE | 2026-07-31 01:32:38.817000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.Datos_conciliados_of` | USER_TABLE | 2026-07-06 10:39:24.833000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.Historico_Apilado_Diario` | USER_TABLE | 2026-07-07 15:56:18.137000 | No (tabla u objeto sin módulo SQL) |
-| `inventar_SpcHidr.Informe_TM_lab` | USER_TABLE | 2026-02-12 12:13:55.607000 | No (tabla u objeto sin módulo SQL) |
+| `inventar_SpcHidr.Informe_TM_lab` | USER_TABLE | 2026-08-17 13:51:26.377000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.Resumen_Intervalo_TotTM` | USER_TABLE | 2026-07-22 14:05:44.430000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.bitacora_turnos_consolidada` | USER_TABLE | 2026-05-19 17:07:34.240000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.campaña` | USER_TABLE | 2025-10-16 14:30:54.387000 | No (tabla u objeto sin módulo SQL) |
@@ -154,16 +160,19 @@ reclamo.v_reclamo_para_conciliados [VIEW] (ver definición anterior)
 | `inventar_SpcHidr.planes_mensuales` | USER_TABLE | 2026-08-04 10:21:23.150000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.produccion_catodica` | USER_TABLE | 2026-07-22 14:11:46.437000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.reporte_turno_cache_emision_test` | USER_TABLE | 2026-07-31 11:14:35.217000 | No (tabla u objeto sin módulo SQL) |
+| `inventar_SpcHidr.resumen_mina` | VIEW | 2026-02-11 13:13:03.167000 | Sí |
 | `inventar_SpcHidr.semilla_inventario_chancado` | USER_TABLE | 2026-08-01 13:19:03.773000 | No (tabla u objeto sin módulo SQL) |
-| `inventar_SpcHidr.sp_factor_ajuste_camiones_test` | SQL_STORED_PROCEDURE | 2026-08-03 22:31:57.337000 | Sí |
+| `inventar_SpcHidr.sp_factor_ajuste_camiones_test` | SQL_STORED_PROCEDURE | 2026-08-21 13:33:37.403000 | Sí |
 | `inventar_SpcHidr.sp_mantiene_datos_conciliados_emision_test` | SQL_STORED_PROCEDURE | 2026-08-04 21:35:44.210000 | Sí |
-| `inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test` | SQL_STORED_PROCEDURE | 2026-08-02 20:56:20.490000 | Sí |
+| `inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test` | SQL_STORED_PROCEDURE | 2026-08-21 13:33:37.463000 | Sí |
 | `inventar_SpcHidr.sp_refrescar_historico_apilado_test` | SQL_STORED_PROCEDURE | 2026-07-23 16:03:32.820000 | Sí |
 | `inventar_SpcHidr.topografia_sal` | USER_TABLE | 2026-05-28 10:01:37.457000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.v_ajuste_camiones_emision_test` | VIEW | 2026-07-31 01:39:53.870000 | Sí |
+| `inventar_SpcHidr.v_apilado_base_mina_stock_srr` | VIEW | 2026-06-01 10:12:33.767000 | Sí |
 | `inventar_SpcHidr.v_apilado_tms_con_sal_srr_reporte_test` | VIEW | 2026-07-24 19:06:44.817000 | Sí |
 | `inventar_SpcHidr.v_apilado_tms_sin_sal_con_srr_reporte_test` | VIEW | 2026-07-29 13:31:05.657000 | Sí |
 | `inventar_SpcHidr.v_bitacora_rangos` | VIEW | 2026-05-14 01:24:38.343000 | Sí |
+| `inventar_SpcHidr.v_conciliacion_chancado_v2` | VIEW | 2026-07-24 08:01:00.463000 | Sí |
 | `inventar_SpcHidr.v_datos_apilado_tmh_v2` | VIEW | 2026-08-04 14:50:41.020000 | Sí |
 | `inventar_SpcHidr.v_estado_apilado_turno_representatividad` | VIEW | 2026-07-24 08:01:00.770000 | Sí |
 | `inventar_SpcHidr.v_he_10s_por_intervalo_excel` | VIEW | 2026-07-22 14:05:44.800000 | Sí |
@@ -182,6 +191,7 @@ reclamo.v_reclamo_para_conciliados [VIEW] (ver definición anterior)
 | `inventar_SpcHidr.v_representatividad_srr_turno_calculada` | VIEW | 2026-07-11 13:19:23.893000 | Sí |
 | `inventar_SpcHidr.v_sal_ajustada` | VIEW | 2026-05-28 19:21:46.190000 | Sí |
 | `inventar_SpcHidr.v_sal_ajustada_operacional_test` | VIEW | 2026-07-29 13:20:09.397000 | Sí |
+| `inventar_SpcHidr.v_srr_tms_origen_turno_emision_test` | VIEW | 2026-08-21 12:39:40.797000 | Sí |
 | `inventar_SpcHidr.v_ton_por_intervalo_excel` | VIEW | 2026-07-22 14:05:44.643000 | Sí |
 | `reclamo.ajuste_manual` | USER_TABLE | 2026-07-29 16:36:45.027000 | No (tabla u objeto sin módulo SQL) |
 | `reclamo.calculo_diario` | USER_TABLE | 2026-07-29 22:58:49.443000 | No (tabla u objeto sin módulo SQL) |

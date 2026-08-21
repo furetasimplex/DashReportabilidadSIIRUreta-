@@ -1,7 +1,7 @@
 # Análisis TM / Análisis Torres de Muestreo: dependencias SQL
 
-> Extraccion de solo lectura: `2026-08-06 19:24:12.876465-03:00`  
-> Servidor: `VPS-5347319-X`  
+> Extraccion de solo lectura: `2026-08-21 14:13:53.510616-03:00`
+> Servidor: `VPS-5347319-X`
 > Base de datos: `inventar_SpcHidr`
 
 ## Flujo ejecutado por la aplicacion
@@ -43,48 +43,54 @@ inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test [SQL_STORED_PROCEDURE]
 
 inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test [SQL_STORED_PROCEDURE]
 ├── [catalogo] inventar_SpcHidr.Control_Factor_Ajuste_Camiones_v2_test [USER_TABLE]
-├── [catalogo] inventar_SpcHidr.reporte_turno_cache_emision_test [USER_TABLE]
-└── [catalogo] inventar_SpcHidr.sp_factor_ajuste_camiones_test [SQL_STORED_PROCEDURE]
-        ├── [catalogo] inventar_SpcHidr.Historico_Apilado_Diario [USER_TABLE]
-        ├── [texto] inventar_SpcHidr.mov_cam [USER_TABLE]
-        ├── [catalogo] inventar_SpcHidr.mov_cam_powerbi [USER_TABLE]
-        ├── [catalogo] inventar_SpcHidr.reporte_turno_cache_emision_test [USER_TABLE]
-        ├── [catalogo] inventar_SpcHidr.v_humedad_inventario_test [VIEW]
-        │       └── [catalogo] inventar_SpcHidr.v_reporte_diario_humedad_test [VIEW]
-        │               ├── [catalogo] inventar_SpcHidr.Informe_TM_lab [USER_TABLE]
-        │               ├── [catalogo] inventar_SpcHidr.humedad_inicial_tm_periodo [USER_TABLE]
-        │               ├── [catalogo] inventar_SpcHidr.v_apilado_tms_con_sal_srr_reporte_test [VIEW]
-        │               │       ├── [catalogo] inventar_SpcHidr.Informe_TM_lab [USER_TABLE]
-        │               │       ├── [catalogo] inventar_SpcHidr.factor_ajuste_camiones [USER_TABLE]
-        │               │       ├── [catalogo] inventar_SpcHidr.humedad_inicial_tm_periodo [USER_TABLE]
-        │               │       ├── [catalogo] inventar_SpcHidr.v_datos_apilado_tmh_v2 [VIEW] (dependencias ya mostradas)
-        │               │       └── [catalogo] inventar_SpcHidr.v_representatividad_diaria_calculada [VIEW]
-        │               │               ├── [catalogo] inventar_SpcHidr.v_peso_real_torre_turno_excel [VIEW]
-        │               │               │       └── [catalogo] inventar_SpcHidr.peso_real_torre_turno [USER_TABLE]
-        │               │               ├── [catalogo] inventar_SpcHidr.v_peso_teorico_turno_torre_excel [VIEW]
-        │               │               │       ├── [catalogo] inventar_SpcHidr.param_peso_teorico_base [USER_TABLE]
-        │               │               │       └── [catalogo] inventar_SpcHidr.v_reporte_diario_emulado_excel [VIEW]
-        │               │               │               ├── [catalogo] inventar_SpcHidr.v_bitacora_rangos [VIEW]
-        │               │               │               │       └── [catalogo] inventar_SpcHidr.bitacora_turnos_consolidada [USER_TABLE]
-        │               │               │               ├── [catalogo] inventar_SpcHidr.v_he_10s_por_intervalo_excel [VIEW]
-        │               │               │               │       └── [catalogo] inventar_SpcHidr.Resumen_Intervalo_TotTM [USER_TABLE]
-        │               │               │               ├── [catalogo] inventar_SpcHidr.v_informe_tm_lab_norm [VIEW]
-        │               │               │               │       └── [catalogo] inventar_SpcHidr.Informe_TM_lab [USER_TABLE]
-        │               │               │               └── [catalogo] inventar_SpcHidr.v_ton_por_intervalo_excel [VIEW]
-        │               │               │                       └── [catalogo] inventar_SpcHidr.Resumen_Intervalo_TotTM [USER_TABLE]
-        │               │               ├── [catalogo] inventar_SpcHidr.v_reporte_diario_emulado_excel [VIEW] (dependencias ya mostradas)
-        │               │               └── [catalogo] inventar_SpcHidr.v_representatividad_srr_turno_calculada [VIEW]
-        │               │                       ├── [catalogo] inventar_SpcHidr.v_estado_apilado_turno_representatividad [VIEW]
-        │               │                       │       └── [catalogo] inventar_SpcHidr.v_datos_apilado_tmh_v2 [VIEW] (dependencias ya mostradas)
-        │               │                       ├── [catalogo] inventar_SpcHidr.v_peso_real_torre_turno_excel [VIEW] (dependencias ya mostradas)
-        │               │                       ├── [catalogo] inventar_SpcHidr.v_peso_teorico_turno_torre_excel [VIEW] (dependencias ya mostradas)
-        │               │                       └── [catalogo] inventar_SpcHidr.v_reporte_diario_emulado_excel [VIEW] (dependencias ya mostradas)
-        │               └── [catalogo] inventar_SpcHidr.v_representatividad_diaria_calculada [VIEW] (dependencias ya mostradas)
-        └── [catalogo] inventar_SpcHidr.v_inventario_chancado_test [VIEW]
-                └── [catalogo] inventar_SpcHidr.v_inventario_chancado_archive_test [VIEW]
-                        ├── [catalogo] inventar_SpcHidr.datos_filtrados [USER_TABLE]
-                        ├── [catalogo] inventar_SpcHidr.semilla_inventario_chancado [USER_TABLE]
-                        └── [catalogo] inventar_SpcHidr.v_humedad_inventario_test [VIEW] (dependencias ya mostradas)
+├── [catalogo] inventar_SpcHidr.sp_factor_ajuste_camiones_test [SQL_STORED_PROCEDURE]
+│       ├── [catalogo] inventar_SpcHidr.Historico_Apilado_Diario [USER_TABLE]
+│       ├── [texto] inventar_SpcHidr.mov_cam [USER_TABLE]
+│       ├── [catalogo] inventar_SpcHidr.mov_cam_powerbi [USER_TABLE]
+│       ├── [catalogo] inventar_SpcHidr.v_humedad_inventario_test [VIEW]
+│       │       └── [catalogo] inventar_SpcHidr.v_reporte_diario_humedad_test [VIEW]
+│       │               ├── [catalogo] inventar_SpcHidr.Informe_TM_lab [USER_TABLE]
+│       │               ├── [catalogo] inventar_SpcHidr.humedad_inicial_tm_periodo [USER_TABLE]
+│       │               ├── [catalogo] inventar_SpcHidr.v_apilado_tms_con_sal_srr_reporte_test [VIEW]
+│       │               │       ├── [catalogo] inventar_SpcHidr.Informe_TM_lab [USER_TABLE]
+│       │               │       ├── [catalogo] inventar_SpcHidr.factor_ajuste_camiones [USER_TABLE]
+│       │               │       ├── [catalogo] inventar_SpcHidr.humedad_inicial_tm_periodo [USER_TABLE]
+│       │               │       ├── [catalogo] inventar_SpcHidr.v_datos_apilado_tmh_v2 [VIEW] (dependencias ya mostradas)
+│       │               │       └── [catalogo] inventar_SpcHidr.v_representatividad_diaria_calculada [VIEW]
+│       │               │               ├── [catalogo] inventar_SpcHidr.v_peso_real_torre_turno_excel [VIEW]
+│       │               │               │       └── [catalogo] inventar_SpcHidr.peso_real_torre_turno [USER_TABLE]
+│       │               │               ├── [catalogo] inventar_SpcHidr.v_peso_teorico_turno_torre_excel [VIEW]
+│       │               │               │       ├── [catalogo] inventar_SpcHidr.param_peso_teorico_base [USER_TABLE]
+│       │               │               │       └── [catalogo] inventar_SpcHidr.v_reporte_diario_emulado_excel [VIEW]
+│       │               │               │               ├── [catalogo] inventar_SpcHidr.v_bitacora_rangos [VIEW]
+│       │               │               │               │       └── [catalogo] inventar_SpcHidr.bitacora_turnos_consolidada [USER_TABLE]
+│       │               │               │               ├── [catalogo] inventar_SpcHidr.v_he_10s_por_intervalo_excel [VIEW]
+│       │               │               │               │       └── [catalogo] inventar_SpcHidr.Resumen_Intervalo_TotTM [USER_TABLE]
+│       │               │               │               ├── [catalogo] inventar_SpcHidr.v_informe_tm_lab_norm [VIEW]
+│       │               │               │               │       └── [catalogo] inventar_SpcHidr.Informe_TM_lab [USER_TABLE]
+│       │               │               │               └── [catalogo] inventar_SpcHidr.v_ton_por_intervalo_excel [VIEW]
+│       │               │               │                       └── [catalogo] inventar_SpcHidr.Resumen_Intervalo_TotTM [USER_TABLE]
+│       │               │               ├── [catalogo] inventar_SpcHidr.v_reporte_diario_emulado_excel [VIEW] (dependencias ya mostradas)
+│       │               │               └── [catalogo] inventar_SpcHidr.v_representatividad_srr_turno_calculada [VIEW]
+│       │               │                       ├── [catalogo] inventar_SpcHidr.v_estado_apilado_turno_representatividad [VIEW]
+│       │               │                       │       └── [catalogo] inventar_SpcHidr.v_datos_apilado_tmh_v2 [VIEW] (dependencias ya mostradas)
+│       │               │                       ├── [catalogo] inventar_SpcHidr.v_peso_real_torre_turno_excel [VIEW] (dependencias ya mostradas)
+│       │               │                       ├── [catalogo] inventar_SpcHidr.v_peso_teorico_turno_torre_excel [VIEW] (dependencias ya mostradas)
+│       │               │                       └── [catalogo] inventar_SpcHidr.v_reporte_diario_emulado_excel [VIEW] (dependencias ya mostradas)
+│       │               └── [catalogo] inventar_SpcHidr.v_representatividad_diaria_calculada [VIEW] (dependencias ya mostradas)
+│       ├── [catalogo] inventar_SpcHidr.v_inventario_chancado_test [VIEW]
+│       │       └── [catalogo] inventar_SpcHidr.v_inventario_chancado_archive_test [VIEW]
+│       │               ├── [catalogo] inventar_SpcHidr.datos_filtrados [USER_TABLE]
+│       │               ├── [catalogo] inventar_SpcHidr.semilla_inventario_chancado [USER_TABLE]
+│       │               └── [catalogo] inventar_SpcHidr.v_humedad_inventario_test [VIEW] (dependencias ya mostradas)
+│       └── [catalogo] inventar_SpcHidr.v_srr_tms_origen_turno_emision_test [VIEW]
+│               ├── [catalogo] inventar_SpcHidr.reporte_turno_cache_emision_test [USER_TABLE]
+│               ├── [catalogo] inventar_SpcHidr.v_apilado_base_mina_stock_srr [VIEW]
+│               │       └── [catalogo] inventar_SpcHidr.mov_cam [USER_TABLE]
+│               └── [catalogo] inventar_SpcHidr.v_conciliacion_chancado_v2 [VIEW]
+│                       └── [catalogo] inventar_SpcHidr.resumen_mina [VIEW]
+│                               └── [catalogo] inventar_SpcHidr.mov_cam [USER_TABLE]
+└── [catalogo] inventar_SpcHidr.v_srr_tms_origen_turno_emision_test [VIEW] (dependencias ya mostradas)
 
 inventar_SpcHidr.sp_refrescar_clays_cufe [SQL_STORED_PROCEDURE]
 ├── [catalogo] inventar_SpcHidr.Clays_CuFe [USER_TABLE]
@@ -93,9 +99,7 @@ inventar_SpcHidr.sp_refrescar_clays_cufe [SQL_STORED_PROCEDURE]
         ├── [catalogo] inventar_SpcHidr.Informe_TM_lab [USER_TABLE]
         ├── [catalogo] inventar_SpcHidr.NIR [USER_TABLE]
         ├── [catalogo] inventar_SpcHidr.representatividad_torres_resultado [USER_TABLE]
-        └── [catalogo] inventar_SpcHidr.v_conciliacion_chancado_v2 [VIEW]
-                └── [catalogo] inventar_SpcHidr.resumen_mina [VIEW]
-                        └── [catalogo] inventar_SpcHidr.mov_cam [USER_TABLE]
+        └── [catalogo] inventar_SpcHidr.v_conciliacion_chancado_v2 [VIEW] (dependencias ya mostradas)
 
 inventar_SpcHidr.sp_actualizar_reporte_turno_cache_emision_test [SQL_STORED_PROCEDURE]
 ├── [catalogo] inventar_SpcHidr.reporte_turno_cache_emision_test [USER_TABLE]
@@ -108,8 +112,7 @@ inventar_SpcHidr.sp_actualizar_reporte_turno_cache_emision_test [SQL_STORED_PROC
         ├── [catalogo] inventar_SpcHidr.representatividad_torres_resultado [USER_TABLE]
         ├── [catalogo] inventar_SpcHidr.v_ajuste_camiones_emision_test [VIEW]
         │       └── [catalogo] inventar_SpcHidr.Control_Factor_Ajuste_Camiones_v2_test [USER_TABLE]
-        ├── [catalogo] inventar_SpcHidr.v_apilado_base_mina_stock_srr [VIEW]
-        │       └── [catalogo] inventar_SpcHidr.mov_cam [USER_TABLE]
+        ├── [catalogo] inventar_SpcHidr.v_apilado_base_mina_stock_srr [VIEW] (dependencias ya mostradas)
         ├── [catalogo] inventar_SpcHidr.v_conciliacion_chancado_v2 [VIEW] (dependencias ya mostradas)
         ├── [catalogo] inventar_SpcHidr.v_datos_apilado_tmh_v2 [VIEW] (dependencias ya mostradas)
         ├── [catalogo] inventar_SpcHidr.v_leyes_resueltas_data_tm_reporte_test [VIEW]
@@ -160,7 +163,7 @@ inventar_SpcHidr.sp_generador_reporte_diario_emision_test [SQL_STORED_PROCEDURE]
 | `inventar_SpcHidr.Control_Apilado_TMH_v2_test` | USER_TABLE | 2026-08-04 14:47:44.723000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.Control_Factor_Ajuste_Camiones_v2_test` | USER_TABLE | 2026-07-31 01:32:38.817000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.Historico_Apilado_Diario` | USER_TABLE | 2026-07-07 15:56:18.137000 | No (tabla u objeto sin módulo SQL) |
-| `inventar_SpcHidr.Informe_TM_lab` | USER_TABLE | 2026-02-12 12:13:55.607000 | No (tabla u objeto sin módulo SQL) |
+| `inventar_SpcHidr.Informe_TM_lab` | USER_TABLE | 2026-08-17 13:51:26.377000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.NIR` | USER_TABLE | 2026-02-10 14:48:59.083000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.Resumen_Intervalo_TotTM` | USER_TABLE | 2026-07-22 14:05:44.430000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.analitos_semilla_reporte_turno` | USER_TABLE | 2026-06-02 14:08:17.580000 | No (tabla u objeto sin módulo SQL) |
@@ -181,10 +184,10 @@ inventar_SpcHidr.sp_generador_reporte_diario_emision_test [SQL_STORED_PROCEDURE]
 | `inventar_SpcHidr.resumen_mina` | VIEW | 2026-02-11 13:13:03.167000 | Sí |
 | `inventar_SpcHidr.semilla_inventario_chancado` | USER_TABLE | 2026-08-01 13:19:03.773000 | No (tabla u objeto sin módulo SQL) |
 | `inventar_SpcHidr.sp_actualizar_reporte_turno_cache_emision_test` | SQL_STORED_PROCEDURE | 2026-07-31 11:23:14.840000 | Sí |
-| `inventar_SpcHidr.sp_factor_ajuste_camiones_test` | SQL_STORED_PROCEDURE | 2026-08-03 22:31:57.337000 | Sí |
+| `inventar_SpcHidr.sp_factor_ajuste_camiones_test` | SQL_STORED_PROCEDURE | 2026-08-21 13:33:37.403000 | Sí |
 | `inventar_SpcHidr.sp_generador_reporte_diario_emision_test` | SQL_STORED_PROCEDURE | 2026-07-31 11:39:34.093000 | Sí |
 | `inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test` | SQL_STORED_PROCEDURE | 2026-08-04 14:48:06.393000 | Sí |
-| `inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test` | SQL_STORED_PROCEDURE | 2026-08-02 20:56:20.490000 | Sí |
+| `inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test` | SQL_STORED_PROCEDURE | 2026-08-21 13:33:37.463000 | Sí |
 | `inventar_SpcHidr.sp_refrescar_clays_cufe` | SQL_STORED_PROCEDURE | 2026-08-03 02:46:39.750000 | Sí |
 | `inventar_SpcHidr.sp_reporte_turno_emision_test` | SQL_STORED_PROCEDURE | 2026-08-04 11:46:16.413000 | Sí |
 | `inventar_SpcHidr.topografia_sal` | USER_TABLE | 2026-05-28 10:01:37.457000 | No (tabla u objeto sin módulo SQL) |
@@ -217,6 +220,7 @@ inventar_SpcHidr.sp_generador_reporte_diario_emision_test [SQL_STORED_PROCEDURE]
 | `inventar_SpcHidr.v_representatividad_srr_turno_calculada` | VIEW | 2026-07-11 13:19:23.893000 | Sí |
 | `inventar_SpcHidr.v_sal_ajustada` | VIEW | 2026-05-28 19:21:46.190000 | Sí |
 | `inventar_SpcHidr.v_sal_ajustada_operacional_test` | VIEW | 2026-07-29 13:20:09.397000 | Sí |
+| `inventar_SpcHidr.v_srr_tms_origen_turno_emision_test` | VIEW | 2026-08-21 12:39:40.797000 | Sí |
 | `inventar_SpcHidr.v_ton_por_intervalo_excel` | VIEW | 2026-07-22 14:05:44.643000 | Sí |
 | `inventar_SpcHidr.v_validacion_leyes_tm1_v2` | VIEW | 2026-07-22 20:31:37.703000 | Sí |
 | `inventar_SpcHidr.v_validacion_leyes_tm2_v2` | VIEW | 2026-07-22 20:37:04.947000 | Sí |
@@ -224,11 +228,6 @@ inventar_SpcHidr.sp_generador_reporte_diario_emision_test [SQL_STORED_PROCEDURE]
 ## Archivos
 
 - `definiciones_bd.sql`: definiciones textuales vigentes de procedimientos, vistas y funciones alcanzadas.
-- `definiciones_hidro_imp_chancado.sql`: definiciones vigentes extraídas de
-  `PROD_SIIR` para `hidro.v_imp_chancado_normalizado` y
-  `hidro.v_imp_conciliacion_chancado`. Se mantienen aparte porque son
-  dependencias entre bases y `sys.sql_expression_dependencies` no entrega su
-  `object_id` desde `inventar_SpcHidr`.
 - `inventario_dependencias.tsv`: aristas del catálogo y referencias textuales detectadas.
 
 ## Limitaciones

@@ -2596,6 +2596,10 @@ def _promedio_ponderado_periodo(
 def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
+    # Campaña se presenta igual que Módulo: como número entero.
+    if "Campania" in df.columns:
+        df["Campania"] = pd.to_numeric(df["Campania"], errors="coerce")
+
     if "Fecha" in df.columns:
         df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
 
@@ -2833,7 +2837,7 @@ def preparar_df_generador_reporte_excel(
     # - Material mantiene el material operacional (Sulfuro/Óxido).
     # - La clasificación por solubilidad no se muestra como columna.
     df["Campaña"] = (
-        df["Campania"]
+        pd.to_numeric(df["Campania"], errors="coerce")
         if "Campania" in df.columns
         else 0
     )
@@ -3481,7 +3485,6 @@ def agregar_hoja_generador_reporte(
     }
 
     columnas_texto = {
-        "Campaña",
         "Material",
         "Malla_Menos_1_2_Programa",
     }
@@ -3918,6 +3921,8 @@ def export_reporte_turno_estilo_leyes_finos(
         # MAPEO DE FORMATOS POR COLUMNA
         # ============================================================
         columnas_numero_0 = [
+            "Campania",
+            "Modulo",
             "Apilado_TMS_Real",
             "Apilado_TMS_Plan_Mensual",
         ]
