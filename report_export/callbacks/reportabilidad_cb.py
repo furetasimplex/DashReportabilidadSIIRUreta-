@@ -2425,10 +2425,32 @@ def _preparar_detalle_mensual_torres(
                 tm3_activo = None
 
             if fecha >= pd.Timestamp("2026-01-01"):
-                # Desde 2026 existe una sola oportunidad operacional por
-                # turno y la fuente oficial determina su evaluabilidad.
-                tm1_activo = turno_activo_oficial
-                tm2_activo = turno_activo_oficial
+                # Desde 2026 cada torre usa exclusivamente su evaluabilidad
+                # oficial por Fecha + Turno + Torre.
+                tm1_evaluable = pd.to_numeric(
+                    fila.get(f"Evaluable_TM1_{turno}"),
+                    errors="coerce",
+                )
+                tm2_evaluable = pd.to_numeric(
+                    fila.get(f"Evaluable_TM2_{turno}"),
+                    errors="coerce",
+                )
+
+                tm1_activo = bool(
+                    pd.notna(tm1_evaluable)
+                    and float(tm1_evaluable) == 1.0
+                )
+                tm2_activo = bool(
+                    pd.notna(tm2_evaluable)
+                    and float(tm2_evaluable) == 1.0
+                )
+
+                if tm1_activo != tm2_activo:
+                    print(
+                        "[RTO] Evaluabilidad torre: "
+                        f"fecha={fecha:%Y-%m-%d} turno={turno[-1]} "
+                        f"TM1={int(tm1_activo)} TM2={int(tm2_activo)}"
+                    )
             else:
                 # En el histórico la evaluabilidad es independiente por
                 # torre. El tonelaje original se consulta antes de convertir

@@ -3798,6 +3798,176 @@ def agregar_hoja_generador_reporte(
     worksheet.hide_gridlines(2)
 
 
+def agregar_hoja_malla_100(
+    writer: pd.ExcelWriter,
+    df_diario: pd.DataFrame,
+) -> None:
+    """Agrega el grafico mensual de Malla #100 al libro de Analisis TM."""
+
+    workbook = writer.book
+    worksheet = workbook.add_worksheet("Malla #100")
+    writer.sheets["Malla #100"] = worksheet
+
+    fechas = pd.to_datetime(
+        df_diario.get("Fecha", pd.Series(dtype="datetime64[ns]")),
+        errors="coerce",
+    ).dropna()
+    if fechas.empty:
+        fecha_referencia = pd.Timestamp.today().normalize()
+    else:
+        fecha_referencia = fechas.min().normalize()
+
+    inicio_mes = fecha_referencia.replace(day=1)
+    fin_mes = fecha_referencia.replace(
+        day=calendar.monthrange(fecha_referencia.year, fecha_referencia.month)[1]
+    )
+    fechas_categoria = [
+        float(fecha.toordinal() - 693594)
+        for fecha in fechas.iloc[:31]
+    ]
+    fechas_categoria.extend([None] * (31 - len(fechas_categoria)))
+
+    chart = workbook.add_chart({
+        "type": "scatter",
+        "subtype": "smooth_with_markers",
+    })
+
+    color_real = "#ED7D31"
+    color_plan = "#00766D"
+
+    chart.add_series({
+        "name": "='Generador Reporte'!$AH$21",
+        "categories": ["Generador Reporte", 21, 2, 51, 2],
+        "categories_data": fechas_categoria,
+        "values": "='Generador Reporte'!$AH$22:$AH$52",
+        "line": {"color": color_real, "width": 1},
+        "marker": {
+            "type": "circle",
+            "size": 5,
+            "border": {"color": color_real},
+            "fill": {"color": color_real},
+        },
+        "data_labels": {
+            "value": True,
+            "position": "above",
+            "num_format": "0.00",
+            "font": {
+                "name": "Arial",
+                "size": 7,
+                "bold": True,
+                "color": "#D5500D",
+            },
+        },
+    })
+    chart.add_series({
+        "name": "Plan",
+        "categories": ["Generador Reporte", 21, 2, 51, 2],
+        "categories_data": fechas_categoria,
+        "values": "='Generador Reporte'!$AJ$22:$AJ$52",
+        "line": {"color": color_plan, "width": 1},
+        "marker": {
+            "type": "circle",
+            "size": 5,
+            "border": {"color": color_plan},
+            "fill": {"color": color_plan},
+        },
+        "data_labels": {
+            "value": True,
+            "position": "below",
+            "num_format": "#,##0.0",
+            "font": {
+                "name": "Arial",
+                "size": 7,
+                "bold": True,
+                "color": COLOR_PAMPA_NORTE,
+            },
+        },
+    })
+
+    chart.set_title({
+        "name": "Malla #100",
+        "name_font": {
+            "name": "Arial",
+            "size": 12,
+            "bold": True,
+            "color": COLOR_PAMPA_NORTE,
+        },
+    })
+    chart.set_x_axis({
+        "date_axis": True,
+        "num_format": "m/d/yyyy",
+        "min": inicio_mes.to_pydatetime(),
+        "max": fin_mes.to_pydatetime(),
+        "major_unit": 1,
+        "major_unit_type": "days",
+        "line": {"color": "#000000", "width": 1},
+        "num_font": {
+            "name": "Arial",
+            "size": 8,
+            "color": COLOR_PAMPA_NORTE,
+            "rotation": -45,
+        },
+        "major_tick_mark": "outside",
+        "minor_tick_mark": "none",
+    })
+    chart.set_y_axis({
+        "name": "[%]",
+        "min": 0,
+        "max": 29,
+        "num_format": "0.00",
+        "num_font": {
+            "name": "Arial",
+            "size": 9,
+            "color": COLOR_PAMPA_NORTE,
+        },
+        "name_font": {
+            "name": "Arial",
+            "size": 9,
+            "bold": True,
+            "color": COLOR_PAMPA_NORTE,
+        },
+        "major_tick_mark": "outside",
+        "minor_tick_mark": "none",
+        "major_gridlines": {"visible": False},
+        "minor_gridlines": {"visible": False},
+    })
+    chart.set_legend({
+        "position": "right",
+        "font": {
+            "name": "Arial",
+            "size": 10,
+            "color": "#666699",
+        },
+        "layout": {
+            "x": 0.5685058019,
+            "y": 0.0197537521,
+            "width": 0.4259834231,
+            "height": 0.2921561232,
+        },
+    })
+    chart.set_plotarea({
+        "layout": {
+            "x": 0.0730116361,
+            "y": 0.1870726491,
+            "width": 0.9059622915,
+            "height": 0.6424189400,
+        },
+    })
+    chart.set_size({"width": 896, "height": 324})
+
+    worksheet.hide_gridlines(2)
+    worksheet.set_zoom(120)
+    worksheet.set_column("A:A", 2)
+    worksheet.insert_chart(
+        "B2",
+        chart,
+        {
+            "x_offset": 35,
+            "y_offset": 6,
+        },
+    )
+
+
 def export_reporte_turno_estilo_leyes_finos(
     df: pd.DataFrame,
     output,
@@ -4384,4 +4554,8 @@ def export_reporte_turno_estilo_leyes_finos(
                 df_diario=df_generador,
                 df_turno_resumen=df_export,
                 df_diario_resumen=df_generador_resumen,
+            )
+            agregar_hoja_malla_100(
+                writer=writer,
+                df_diario=df_generador,
             )
