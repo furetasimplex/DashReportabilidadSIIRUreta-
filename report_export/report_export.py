@@ -158,6 +158,61 @@ def _agregar_encabezado_institucional_torre(
     )
 
 
+def _agregar_cuadro_formula_dosis_acido(workbook, worksheet):
+    """Agrega la nota metodolÃ³gica visual de dosis de Ã¡cido ideal."""
+    fmt_titulo = workbook.add_format({
+        "font_name": "Arial",
+        "font_size": 9,
+        "bold": True,
+        "font_color": COLOR_PAMPA_NORTE,
+        "align": "left",
+        "valign": "vcenter",
+        "bottom": 1,
+        "bottom_color": "#B7B7B7",
+    })
+    fmt_formula = workbook.add_format({
+        "font_name": "Arial",
+        "font_size": 7,
+        "font_color": "#555555",
+        "align": "left",
+        "valign": "vcenter",
+    })
+    fmt_nota = workbook.add_format({
+        "font_name": "Arial",
+        "font_size": 6,
+        "italic": True,
+        "font_color": "#8A8A8A",
+        "align": "left",
+        "valign": "vcenter",
+    })
+
+    # Cuadro metodolÃ³gico informativo.
+    # No calcula la dosis; documenta la lÃ³gica vigente utilizada
+    # para Dosis_Acido_Ideal_TM.
+    worksheet.merge_range(
+        "V4:AO4",
+        "Dosis \u00e1cido Ideal TM",
+        fmt_titulo,
+    )
+    worksheet.merge_range(
+        "V5:AO5",
+        "S = CuS/CuT   |   S < 0,25:  15 si CO\u2083 \u2264 0,25;   "
+        "11 + 15,51\u00b7CO\u2083 si CO\u2083 > 0,25",
+        fmt_formula,
+    )
+    worksheet.merge_range(
+        "V6:AO6",
+        "S \u2265 0,25:  MAX(15; 8,182\u00b7LN(CuS) + 18,99 + "
+        "15,51\u00b7CO\u2083)   |   CuS \u2264 0 \u2192 0",
+        fmt_formula,
+    )
+    worksheet.merge_range(
+        "V7:AO7",
+        "Sin Apilado real o variables requeridas: no evaluable.",
+        fmt_nota,
+    )
+
+
 def _agregar_marco_exterior_torre(
     workbook,
     worksheet,
@@ -3126,6 +3181,24 @@ def preparar_df_generador_reporte_excel(
 
     columnas = [col for col in columnas if col in df.columns]
 
+    # NormalizaciÃ³n general previa a los vacÃ­os semÃ¡nticos por tonelaje.
+    columnas_texto_export = {
+        "Fecha",
+        "Material",
+        "Malla_Menos_1_2_Programa",
+    }
+
+    for col in columnas:
+        if col not in columnas_texto_export:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+    if "Malla_Menos_1_2_Programa" in df.columns:
+        df["Malla_Menos_1_2_Programa"] = (
+            df["Malla_Menos_1_2_Programa"]
+            .replace({"": "0", "nan": "0", "None": "0", "NULL": "0"})
+            .fillna("0")
+        )
+
     # ------------------------------------------------------------
     # PRESENTACIÓN EN EXCEL: BLOQUES SIN DATOS -> CELDAS VACÍAS
     # ------------------------------------------------------------
@@ -3206,26 +3279,8 @@ def preparar_df_generador_reporte_excel(
 
     # ------------------------------------------------------------
     # PRESENTACIÓN FINAL EN EXCEL:
-    # toda celda numérica vacía se muestra como 0.
-    # Los campos descriptivos permanecen vacíos cuando no hay texto.
+    # los vacíos semánticos aplicados por tonelaje permanecen como NaN.
     # ------------------------------------------------------------
-    columnas_texto_export = {
-        "Fecha",
-        "Material",
-        "Malla_Menos_1_2_Programa",
-    }
-
-    for col in columnas:
-        if col not in columnas_texto_export:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-
-    if "Malla_Menos_1_2_Programa" in df.columns:
-        df["Malla_Menos_1_2_Programa"] = (
-            df["Malla_Menos_1_2_Programa"]
-            .replace({"": "0", "nan": "0", "None": "0", "NULL": "0"})
-            .fillna("0")
-        )
-
     return df[columnas]
 
 def agregar_hoja_generador_reporte(
@@ -3907,7 +3962,7 @@ def agregar_hoja_malla_100(
             "color": COLOR_PAMPA_NORTE,
             "rotation": -45,
         },
-        "major_tick_mark": "outside",
+        "major_tick_mark": "none",
         "minor_tick_mark": "none",
     })
     chart.set_y_axis({
@@ -3925,6 +3980,10 @@ def agregar_hoja_malla_100(
             "size": 9,
             "bold": True,
             "color": COLOR_PAMPA_NORTE,
+        },
+        "name_layout": {
+            "x": 0.00466623032874213,
+            "y": 0.4370740287479753,
         },
         "major_tick_mark": "outside",
         "minor_tick_mark": "none",
@@ -3962,7 +4021,7 @@ def agregar_hoja_malla_100(
         "B2",
         chart,
         {
-            "x_offset": 35,
+            "x_offset": 78,
             "y_offset": 6,
         },
     )
@@ -4213,6 +4272,7 @@ def export_reporte_turno_estilo_leyes_finos(
             fmt_subtitulo,
             con_turno=True,
         )
+        _agregar_cuadro_formula_dosis_acido(workbook, worksheet)
 
         # ============================================================
         # ENCABEZADOS TIPO PLANTILLA
