@@ -1,8 +1,8 @@
 """
 Conversión de libros Excel (.xlsx) a PDF.
 
-Único motor: LibreOffice headless (`soffice` / `libreoffice`).
-Post-proceso: pypdf (+ pdfplumber) para normalizar a A3.
+Motor de conversión XLSX→PDF: LibreOffice headless (`soffice` / `libreoffice`).
+Post-proceso A3: pypdf + pypdfium2 (sin pdfminer/pdfplumber).
 
 Requisito en servidor Linux (y en Windows de desarrollo): LibreOffice instalado
 y `soffice` en PATH, o en las rutas estándar de instalación.
@@ -25,6 +25,42 @@ A3_WIDTH_PT = 841.8898
 A3_HEIGHT_PT = 1190.5512
 
 
+def _limites_contenido_pagina(pdf_bytes: bytes, indice: int = 0) -> tuple[float, float, float, float] | None:
+    """Rectángulo ocupado (x0, y0, x1, y1) en coords PDF (origen abajo-izquierda).
+
+    Usa pypdfium2 para no depender de pdfminer/pdfplumber (PDFStackT roto en
+    venvs con el paquete legado `pdfminer`).
+    """
+    import pypdfium2 as pdfium
+
+    documento = pdfium.PdfDocument(pdf_bytes)
+    try:
+        pagina = documento[indice]
+        ancho, alto = pagina.get_size()
+        limites = []
+        for objeto in pagina.get_objects():
+            try:
+                x0, y0, x1, y1 = objeto.get_bounds()
+            except Exception:
+                continue
+            caja_ancho = float(x1) - float(x0)
+            caja_alto = float(y1) - float(y0)
+            if caja_ancho >= ancho * 0.98 and caja_alto >= alto * 0.98:
+                continue
+            limites.append((float(x0), float(y0), float(x1), float(y1)))
+        if not limites:
+            return None
+        padding = 6.0
+        return (
+            max(0.0, min(v[0] for v in limites) - padding),
+            max(0.0, min(v[1] for v in limites) - padding),
+            min(ancho, max(v[2] for v in limites) + padding),
+            min(alto, max(v[3] for v in limites) + padding),
+        )
+    finally:
+        documento.close()
+
+
 def _stack_pages_vertically(pdf_bytes: bytes) -> bytes:
     """Une varias paginas en una sola tira vertical (pagina 0 arriba).
 
@@ -32,23 +68,17 @@ def _stack_pages_vertically(pdf_bytes: bytes) -> bytes:
     el borde sin tinta de cada una deja una linea blanca de ~1,6 pt cruzando las
     tablas justo en el salto de pagina.
     """
-    import pdfplumber
     from pypdf import PageObject, PdfReader, PdfWriter, Transformation
 
     reader = PdfReader(BytesIO(pdf_bytes))
     recortes = []
-    with pdfplumber.open(BytesIO(pdf_bytes)) as plumber_pdf:
-        for pagina in plumber_pdf.pages:
-            alto = float(pagina.height)
-            objetos = [o for grupo in pagina.objects.values() for o in grupo]
-            arriba = [o["top"] for o in objetos if o.get("top") is not None]
-            abajo = [o["bottom"] for o in objetos if o.get("bottom") is not None]
-            # pdfplumber mide desde arriba; el PDF, desde abajo.
-            recortes.append(
-                (alto - max(abajo), alto - min(arriba))
-                if arriba and abajo
-                else (0.0, alto)
-            )
+    for indice, page in enumerate(reader.pages):
+        alto = float(page.mediabox.height)
+        caja = _limites_contenido_pagina(pdf_bytes, indice)
+        if caja is None:
+            recortes.append((0.0, alto))
+        else:
+            recortes.append((caja[1], caja[3]))
 
     total_height = sum(y1 - y0 for y0, y1 in recortes)
     max_width = max(float(p.mediabox.width) for p in reader.pages)
@@ -74,7 +104,6 @@ def normalize_single_page_to_a3(
     landscape: bool = False,
 ) -> bytes:
     """Ajusta el contenido de una única página al lienzo A3 solicitado."""
-    import pdfplumber
     from pypdf import PageObject, PdfReader, PdfWriter, Transformation
     from pypdf.generic import DecodedStreamObject, NameObject
 
@@ -95,32 +124,9 @@ def normalize_single_page_to_a3(
 
     # Se detecta el rectangulo realmente ocupado y se lleva al A3
     # con margenes controlados, evitando una pagina diminuta en el centro.
-    with pdfplumber.open(BytesIO(pdf_bytes)) as plumber_pdf:
-        plumber_page = plumber_pdf.pages[0]
-        objetos = []
-        for coleccion in plumber_page.objects.values():
-            objetos.extend(coleccion)
-
-    limites = []
-    for obj in objetos:
-        x0 = obj.get("x0")
-        x1 = obj.get("x1")
-        y0 = obj.get("y0")
-        y1 = obj.get("y1")
-        if None in (x0, x1, y0, y1):
-            continue
-        ancho = float(x1) - float(x0)
-        alto = float(y1) - float(y0)
-        if ancho >= source_width * 0.98 and alto >= source_height * 0.98:
-            continue
-        limites.append((float(x0), float(y0), float(x1), float(y1)))
-
-    if limites:
-        padding = 6.0
-        content_x0 = max(0.0, min(v[0] for v in limites) - padding)
-        content_y0 = max(0.0, min(v[1] for v in limites) - padding)
-        content_x1 = min(source_width, max(v[2] for v in limites) + padding)
-        content_y1 = min(source_height, max(v[3] for v in limites) + padding)
+    caja = _limites_contenido_pagina(pdf_bytes, 0)
+    if caja is not None:
+        content_x0, content_y0, content_x1, content_y1 = caja
     else:
         content_x0, content_y0 = 0.0, 0.0
         content_x1, content_y1 = source_width, source_height

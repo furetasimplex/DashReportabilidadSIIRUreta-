@@ -52,10 +52,10 @@ six==1.17.0
 tzdata==2025.2
 xlsxwriter==3.2.5
 
-# --- PDF (reportlab + post-proceso A3 via pdfplumber/pypdf) ---
-# NO instalar el paquete legado "pdfminer" (sin .six): rompe PDFStackT.
-# Si el venv ya lo tiene: pip uninstall -y pdfminer pdfminer3k
-# Luego: pip install --force-reinstall pdfminer.six==20260107 pdfplumber==0.11.10
+# --- PDF (reportlab + post-proceso A3 via pypdf/pypdfium2) ---
+# Runtime del PDF historial/python NO usa pdfplumber (evita PDFStackT).
+# pdfplumber/pdfminer.six quedan para tests y herramientas de diagnostico.
+# NO instalar el paquete legado "pdfminer" (sin .six).
 pdfminer.six==20260107
 pdfplumber==0.11.10
 pillow==12.2.0
