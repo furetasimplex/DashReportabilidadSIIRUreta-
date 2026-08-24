@@ -53,11 +53,12 @@ tzdata==2025.2
 xlsxwriter==3.2.5
 
 # --- PDF (reportlab + LibreOffice via xlsx_to_pdf; post-proceso pypdf/pdfplumber) ---
-pdfminer.six==20250506
+# pdfplumber 0.11.10 fija pdfminer.six==20260107 y pide Pillow>=12.2 / pypdfium2>=5.9
+pdfminer.six==20260107
 pdfplumber==0.11.10
-pillow==11.3.0
+pillow==12.2.0
 pypdf==6.14.2
-pypdfium2==5.0.0
+pypdfium2==5.9.0
 reportlab==4.4.9
 
 # --- Cientifico / tabs (variogramas, reconciliacion, imagenes) ---
