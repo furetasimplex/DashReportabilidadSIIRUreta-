@@ -17,9 +17,10 @@ from dash import Dash
 import dash_ag_grid as dag
 from tabs.utils_recon import balance_core
 from tabs.utils_dash import  get_data_publica_casos, parse_contents
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+from db_connection import get_engine
 
-ENGINE = create_engine("mysql+pymysql://inventar_simplex:PLexyz31416@149.50.133.195:3306/inventar_SpcHidr?charset=utf8mb4")
+ENGINE = get_engine()
 
 dict_style_boton_2 = {
         'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',

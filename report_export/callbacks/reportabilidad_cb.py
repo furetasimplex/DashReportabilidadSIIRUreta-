@@ -6446,6 +6446,49 @@ def _inspeccionar_workbook_representatividad(
     return resultado
 
 
+class WorkbookRepresentatividadInconsistenteError(RuntimeError):
+    """El XLSX de representatividad no pasó la validación previa a exportar."""
+
+    def __init__(self, mensaje_tecnico: str, *, tipo: str, detalle: str):
+        super().__init__(mensaje_tecnico)
+        self.tipo = tipo
+        self.detalle = detalle
+
+
+def _etiqueta_tipo_rep(tipo: str) -> str:
+    return {
+        "quimico": "Químico",
+        "fisico": "Físico",
+        "srr": "SRR",
+    }.get(str(tipo).lower(), str(tipo))
+
+
+def _fmt_pct_rep(valor) -> str:
+    if valor is None:
+        return "sin valor"
+    return f"{float(valor) * 100:.2f}%"
+
+
+def _contenido_modal_workbook_inconsistente(
+    exc: WorkbookRepresentatividadInconsistenteError,
+):
+    """Mensaje legible para el modal de error de exportación."""
+    return [
+        html.P(
+            "No se pudo generar el reporte "
+            f"{_etiqueta_tipo_rep(exc.tipo)} porque los indicadores del "
+            "libro Excel no son consistentes entre sí.",
+            className="mb-3",
+        ),
+        html.P(exc.detalle, className="mb-3"),
+        html.P(
+            "Vuelva a refrescar o publicar el período, o revise los datos "
+            "de origen, y reintente la exportación.",
+            className="mb-0 text-muted",
+        ),
+    ]
+
+
 def _validar_workbook_representatividad(
     xlsx_bytes: bytes,
     fecha_fin,
@@ -6457,9 +6500,15 @@ def _validar_workbook_representatividad(
     for tipo in ("quimico", "fisico", "srr"):
         fecha_max = metricas[tipo]["fecha_max_detalle"]
         if fecha_max != corte:
-            raise RuntimeError(
+            raise WorkbookRepresentatividadInconsistenteError(
                 f"Workbook inconsistente para {tipo}: corte={corte}, "
-                f"fecha máxima del detalle={fecha_max}. No se convertirá PDF."
+                f"fecha máxima del detalle={fecha_max}. No se convertirá PDF.",
+                tipo=tipo,
+                detalle=(
+                    f"La fecha de corte operacional es {corte.strftime('%d-%m-%Y')}, "
+                    "pero el detalle del reporte llega hasta "
+                    f"{fecha_max.strftime('%d-%m-%Y') if fecha_max else 'sin fecha'}."
+                ),
             )
 
     # En el mes actual del FY, la barra mensual FY debe coincidir con el MTD
@@ -6470,9 +6519,15 @@ def _validar_workbook_representatividad(
         fy_mes = metricas[tipo]["fy"].get(etiqueta_mes)
         combinado_mtd = metricas[tipo]["combinado_mtd"]
         if fy_mes is None or abs(fy_mes - combinado_mtd) > 1e-9:
-            raise RuntimeError(
+            raise WorkbookRepresentatividadInconsistenteError(
                 f"Workbook inconsistente para {tipo}: FY {etiqueta_mes}="
-                f"{fy_mes}, combinado MTD={combinado_mtd}. No se convertirá PDF."
+                f"{fy_mes}, combinado MTD={combinado_mtd}. No se convertirá PDF.",
+                tipo=tipo,
+                detalle=(
+                    f"En {etiqueta_mes}, el indicador FY "
+                    f"({_fmt_pct_rep(fy_mes)}) no coincide con el MTD "
+                    f"combinado ({_fmt_pct_rep(combinado_mtd)})."
+                ),
             )
     return metricas
 
@@ -7791,6 +7846,20 @@ def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
             contenido,
         )
 
+    except WorkbookRepresentatividadInconsistenteError as e:
+        import traceback
+        traceback.print_exc()
+        return (
+            no_update,
+            (
+                f"No se generó el Excel {_etiqueta_tipo_rep(e.tipo)}: "
+                "indicadores inconsistentes en el reporte."
+            ),
+            html.Div(),
+            True,
+            _contenido_modal_workbook_inconsistente(e),
+        )
+
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -7826,6 +7895,8 @@ def _clear_progress_on_viz(_):
     Output("report-download-pdf", "data"),
     Output("report-status", "children", allow_duplicate=True),
     Output("report-progress", "children", allow_duplicate=True),
+    Output("report-error-modal", "is_open", allow_duplicate=True),
+    Output("report-error-modal-body", "children", allow_duplicate=True),
     Input({"type": "report-pdf-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
@@ -7841,9 +7912,9 @@ def _clear_progress_on_viz(_):
 def generar_pdf(n_clicks_list, f_ini, f_fin):
     triggered = ctx.triggered_id
     if not triggered or not isinstance(triggered, dict):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, False, no_update
     if not any(n for n in n_clicks_list if n):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, False, no_update
 
     tipo = triggered["tipo"]
     _done = html.Div()
@@ -7852,7 +7923,13 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
 
     if not f_ini or not f_fin:
         print("[PDF] Sin fechas - abortando")
-        return no_update, "Debe seleccionar rango de fechas.", _done
+        return (
+            no_update,
+            "Debe seleccionar rango de fechas.",
+            _done,
+            False,
+            no_update,
+        )
 
     ini_d = pd.to_datetime(f_ini).date()
     fin_d = pd.to_datetime(f_fin).date()
@@ -7899,6 +7976,8 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"{metricas[analisis]['filas_detalle']} filas - "
                 "PDF A3 sin solapamientos",
                 _done,
+                False,
+                no_update,
             )
 
         # ── REPORTE POR TURNO ─────────────────────────────────────────
@@ -7920,7 +7999,13 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
             )
             print(f"[PDF] reporte_turno rows={len(df_turno)}")
             if df_turno.empty:
-                return no_update, "Sin datos para el rango seleccionado.", _done
+                return (
+                    no_update,
+                    "Sin datos para el rango seleccionado.",
+                    _done,
+                    False,
+                    no_update,
+                )
 
             df_generador = fetch_generador_reporte_diario_emision(
                 start_date=ini_d,
@@ -7960,7 +8045,13 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"PDF generado: {filename} "
                 f"(turno={len(df_turno)}, generador={len(df_generador)})"
             )
-            return _enviar_descarga(pdf_bytes, filename), status, _done
+            return (
+                _enviar_descarga(pdf_bytes, filename),
+                status,
+                _done,
+                False,
+                no_update,
+            )
 
         # ── PRODUCCIÓN DIARIA / DATOS CONCILIADOS ─────────────────────
         if tipo == "prod":
@@ -7979,7 +8070,13 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
             )
             print(f"[PDF][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
             if df.empty:
-                return no_update, "Sin datos para generar PDF.", _done
+                return (
+                    no_update,
+                    "Sin datos para generar PDF.",
+                    _done,
+                    False,
+                    no_update,
+                )
 
             pdf_bytes = generar_pdf_datos_conciliados(df, f_ini, f_fin)
             print(f"[PDF] prod pdf size={len(pdf_bytes)} bytes")
@@ -7988,7 +8085,13 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
                 f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
             )
-            return _enviar_descarga(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
+            return (
+                _enviar_descarga(pdf_bytes, filename),
+                f"PDF generado: {filename} ({len(df)} registros)",
+                _done,
+                False,
+                no_update,
+            )
 
         # ── BALANCE / CONCILIACIÓN ────────────────────────────────────
         print(f"[PDF] Fetching report_data tipo={tipo} end={fin_d}")
@@ -8000,7 +8103,13 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
         print(f"[PDF] report_data rows={len(df)}")
 
         if df.empty:
-            return no_update, "Sin datos para generar PDF.", _done
+            return (
+                no_update,
+                "Sin datos para generar PDF.",
+                _done,
+                False,
+                no_update,
+            )
 
         pdf_bytes = generar_pdf_datos_conciliados(df, f_ini, f_fin)
         print(f"[PDF] {tipo} pdf size={len(pdf_bytes)} bytes")
@@ -8009,13 +8118,39 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
             f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
             f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.pdf"
         )
-        return _enviar_descarga(pdf_bytes, filename), f"PDF generado: {filename} ({len(df)} registros)", _done
+        return (
+            _enviar_descarga(pdf_bytes, filename),
+            f"PDF generado: {filename} ({len(df)} registros)",
+            _done,
+            False,
+            no_update,
+        )
 
+    except WorkbookRepresentatividadInconsistenteError as e:
+        import traceback
+        print(f"[PDF ERROR] tipo={tipo}: {e}")
+        traceback.print_exc()
+        return (
+            no_update,
+            (
+                f"No se generó el PDF {_etiqueta_tipo_rep(e.tipo)}: "
+                "indicadores inconsistentes en el reporte."
+            ),
+            _done,
+            True,
+            _contenido_modal_workbook_inconsistente(e),
+        )
     except Exception as e:
         import traceback
         print(f"[PDF ERROR] tipo={tipo}: {e}")
         traceback.print_exc()
-        return no_update, f"Error al generar PDF ({tipo}): {e}", _done
+        return (
+            no_update,
+            f"Error al generar PDF ({tipo}): {e}",
+            _done,
+            False,
+            no_update,
+        )
 
 
 def _alternar_pad(valor: str | None) -> str:

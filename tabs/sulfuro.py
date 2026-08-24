@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-# === Conexión DB (mysql.connector) ===
 from db_connection import get_connection
 
 # =========================

@@ -6,15 +6,11 @@ import plotly.express as px
 import numpy as np
 import string
 import sqlalchemy
-#from databricks import sql
-import mariadb
 import sys
 import cv2
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import mysql.connector
-import os
 from dotenv import load_dotenv
 from dash import Dash
 from db_connection import get_connection

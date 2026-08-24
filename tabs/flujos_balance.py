@@ -1,6 +1,6 @@
 import pandas as pd
-from sqlalchemy import create_engine, text
-import os
+from sqlalchemy import text
+from db_connection import get_engine
 
 # --- 1. TODA LA LÓGICA ESTÁ DENTRO DE ESTA FUNCIÓN ---
 def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
@@ -11,14 +11,10 @@ def ejecutar_balance_flujos(fecha_inicio, fecha_fin):
     
     print(f"Iniciando balance para el rango: {fecha_inicio} a {fecha_fin}")
 
-    # --- Conexión a MySQL ---
-    user = "inventar_simplex"
-    password = "PLexyz31416"
-    host = "149.50.133.195"
-    port = 3306
-    database = "inventar_SpcHidr"
     try:
-        engine = create_engine(f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}")
+        engine = get_engine()
+        if engine is None:
+            raise RuntimeError("get_engine() devolvio None")
     except Exception as e:
         print(f"Error de conexión a la base de datos: {e}")
         return pd.DataFrame()

@@ -2,7 +2,6 @@
 import dash
 from dash import dcc, html, Input, Output, State, ctx
 import pandas as pd
-from sqlalchemy import create_engine
 import base64
 import io
 import os
@@ -10,12 +9,6 @@ from dotenv import load_dotenv
 from db_connection import get_engine
 load_dotenv()
 engine = get_engine()
-
-# Conexión a base de datos MySQL
-
-#puerto = '3306'
-
-#engine = create_engine(f"mysql+pymysql://{usuario}:{contraseña}@{host}:{puerto}/{base_datos}")
 
 # Función para limpiar y preparar los datos de la hoja "Datos filtrados"
 def limpiar_datos_filtrados(df_raw):
