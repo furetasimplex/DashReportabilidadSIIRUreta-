@@ -1,0 +1,25 @@
+{
+  "id_reporte": 110,
+  "timestamp": "2026-08-24T12:20:14.407684-04:00",
+  "metadata": {
+    "id_reporte": 110,
+    "periodo_mes": "2026-08",
+    "periodo_inicio": "2026-08-01",
+    "periodo_fin": "2026-08-31",
+    "fecha_corte_operacional": "2026-08-23",
+    "anio_fiscal": 2027,
+    "activo": true,
+    "estado": "FINALIZADO",
+    "usuario": "frojas"
+  },
+  "bloques": {
+    "gestion_fy_fisico": {
+      "payload": "[{\"Orden\":1,\"Fecha_Mes\":\"2026-07-01T00:00:00.000\",\"Etiqueta\":\"jul-26\",\"Tipo_Registro\":\"MES\",\"Turnos_Evaluables\":114,\"Turnos_Representativos\":5,\"Representatividad\":0.043859649122807,\"Objetivo\":0.85,\"Tipo\":\"FISICO\",\"Alcance\":\"COMBINADO\",\"A\\u00f1o_Fiscal\":2027,\"Fecha_Corte\":\"2026-08-23T00:00:00.000\"},{\"Orden\":2,\"Fecha_Mes\":\"2026-08-01T00:00:00.000\",\"Etiqueta\":\"ago-26\",\"Tipo_Registro\":\"MES\",\"Turnos_Evaluables\":90,\"Turnos_Representativos\":8,\"Representatividad\":0.088888888888889,\"Objetivo\":0.85,\"Tipo\":\"FISICO\",\"Alcance\":\"COMBINADO\",\"A\\u00f1o_Fiscal\":2027,\"Fecha_Corte\":\"2026-08-23T00:00:00.000\"},{\"Orden\":13,\"Fecha_Mes\":null,\"Etiqueta\":\"YTD\",\"Tipo_Registro\":\"YTD\",\"Turnos_Evaluables\":204,\"Turnos_Representativos\":13,\"Representatividad\":0.063725490196078,\"Objetivo\":0.85,\"Tipo\":\"FISICO\",\"Alcance\":\"COMBINADO\",\"A\\u00f1o_Fiscal\":2027,\"Fecha_Corte\":\"2026-08-23T00:00:00.000\"}]",
+      "filas": 3
+    },
+    "gestion_fy_quimico": {
+      "payload": "[{\"Orden\":1,\"Fecha_Mes\":\"2026-07-01T00:00:00.000\",\"Etiqueta\":\"jul-26\",\"Tipo_Registro\":\"MES\",\"Turnos_Evaluables\":114,\"Turnos_Representativos\":14,\"Representatividad\":0.12280701754386,\"Objetivo\":0.85,\"Tipo\":\"QUIMICO\",\"Alcance\":\"COMBINADO\",\"A\\u00f1o_Fiscal\":2027,\"Fecha_Corte\":\"2026-08-23T00:00:00.000\"},{\"Orden\":2,\"Fecha_Mes\":\"2026-08-01T00:00:00.000\",\"Etiqueta\":\"ago-26\",\"Tipo_Registro\":\"MES\",\"Turnos_Evaluables\":90,\"Turnos_Representativos\":14,\"Representatividad\":0.155555555555556,\"Objetivo\":0.85,\"Tipo\":\"QUIMICO\",\"Alcance\":\"COMBINADO\",\"A\\u00f1o_Fiscal\":2027,\"Fecha_Corte\":\"2026-08-23T00:00:00.000\"},{\"Orden\":13,\"Fecha_Mes\":null,\"Etiqueta\":\"YTD\",\"Tipo_Registro\":\"YTD\",\"Turnos_Evaluables\":204,\"Turnos_Representativos\":28,\"Representatividad\":0.137254901960784,\"Objetivo\":0.85,\"Tipo\":\"QUIMICO\",\"Alcance\":\"COMBINADO\",\"A\\u00f1o_Fiscal\":2027,\"Fecha_Corte\":\"2026-08-23T00:00:00.000\"}]",
+      "filas": 3
+    }
+  }
+}
