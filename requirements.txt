@@ -25,7 +25,7 @@ plotly==6.2.0
 python-dotenv==1.1.1
 requests==2.32.4
 retrying==1.4.0
-typing_extensions==4.14.1
+typing_extensions==4.16.0
 urllib3==2.5.0
 Werkzeug==3.1.3
 zipp==3.23.0
@@ -52,8 +52,10 @@ six==1.17.0
 tzdata==2025.2
 xlsxwriter==3.2.5
 
-# --- PDF (reportlab + LibreOffice via xlsx_to_pdf; post-proceso pypdf/pdfplumber) ---
-# pdfplumber 0.11.10 fija pdfminer.six==20260107 y pide Pillow>=12.2 / pypdfium2>=5.9
+# --- PDF (reportlab + post-proceso A3 via pdfplumber/pypdf) ---
+# NO instalar el paquete legado "pdfminer" (sin .six): rompe PDFStackT.
+# Si el venv ya lo tiene: pip uninstall -y pdfminer pdfminer3k
+# Luego: pip install --force-reinstall pdfminer.six==20260107 pdfplumber==0.11.10
 pdfminer.six==20260107
 pdfplumber==0.11.10
 pillow==12.2.0
