@@ -4704,7 +4704,7 @@ CAST(
             WHEN ISNULL(r.Solubilidad_Real, 0) < 0.25 THEN
                 CASE
                     WHEN ISNULL(r.CO3_Real, 0) <= 0.25
-                        THEN 15.0
+                        THEN 14.0
                     ELSE 11.0 + (15.51 * ISNULL(r.CO3_Real, 0))
                 END
 
@@ -4716,8 +4716,8 @@ CAST(
                         CASE
                             WHEN (8.182 * LOG(r.CuS_Real))
                                + 18.99
-                               + (15.51 * ISNULL(r.CO3_Real, 0)) < 15.0
-                                THEN 15.0
+                               + (15.51 * ISNULL(r.CO3_Real, 0)) < 14.0
+                                THEN 14.0
                             ELSE (8.182 * LOG(r.CuS_Real))
                                + 18.99
                                + (15.51 * ISNULL(r.CO3_Real, 0))
@@ -4733,7 +4733,7 @@ CAST(
             WHEN ISNULL(ps.Solubilidad_Plan_Semanal, 0) < 0.25 THEN
                 CASE
                     WHEN ISNULL(ps.CO3_Plan_Semanal, 0) <= 0.25
-                        THEN 15.0
+                        THEN 14.0
                     ELSE 11.0 + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0))
                 END
 
@@ -4745,8 +4745,8 @@ CAST(
                         CASE
                             WHEN (8.182 * LOG(ps.CuS_Plan_Semanal))
                                + 18.99
-                               + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0)) < 15.0
-                                THEN 15.0
+                               + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0)) < 14.0
+                                THEN 14.0
                             ELSE (8.182 * LOG(ps.CuS_Plan_Semanal))
                                + 18.99
                                + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0))
@@ -7407,7 +7407,7 @@ CAST(
             WHEN ISNULL(r.Solubilidad_Real, 0) < 0.25 THEN
                 CASE
                     WHEN ISNULL(r.CO3_Real, 0) <= 0.25
-                        THEN 15.0
+                        THEN 14.0
                     ELSE 11.0 + (15.51 * ISNULL(r.CO3_Real, 0))
                 END
 
@@ -7419,8 +7419,8 @@ CAST(
                         CASE
                             WHEN (8.182 * LOG(r.CuS_Real))
                                + 18.99
-                               + (15.51 * ISNULL(r.CO3_Real, 0)) < 15.0
-                                THEN 15.0
+                               + (15.51 * ISNULL(r.CO3_Real, 0)) < 14.0
+                                THEN 14.0
                             ELSE (8.182 * LOG(r.CuS_Real))
                                + 18.99
                                + (15.51 * ISNULL(r.CO3_Real, 0))
@@ -7436,7 +7436,7 @@ CAST(
             WHEN ISNULL(ps.Solubilidad_Plan_Semanal, 0) < 0.25 THEN
                 CASE
                     WHEN ISNULL(ps.CO3_Plan_Semanal, 0) <= 0.25
-                        THEN 15.0
+                        THEN 14.0
                     ELSE 11.0 + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0))
                 END
 
@@ -7448,8 +7448,8 @@ CAST(
                         CASE
                             WHEN (8.182 * LOG(ps.CuS_Plan_Semanal))
                                + 18.99
-                               + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0)) < 15.0
-                                THEN 15.0
+                               + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0)) < 14.0
+                                THEN 14.0
                             ELSE (8.182 * LOG(ps.CuS_Plan_Semanal))
                                + 18.99
                                + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0))

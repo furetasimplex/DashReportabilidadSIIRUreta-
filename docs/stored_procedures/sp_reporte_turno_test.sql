@@ -1226,44 +1226,61 @@ ps.CaolBeta_Plan_Semanal,
 
 /* Dosis de ácido */
 CAST(
-    CASE
-        WHEN r.Apilado_TMS_Real IS NULL
-          OR r.Apilado_TMS_Real = 0
-          OR r.Solubilidad_Real IS NULL
-          OR r.CO3_Real IS NULL
-            THEN NULL
+    ROUND(
+        CASE
+            WHEN ISNULL(r.Solubilidad_Real, 0) < 0.25 THEN
+                CASE
+                    WHEN ISNULL(r.CO3_Real, 0) <= 0.25
+                        THEN 14.0
+                    ELSE 11.0 + (15.51 * ISNULL(r.CO3_Real, 0))
+                END
 
-        WHEN r.Solubilidad_Real <= 0.25
-            THEN 9 + 16.33 * r.CO3_Real * 0.95
-
-        WHEN r.Solubilidad_Real > 0.25
-          AND r.CuS_Real > 0
-            THEN 8.182 * LOG(r.CuS_Real)
-               + 18.997
-               + 16.33 * r.CO3_Real * 0.95
-               + 2
-
-        ELSE NULL
-    END
+            ELSE
+                CASE
+                    WHEN r.CuS_Real IS NULL OR r.CuS_Real <= 0
+                        THEN 0.0
+                    ELSE
+                        CASE
+                            WHEN (8.182 * LOG(r.CuS_Real))
+                               + 18.99
+                               + (15.51 * ISNULL(r.CO3_Real, 0)) < 14.0
+                                THEN 14.0
+                            ELSE (8.182 * LOG(r.CuS_Real))
+                               + 18.99
+                               + (15.51 * ISNULL(r.CO3_Real, 0))
+                        END
+                END
+        END
+    , 2)
 AS decimal(18, 2)) AS Dosis_Acido_Ideal_TM,
 
 CAST(
-    COALESCE(
+    ROUND(
         CASE
-            WHEN COALESCE(ps.Solubilidad_Plan_Semanal, 0) <= 0.25
-                THEN 9 + 16.33 * COALESCE(ps.CO3_Plan_Semanal, 0) * 0.95
+            WHEN ISNULL(ps.Solubilidad_Plan_Semanal, 0) < 0.25 THEN
+                CASE
+                    WHEN ISNULL(ps.CO3_Plan_Semanal, 0) <= 0.25
+                        THEN 14.0
+                    ELSE 11.0 + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0))
+                END
 
-            WHEN ps.Solubilidad_Plan_Semanal > 0.25
-                AND ps.CuS_Plan_Semanal > 0
-                    THEN 8.182 * LOG(ps.CuS_Plan_Semanal)
-                   + 18.997
-                   + 16.33 * COALESCE(ps.CO3_Plan_Semanal, 0) * 0.95
-                   + 2
-
-            ELSE 0
-        END,
-        0
-    )
+            ELSE
+                CASE
+                    WHEN ps.CuS_Plan_Semanal IS NULL OR ps.CuS_Plan_Semanal <= 0
+                        THEN 0.0
+                    ELSE
+                        CASE
+                            WHEN (8.182 * LOG(ps.CuS_Plan_Semanal))
+                               + 18.99
+                               + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0)) < 14.0
+                                THEN 14.0
+                            ELSE (8.182 * LOG(ps.CuS_Plan_Semanal))
+                               + 18.99
+                               + (15.51 * ISNULL(ps.CO3_Plan_Semanal, 0))
+                        END
+                END
+        END
+    , 2)
 AS decimal(18, 2)) AS Dosis_Acido_Programa_Semanal,
 
         /* Fuentes de información explícitas */

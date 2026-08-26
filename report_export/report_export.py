@@ -196,13 +196,13 @@ def _agregar_cuadro_formula_dosis_acido(workbook, worksheet):
     )
     worksheet.merge_range(
         "V5:AO5",
-        "S = CuS/CuT   |   S < 0,25:  15 si CO\u2083 \u2264 0,25;   "
+        "S = CuS/CuT   |   S < 0,25:  14 si CO\u2083 \u2264 0,25;   "
         "11 + 15,51\u00b7CO\u2083 si CO\u2083 > 0,25",
         fmt_formula,
     )
     worksheet.merge_range(
         "V6:AO6",
-        "S \u2265 0,25:  MAX(15; 8,182\u00b7LN(CuS) + 18,99 + "
+        "S \u2265 0,25:  MAX(14; 8,182\u00b7LN(CuS) + 18,99 + "
         "15,51\u00b7CO\u2083)   |   CuS \u2264 0 \u2192 0",
         fmt_formula,
     )
