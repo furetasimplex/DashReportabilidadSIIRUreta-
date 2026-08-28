@@ -986,6 +986,8 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
     color_texto = "476475"
     relleno_azul = PatternFill("solid", fgColor="D7E1E7")
     relleno_blanco = PatternFill("solid", fgColor="FFFFFF")
+    relleno_oxido = PatternFill("solid", fgColor="FCE4D6")
+    relleno_sulfuro = PatternFill("solid", fgColor="E2F0D9")
     lado = Side(style="thin", color="808080")
     borde = Border(left=lado, right=lado, top=lado, bottom=lado)
 
@@ -1020,6 +1022,28 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
         celda.border = borde
 
     for fila_excel, (_, fila) in enumerate(df_balance.iterrows(), start=6):
+        valor_material = fila.get("Material")
+        material = (
+            ""
+            if pd.isna(valor_material)
+            else str(valor_material).strip().upper()
+        )
+        material = (
+            material.replace("Á", "A")
+            .replace("É", "E")
+            .replace("Í", "I")
+            .replace("Ó", "O")
+            .replace("Ú", "U")
+        )
+        if material in {"OXIDO", "OXIDOS"}:
+            relleno_fila = relleno_oxido
+        elif material in {"SULFURO", "SULFUROS"}:
+            relleno_fila = relleno_sulfuro
+        else:
+            relleno_fila = (
+                relleno_blanco if fila_excel % 2 == 0 else relleno_azul
+            )
+
         for col_excel, (_, fuente) in enumerate(columnas, start=1):
             valor = fila[fuente]
             if pd.isna(valor):
@@ -1028,7 +1052,7 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
                 valor = valor.to_pydatetime()
             celda = ws.cell(fila_excel, col_excel, valor)
             celda.font = Font(name="Arial", size=10, color=color_texto)
-            celda.fill = relleno_blanco if fila_excel % 2 == 0 else relleno_azul
+            celda.fill = relleno_fila
             celda.alignment = Alignment(horizontal="center", vertical="center")
             celda.border = borde
         ws.row_dimensions[fila_excel].height = 20
@@ -1056,6 +1080,198 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
     ws.page_setup.fitToHeight = 0
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.print_area = f"A1:AG{ultima_fila}"
+
+    relleno_ajuste_manual = PatternFill("solid", fgColor="D7E1E7")
+    fuente_ajuste_manual = Font(
+        name="Arial", size=11, bold=True, color="476475"
+    )
+    alineacion_ajuste_manual = Alignment(
+        horizontal="center", vertical="center"
+    )
+    lado_ajuste_manual = Side(style="medium", color="000000")
+    borde_ajuste_manual = Border(
+        left=lado_ajuste_manual,
+        right=lado_ajuste_manual,
+        top=lado_ajuste_manual,
+        bottom=lado_ajuste_manual,
+    )
+    for fila in range(39, 44):
+        celda = ws.cell(fila, 9)
+        celda.value = None
+        celda.fill = relleno_ajuste_manual
+        celda.font = fuente_ajuste_manual
+        celda.alignment = alineacion_ajuste_manual
+        celda.border = borde_ajuste_manual
+        celda.number_format = "#,##0.00"
+
+
+def _agregar_hoja_datos_correo(wb, df: pd.DataFrame, fecha_corte) -> None:
+    """Agrega un resumen autocontenido listo para copiar en un correo."""
+    nombre_hoja = "Datos para correo"
+    if nombre_hoja in wb.sheetnames:
+        del wb[nombre_hoja]
+    ws = wb.create_sheet(title=nombre_hoja)
+    ws.sheet_view.showGridLines = False
+
+    datos_correo = df.copy()
+    datos_correo["Fecha"] = pd.to_datetime(
+        datos_correo["Fecha"], errors="coerce"
+    ).dt.normalize()
+    fecha_corte = pd.Timestamp(fecha_corte).normalize()
+    datos_correo = datos_correo[datos_correo["Fecha"] <= fecha_corte].copy()
+    inicio_mes = fecha_corte.replace(day=1)
+    datos_mtd = datos_correo[datos_correo["Fecha"] >= inicio_mes]
+
+    def ultimo_avance(campana, modulo, avance):
+        columnas = ["Fecha", campana, modulo, avance]
+        if any(columna not in datos_correo.columns for columna in columnas):
+            return None
+        candidatos = datos_correo[columnas].copy()
+        candidatos[avance] = pd.to_numeric(candidatos[avance], errors="coerce")
+        validos = (
+            candidatos["Fecha"].notna()
+            & candidatos[campana].notna()
+            & candidatos[modulo].notna()
+            & candidatos[avance].notna()
+            & candidatos[campana].astype(str).str.strip().ne("")
+            & candidatos[modulo].astype(str).str.strip().ne("")
+        )
+        candidatos = candidatos.loc[validos].sort_values(
+            "Fecha", kind="stable"
+        )
+        if candidatos.empty:
+            return None
+        fila = candidatos.iloc[-1]
+        valor_avance = float(fila[avance])
+        if valor_avance > 1:
+            valor_avance /= 100
+        return fila[campana], fila[modulo], valor_avance
+
+    def texto_avance(etiqueta, resultado, material=None):
+        if resultado is None:
+            return f"{etiqueta}: sin información disponible"
+        campana, modulo, avance = resultado
+        material_mostrado = material or str(campana).strip()
+        modulo_mostrado = str(modulo).strip()
+        if isinstance(modulo, (int, float)) and not pd.isna(modulo):
+            modulo_mostrado = f"{modulo:g}"
+        return (
+            f"{etiqueta}: {avance:.0%} del Módulo {modulo_mostrado} "
+            f"{material_mostrado}"
+        )
+
+    def suma_columna(datos, columna):
+        if columna not in datos.columns:
+            return 0.0
+        return float(pd.to_numeric(datos[columna], errors="coerce").sum())
+
+    def valor_diario(columna):
+        datos_dia = datos_correo[datos_correo["Fecha"] == fecha_corte]
+        return suma_columna(datos_dia, columna)
+
+    def formato_entero(valor):
+        return f"{valor:,.0f}".replace(",", ".")
+
+    apilamiento = ultimo_avance(
+        "Campana_apilado", "Modulo_apilado", "Avance_apilado"
+    )
+    rotopala_1 = ultimo_avance(
+        "Campana_reclamo_oxidos",
+        "Modulo_reclamo_oxidos",
+        "Avance_reclamo_oxidos",
+    )
+    rotopala_2 = ultimo_avance(
+        "Campana_reclamo_sulfuros",
+        "modulo_reclamo_sulfuros",
+        "Avance_reclamo_sulfuros",
+    )
+
+    catodos_diario = valor_diario("Produccion_Catodos_Real")
+    catodos_mtd = suma_columna(datos_mtd, "Produccion_Catodos_Real")
+    apilado_diario = valor_diario("Apilado_TMS_Real")
+    apilado_mtd = suma_columna(datos_mtd, "Apilado_TMS_Real")
+    chancado_mtd = suma_columna(datos_mtd, "Chancado_TMS_Real")
+    srr_mtd = suma_columna(datos_mtd, "SRR_TMS_promedio_dia")
+    check_balance = chancado_mtd - (apilado_mtd - srr_mtd)
+
+    fecha_larga = (
+        f"{fecha_corte.day} de {MESES_ES[fecha_corte.month - 1]}, "
+        f"{fecha_corte.year}"
+    )
+    fecha_compacta = (
+        f"{fecha_corte.day} {MESES_ES[fecha_corte.month - 1]} "
+        f"{fecha_corte.year}"
+    )
+    textos = {
+        3: "Adjunto Producciones Conciliadas.",
+        4: f"Chancado, Apilado y Ripios al {fecha_larga}.",
+        5: "(Avance, de apilador y rotopala, tomado por geomensura)",
+        6: f"Cátodos al {fecha_larga}.",
+        8: f"Avances al {fecha_compacta}:",
+        9: texto_avance("Apilamiento", apilamiento),
+        10: texto_avance("Ripios Rotopala 1", rotopala_1, "Óxido"),
+        11: texto_avance("Ripios Rotopala 2", rotopala_2, "Sulfuro"),
+        13: "Producción:",
+        14: (
+            "Producción de Cátodos [t] diario / mensual "
+            f"({fecha_compacta}): {formato_entero(catodos_diario)} / "
+            f"{formato_entero(catodos_mtd)}"
+        ),
+        15: (
+            f"Apilado [t] diario / mensual ({fecha_compacta}): "
+            f"{formato_entero(apilado_diario)} / {formato_entero(apilado_mtd)}"
+        ),
+    }
+
+    color_texto = "476475"
+    relleno_titulo = PatternFill("solid", fgColor="D7E1E7")
+    relleno_claro = PatternFill("solid", fgColor="F3F6F8")
+    lado = Side(style="thin", color="B7C5CD")
+    borde = Border(left=lado, right=lado, top=lado, bottom=lado)
+
+    ws.merge_cells("A1:H1")
+    ws["A1"] = nombre_hoja
+    ws["A1"].font = Font(name="Arial", size=14, bold=True, color=color_texto)
+    ws["A1"].fill = relleno_titulo
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    for fila, texto in textos.items():
+        ws.merge_cells(start_row=fila, start_column=1, end_row=fila, end_column=8)
+        celda = ws.cell(fila, 1, texto)
+        celda.font = Font(
+            name="Arial", size=10, color=color_texto,
+            bold=fila in {3, 8, 13}, italic=fila == 5,
+        )
+        celda.alignment = Alignment(vertical="center", wrap_text=True)
+
+    ws.merge_cells("J3:M3")
+    ws["J3"] = "Resumen de datos"
+    ws["J3"].font = Font(name="Arial", size=11, bold=True, color=color_texto)
+    ws["J3"].fill = relleno_titulo
+    ws["J3"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.merge_cells("J4:M4")
+    ws["J4"] = f"Check balance: {formato_entero(check_balance)} t"
+    ws["J4"].font = Font(name="Arial", size=11, bold=True, color=color_texto)
+    ws["J4"].fill = relleno_claro
+    ws["J4"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.merge_cells("J5:M6")
+    ws["J5"] = "Nota: este valor no puede ser mayor a 3.000 ton."
+    ws["J5"].font = Font(name="Arial", size=9, italic=True, color=color_texto)
+    ws["J5"].alignment = Alignment(
+        horizontal="center", vertical="center", wrap_text=True
+    )
+    for rango in ("A1:H1", "J3:M3", "J4:M4", "J5:M6"):
+        for fila in ws[rango]:
+            for celda in fila:
+                celda.border = borde
+
+    for columna in range(1, 9):
+        ws.column_dimensions[get_column_letter(columna)].width = 14
+    ws.column_dimensions["I"].width = 3
+    for columna in range(10, 14):
+        ws.column_dimensions[get_column_letter(columna)].width = 14
+    ws.row_dimensions[1].height = 24
+    for fila in (4, 5, 6, 9, 10, 11, 14, 15):
+        ws.row_dimensions[fila].height = 22
 
 
 def export_datos_conciliados_to_template(
@@ -1223,6 +1439,8 @@ def export_datos_conciliados_to_template(
     if df_factor_ajuste is not None:
         _validar_factor_ajuste_camiones(df, df_factor_ajuste)
         _agregar_hoja_factor_ajuste_camiones(wb, df_factor_ajuste)
+
+    _agregar_hoja_datos_correo(wb, df_resumen, fecha_corte_resumen)
 
     out = io.BytesIO()
     wb.save(out)
