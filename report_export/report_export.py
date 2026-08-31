@@ -93,6 +93,10 @@ BHP_LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "pampa-norte-bhp-oficial.png
 COLOR_PAMPA_NORTE = "#018982"
 COLOR_BLANCO = "#FFFFFF"
 COLOR_BORDE = "#808080"
+COLOR_IMP = "#FF0000"
+COLOR_MB = "#FFC000"
+COLOR_TM2 = "#92D050"
+COLOR_TM1 = "#00B0F0"
 
 def _aplicar_dimensiones_oficiales_torre(worksheet, con_turno=False):
     worksheet.set_column("A:A", 15 if con_turno else 11)
@@ -1810,6 +1814,212 @@ def actualizar_reporte_turno_cache_emision(
             "Error al actualizar el cache del Reporte por Turno mediante "
             f"{SP_ACTUALIZA_REPORTE_TURNO_CACHE_EMISION}: {exc}"
         ) from exc
+
+
+def fetch_clays_cufe_report(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Consulta Clays/CuFe y su fuente real; ``end_date`` es exclusiva.
+
+    La procedencia se lee de la misma vista calculada consumida por
+    ``sp_refrescar_clays_cufe``. No se deduce comparando valores numéricos.
+    """
+    if start_date is None or end_date is None:
+        raise ValueError("FechaInicio y FechaFin son obligatorias.")
+    if start_date >= end_date:
+        raise ValueError(
+            "FechaInicio debe ser anterior a FechaFin; FechaFin es exclusiva."
+        )
+
+    sql = _sa_text("""
+        WITH clays_normalizado AS
+        (
+            SELECT
+                c.Fecha,
+                CASE
+                    WHEN n.Torre_Normalizada IN ('TM1', 'T1', 'TORRE1') THEN 'TM1'
+                    WHEN n.Torre_Normalizada IN ('TM2', 'T2', 'TORRE2') THEN 'TM2'
+                END AS Torre,
+                CASE
+                    WHEN n.Turno_Normalizado IN ('A', 'TA', 'TURNOA') THEN 'A'
+                    WHEN n.Turno_Normalizado IN ('B', 'TB', 'TURNOB') THEN 'B'
+                END AS Turno,
+                c.CaolBeta,
+                c.CuFe
+            FROM [inventar_SpcHidr].[Clays_CuFe] AS c
+            CROSS APPLY
+            (
+                VALUES
+                (
+                    REPLACE(REPLACE(REPLACE(UPPER(LTRIM(RTRIM(ISNULL(c.Torre, '')))), ' ', ''), '-', ''), '_', ''),
+                    REPLACE(REPLACE(REPLACE(UPPER(LTRIM(RTRIM(ISNULL(c.Turno, '')))), ' ', ''), '-', ''), '_', '')
+                )
+            ) AS n(Torre_Normalizada, Turno_Normalizado)
+            WHERE c.Fecha >= :start_date
+              AND c.Fecha < :end_date
+        ),
+        trazabilidad_caol AS
+        (
+            SELECT Fecha, Turno, Torre, Fuente_CaolBeta
+            FROM
+            (
+                SELECT
+                    t.Fecha,
+                    t.Turno,
+                    t.Torre,
+                    t.Fuente_CaolBeta,
+                    ROW_NUMBER() OVER
+                    (
+                        PARTITION BY t.Fecha, t.Turno, t.Torre
+                        ORDER BY t.fecha_proceso DESC, t.id_trazabilidad DESC
+                    ) AS rn
+                FROM [inventar_SpcHidr].[Clays_CuFe_trazabilidad] AS t
+                WHERE t.Fecha >= :start_date
+                  AND t.Fecha < :end_date
+                  AND ISNULL(t.Fuente_CaolBeta, 'SIN_DATO') <> 'SIN_DATO'
+            ) AS ranked
+            WHERE rn = 1
+        ),
+        trazabilidad_cufe AS
+        (
+            SELECT Fecha, Turno, Torre, Fuente_CuFe
+            FROM
+            (
+                SELECT
+                    t.Fecha,
+                    t.Turno,
+                    t.Torre,
+                    t.Fuente_CuFe,
+                    ROW_NUMBER() OVER
+                    (
+                        PARTITION BY t.Fecha, t.Turno, t.Torre
+                        ORDER BY t.fecha_proceso DESC, t.id_trazabilidad DESC
+                    ) AS rn
+                FROM [inventar_SpcHidr].[Clays_CuFe_trazabilidad] AS t
+                WHERE t.Fecha >= :start_date
+                  AND t.Fecha < :end_date
+                  AND ISNULL(t.Fuente_CuFe, 'SIN_DATO') <> 'SIN_DATO'
+            ) AS ranked
+            WHERE rn = 1
+        )
+        SELECT
+            c.Fecha,
+            c.Torre,
+            c.Turno,
+            c.CaolBeta,
+            c.CuFe,
+            CASE
+                WHEN UPPER(ISNULL(f.Fuente_CaolBeta, '')) LIKE 'NIR_TM2_%' THEN 'TM2'
+                WHEN UPPER(ISNULL(f.Fuente_CaolBeta, '')) LIKE 'NIR_PROPIO_%' THEN c.Torre
+                WHEN UPPER(ISNULL(f.Fuente_CaolBeta, '')) LIKE 'MB_%' THEN 'MB'
+                WHEN UPPER(ISNULL(f.Fuente_CaolBeta, '')) LIKE 'IMP%' THEN 'IMP'
+            END AS Fuente_CaolBeta,
+            CASE
+                WHEN UPPER(ISNULL(f.Fuente_CuFe, '')) LIKE 'LAB_TM2_%' THEN 'TM2'
+                WHEN UPPER(ISNULL(f.Fuente_CuFe, '')) LIKE 'LAB_PROPIO_%' THEN c.Torre
+                WHEN UPPER(ISNULL(f.Fuente_CuFe, '')) LIKE 'MB_%' THEN 'MB'
+                WHEN UPPER(ISNULL(f.Fuente_CuFe, '')) LIKE 'IMP%' THEN 'IMP'
+            END AS Fuente_CuFe
+        FROM clays_normalizado AS c
+        LEFT JOIN [inventar_SpcHidr].[v_clays_cufe_calculado_v2_test] AS v
+          ON v.Fecha = c.Fecha
+         AND v.Torre = c.Torre
+         AND v.Turno = c.Turno
+        LEFT JOIN trazabilidad_caol AS tc
+          ON tc.Fecha = c.Fecha
+         AND tc.Torre = c.Torre
+         AND tc.Turno = c.Turno
+        LEFT JOIN trazabilidad_cufe AS tf
+          ON tf.Fecha = c.Fecha
+         AND tf.Torre = c.Torre
+         AND tf.Turno = c.Turno
+        CROSS APPLY
+        (
+            VALUES
+            (
+                CASE
+                    WHEN ISNULL(v.Fuente_CaolBeta, 'SIN_DATO') <> 'SIN_DATO'
+                        THEN v.Fuente_CaolBeta
+                    ELSE tc.Fuente_CaolBeta
+                END,
+                CASE
+                    WHEN ISNULL(v.Fuente_CuFe, 'SIN_DATO') <> 'SIN_DATO'
+                        THEN v.Fuente_CuFe
+                    ELSE tf.Fuente_CuFe
+                END
+            )
+        ) AS f(Fuente_CaolBeta, Fuente_CuFe)
+        WHERE c.Torre IS NOT NULL
+          AND c.Turno IS NOT NULL
+        ORDER BY
+            c.Fecha,
+            CASE c.Torre WHEN 'TM1' THEN 1 WHEN 'TM2' THEN 2 ELSE 3 END,
+            CASE c.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
+    """)
+    with _get_engine().connect() as conn:
+        return pd.read_sql(
+            sql,
+            conn,
+            params={"start_date": start_date, "end_date": end_date},
+        )
+
+
+def fetch_trazabilidad_analitos_report(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Lee la trazabilidad final persistida por el SP; fin exclusivo."""
+    if start_date is None or end_date is None or start_date >= end_date:
+        raise ValueError("Rango de fechas inválido; FechaFin es exclusiva.")
+    sql = _sa_text("""
+        SELECT
+            t.Fecha, t.Turno, t.TM_Destino, t.Analito, t.Valor_Final,
+            t.Fuente_Base, t.Fuente_Tecnica, t.Fecha_Origen,
+            t.Turno_Origen, t.TM_Origen, t.Resolucion,
+            t.Representatividad_Quimica, t.Representatividad_Fisica,
+            t.Fecha_Proceso,
+            c.Apilado_TMS_Real,
+            f.Fuente_Info_Quimica AS Resumen_Quimico_Actual,
+            f.Fuente_Info_Fisica AS Resumen_Fisico_Actual
+        FROM inventar_SpcHidr.trazabilidad_analitos_tm_emision_test t
+        LEFT JOIN inventar_SpcHidr.reporte_turno_cache_emision_test c
+          ON c.Fecha=t.Fecha AND c.Turno=t.Turno
+        LEFT JOIN inventar_SpcHidr.v_reporte_turno_fuentes_info_test f
+          ON f.Fecha=t.Fecha AND f.Turno=t.Turno
+        WHERE t.Fecha>=:start_date AND t.Fecha<:end_date
+        ORDER BY t.Fecha,
+          CASE t.TM_Destino WHEN 'TM1' THEN 1 WHEN 'TM2' THEN 2 ELSE 3 END,
+          CASE t.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
+          t.Analito;
+    """)
+    with _get_engine().connect() as conn:
+        return pd.read_sql(
+            sql, conn, params={"start_date": start_date, "end_date": end_date}
+        )
+
+
+def fetch_curva_granulometrica_report(
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Lee la curva granulometrica oficial ya ponderada; fin exclusivo."""
+    if start_date is None or end_date is None or start_date >= end_date:
+        raise ValueError("Rango de fechas invalido; FechaFin es exclusiva.")
+    sql = _sa_text("""
+        SELECT
+            Fecha, Turno, Ton_TM1, Ton_TM2, Rep_Fisica_TM1, Rep_Fisica_TM2,
+            Tiene_Curva_TM1, Tiene_Curva_TM2, Torres_Utilizadas,
+            P2, P1, P34, P12, P14, P10, P35, P100, P150, P200, P325,
+            PBajo325
+        FROM inventar_SpcHidr.v_curva_granulometrica_torres_test
+        WHERE Fecha >= :start_date AND Fecha < :end_date
+        ORDER BY Fecha, CASE Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
+    """)
+    with _get_engine().connect() as conn:
+        return pd.read_sql(
+            sql, conn, params={"start_date": start_date, "end_date": end_date}
+        )
 
 
 def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame:
@@ -4027,11 +4237,679 @@ def agregar_hoja_malla_100(
     )
 
 
+def agregar_hoja_curva_granulometrica(
+    writer: pd.ExcelWriter,
+    df_curva_granulometrica: pd.DataFrame,
+    periodo_inicio: date = None,
+    periodo_fin: date = None,
+) -> None:
+    """Agrega la curva observada ya calculada en SQL, sin reponderarla."""
+    columnas = [
+        "Fecha", "Turno", "Ton_TM1", "Ton_TM2", "Rep_Fisica_TM1",
+        "Rep_Fisica_TM2", "Tiene_Curva_TM1", "Tiene_Curva_TM2",
+        "Torres_Utilizadas", "P2", "P1", "P34", "P12", "P14", "P10",
+        "P35", "P100", "P150", "P200", "P325", "PBajo325",
+    ]
+    df_export = df_curva_granulometrica.copy().reindex(columns=columnas)
+    if not df_export.empty:
+        df_export["Fecha"] = pd.to_datetime(df_export["Fecha"], errors="coerce")
+        df_export = df_export.sort_values(
+            ["Fecha", "Turno"],
+            key=lambda s: s.map({"A": 1, "B": 2}) if s.name == "Turno" else s,
+            kind="stable",
+        )
+    fechas_validas = df_export["Fecha"].dropna()
+    if periodo_inicio is None and not fechas_validas.empty:
+        periodo_inicio = fechas_validas.min().date()
+    if periodo_fin is None and not fechas_validas.empty:
+        periodo_fin = fechas_validas.max().date()
+    texto_periodo = "Período: sin datos"
+    if periodo_inicio is not None and periodo_fin is not None:
+        texto_periodo = (
+            f"Período: {pd.Timestamp(periodo_inicio).strftime('%d-%m-%Y')} al "
+            f"{pd.Timestamp(periodo_fin).strftime('%d-%m-%Y')}"
+        )
+
+    workbook = writer.book
+    worksheet = workbook.add_worksheet("Curva Granulométrica")
+    writer.sheets["Curva Granulométrica"] = worksheet
+    base = {
+        "font_name": "Arial", "font_size": 9, "font_color": "#476475",
+        "align": "center", "valign": "vcenter", "border": 1,
+        "border_color": "#A6A6A6",
+    }
+    titulo = workbook.add_format({
+        "font_name": "Arial", "font_size": 18, "bold": True,
+        "font_color": COLOR_BLANCO, "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center", "valign": "vcenter",
+    })
+    subtitulo = workbook.add_format({
+        "font_name": "Arial", "font_size": 10, "italic": True,
+        "font_color": "#476475", "align": "center", "valign": "vcenter",
+    })
+    nota = workbook.add_format({
+        "font_name": "Arial", "font_size": 9, "italic": True,
+        "font_color": "#7F8F99", "align": "center", "valign": "vcenter",
+        "text_wrap": True,
+    })
+    header_grupo = workbook.add_format({
+        **base, "bold": True, "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE, "border_color": "#476475",
+    })
+    header = workbook.add_format({
+        **base, "bold": True, "bg_color": "#D7E1E7",
+        "border_color": "#476475", "text_wrap": True,
+    })
+    texto = workbook.add_format(base)
+    fecha_fmt = workbook.add_format({**base, "num_format": "dd-mm-yyyy"})
+    numero_fmt = workbook.add_format({**base, "num_format": "#,##0.0"})
+    porcentaje_fmt = workbook.add_format({**base, "num_format": "0.00%"})
+    curva_fmt = workbook.add_format({**base, "num_format": '0.00 "%"'})
+
+    last_col = len(columnas) - 1
+    worksheet.merge_range(
+        0, 0, 1, last_col, "Curva Granulométrica - Torres de Muestreo", titulo
+    )
+    worksheet.merge_range(
+        2, 0, 2, last_col, texto_periodo, subtitulo,
+    )
+    worksheet.merge_range(
+        3, 0, 4, last_col,
+        "Curva observada ponderada por tonelaje real de cada torre. Las torres "
+        "sin ensayo granulométrico no participan de la ponderación. La "
+        "representatividad física se presenta como información diagnóstica y no "
+        "como filtro de esta curva. La estructura conserva todas las fracciones "
+        "del formato oficial; en los archivos basales actuales, las fracciones "
+        "posteriores a #100 corresponden al cierre del formato granulométrico.",
+        nota,
+    )
+    worksheet.merge_range(6, 0, 6, 1, "IDENTIFICACIÓN", header_grupo)
+    worksheet.merge_range(6, 2, 6, 3, "MASA", header_grupo)
+    worksheet.merge_range(6, 4, 6, 5, "REPRESENTATIVIDAD FÍSICA", header_grupo)
+    worksheet.merge_range(6, 6, 6, 8, "TRAZABILIDAD", header_grupo)
+    worksheet.merge_range(
+        6, 9, 6, last_col, "PASANTE ACUMULADO (%)", header_grupo
+    )
+    etiquetas = {
+        "Torres_Utilizadas": "Torres utilizadas", "Ton_TM1": "Ton TM1",
+        "Ton_TM2": "Ton TM2", "Rep_Fisica_TM1": "Rep TM1",
+        "Rep_Fisica_TM2": "Rep TM2",
+        "Tiene_Curva_TM1": "Curva TM1", "Tiene_Curva_TM2": "Curva TM2",
+        "P2": "2\"", "P1": "1\"", "P34": "3/4\"", "P12": "1/2\"",
+        "P14": "1/4\"", "P10": "#10", "P35": "#35", "P100": "#100",
+        "P150": "#150", "P200": "#200", "P325": "#325",
+        "PBajo325": "-#325",
+    }
+    for col_idx, columna in enumerate(columnas):
+        worksheet.write(7, col_idx, etiquetas.get(columna, columna), header)
+
+    curva_cols = set(columnas[9:])
+    for row_idx, fila in enumerate(df_export.itertuples(index=False, name=None), start=8):
+        for col_idx, (columna, valor) in enumerate(zip(columnas, fila)):
+            if pd.isna(valor):
+                worksheet.write_blank(row_idx, col_idx, None, texto)
+            elif columna == "Fecha":
+                worksheet.write_datetime(
+                    row_idx, col_idx, pd.Timestamp(valor).to_pydatetime(), fecha_fmt
+                )
+            elif columna in {"Ton_TM1", "Ton_TM2"}:
+                worksheet.write_number(row_idx, col_idx, float(valor), numero_fmt)
+            elif columna in {"Rep_Fisica_TM1", "Rep_Fisica_TM2"}:
+                worksheet.write_number(row_idx, col_idx, float(valor), porcentaje_fmt)
+            elif columna in {"Tiene_Curva_TM1", "Tiene_Curva_TM2"}:
+                worksheet.write(row_idx, col_idx, "Sí" if int(valor) == 1 else "No", texto)
+            elif columna in curva_cols:
+                worksheet.write_number(row_idx, col_idx, float(valor), curva_fmt)
+            else:
+                worksheet.write(row_idx, col_idx, valor, texto)
+
+    worksheet.set_column(0, 0, 12)
+    worksheet.set_column(1, 1, 8)
+    worksheet.set_column(2, 5, 12)
+    worksheet.set_column(6, 7, 11)
+    worksheet.set_column(8, 8, 17)
+    worksheet.set_column(9, last_col, 10)
+    worksheet.set_row(0, 24)
+    worksheet.set_row(3, 22)
+    worksheet.set_row(4, 22)
+    worksheet.set_row(6, 22)
+    worksheet.set_row(7, 32)
+    worksheet.freeze_panes(8, 2)
+    if not df_export.empty:
+        worksheet.autofilter(7, 0, 7 + len(df_export), last_col)
+    worksheet.hide_gridlines(2)
+    worksheet.set_landscape()
+    worksheet.fit_to_pages(1, 0)
+
+
+def agregar_hoja_clays_cufe(
+    writer: pd.ExcelWriter,
+    df_clays_cufe: pd.DataFrame,
+) -> None:
+    """Agrega la hoja visual Clays-CuFe sin mutar ni recalcular sus datos."""
+    df_export = df_clays_cufe.copy()
+    columnas = [
+        "Identificador", "Muestra", "Caolinita", "Qz", "CaolBeta", "CuFe",
+        "Fuente CaolBeta", "Fuente CuFe",
+    ]
+
+    if not df_export.empty:
+        df_export["Fecha"] = pd.to_datetime(df_export["Fecha"], errors="coerce")
+        df_export["Torre"] = df_export["Torre"].astype("string").str.upper()
+        df_export["Turno"] = df_export["Turno"].astype("string").str.upper()
+        torre_num = df_export["Torre"].map({"TM1": 1, "TM2": 2})
+        turno_excel = df_export["Turno"].map({"A": "TA", "B": "TB"})
+        df_export["Identificador"] = (
+            df_export["Fecha"].dt.strftime("%d-%m-%Y")
+            + " TORRE N°" + torre_num.astype("Int64").astype("string")
+            + " " + turno_excel
+        )
+        df_export["Muestra"] = (
+            "TM-" + torre_num.astype("Int64").astype("string")
+            + "_" + df_export["Fecha"].dt.strftime("%d-%m-%y")
+            + "-" + turno_excel
+        )
+        df_export["Caolinita"] = np.nan
+        df_export["Qz"] = np.nan
+        df_export["Fuente CaolBeta"] = df_export.get("Fuente_CaolBeta")
+        df_export["Fuente CuFe"] = df_export.get("Fuente_CuFe")
+        df_export["_torre_orden"] = torre_num
+        df_export["_turno_orden"] = df_export["Turno"].map({"A": 1, "B": 2})
+        df_export = df_export.sort_values(
+            ["Fecha", "_torre_orden", "_turno_orden"], kind="stable"
+        )[columnas]
+    else:
+        df_export = pd.DataFrame(columns=columnas)
+
+    workbook = writer.book
+    worksheet = workbook.add_worksheet("Clays-CuFe")
+    writer.sheets["Clays-CuFe"] = worksheet
+    base = {
+        "font_name": "Calibri", "font_size": 10, "align": "center",
+        "valign": "vcenter", "border": 1, "border_color": COLOR_BORDE,
+    }
+    fmt_titulo = workbook.add_format({
+        "bold": True, "font_name": "Arial", "font_size": 18,
+        "font_color": COLOR_BLANCO, "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center", "valign": "vcenter",
+    })
+    fmt_header = workbook.add_format({
+        **base, "bold": True, "font_size": 11, "font_color": COLOR_BLANCO,
+        "bg_color": COLOR_PAMPA_NORTE, "text_wrap": True,
+    })
+    fmt_texto = workbook.add_format(base)
+    fmt_num_2 = workbook.add_format({**base, "num_format": "0.00"})
+    fmt_num_4 = workbook.add_format({**base, "num_format": "0.0000"})
+    colores = {"IMP": COLOR_IMP, "MB": COLOR_MB, "TM2": COLOR_TM2, "TM1": COLOR_TM1}
+    formatos_caol = {
+        fuente: workbook.add_format({**base, "num_format": "0.00", "bg_color": color})
+        for fuente, color in colores.items()
+    }
+    formatos_cufe = {
+        fuente: workbook.add_format({**base, "num_format": "0.0000", "bg_color": color})
+        for fuente, color in colores.items()
+    }
+
+    worksheet.merge_range("A1:H2", "Clays-CuFe", fmt_titulo)
+    for col_idx, nombre in enumerate(columnas):
+        worksheet.write(3, col_idx, nombre, fmt_header)
+
+    for row_idx, (_, row) in enumerate(df_export.iterrows(), start=4):
+        for col_idx, nombre in enumerate(columnas):
+            valor = row[nombre]
+            if pd.isna(valor):
+                worksheet.write_blank(row_idx, col_idx, None, fmt_texto)
+            elif nombre == "CaolBeta":
+                worksheet.write_number(
+                    row_idx, col_idx, float(valor),
+                    formatos_caol.get(row["Fuente CaolBeta"], fmt_num_2),
+                )
+            elif nombre == "CuFe":
+                worksheet.write_number(
+                    row_idx, col_idx, float(valor),
+                    formatos_cufe.get(row["Fuente CuFe"], fmt_num_4),
+                )
+            else:
+                worksheet.write(row_idx, col_idx, valor, fmt_texto)
+
+    worksheet.write("J2", "Fuente", fmt_header)
+    descripciones = {
+        "IMP": "Fuente provisional IMP", "MB": "Modelo de Bloque",
+        "TM2": "Torre de Muestreo 2", "TM1": "Torre de Muestreo 1",
+    }
+    for fila, fuente in enumerate(("IMP", "MB", "TM2", "TM1"), start=2):
+        fmt_leyenda = workbook.add_format({**base, "bg_color": colores[fuente]})
+        worksheet.write(fila, 9, fuente, fmt_leyenda)
+        worksheet.write(fila, 10, descripciones[fuente], fmt_texto)
+
+    worksheet.set_column("A:A", 27)
+    worksheet.set_column("B:B", 21)
+    worksheet.set_column("C:D", 11)
+    worksheet.set_column("E:F", 12)
+    worksheet.set_column("G:H", 18)
+    worksheet.set_column("I:I", 3)
+    worksheet.set_column("J:J", 10)
+    worksheet.set_column("K:K", 25)
+    worksheet.set_row(0, 24)
+    worksheet.set_row(3, 32)
+    worksheet.freeze_panes(4, 0)
+    if not df_export.empty:
+        worksheet.autofilter(3, 0, 3 + len(df_export), len(columnas) - 1)
+    worksheet.hide_gridlines(2)
+    worksheet.set_landscape()
+    worksheet.fit_to_pages(1, 0)
+
+
+def agregar_hoja_trazabilidad_analitos(
+    writer: pd.ExcelWriter,
+    df_trazabilidad_analitos: pd.DataFrame,
+    df_cobertura_operacional: pd.DataFrame = None,
+) -> None:
+    """Agrega trazabilidad real y completa solo turnos no evaluables en Excel."""
+    df_export = df_trazabilidad_analitos.copy()
+    analitos = [
+        "CuT", "CuS", "FeT", "FeS", "CO3", "ConsH", "CuFe", "CaolBeta",
+        "Malla_Menos_1_2", "Malla_Menos_100",
+    ]
+    etiquetas = {
+        "Malla_Menos_1_2": "Malla -1/2",
+        "Malla_Menos_100": "Malla -100",
+    }
+    quimicos = set(analitos[:8])
+    fisicos = set(analitos[8:])
+    claves = ["Fecha", "Turno", "TM_Destino"]
+
+    if df_export.empty:
+        ancho = pd.DataFrame(columns=claves)
+    else:
+        df_export["Fecha"] = pd.to_datetime(df_export["Fecha"], errors="coerce")
+        if "Apilado_TMS_Real" in df_export.columns:
+            evaluable = pd.to_numeric(
+                df_export["Apilado_TMS_Real"], errors="coerce"
+            ).gt(0)
+        else:
+            evaluable = pd.Series(True, index=df_export.index)
+        df_visible = df_export.copy()
+        df_visible["Estado"] = evaluable.map(
+            {True: "EVALUABLE", False: "NO EVALUABLE"}
+        )
+        no_evaluable = ~evaluable
+        df_visible.loc[no_evaluable, [
+            "Valor_Final", "Fuente_Base", "Representatividad_Quimica",
+            "Representatividad_Fisica",
+        ]] = pd.NA
+
+        valores = df_visible.pivot(index=claves, columns="Analito", values="Valor_Final")
+        fuentes = df_visible.pivot(index=claves, columns="Analito", values="Fuente_Base")
+        reps = df_visible.groupby(claves, as_index=True)[
+            ["Estado", "Representatividad_Quimica", "Representatividad_Fisica"]
+        ].first()
+        ancho = reps.reset_index()
+        for analito in analitos:
+            etiqueta = etiquetas.get(analito, analito)
+            serie_valor = (
+                valores[analito] if analito in valores.columns
+                else pd.Series(index=valores.index, dtype="float64")
+            )
+            serie_fuente = (
+                fuentes[analito] if analito in fuentes.columns
+                else pd.Series(index=fuentes.index, dtype="object")
+            )
+            ancho[etiqueta] = serie_valor.reindex(valores.index).values
+            fuente = serie_fuente.reindex(fuentes.index).values
+            ancho[f"Fuente {etiqueta}"] = pd.Series(fuente).fillna("-").values
+
+        orden_fuentes = ["TM1", "TM2", "MB", "IMP"]
+        def _resumen_turno(grupo, conjunto):
+            presentes = set(
+                grupo.loc[grupo["Analito"].isin(conjunto), "Fuente_Base"].dropna()
+            )
+            return "; ".join(
+                {"TM1": "T1", "TM2": "T2"}.get(x, x)
+                for x in orden_fuentes if x in presentes
+            ) or "-"
+
+        resumen_q = df_visible.groupby(["Fecha", "Turno"]).apply(
+            lambda g: _resumen_turno(g, quimicos), include_groups=False
+        ).rename("Resumen Químico")
+        resumen_f = df_visible.groupby(["Fecha", "Turno"]).apply(
+            lambda g: _resumen_turno(g, fisicos), include_groups=False
+        ).rename("Resumen Físico")
+        ancho = ancho.merge(resumen_q, on=["Fecha", "Turno"], how="left")
+        ancho = ancho.merge(resumen_f, on=["Fecha", "Turno"], how="left")
+        ancho = ancho.sort_values(
+            ["Fecha", "Turno", "TM_Destino"],
+            key=lambda s: s.map({"TM1": 1, "TM2": 2, "A": 1, "B": 2})
+            if s.name in {"TM_Destino", "Turno"} else s,
+            kind="stable",
+        )
+
+    if df_cobertura_operacional is not None:
+        requeridas = {"Fecha", "Turno", "Apilado_TMS_Real"}
+        faltantes = requeridas - set(df_cobertura_operacional.columns)
+        if faltantes:
+            raise RuntimeError(
+                "Cobertura operacional incompleta para Trazabilidad Analitos: "
+                + ", ".join(sorted(faltantes))
+            )
+        cobertura = df_cobertura_operacional[
+            ["Fecha", "Turno", "Apilado_TMS_Real"]
+        ].copy()
+        cobertura["Fecha"] = pd.to_datetime(cobertura["Fecha"], errors="coerce")
+        cobertura["Turno"] = cobertura["Turno"].astype("string").str.strip().str.upper()
+        cobertura["Apilado_TMS_Real"] = pd.to_numeric(
+            cobertura["Apilado_TMS_Real"], errors="coerce"
+        )
+        if cobertura[["Fecha", "Turno"]].isna().any().any():
+            raise RuntimeError("Cobertura operacional contiene Fecha o Turno NULL.")
+        conflictos = cobertura.groupby(["Fecha", "Turno"])[
+            "Apilado_TMS_Real"
+        ].nunique(dropna=False)
+        if (conflictos > 1).any():
+            raise RuntimeError(
+                "Cobertura operacional contiene TMS contradictorio por Fecha + Turno."
+            )
+        cobertura = cobertura.drop_duplicates(["Fecha", "Turno"])
+        claves_trazadas = set()
+        if not df_export.empty:
+            claves_trazadas = set(zip(df_export["Fecha"], df_export["Turno"]))
+        sin_trazabilidad = cobertura.loc[
+            ~cobertura.apply(
+                lambda r: (r["Fecha"], r["Turno"]) in claves_trazadas,
+                axis=1,
+            )
+        ]
+        anomalias = sin_trazabilidad.loc[
+            sin_trazabilidad["Apilado_TMS_Real"].isna()
+            | sin_trazabilidad["Apilado_TMS_Real"].gt(0)
+        ]
+        if not anomalias.empty:
+            detalle = anomalias[
+                ["Fecha", "Turno", "Apilado_TMS_Real"]
+            ].to_dict(orient="records")
+            raise RuntimeError(
+                "ANOMALIA_TRAZABILIDAD: turno con TMS positivo o desconocido "
+                f"sin trazabilidad analítica: {detalle}"
+            )
+        filas_no_evaluables = []
+        for fila in sin_trazabilidad.loc[
+            sin_trazabilidad["Apilado_TMS_Real"].le(0)
+        ].itertuples(index=False):
+            for tm in ("TM1", "TM2"):
+                nueva = {
+                    "Fecha": fila.Fecha, "Turno": fila.Turno,
+                    "TM_Destino": tm, "Estado": "NO EVALUABLE",
+                    "Representatividad_Quimica": pd.NA,
+                    "Representatividad_Fisica": pd.NA,
+                    "Resumen Químico": "-", "Resumen Físico": "-",
+                }
+                for analito in analitos:
+                    etiqueta = etiquetas.get(analito, analito)
+                    nueva[etiqueta] = pd.NA
+                    nueva[f"Fuente {etiqueta}"] = "-"
+                filas_no_evaluables.append(nueva)
+        if filas_no_evaluables:
+            nuevas_filas = pd.DataFrame(filas_no_evaluables)
+            if ancho.empty:
+                ancho = nuevas_filas
+            else:
+                ancho = pd.DataFrame.from_records(
+                    ancho.to_dict(orient="records") + filas_no_evaluables
+                )
+
+    if not ancho.empty:
+        ancho = ancho.sort_values(
+            ["Fecha", "Turno", "TM_Destino"],
+            key=lambda s: s.map({"TM1": 1, "TM2": 2, "A": 1, "B": 2})
+            if s.name in {"TM_Destino", "Turno"} else s,
+            kind="stable",
+        )
+
+    columnas = ["Fecha", "Turno", "TM_Destino", "Estado",
+        "Representatividad_Quimica", "Representatividad_Fisica"]
+    for analito in analitos:
+        etiqueta = etiquetas.get(analito, analito)
+        columnas.extend([etiqueta, f"Fuente {etiqueta}"])
+    columnas.extend(["Resumen Químico", "Resumen Físico"])
+    ancho = ancho.reindex(columns=columnas)
+
+    workbook = writer.book
+    worksheet = workbook.add_worksheet("Trazabilidad Analitos")
+    writer.sheets["Trazabilidad Analitos"] = worksheet
+    base = {"font_name": "Arial", "font_size": 9, "font_color": "#476475",
+            "align": "center", "valign": "vcenter", "border": 1,
+            "border_color": "#A6A6A6"}
+    titulo = workbook.add_format({"font_name": "Arial", "font_size": 18,
+        "bold": True, "font_color": COLOR_BLANCO, "bg_color": COLOR_PAMPA_NORTE,
+        "align": "center", "valign": "vcenter"})
+    subtitulo = workbook.add_format({"font_name": "Arial", "font_size": 11,
+        "italic": True, "font_color": "#476475", "align": "center"})
+    nota = workbook.add_format({"font_name": "Arial", "font_size": 8,
+        "italic": True, "font_color": "#7F8F99", "align": "center",
+        "valign": "vcenter"})
+    header_grupo = workbook.add_format({**base, "bold": True,
+        "font_color": COLOR_BLANCO, "bg_color": COLOR_PAMPA_NORTE,
+        "text_wrap": True, "border_color": "#476475"})
+    header_analito = workbook.add_format({**base, "bold": True,
+        "bg_color": "#D7E1E7", "text_wrap": True,
+        "border_color": "#476475"})
+    header_campo = workbook.add_format({**base, "bold": True,
+        "bg_color": "#EAF0F3", "text_wrap": True,
+        "border_color": "#476475"})
+    colores = {"TM1": COLOR_TM1, "TM2": COLOR_TM2, "MB": COLOR_MB, "IMP": COLOR_IMP}
+    cache_formatos = {}
+
+    def _formato_cuerpo(
+        tipo, alterno=False, fin_grupo=False, fuente=None,
+        no_evaluable=False,
+    ):
+        clave = (tipo, alterno, fin_grupo, fuente, no_evaluable)
+        if clave in cache_formatos:
+            return cache_formatos[clave]
+        cfg = dict(base)
+        cfg["bg_color"] = "#F5F8FA" if alterno else "#FFFFFF"
+        if fin_grupo:
+            cfg["bottom"] = 2
+            cfg["bottom_color"] = "#476475"
+        if tipo == "fecha":
+            cfg["num_format"] = "dd-mm-yyyy"
+        elif tipo == "valor4":
+            cfg.update({"num_format": "0.0000", "align": "right"})
+        elif tipo == "valor2":
+            cfg.update({"num_format": "0.00", "align": "right"})
+        elif tipo == "rep":
+            cfg["num_format"] = "0.0%"
+        elif tipo == "rep_ok":
+            cfg.update({"num_format": "0.0%", "bg_color": "#E2F0D9", "bold": True})
+        elif tipo == "rep_baja":
+            cfg.update({"num_format": "0.0%", "bg_color": "#FCE4D6", "bold": True})
+        elif tipo == "torre":
+            cfg.update({"bg_color": "#EAF0F3", "bold": True,
+                        "left": 2, "left_color": "#476475"})
+        elif tipo == "fuente" and fuente in colores:
+            cfg.update({"bg_color": colores[fuente], "bold": True})
+            if fuente == "IMP":
+                cfg["font_color"] = COLOR_BLANCO
+        elif tipo == "resumen":
+            cfg.update({"bold": True, "left": 2, "left_color": "#476475"})
+        if no_evaluable:
+            cfg.update({"bg_color": "#E7E6E6", "font_color": "#7F7F7F"})
+        cache_formatos[clave] = workbook.add_format(cfg)
+        return cache_formatos[clave]
+
+    last_col = len(columnas) - 1
+    worksheet.merge_range(0, 0, 1, last_col, "Trazabilidad de Analitos", titulo)
+    worksheet.merge_range(2, 0, 2, last_col,
+        "Origen final de información por Torre, Turno y Analito", subtitulo)
+    worksheet.merge_range(3, 0, 3, last_col,
+        "Los valores corresponden a la resolución final por torre antes de "
+        "la ponderación por TMS del turno.", nota)
+
+    worksheet.merge_range(4, 0, 4, 5, "IDENTIFICACIÓN", header_grupo)
+    worksheet.merge_range(4, 6, 4, 21, "QUÍMICA", header_grupo)
+    worksheet.merge_range(4, 22, 4, 25, "FÍSICA", header_grupo)
+    worksheet.merge_range(4, 26, 4, 27, "RESUMEN", header_grupo)
+    identificadores = ["Fecha", "Turno", "Torre", "Estado Operacional",
+                       "Rep. Química", "Rep. Física"]
+    for c, nombre in enumerate(identificadores):
+        worksheet.write_blank(5, c, None, header_analito)
+        worksheet.write(6, c, nombre, header_campo)
+    for idx, analito in enumerate(analitos):
+        etiqueta = etiquetas.get(analito, analito)
+        inicio = 6 + idx * 2
+        worksheet.merge_range(5, inicio, 5, inicio + 1, etiqueta, header_analito)
+        worksheet.write(6, inicio, "Valor", header_campo)
+        worksheet.write(6, inicio + 1, "Fuente", header_campo)
+    for c, nombre in (
+        (26, "Fuentes Químicas Turno"),
+        (27, "Fuentes Físicas Turno"),
+    ):
+        worksheet.write_blank(5, c, None, header_analito)
+        worksheet.write(6, c, nombre, header_campo)
+
+    detalles = {}
+    if not df_export.empty:
+        detalles = {
+            (r.Fecha, r.Turno, r.TM_Destino, r.Analito): r
+            for r in df_export.itertuples(index=False)
+        }
+    filas_ancho = list(ancho.itertuples(index=False, name=None))
+    grupos = []
+    for row in filas_ancho:
+        row_map = dict(zip(columnas, row))
+        clave = (row_map["Fecha"], row_map["Turno"])
+        if not grupos or grupos[-1] != clave:
+            grupos.append(clave)
+    orden_grupo = {clave: idx for idx, clave in enumerate(grupos)}
+
+    for pos, row in enumerate(filas_ancho):
+        r_idx = 7 + pos
+        row_map = dict(zip(columnas, row))
+        clave_grupo = (row_map["Fecha"], row_map["Turno"])
+        alterno = bool(orden_grupo[clave_grupo] % 2)
+        siguiente = filas_ancho[pos + 1] if pos + 1 < len(filas_ancho) else None
+        if siguiente is None:
+            fin_grupo = True
+        else:
+            siguiente_map = dict(zip(columnas, siguiente))
+            fin_grupo = clave_grupo != (
+                siguiente_map["Fecha"], siguiente_map["Turno"]
+            )
+        no_evaluable_fila = row_map.get("Estado") == "NO EVALUABLE"
+        for c_idx, col in enumerate(columnas):
+            value = row_map[col]
+            if no_evaluable_fila:
+                if col == "Fecha":
+                    tipo_no_evaluable = "fecha"
+                elif col.startswith("Representatividad"):
+                    tipo_no_evaluable = "rep"
+                elif col in {"ConsH", "CaolBeta", "Malla -1/2", "Malla -100"}:
+                    tipo_no_evaluable = "valor2"
+                elif col in analitos or col in set(etiquetas.values()):
+                    tipo_no_evaluable = "valor4"
+                else:
+                    tipo_no_evaluable = "texto"
+                fmt = _formato_cuerpo(
+                    tipo_no_evaluable, alterno, fin_grupo,
+                    no_evaluable=True,
+                )
+            elif col == "Fecha":
+                fmt = _formato_cuerpo("fecha", alterno, fin_grupo)
+            elif col == "TM_Destino":
+                fmt = _formato_cuerpo("torre", alterno, fin_grupo)
+            elif col.startswith("Representatividad"):
+                if pd.isna(value):
+                    fmt = _formato_cuerpo("rep", alterno, fin_grupo)
+                else:
+                    tipo_rep = "rep_ok" if float(value) >= 0.75 else "rep_baja"
+                    fmt = _formato_cuerpo(tipo_rep, alterno, fin_grupo)
+            elif col.startswith("Fuente "):
+                fmt = _formato_cuerpo("fuente", alterno, fin_grupo, value)
+            elif col.startswith("Resumen "):
+                fmt = _formato_cuerpo("resumen", alterno, fin_grupo)
+            elif col in {"ConsH", "CaolBeta", "Malla -1/2", "Malla -100"}:
+                fmt = _formato_cuerpo("valor2", alterno, fin_grupo)
+            elif col in analitos or col in set(etiquetas.values()):
+                fmt = _formato_cuerpo("valor4", alterno, fin_grupo)
+            else:
+                fmt = _formato_cuerpo("texto", alterno, fin_grupo)
+            if pd.isna(value):
+                worksheet.write_blank(r_idx, c_idx, None, fmt)
+            elif col == "Fecha":
+                worksheet.write_datetime(r_idx, c_idx, pd.Timestamp(value).to_pydatetime(), fmt)
+            elif col.startswith("Representatividad"):
+                worksheet.write_number(r_idx, c_idx, float(value), fmt)
+            elif col.startswith("Fuente "):
+                worksheet.write(r_idx, c_idx, value, fmt)
+            elif col in {"Turno", "TM_Destino", "Estado", "Resumen Químico", "Resumen Físico"}:
+                valor_visible = value
+                if col in {"Resumen Químico", "Resumen Físico"}:
+                    valor_visible = "; ".join(
+                        {"T1": "TM1", "T2": "TM2"}.get(parte.strip(), parte.strip())
+                        for parte in str(value).split(";")
+                    )
+                worksheet.write(r_idx, c_idx, valor_visible, fmt)
+            else:
+                worksheet.write_number(r_idx, c_idx, float(value), fmt)
+                analito_db = next((k for k, v in etiquetas.items() if v == col), col)
+                d = detalles.get((pd.Timestamp(row_map["Fecha"]), row_map["Turno"], row_map["TM_Destino"], analito_db))
+                if d is not None:
+                    worksheet.write_comment(r_idx, c_idx,
+                        f"Fuente técnica: {d.Fuente_Tecnica or '-'}\n"
+                        f"Resolución: {d.Resolucion or '-'}\n"
+                        f"Origen: {d.Fecha_Origen or '-'} / {d.Turno_Origen or '-'} / {d.TM_Origen or '-'}")
+
+    worksheet.set_column(0, 0, 12)
+    worksheet.set_column(1, 2, 7)
+    worksheet.set_column(3, 3, 14)
+    worksheet.set_column(4, 5, 12)
+    for idx in range(len(analitos)):
+        inicio = 6 + idx * 2
+        worksheet.set_column(inicio, inicio, 10)
+        worksheet.set_column(inicio + 1, inicio + 1, 9)
+    worksheet.set_column(26, 27, 14)
+    worksheet.set_row(0, 24)
+    worksheet.set_row(4, 22)
+    worksheet.set_row(5, 24)
+    worksheet.set_row(6, 32)
+    for r_idx in range(7, 7 + len(filas_ancho)):
+        worksheet.set_row(r_idx, 19)
+    worksheet.freeze_panes(7, 6)
+    if not ancho.empty:
+        worksheet.autofilter(6, 0, 6 + len(ancho), last_col)
+    legend_col = last_col + 2
+    worksheet.write(4, legend_col, "Fuente", header_grupo)
+    descripciones = {"TM1": "Torre de Muestreo 1", "TM2": "Torre de Muestreo 2",
+        "MB": "Modelo de Bloque / fuente oficial mina", "IMP": "Fuente provisional IMP"}
+    for offset, fuente in enumerate(("TM1", "TM2", "MB", "IMP"), start=5):
+        worksheet.write(offset, legend_col, fuente,
+            _formato_cuerpo("fuente", False, False, fuente))
+        worksheet.write(offset, legend_col + 1, descripciones[fuente],
+            _formato_cuerpo("texto"))
+    worksheet.write(10, legend_col, "Rep.", header_grupo)
+    worksheet.write(11, legend_col, ">=75 %", _formato_cuerpo("rep_ok"))
+    worksheet.write(11, legend_col + 1, "Representativo",
+        _formato_cuerpo("texto"))
+    worksheet.write(12, legend_col, "<75 %", _formato_cuerpo("rep_baja"))
+    worksheet.write(12, legend_col + 1, "No representativo",
+        _formato_cuerpo("texto"))
+    worksheet.set_column(legend_col, legend_col, 10)
+    worksheet.set_column(legend_col + 1, legend_col + 1, 34)
+    worksheet.hide_gridlines(2)
+    worksheet.set_landscape()
+    worksheet.fit_to_pages(1, 0)
+
+
 def export_reporte_turno_estilo_leyes_finos(
     df: pd.DataFrame,
     output,
     df_generador: pd.DataFrame = None,
     df_generador_resumen: pd.DataFrame = None,
+    df_clays_cufe: pd.DataFrame = None,
+    df_trazabilidad_analitos: pd.DataFrame = None,
+    df_curva_granulometrica: pd.DataFrame = None,
+    periodo_inicio: date = None,
+    periodo_fin: date = None,
 ):
     """
     Exporta el reporte por turno con formato visual similar al archivo:
@@ -4618,4 +5496,26 @@ def export_reporte_turno_estilo_leyes_finos(
             agregar_hoja_malla_100(
                 writer=writer,
                 df_diario=df_generador,
+            )
+        if df_curva_granulometrica is not None:
+            agregar_hoja_curva_granulometrica(
+                writer=writer,
+                df_curva_granulometrica=df_curva_granulometrica,
+                periodo_inicio=periodo_inicio,
+                periodo_fin=periodo_fin,
+            )
+        if df_clays_cufe is not None:
+            agregar_hoja_clays_cufe(
+                writer=writer,
+                df_clays_cufe=df_clays_cufe,
+            )
+        if df_trazabilidad_analitos is not None:
+            cobertura_operacional = None
+            columnas_cobertura = {"Fecha", "Turno", "Apilado_TMS_Real"}
+            if columnas_cobertura.issubset(df.columns):
+                cobertura_operacional = df[list(columnas_cobertura)].copy()
+            agregar_hoja_trazabilidad_analitos(
+                writer=writer,
+                df_trazabilidad_analitos=df_trazabilidad_analitos,
+                df_cobertura_operacional=cobertura_operacional,
             )

@@ -4595,6 +4595,10 @@ CASE
 
     ELSE b.Fuente_FeS
 END AS Fuente_FeS,
+
+    ult_fes.Fecha AS Fecha_Origen_FeS,
+    b.Turno AS Turno_Origen_FeS,
+    b.TM AS TM_Origen_FeS,
 /* ============================================================
    ConsH con resolución cronológica
 
@@ -4661,6 +4665,10 @@ CASE
     ELSE 'ARRASTRE_ULTIMO_VALIDO'
 END AS Fuente_ConsH,
 
+    ult_consh.Fecha AS Fecha_Origen_ConsH,
+    ult_consh.Turno_Origen AS Turno_Origen_ConsH,
+    ult_consh.TM_Origen AS TM_Origen_ConsH,
+
    ult_malla.Malla_Menos_1_2
     AS Malla_Menos_1_2,
 
@@ -4671,6 +4679,10 @@ CASE
     ELSE ult_malla.Fuente_Malla_Resuelta
 
 END AS Fuente_Malla_Menos_1_2,
+
+    ult_malla.Fecha_Origen AS Fecha_Origen_Malla_Menos_1_2,
+    ult_malla.Turno_Origen AS Turno_Origen_Malla_Menos_1_2,
+    ult_malla.TM_Origen AS TM_Origen_Malla_Menos_1_2,
 
     b.Malla_Menos_100,
     b.Fuente_Malla_Menos_100,
@@ -4805,10 +4817,131 @@ CREATE CLUSTERED INDEX IX_leyes_v2_fecha_turno_tm
 ON #leyes_v2 (Fecha, Turno, TM);
 
 /* ============================================================
+   TRAZABILIDAD: estado inicial de #leyes_v2
+   Los bloques posteriores actualizan esta metadata junto con el valor.
+   ============================================================ */
+DROP TABLE IF EXISTS #trazabilidad_analitos;
+
+SELECT
+    l.Fecha,
+    l.Turno,
+    l.TM AS TM_Destino,
+    a.Analito,
+    a.Valor_Final,
+    CASE
+        WHEN a.Valor_Final IS NULL THEN NULL
+        WHEN a.Fuente_Tecnica = 'MINA' THEN 'MB'
+        WHEN a.Fuente_Tecnica = 'IMP' THEN 'IMP'
+        WHEN a.TM_Origen IN ('TM1', 'TM2')
+         AND a.Fuente_Tecnica IN
+             ('ARRASTRE_ULTIMO_VALIDO', 'SEMILLA_INICIO_PERIODO')
+            THEN a.TM_Origen
+        WHEN a.Fuente_Tecnica LIKE '%TORRE%' AND a.TM_Origen = 'TM1' THEN 'TM1'
+        WHEN a.Fuente_Tecnica LIKE '%TORRE%' AND a.TM_Origen = 'TM2' THEN 'TM2'
+        WHEN a.Fuente_Tecnica = 'SEMILLA_INICIO_PERIODO'
+             AND a.TM_Origen IN ('TM1', 'TM2') THEN a.TM_Origen
+    END AS Fuente_Base,
+    a.Fuente_Tecnica,
+    a.Fecha_Origen,
+    a.Turno_Origen,
+    a.TM_Origen,
+    CASE
+        WHEN a.Valor_Final IS NULL THEN 'SIN_DATO'
+        WHEN a.Fuente_Tecnica = 'MINA' THEN 'FALLBACK_MB'
+        WHEN a.Fuente_Tecnica = 'IMP' THEN 'PROVISIONAL_IMP'
+        WHEN a.Fuente_Tecnica = 'ARRASTRE_ULTIMO_VALIDO' THEN 'ARRASTRE'
+        WHEN a.Fuente_Tecnica = 'SEMILLA_INICIO_PERIODO' THEN 'SEMILLA'
+        WHEN a.Fuente_Tecnica LIKE '%OTRO_TURNO%' THEN 'OTRO_TURNO'
+        WHEN a.Fuente_Tecnica LIKE '%COMPARTIDA%' THEN 'COMPARTIDO_TM2_A_TM1'
+        WHEN a.Fuente_Tecnica LIKE '%TORRE%' THEN 'PROPIO'
+        ELSE 'SIN_DATO'
+    END AS Resolucion
+INTO #trazabilidad_analitos
+FROM #leyes_v2 AS l
+CROSS APPLY
+(
+    VALUES
+      ('CuT', l.CuT, l.Fuente_CuT, l.Fecha, l.Turno,
+          CASE WHEN l.Fuente_CuT LIKE '%TORRE%' THEN l.TM END),
+      ('CuS', l.CuS, l.Fuente_CuS, l.Fecha, l.Turno,
+          CASE WHEN l.Fuente_CuS LIKE '%TORRE%' THEN l.TM END),
+      ('FeT', l.FeT, l.Fuente_FeT, l.Fecha, l.Turno,
+          CASE WHEN l.Fuente_FeT LIKE '%TORRE%' THEN l.TM END),
+      ('FeS', l.FeS, l.Fuente_FeS, l.Fecha_Origen_FeS,
+          l.Turno_Origen_FeS, l.TM_Origen_FeS),
+      ('CO3', l.CO3, l.Fuente_CO3, l.Fecha, l.Turno,
+          CASE WHEN l.Fuente_CO3 LIKE '%TORRE%' THEN l.TM END),
+      ('ConsH', l.ConsH, l.Fuente_ConsH, l.Fecha_Origen_ConsH,
+          l.Turno_Origen_ConsH, l.TM_Origen_ConsH),
+      ('CuFe', l.CuFe, l.Fuente_CuFe, l.Fecha, l.Turno,
+          CASE WHEN l.Fuente_CuFe LIKE '%TORRE%' THEN l.TM END),
+      ('CaolBeta', l.CaolBeta, l.Fuente_CaolBeta, l.Fecha, l.Turno,
+          CASE WHEN l.Fuente_CaolBeta LIKE '%TORRE%' THEN l.TM END),
+      ('Malla_Menos_1_2', l.Malla_Menos_1_2, l.Fuente_Malla_Menos_1_2,
+          l.Fecha_Origen_Malla_Menos_1_2, l.Turno_Origen_Malla_Menos_1_2,
+          l.TM_Origen_Malla_Menos_1_2),
+      ('Malla_Menos_100', l.Malla_Menos_100, l.Fuente_Malla_Menos_100,
+          l.Fecha, l.Turno,
+          CASE WHEN l.Fuente_Malla_Menos_100 LIKE '%TORRE%' THEN l.TM END)
+) AS a(Analito, Valor_Final, Fuente_Tecnica, Fecha_Origen, Turno_Origen, TM_Origen);
+
+/* La etiqueta técnica conserva explícitamente la compartición TM2 -> TM1. */
+UPDATE #trazabilidad_analitos
+SET Fuente_Base = 'TM2',
+    TM_Origen = 'TM2',
+    Resolucion = 'COMPARTIDO_TM2_A_TM1'
+WHERE Fuente_Tecnica LIKE '%COMPARTIDA%TM2%TM1%';
+
+CREATE UNIQUE CLUSTERED INDEX IX_trazabilidad_analitos_clave
+ON #trazabilidad_analitos (Fecha, Turno, TM_Destino, Analito);
+
+/* ============================================================
    BLOQUE 11C - Ajuste CuFe según regla oficial
    Si representatividad química > 0.75, usar Clays_CuFe.
    Si no cumple, mantener CuFe ya resuelto desde MINA/Conciliación.
    ============================================================ */
+
+UPDATE tr
+SET
+    tr.Fuente_Base = CASE
+        WHEN v.Fuente_CuFe LIKE 'LAB_TM2_%' THEN 'TM2'
+        WHEN v.Fuente_CuFe LIKE 'LAB_PROPIO_%' THEN l.TM
+        WHEN v.Fuente_CuFe LIKE 'MB_%' THEN 'MB'
+        WHEN v.Fuente_CuFe LIKE 'IMP%' THEN 'IMP'
+    END,
+    tr.Fuente_Tecnica = v.Fuente_CuFe,
+    tr.Fecha_Origen = l.Fecha,
+    tr.Turno_Origen = l.Turno,
+    tr.TM_Origen = CASE
+        WHEN v.Fuente_CuFe LIKE 'LAB_TM2_%' THEN 'TM2'
+        WHEN v.Fuente_CuFe LIKE 'LAB_PROPIO_%' THEN l.TM
+    END,
+    tr.Resolucion = CASE
+        WHEN v.Fuente_CuFe LIKE 'LAB_TM2_%' THEN 'COMPARTIDO_TM2_A_TM1'
+        WHEN v.Fuente_CuFe LIKE 'LAB_PROPIO_%' THEN 'PROPIO'
+        WHEN v.Fuente_CuFe LIKE 'MB_%' THEN 'FALLBACK_MB'
+        WHEN v.Fuente_CuFe LIKE 'IMP%' THEN 'PROVISIONAL_IMP'
+        ELSE 'SIN_DATO'
+    END
+FROM #trazabilidad_analitos AS tr
+INNER JOIN #leyes_v2 AS l
+    ON l.Fecha = tr.Fecha AND l.Turno = tr.Turno AND l.TM = tr.TM_Destino
+INNER JOIN inventar_SpcHidr.representatividad_torres_resultado AS r
+    ON r.Dia = l.Fecha
+INNER JOIN inventar_SpcHidr.v_clays_cufe_calculado_v2_test AS v
+    ON v.Fecha = l.Fecha AND v.Turno = l.Turno AND v.Torre = l.TM
+CROSS APPLY (VALUES (CASE
+    WHEN l.TM = 'TM1' AND l.Turno = 'A' THEN r.TM1_TurnoA_Quimico
+    WHEN l.TM = 'TM1' AND l.Turno = 'B' THEN r.TM1_TurnoB_Quimico
+    WHEN l.TM = 'TM2' AND l.Turno = 'A' THEN r.TM2_TurnoA_Quimico
+    WHEN l.TM = 'TM2' AND l.Turno = 'B' THEN r.TM2_TurnoB_Quimico
+END)) AS rep(Rep_Raw)
+CROSS APPLY (VALUES
+    (CASE WHEN rep.Rep_Raw > 1 THEN rep.Rep_Raw / 100.0 ELSE rep.Rep_Raw END)
+) AS rn(Rep_Normalizada)
+WHERE tr.Analito = 'CuFe'
+  AND v.CuFe_Final_2D IS NOT NULL
+  AND ISNULL(rn.Rep_Normalizada, 0) > 0.75;
 
 UPDATE l
 SET
@@ -4857,6 +4990,19 @@ WHERE TRY_CAST(c.CuFe AS float) IS NOT NULL
    para CuT, CuS, CO3 y FeT.
    ============================================================ */
 
+UPDATE tr
+SET tr.Fuente_Base = 'TM2', tr.Fuente_Tecnica = 'LAB_TM2_COMPARTIDO',
+    tr.Fecha_Origen = tm1.Fecha, tr.Turno_Origen = tm1.Turno,
+    tr.TM_Origen = 'TM2', tr.Resolucion = 'COMPARTIDO_TM2_A_TM1'
+FROM #trazabilidad_analitos AS tr
+INNER JOIN #leyes_v2 AS tm1
+    ON tm1.Fecha = tr.Fecha AND tm1.Turno = tr.Turno AND tm1.TM = tr.TM_Destino
+INNER JOIN #leyes_v2 AS tm2
+    ON tm2.Fecha = tm1.Fecha AND tm2.Turno = tm1.Turno AND tm2.TM = 'TM2'
+WHERE tr.Analito = 'CuFe' AND tm1.TM = 'TM1'
+  AND tm2.CuFe IS NOT NULL AND tm2.Fuente_CuFe LIKE '%TORRE%'
+  AND (tm1.CuFe IS NULL OR ISNULL(tm1.Fuente_CuFe, '') NOT LIKE '%TORRE%');
+
 UPDATE tm1
 SET
     tm1.CuFe = tm2.CuFe,
@@ -4883,6 +5029,17 @@ WHERE tm1.TM = 'TM1'
    el turno como TM2 y usa el valor representativo de TM2.
    ============================================================ */
 
+UPDATE tr
+SET tr.Fuente_Base = 'TM2', tr.Fuente_Tecnica = 'TORRE_COMPARTIDA_TM2_A_TM1',
+    tr.Fecha_Origen = tm1.Fecha, tr.Turno_Origen = tm1.Turno,
+    tr.TM_Origen = 'TM2', tr.Resolucion = 'COMPARTIDO_TM2_A_TM1'
+FROM #trazabilidad_analitos tr
+JOIN #leyes_v2 tm1 ON tm1.Fecha=tr.Fecha AND tm1.Turno=tr.Turno AND tm1.TM=tr.TM_Destino
+JOIN #leyes_v2 tm2 ON tm2.Fecha=tm1.Fecha AND tm2.Turno=tm1.Turno AND tm2.TM='TM2'
+WHERE tr.Analito='FeT' AND tm1.TM='TM1' AND tm2.FeT IS NOT NULL
+  AND tm2.Fuente_FeT LIKE '%TORRE%'
+  AND (tm1.FeT IS NULL OR ISNULL(tm1.Fuente_FeT,'') NOT LIKE '%TORRE%');
+
 UPDATE tm1
 SET
     tm1.FeT = tm2.FeT,
@@ -4907,6 +5064,17 @@ WHERE tm1.TM = 'TM1'
    puede completar TM1 cuando TM1 no tiene dato representativo propio.
    ============================================================ */
 
+UPDATE tr
+SET tr.Fuente_Base = 'TM2', tr.Fuente_Tecnica = 'TORRE_COMPARTIDA_TM2_A_TM1',
+    tr.Fecha_Origen = tm1.Fecha, tr.Turno_Origen = tm1.Turno,
+    tr.TM_Origen = 'TM2', tr.Resolucion = 'COMPARTIDO_TM2_A_TM1'
+FROM #trazabilidad_analitos tr
+JOIN #leyes_v2 tm1 ON tm1.Fecha=tr.Fecha AND tm1.Turno=tr.Turno AND tm1.TM=tr.TM_Destino
+JOIN #leyes_v2 tm2 ON tm2.Fecha=tm1.Fecha AND tm2.Turno=tm1.Turno AND tm2.TM='TM2'
+WHERE tr.Analito='CO3' AND tm1.TM='TM1' AND tm2.CO3 IS NOT NULL
+  AND tm2.Fuente_CO3 LIKE '%TORRE%'
+  AND (tm1.CO3 IS NULL OR ISNULL(tm1.Fuente_CO3,'') NOT LIKE '%TORRE%');
+
 UPDATE tm1
 SET
     tm1.CO3 = tm2.CO3,
@@ -4930,6 +5098,35 @@ WHERE tm1.TM = 'TM1'
    Fecha + Turno + TM. No depende de Conciliación Chancado
    cuando existe dato NIR/Clays disponible.
    ============================================================ */
+
+UPDATE tr
+SET
+    tr.Fuente_Base = CASE
+        WHEN v.Fuente_CaolBeta LIKE 'NIR_TM2_%' THEN 'TM2'
+        WHEN v.Fuente_CaolBeta LIKE 'NIR_PROPIO_%' THEN l.TM
+        WHEN v.Fuente_CaolBeta LIKE 'MB_%' THEN 'MB'
+        WHEN v.Fuente_CaolBeta LIKE 'IMP%' THEN 'IMP'
+    END,
+    tr.Fuente_Tecnica = v.Fuente_CaolBeta,
+    tr.Fecha_Origen = l.Fecha,
+    tr.Turno_Origen = l.Turno,
+    tr.TM_Origen = CASE
+        WHEN v.Fuente_CaolBeta LIKE 'NIR_TM2_%' THEN 'TM2'
+        WHEN v.Fuente_CaolBeta LIKE 'NIR_PROPIO_%' THEN l.TM
+    END,
+    tr.Resolucion = CASE
+        WHEN v.Fuente_CaolBeta LIKE 'NIR_TM2_%' THEN 'COMPARTIDO_TM2_A_TM1'
+        WHEN v.Fuente_CaolBeta LIKE 'NIR_PROPIO_%' THEN 'PROPIO'
+        WHEN v.Fuente_CaolBeta LIKE 'MB_%' THEN 'FALLBACK_MB'
+        WHEN v.Fuente_CaolBeta LIKE 'IMP%' THEN 'PROVISIONAL_IMP'
+        ELSE 'SIN_DATO'
+    END
+FROM #trazabilidad_analitos tr
+JOIN #leyes_v2 l
+  ON l.Fecha=tr.Fecha AND l.Turno=tr.Turno AND l.TM=tr.TM_Destino
+JOIN inventar_SpcHidr.v_clays_cufe_calculado_v2_test v
+  ON v.Fecha=l.Fecha AND v.Turno=l.Turno AND v.Torre=l.TM
+WHERE tr.Analito='CaolBeta' AND v.CaolBeta_Final_2D IS NOT NULL;
 
 UPDATE l
 SET
@@ -4959,6 +5156,17 @@ WHERE clay.CaolBeta_Clays IS NOT NULL;
    puede completar TM1 cuando TM1 no tiene dato representativo propio.
    ============================================================ */
 
+UPDATE tr
+SET tr.Fuente_Base = 'TM2', tr.Fuente_Tecnica = 'TORRE_COMPARTIDA_TM2_A_TM1',
+    tr.Fecha_Origen = tm1.Fecha, tr.Turno_Origen = tm1.Turno,
+    tr.TM_Origen = 'TM2', tr.Resolucion = 'COMPARTIDO_TM2_A_TM1'
+FROM #trazabilidad_analitos tr
+JOIN #leyes_v2 tm1 ON tm1.Fecha=tr.Fecha AND tm1.Turno=tr.Turno AND tm1.TM=tr.TM_Destino
+JOIN #leyes_v2 tm2 ON tm2.Fecha=tm1.Fecha AND tm2.Turno=tm1.Turno AND tm2.TM='TM2'
+WHERE tr.Analito='CuT' AND tm1.TM='TM1' AND tm2.CuT IS NOT NULL
+  AND tm2.Fuente_CuT LIKE '%TORRE%'
+  AND (tm1.CuT IS NULL OR ISNULL(tm1.Fuente_CuT,'') NOT LIKE '%TORRE%');
+
 UPDATE tm1
 SET
     tm1.CuT = tm2.CuT,
@@ -4981,6 +5189,17 @@ WHERE tm1.TM = 'TM1'
    Si TM2 tiene CuS representativo de torre para la misma Fecha + Turno,
    puede completar TM1 cuando TM1 no tiene dato representativo propio.
    ============================================================ */
+
+UPDATE tr
+SET tr.Fuente_Base = 'TM2', tr.Fuente_Tecnica = 'TORRE_COMPARTIDA_TM2_A_TM1',
+    tr.Fecha_Origen = tm1.Fecha, tr.Turno_Origen = tm1.Turno,
+    tr.TM_Origen = 'TM2', tr.Resolucion = 'COMPARTIDO_TM2_A_TM1'
+FROM #trazabilidad_analitos tr
+JOIN #leyes_v2 tm1 ON tm1.Fecha=tr.Fecha AND tm1.Turno=tr.Turno AND tm1.TM=tr.TM_Destino
+JOIN #leyes_v2 tm2 ON tm2.Fecha=tm1.Fecha AND tm2.Turno=tm1.Turno AND tm2.TM='TM2'
+WHERE tr.Analito='CuS' AND tm1.TM='TM1' AND tm2.CuS IS NOT NULL
+  AND tm2.Fuente_CuS LIKE '%TORRE%'
+  AND (tm1.CuS IS NULL OR ISNULL(tm1.Fuente_CuS,'') NOT LIKE '%TORRE%');
 
 UPDATE tm1
 SET
@@ -5039,6 +5258,53 @@ WHERE ISNULL(t.TMS, 0) > 0
 /* ============================================================
    BLOQUE 12: PONDERACIÓN DE LEYES REALES POR TMS
    ============================================================ */
+
+/* TRAZABILIDAD FINAL: despues de resoluciones y antes de ponderacion. */
+UPDATE tr
+SET tr.Valor_Final = CASE tr.Analito
+    WHEN 'CuT' THEN l.CuT WHEN 'CuS' THEN l.CuS WHEN 'FeT' THEN l.FeT
+    WHEN 'FeS' THEN l.FeS WHEN 'CO3' THEN l.CO3 WHEN 'ConsH' THEN l.ConsH
+    WHEN 'CuFe' THEN l.CuFe WHEN 'CaolBeta' THEN l.CaolBeta
+    WHEN 'Malla_Menos_1_2' THEN l.Malla_Menos_1_2
+    WHEN 'Malla_Menos_100' THEN l.Malla_Menos_100 END
+FROM #trazabilidad_analitos tr
+JOIN #leyes_v2 l
+  ON l.Fecha=tr.Fecha AND l.Turno=tr.Turno AND l.TM=tr.TM_Destino;
+
+DELETE FROM inventar_SpcHidr.trazabilidad_analitos_tm_emision_test
+WHERE Fecha >= @fecha_inicio AND Fecha < @fecha_fin;
+
+INSERT INTO inventar_SpcHidr.trazabilidad_analitos_tm_emision_test
+(
+    Fecha, Turno, TM_Destino, Analito, Valor_Final,
+    Fuente_Base, Fuente_Tecnica, Fecha_Origen, Turno_Origen, TM_Origen,
+    Resolucion, Representatividad_Quimica, Representatividad_Fisica,
+    Fecha_Proceso
+)
+SELECT
+    tr.Fecha, tr.Turno, tr.TM_Destino, tr.Analito, tr.Valor_Final,
+    CASE WHEN tr.Valor_Final IS NULL THEN NULL ELSE tr.Fuente_Base END,
+    tr.Fuente_Tecnica, tr.Fecha_Origen, tr.Turno_Origen, tr.TM_Origen,
+    CASE WHEN tr.Valor_Final IS NULL THEN 'SIN_DATO' ELSE tr.Resolucion END,
+    TRY_CONVERT(decimal(18,10), rep.Rep_Quimica),
+    TRY_CONVERT(decimal(18,10), rep.Rep_Fisica), SYSDATETIME()
+FROM #trazabilidad_analitos tr
+LEFT JOIN inventar_SpcHidr.representatividad_torres_resultado r
+  ON r.Dia=tr.Fecha
+CROSS APPLY (VALUES
+(
+    CASE
+      WHEN tr.TM_Destino='TM1' AND tr.Turno='A' THEN r.TM1_TurnoA_Quimico
+      WHEN tr.TM_Destino='TM1' AND tr.Turno='B' THEN r.TM1_TurnoB_Quimico
+      WHEN tr.TM_Destino='TM2' AND tr.Turno='A' THEN r.TM2_TurnoA_Quimico
+      WHEN tr.TM_Destino='TM2' AND tr.Turno='B' THEN r.TM2_TurnoB_Quimico END,
+    CASE
+      WHEN tr.TM_Destino='TM1' AND tr.Turno='A' THEN r.TM1_TurnoA_Fisico
+      WHEN tr.TM_Destino='TM1' AND tr.Turno='B' THEN r.TM1_TurnoB_Fisico
+      WHEN tr.TM_Destino='TM2' AND tr.Turno='A' THEN r.TM2_TurnoA_Fisico
+      WHEN tr.TM_Destino='TM2' AND tr.Turno='B' THEN r.TM2_TurnoB_Fisico END
+)) rep(Rep_Quimica, Rep_Fisica)
+WHERE tr.Fecha >= @fecha_inicio AND tr.Fecha < @fecha_fin;
 
 DROP TABLE IF EXISTS #reales;
 

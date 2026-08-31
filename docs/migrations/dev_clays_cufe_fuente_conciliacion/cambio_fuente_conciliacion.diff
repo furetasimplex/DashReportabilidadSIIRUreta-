@@ -1,0 +1,250 @@
+--- a/v_clays_cufe_calculado_v2_test.sql
++++ b/v_clays_cufe_calculado_v2_test.sql
+@@ -1,6 +1,4 @@
+-
+-
+-CREATE   VIEW
++ALTER VIEW
+ 
+     [inventar_SpcHidr].[v_clays_cufe_calculado_v2_test]
+ 
+@@ -802,7 +800,10 @@
+ 
+         TRY_CONVERT(float, c.CuFe)
+ 
+-            AS CuFe_MB
++            AS CuFe_MB,
++
++        UPPER(LTRIM(RTRIM(ISNULL(c.Fuente_Dato, ''))))
++            AS Fuente_Conciliacion
+ 
+ 
+ 
+@@ -898,7 +899,10 @@
+ 
+         MAX(CuFe_MB)
+ 
+-            AS CuFe_MB
++            AS CuFe_MB,
++
++        MAX(Fuente_Conciliacion)
++            AS Fuente_Conciliacion
+ 
+ 
+ 
+@@ -1083,6 +1087,7 @@
+         m.CaolBeta_MB,
+ 
+         m.CuFe_MB,
++        m.Fuente_Conciliacion,
+ 
+         m.Cantidad_Registros_MB
+ 
+@@ -1295,6 +1300,7 @@
+         f.CaolBeta_MB,
+ 
+         f.CuFe_MB,
++        f.Fuente_Conciliacion,
+ 
+         f.Cantidad_Registros_MB
+ 
+@@ -1392,7 +1398,7 @@
+ 
+              AND f.Representatividad_Quimica IS NULL
+ 
+-                THEN 'MB_SIN_REPRESENTATIVIDAD'
++                THEN CASE WHEN f.Fuente_Conciliacion = 'IMP' THEN 'IMP_SIN_REPRESENTATIVIDAD' ELSE 'MB_SIN_REPRESENTATIVIDAD' END
+ 
+ 
+ 
+@@ -1400,7 +1406,7 @@
+ 
+              AND f.Representatividad_Quimica < 0.75
+ 
+-                THEN 'MB_NO_REPRESENTATIVO'
++                THEN CASE WHEN f.Fuente_Conciliacion = 'IMP' THEN 'IMP_NO_REPRESENTATIVO' ELSE 'MB_NO_REPRESENTATIVO' END
+ 
+ 
+ 
+@@ -1410,7 +1416,7 @@
+ 
+              AND f.CaolBeta_NIR IS NULL
+ 
+-                THEN 'MB_SIN_RESULTADO_NIR'
++                THEN CASE WHEN f.Fuente_Conciliacion = 'IMP' THEN 'IMP_SIN_RESULTADO_NIR' ELSE 'MB_SIN_RESULTADO_NIR' END
+ 
+ 
+ 
+@@ -1488,7 +1494,7 @@
+ 
+              AND f.Representatividad_Quimica IS NULL
+ 
+-                THEN 'MB_SIN_REPRESENTATIVIDAD'
++                THEN CASE WHEN f.Fuente_Conciliacion = 'IMP' THEN 'IMP_SIN_REPRESENTATIVIDAD' ELSE 'MB_SIN_REPRESENTATIVIDAD' END
+ 
+ 
+ 
+@@ -1496,7 +1502,7 @@
+ 
+              AND f.Representatividad_Quimica < 0.75
+ 
+-                THEN 'MB_NO_REPRESENTATIVO'
++                THEN CASE WHEN f.Fuente_Conciliacion = 'IMP' THEN 'IMP_NO_REPRESENTATIVO' ELSE 'MB_NO_REPRESENTATIVO' END
+ 
+ 
+ 
+@@ -1506,7 +1512,7 @@
+ 
+              AND f.CuFe_Laboratorio IS NULL
+ 
+-                THEN 'MB_SIN_RESULTADO_CUFE'
++                THEN CASE WHEN f.Fuente_Conciliacion = 'IMP' THEN 'IMP_SIN_RESULTADO_CUFE' ELSE 'MB_SIN_RESULTADO_CUFE' END
+ 
+ 
+ 
+@@ -1636,6 +1642,8 @@
+ 
+     CuFe_MB,
+ 
++    Fuente_Conciliacion,
++
+ 
+ 
+     /* Resultado con precisión completa */
+@@ -1667,4 +1675,3 @@
+ 
+ 
+ FROM resuelto;
+-
+--- a/sp_refrescar_clays_cufe.sql
++++ b/sp_refrescar_clays_cufe.sql
+@@ -1,6 +1,4 @@
+-
+-
+-CREATE   PROCEDURE
++ALTER PROCEDURE
+ 
+     [inventar_SpcHidr].[sp_refrescar_clays_cufe]
+ 
+@@ -518,7 +516,13 @@
+ 
+             c.CuFe
+ 
+-        ) AS CuFe_Anterior
++        ) AS CuFe_Anterior,
++
++        hist.Fuente_CaolBeta
++            AS Fuente_CaolBeta_Anterior,
++
++        hist.Fuente_CuFe
++            AS Fuente_CuFe_Anterior
+ 
+ 
+ 
+@@ -654,6 +658,24 @@
+ 
+     )
+ 
++    OUTER APPLY
++    (
++        SELECT TOP (1)
++            t.Fuente_CaolBeta,
++            t.Fuente_CuFe
++        FROM [inventar_SpcHidr].[Clays_CuFe_trazabilidad] AS t
++        WHERE t.Fecha = c.Fecha
++          AND t.Torre = CASE
++                WHEN norm.Torre_Normalizada IN ('TM1', 'T1', 'TORRE1') THEN 'TM1'
++                WHEN norm.Torre_Normalizada IN ('TM2', 'T2', 'TORRE2') THEN 'TM2'
++              END
++          AND t.Turno = CASE
++                WHEN norm.Turno_Normalizado IN ('A', 'TA', 'TURNOA') THEN 'A'
++                WHEN norm.Turno_Normalizado IN ('B', 'TB', 'TURNOB') THEN 'B'
++              END
++        ORDER BY t.fecha_proceso DESC, t.id_trazabilidad DESC
++    ) AS hist
++
+ 
+ 
+     WHERE
+@@ -736,6 +758,9 @@
+ 
+         d.CuFe_Anterior,
+ 
++        d.Fuente_CaolBeta_Anterior,
++        d.Fuente_CuFe_Anterior,
++
+ 
+ 
+         CASE
+@@ -786,6 +811,18 @@
+ 
+ 
+ 
++            WHEN
++            (
++                d.Fuente_CaolBeta_Anterior IS NOT NULL
++                AND ISNULL(d.Fuente_CaolBeta_Anterior, '') <> ISNULL(f.Fuente_CaolBeta, '')
++            )
++            OR
++            (
++                d.Fuente_CuFe_Anterior IS NOT NULL
++                AND ISNULL(d.Fuente_CuFe_Anterior, '') <> ISNULL(f.Fuente_CuFe, '')
++            )
++                THEN 'TRAZABILIDAD'
++
+             ELSE 'SIN_CAMBIO'
+ 
+         END AS Accion
+@@ -1544,7 +1581,9 @@
+ 
+                 'INSERTAR',
+ 
+-                'ACTUALIZAR'
++                'ACTUALIZAR',
++
++                'TRAZABILIDAD'
+ 
+             );
+ 
+@@ -1620,13 +1659,21 @@
+ 
+         ) AS Registros_Actualizados,
+ 
+-
+-
+         SUM
+-
+         (
+-
+             CASE
++                WHEN Accion = 'TRAZABILIDAD' THEN 1
++                ELSE 0
++            END
++        ) AS Registros_Trazabilidad_Actualizada,
++
++
++
++        SUM
++
++        (
++
++            CASE
+ 
+                 WHEN Accion = 'SIN_CAMBIO' THEN 1
+ 
+@@ -1682,7 +1729,9 @@
+ 
+             'INSERTAR',
+ 
+-            'ACTUALIZAR'
++            'ACTUALIZAR',
++
++            'TRAZABILIDAD'
+ 
+         )
+ 
+@@ -1697,4 +1746,3 @@
+         Torre;
+ 
+ END;
+-

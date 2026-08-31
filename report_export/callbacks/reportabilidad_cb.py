@@ -31,6 +31,9 @@ from report_export.report_export import (
     actualizar_factor_ajuste_camiones_v2_report,
     actualizar_reporte_turno_cache_emision,
     fetch_reporte_turno_cache_emision,
+    fetch_clays_cufe_report,
+    fetch_trazabilidad_analitos_report,
+    fetch_curva_granulometrica_report,
     fetch_generador_reporte_diario_emision,
     export_reporte_turno_estilo_leyes_finos,
     write_reporte_torre_oficial,
@@ -7658,6 +7661,30 @@ def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
             if df_turno.empty:
                 return no_update, "Sin datos para el rango seleccionado.", _done, False, no_update
 
+            df_clays_cufe = fetch_clays_cufe_report(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo,
+            )
+            print(f"[EXCEL] Clays-CuFe rows={len(df_clays_cufe)}")
+
+            df_trazabilidad_analitos = fetch_trazabilidad_analitos_report(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo,
+            )
+            print(
+                f"[EXCEL] Trazabilidad Analitos rows="
+                f"{len(df_trazabilidad_analitos)}"
+            )
+
+            df_curva_granulometrica = fetch_curva_granulometrica_report(
+                start_date=ini_d,
+                end_date=fin_sql_exclusivo,
+            )
+            print(
+                f"[EXCEL] Curva Granulométrica rows="
+                f"{len(df_curva_granulometrica)}"
+            )
+
             print(f"[EXCEL] Fetching generador_reporte_diario {ini_d} -> {fin_sql_exclusivo}")
             _t0 = time.perf_counter()
             df_generador = fetch_generador_reporte_diario_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
@@ -7684,6 +7711,11 @@ def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
                 output=output,
                 df_generador=df_generador,
                 df_generador_resumen=df_generador_resumen,
+                df_clays_cufe=df_clays_cufe,
+                df_trazabilidad_analitos=df_trazabilidad_analitos,
+                df_curva_granulometrica=df_curva_granulometrica,
+                periodo_inicio=ini_d,
+                periodo_fin=fin_d,
             )
             output.seek(0)
             xbytes = output.getvalue()
