@@ -2,14 +2,24 @@
 import copy as copy_module
 import calendar
 import io
+import os
+import html
+import posixpath
 import re
+import unicodedata
 import xml.etree.ElementTree as ET
+from collections import Counter
 from zipfile import ZIP_DEFLATED, ZipFile
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.views import Selection
+from report_export.report_export import BalanceReportError
+from report_export.balance_contract import (
+    build_balance_report_identity,
+    validate_balance_template_hash,
+)
 # Rango por defecto de la plantilla antigua de Datos conciliados.
 # La plantilla vigente se detecta dinamicamente desde el encabezado "Dia".
 PLANTILLA_DATOS_START_ROW = 16
@@ -211,6 +221,830 @@ def _load_template(template_path: str):
     for ws in wb.worksheets:
         ws.defined_names.clear()
     return wb
+
+
+def _load_balance_template(template_path: str):
+    """Carga Balance sin limpiar nombres, hojas, vinculos ni formulas."""
+    if not template_path or not os.path.isfile(template_path):
+        raise BalanceReportError(
+            f"No existe el template de Balance: {template_path}"
+        )
+    return load_workbook(
+        template_path,
+        data_only=False,
+        keep_links=True,
+        read_only=False,
+    )
+
+
+_BALANCE_SHEETS = (
+    "Datos Reconciliados",
+    "Análisis Variación-Tolerancias",
+)
+_BALANCE_ALL_SHEETS = (
+    "Resumen",
+    "Informe Hidrometalurgia",
+    "Balance por Áreas",
+    "Diagrama",
+    "Datos Reconciliados",
+    "Análisis Variación-Tolerancias",
+    "Proceso Área Seca",
+    "Proceso Área Húmeda",
+    "Proceso Área Cátodos",
+)
+_BALANCE_FIELDS = (
+    "tolerancia_masa", "tolerancia_ley", "masa_medida",
+    "masa_reconciliada", "ley_cu_medida", "ley_cu_reconciliada",
+    "fino_cu_medido", "fino_cu_reconciliado",
+)
+
+
+def _balance_normalize(value):
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+def _balance_excel_value(value):
+    """Convierte NaN/NA a celda vacia sin transformar ceros ni signos."""
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return value.item() if hasattr(value, "item") else value
+
+
+def _balance_metadata_dict(metadata):
+    if isinstance(metadata, pd.Series):
+        return metadata.to_dict()
+    if isinstance(metadata, pd.DataFrame):
+        if len(metadata) != 1:
+            raise BalanceReportError("La metadata del Run debe contener una fila.")
+        return metadata.iloc[0].to_dict()
+    if isinstance(metadata, dict):
+        return dict(metadata)
+    raise BalanceReportError("La metadata del Run no tiene un formato valido.")
+
+
+def _balance_validate_codes(frame, label):
+    if not isinstance(frame, pd.DataFrame):
+        raise BalanceReportError(f"{label} debe ser un DataFrame.")
+    if len(frame) != 120:
+        raise BalanceReportError(
+            f"{label} posee {len(frame)} flujos; se esperaban 120."
+        )
+    if "codigo_flujo" not in frame.columns:
+        raise BalanceReportError(f"{label} no contiene codigo_flujo.")
+    codes = frame["codigo_flujo"].astype(str).str.strip()
+    duplicated = sorted(codes[codes.duplicated(keep=False)].unique())
+    if duplicated:
+        raise BalanceReportError(
+            f"{label} contiene codigos duplicados: "
+            + ", ".join(duplicated)
+            + "."
+        )
+    expected = {f"F{i}" for i in range(1, 121)}
+    received = set(codes)
+    missing_codes = sorted(expected - received, key=lambda x: int(x[1:]))
+    extra_codes = sorted(received - expected)
+    if missing_codes:
+        raise BalanceReportError("Faltan flujos: " + ", ".join(missing_codes) + ".")
+    if extra_codes:
+        raise BalanceReportError(
+            "Existen flujos no esperados: " + ", ".join(extra_codes) + "."
+        )
+    normalized = frame.copy()
+    normalized["codigo_flujo"] = codes
+    return normalized.set_index("codigo_flujo", drop=False)
+
+
+def _balance_validate_inputs(df_periodo, df_acumulado, metadata):
+    if not isinstance(df_periodo, pd.DataFrame):
+        raise BalanceReportError("El periodo debe ser un DataFrame.")
+    if not isinstance(df_acumulado, pd.DataFrame):
+        raise BalanceReportError("El acumulado debe ser un DataFrame.")
+    missing = sorted(
+        set(("codigo_flujo",) + _BALANCE_FIELDS) - set(df_periodo.columns)
+    )
+    if missing:
+        raise BalanceReportError(
+            "Faltan columnas para generar Balance: " + ", ".join(missing) + "."
+        )
+    accumulated_fields = {
+        "codigo_flujo",
+        "masa_reconciliada_acumulada",
+        "ley_cu_reconciliada_acumulada",
+        "fino_cu_reconciliado_acumulado",
+    }
+    missing_accumulated = sorted(accumulated_fields - set(df_acumulado.columns))
+    if missing_accumulated:
+        raise BalanceReportError(
+            "Faltan columnas acumuladas para generar Balance: "
+            + ", ".join(missing_accumulated)
+            + "."
+        )
+
+    meta = _balance_metadata_dict(metadata)
+    start = pd.to_datetime(meta.get("fecha_inicio"), errors="coerce")
+    end = pd.to_datetime(meta.get("fecha_fin"), errors="coerce")
+    if pd.isna(start) or pd.isna(end):
+        raise BalanceReportError("El Caso no posee fecha_inicio/fecha_fin validas.")
+    if start.date() > end.date():
+        raise BalanceReportError("fecha_inicio no puede ser posterior a fecha_fin.")
+    if start.year != end.year or start.month != end.month:
+        raise BalanceReportError(
+            "El Caso seleccionado cruza meses y no puede utilizarse para "
+            "construir un acumulado MTD con resultados agregados por Caso."
+        )
+    mtd_start = pd.to_datetime(
+        meta.get("fecha_inicio_acumulado", end.replace(day=1)), errors="coerce"
+    )
+    mtd_end = pd.to_datetime(
+        meta.get("fecha_fin_acumulado", end), errors="coerce"
+    )
+    if pd.isna(mtd_start) or pd.isna(mtd_end):
+        raise BalanceReportError("Las fechas del acumulado MTD no son validas.")
+    if mtd_start.date() != end.date().replace(day=1) or mtd_end.date() != end.date():
+        raise BalanceReportError("El intervalo acumulado MTD no coincide con el Caso.")
+    period = _balance_validate_codes(df_periodo, "El periodo")
+    accumulated = _balance_validate_codes(df_acumulado, "El acumulado")
+    return (
+        period,
+        accumulated,
+        meta,
+        start.date(),
+        end.date(),
+        mtd_start.date(),
+    )
+
+
+def _balance_flow_rows(ws):
+    found = {f"F{i}": [] for i in range(1, 121)}
+    for row in ws.iter_rows():
+        for cell in row:
+            value = str(cell.value).strip() if cell.value is not None else ""
+            if value in found:
+                found[value].append(cell.coordinate)
+    for code, coords in found.items():
+        if not coords:
+            raise BalanceReportError(
+                f"El Flow ID {code} no fue encontrado en {ws.title}."
+            )
+        if len(coords) != 1:
+            raise BalanceReportError(
+                f"El Flow ID {code} aparece duplicado en el template "
+                f"({ws.title}: {', '.join(coords)})."
+            )
+    columns = {ws[coords[0]].column for coords in found.values()}
+    if len(columns) != 1:
+        raise BalanceReportError(
+            f"Los Flow ID de {ws.title} no estan en una unica columna."
+        )
+    return {code: ws[coords[0]].row for code, coords in found.items()}, columns.pop()
+
+
+def _balance_header_context(ws, column, first_data_row):
+    values = []
+    start_row = max(1, first_data_row - 12)
+    for row in range(start_row, first_data_row):
+        cell = ws.cell(row=row, column=column)
+        value = cell.value
+        if value is None:
+            for merged in ws.merged_cells.ranges:
+                if cell.coordinate in merged:
+                    value = ws.cell(merged.min_row, merged.min_col).value
+                    break
+        if value is not None:
+            values.append(str(value))
+    return _balance_normalize(" | ".join(values))
+
+
+def _balance_find_column(ws, flow_col, first_data_row, description, predicate):
+    matches = []
+    for column in range(1, ws.max_column + 1):
+        if column == flow_col:
+            continue
+        context = _balance_header_context(ws, column, first_data_row)
+        if predicate(context):
+            matches.append((column, context))
+    if len(matches) != 1:
+        detail = "; ".join(f"{get_column_letter(c)}={h}" for c, h in matches)
+        raise BalanceReportError(
+            f"No fue posible identificar univocamente la columna {description} "
+            f"en {ws.title}. Coincidencias: {detail or 'ninguna'}."
+        )
+    return matches[0][0]
+
+
+def _balance_columns_reconciliados(ws, flow_col, first_row):
+    def period(ctx): return "period" in ctx and "acumul" not in ctx
+    def accum(ctx): return "acumul" in ctx
+    def ton(ctx): return "tonel" in ctx or "masa" in ctx
+    def fine(ctx): return "fino" in ctx
+    def grade(ctx): return "ley" in ctx and not fine(ctx)
+    return {
+        "period_masa": _balance_find_column(ws, flow_col, first_row, "Tonelaje periodo", lambda c: period(c) and ton(c)),
+        "period_ley": _balance_find_column(ws, flow_col, first_row, "Ley Cu periodo", lambda c: period(c) and grade(c)),
+        "period_fino": _balance_find_column(ws, flow_col, first_row, "Cu fino periodo", lambda c: period(c) and fine(c)),
+        "accum_masa": _balance_find_column(ws, flow_col, first_row, "Tonelaje acumulado", lambda c: accum(c) and ton(c)),
+        "accum_ley": _balance_find_column(ws, flow_col, first_row, "Ley Cu acumulada", lambda c: accum(c) and grade(c)),
+        "accum_fino": _balance_find_column(ws, flow_col, first_row, "Cu fino acumulado", lambda c: accum(c) and fine(c)),
+    }
+
+
+def _balance_columns_analysis(ws, flow_col, first_row):
+    def fine(ctx): return "fino" in ctx
+    def ton(ctx): return "tonel" in ctx or "masa" in ctx
+    def measured(ctx): return "medido" in ctx
+    def reconciled(ctx): return "reconciliado" in ctx
+    return {
+        "tol_masa": _balance_find_column(ws, flow_col, first_row, "Tolerancia", lambda c: "tolerancia" in c and "cu" not in c and "ley" not in c),
+        "tol_ley": _balance_find_column(ws, flow_col, first_row, "Tolerancia Cu", lambda c: "tolerancia" in c and ("cu" in c or "ley" in c)),
+        "med_masa": _balance_find_column(ws, flow_col, first_row, "Medido Tonelaje", lambda c: measured(c) and ton(c)),
+        "rec_masa": _balance_find_column(ws, flow_col, first_row, "Reconciliado Tonelaje", lambda c: reconciled(c) and ton(c)),
+        "med_fino": _balance_find_column(ws, flow_col, first_row, "Medido Cu fino", lambda c: measured(c) and fine(c)),
+        "rec_fino": _balance_find_column(ws, flow_col, first_row, "Reconciliado Cu fino", lambda c: reconciled(c) and fine(c)),
+    }
+
+
+def _balance_write_cell(ws, row, column, value):
+    cell = ws.cell(row=row, column=column)
+    if cell.data_type == "f" or (isinstance(cell.value, str) and cell.value.startswith("=")):
+        raise BalanceReportError(
+            f"La celda autorizada {ws.title}!{cell.coordinate} contiene una formula."
+        )
+    cell.value = _balance_excel_value(value)
+
+
+def _balance_period_text(prefix, start, end):
+    months = (
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+    )
+    return f"{prefix} {start.day:02d} al {end.day:02d} de {months[end.month - 1]} {end.year}"
+
+
+def _balance_update_authorized_visible_metadata(wb, metadata, start, end):
+    """Actualiza solo los seis textos visibles autorizados por auditoria."""
+    months = (
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+    )
+    month = months[end.month - 1]
+    period_without_year = (
+        f"Período {start.day:02d} al {end.day:02d} de {month}"
+    )
+    identity = build_balance_report_identity(metadata)
+    values = {
+        ("Resumen", "F10"): (
+            f"{identity['caso_label']} | {identity['run_label']}"
+        ),
+        ("Resumen", "E11"): f"Periodo {start.day:02d} al {end.day:02d}",
+        ("Resumen", "F11"): f"Acumulado al {end.day:02d}",
+        ("Proceso Área Seca", "P14"): period_without_year,
+        ("Proceso Área Húmeda", "U14"): period_without_year,
+        ("Proceso Área Húmeda", "U105"): period_without_year,
+        ("Proceso Área Cátodos", "P14"): period_without_year,
+    }
+    for (sheet_name, coordinate), value in values.items():
+        cell = wb[sheet_name][coordinate]
+        if cell.data_type == "f" or (
+            isinstance(cell.value, str) and cell.value.startswith("=")
+        ):
+            raise BalanceReportError(
+                f"La celda de metadata {sheet_name}!{coordinate} contiene una formula."
+            )
+        cell.value = value
+
+
+def _balance_update_headers_and_metadata(wb, metadata, start, end, mtd_start):
+    period_text = _balance_period_text("Período", start, end)
+    accumulated_text = _balance_period_text("Acumulado", mtd_start, end)
+    for sheet_name in _BALANCE_SHEETS:
+        ws = wb[sheet_name]
+        for row in ws.iter_rows():
+            for cell in row:
+                if not isinstance(cell.value, str) or cell.value.startswith("="):
+                    continue
+                normalized = _balance_normalize(cell.value)
+                if normalized.startswith("periodo"):
+                    cell.value = period_text
+                elif normalized.startswith("acumulado"):
+                    cell.value = accumulated_text
+
+    label_values = {
+        "nombre caso": metadata.get("nombre_caso"),
+        "fecha inicio": start,
+        "fecha fin": end,
+        "run id": metadata.get("run_id"),
+        "caso id": metadata.get("caso_id"),
+        "modelo id": metadata.get("modelo_id"),
+        "solver name": metadata.get("solver_name"),
+        "solver version": metadata.get("solver_version"),
+        "es oficial": "SI" if bool(metadata.get("es_oficial")) else "NO - DEV",
+    }
+    occurrences = {label: [] for label in label_values}
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                normalized = _balance_normalize(cell.value)
+                if normalized.rstrip(":") in occurrences:
+                    occurrences[normalized.rstrip(":")].append((ws, cell))
+    for label, locations in occurrences.items():
+        if len(locations) != 1:
+            continue
+        ws, label_cell = locations[0]
+        target = ws.cell(label_cell.row, label_cell.column + 1)
+        if target.data_type != "f" and not (
+            isinstance(target.value, str) and target.value.startswith("=")
+        ):
+            target.value = _balance_excel_value(label_values[label])
+    _balance_update_authorized_visible_metadata(wb, metadata, start, end)
+
+
+def _balance_cell_snapshot(wb):
+    return {
+        (ws.title, cell.coordinate): (cell.value, cell.data_type)
+        for ws in wb.worksheets
+        for row in ws.iter_rows()
+        for cell in row
+    }
+
+
+def _balance_sheet_parts(files):
+    ns_main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    ns_rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    ns_pkg = "http://schemas.openxmlformats.org/package/2006/relationships"
+    workbook = ET.fromstring(files["xl/workbook.xml"])
+    relationships = ET.fromstring(files["xl/_rels/workbook.xml.rels"])
+    targets = {
+        item.attrib["Id"]: item.attrib["Target"]
+        for item in relationships.findall(f"{{{ns_pkg}}}Relationship")
+    }
+    result = {}
+    for sheet in workbook.findall(f".//{{{ns_main}}}sheet"):
+        target = targets[sheet.attrib[f"{{{ns_rel}}}id"]]
+        part = (
+            target.lstrip("/")
+            if target.startswith("/")
+            else posixpath.join("xl", target)
+        )
+        result[sheet.attrib["name"]] = posixpath.normpath(part)
+    return result
+
+
+def _balance_cell_xml(sheet_xml, coordinate):
+    pattern = re.compile(
+        rb'<c\b(?=[^>]*\br="' + re.escape(coordinate.encode("ascii"))
+        + rb'")[^>]*?(?:\s*/>|>.*?</c>)',
+        re.DOTALL,
+    )
+    match = pattern.search(sheet_xml)
+    return match.group(0) if match else None
+
+
+def _balance_replace_cell_xml(base_xml, source_xml, coordinate):
+    replacement = _balance_cell_xml(source_xml, coordinate)
+    if replacement is None:
+        raise BalanceReportError(
+            f"No fue posible serializar la celda autorizada {coordinate}."
+        )
+    pattern = re.compile(
+        rb'<c\b(?=[^>]*\br="' + re.escape(coordinate.encode("ascii"))
+        + rb'")[^>]*?(?:\s*/>|>.*?</c>)',
+        re.DOTALL,
+    )
+    base_match = pattern.search(base_xml)
+    if base_match:
+        original = base_match.group(0)
+        original_open = re.match(rb"<c\b[^>]*", original).group(0)
+        original_open = re.sub(rb"\s*/\s*$", b"", original_open)
+        source_open = re.match(rb"<c\b[^>]*", replacement).group(0)
+        source_type = re.search(rb'\bt="([^"]+)"', source_open)
+        merged_open = re.sub(rb'\s+t="[^"]+"', b"", original_open)
+        if source_type and not replacement.rstrip().endswith(b"/>"):
+            merged_open += b' t="' + source_type.group(1) + b'"'
+        if replacement.endswith(b"/>"):
+            merged = merged_open + b"/>"
+        else:
+            source_content = replacement[replacement.find(b">") + 1:-4]
+            merged = merged_open + b">" + source_content + b"</c>"
+        return base_xml[:base_match.start()] + merged + base_xml[base_match.end():]
+    row_number = re.search(r"\d+", coordinate).group(0).encode("ascii")
+    row_pattern = re.compile(
+        rb'(<row\b(?=[^>]*\br="' + row_number + rb'")[^>]*>)(.*?)(</row>)',
+        re.DOTALL,
+    )
+    if not row_pattern.search(base_xml):
+        raise BalanceReportError(
+            f"No existe la fila OOXML para insertar la celda {coordinate}."
+        )
+    return row_pattern.sub(
+        lambda match: match.group(1) + match.group(2) + replacement + match.group(3),
+        base_xml,
+        count=1,
+    )
+
+
+def _balance_direct_xf_nodes(cell_xfs_body):
+    """Extrae los xf hijos directos sin reserializar el XML del template."""
+    nodes = []
+    position = 0
+    while True:
+        start = cell_xfs_body.find(b"<xf", position)
+        if start < 0:
+            return nodes
+        open_end = cell_xfs_body.find(b">", start) + 1
+        if open_end == 0:
+            raise BalanceReportError("styles.xml contiene un xf incompleto.")
+        if cell_xfs_body[open_end - 2:open_end] == b"/>":
+            end = open_end
+        else:
+            end = cell_xfs_body.find(b"</xf>", open_end)
+            if end < 0:
+                raise BalanceReportError("styles.xml contiene un xf sin cierre.")
+            end += len(b"</xf>")
+        nodes.append(cell_xfs_body[start:end])
+        position = end
+
+
+def _balance_apply_f10_dark_font(files, summary_part):
+    """Crea un estilo negro exclusivo para Resumen!F10 en el output."""
+    cell = _balance_cell_xml(files[summary_part], "F10")
+    style_match = re.search(rb'\bs="(\d+)"', cell or b"")
+    if not style_match:
+        raise BalanceReportError("Resumen!F10 no conserva un estilo OOXML base.")
+    source_style_id = int(style_match.group(1))
+
+    styles = files["xl/styles.xml"]
+    fonts_match = re.search(rb'(<fonts\b[^>]*\bcount=")(\d+)("[^>]*>)(.*?)(</fonts>)', styles, re.DOTALL)
+    xfs_match = re.search(rb'(<cellXfs\b[^>]*\bcount=")(\d+)("[^>]*>)(.*?)(</cellXfs>)', styles, re.DOTALL)
+    if not fonts_match or not xfs_match:
+        raise BalanceReportError("No fue posible localizar fonts/cellXfs en styles.xml.")
+
+    fonts = re.findall(rb"<font>.*?</font>", fonts_match.group(4), re.DOTALL)
+    xfs = _balance_direct_xf_nodes(xfs_match.group(4))
+    if source_style_id >= len(xfs):
+        raise BalanceReportError("El estilo de Resumen!F10 no existe en cellXfs.")
+    source_xf = xfs[source_style_id]
+    font_match = re.search(rb'\bfontId="(\d+)"', source_xf)
+    if not font_match or int(font_match.group(1)) >= len(fonts):
+        raise BalanceReportError("El font de Resumen!F10 no existe en styles.xml.")
+    source_font = fonts[int(font_match.group(1))]
+    dark_font, replacements = re.subn(
+        rb'<color\b[^>]*/>', b'<color rgb="FF000000"/>', source_font, count=1
+    )
+    if replacements != 1:
+        raise BalanceReportError("El font de Resumen!F10 no tiene color reemplazable.")
+
+    new_font_id = len(fonts)
+    new_style_id = len(xfs)
+    dark_xf, replacements = re.subn(
+        rb'\bfontId="\d+"', f'fontId="{new_font_id}"'.encode("ascii"), source_xf, count=1
+    )
+    if replacements != 1:
+        raise BalanceReportError("El estilo de Resumen!F10 no referencia un font.")
+
+    new_fonts = (
+        fonts_match.group(1) + str(new_font_id + 1).encode("ascii")
+        + fonts_match.group(3) + fonts_match.group(4) + dark_font + fonts_match.group(5)
+    )
+    styles = styles[:fonts_match.start()] + new_fonts + styles[fonts_match.end():]
+    xfs_match = re.search(rb'(<cellXfs\b[^>]*\bcount=")(\d+)("[^>]*>)(.*?)(</cellXfs>)', styles, re.DOTALL)
+    new_xfs = (
+        xfs_match.group(1) + str(new_style_id + 1).encode("ascii")
+        + xfs_match.group(3) + xfs_match.group(4) + dark_xf + xfs_match.group(5)
+    )
+    files["xl/styles.xml"] = styles[:xfs_match.start()] + new_xfs + styles[xfs_match.end():]
+
+    updated_cell = re.sub(
+        rb'\bs="\d+"', f's="{new_style_id}"'.encode("ascii"), cell, count=1
+    )
+    files[summary_part] = files[summary_part].replace(cell, updated_cell, 1)
+
+
+def validate_balance_output_package(xlsx_bytes):
+    """Rechaza ZIP, XML o referencias de celda invalidas antes de exportar."""
+    with ZipFile(io.BytesIO(xlsx_bytes), "r") as archive:
+        names = [item.filename for item in archive.infolist()]
+        duplicates = sorted(name for name, count in Counter(names).items() if count > 1)
+        if duplicates:
+            raise BalanceReportError(
+                "El XLSX contiene partes ZIP duplicadas: " + ", ".join(duplicates)
+            )
+        corrupt = archive.testzip()
+        if corrupt:
+            raise BalanceReportError(f"CRC invalido en la parte XLSX {corrupt}.")
+        name_set = set(names)
+        ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+        rel_ns = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+        content_ns = "{http://schemas.openxmlformats.org/package/2006/content-types}"
+        content_types = ET.fromstring(archive.read("[Content_Types].xml"))
+        defaults = {
+            item.attrib["Extension"]
+            for item in content_types.findall(content_ns + "Default")
+        }
+        overrides = {
+            item.attrib["PartName"].lstrip("/")
+            for item in content_types.findall(content_ns + "Override")
+        }
+        missing_types = [
+            name for name in names
+            if name != "[Content_Types].xml"
+            and not name.endswith("/")
+            and name not in overrides
+            and name.rsplit(".", 1)[-1] not in defaults
+        ]
+        if missing_types:
+            raise BalanceReportError(
+                "Partes XLSX sin Content Type: " + ", ".join(missing_types)
+            )
+        for name in names:
+            if not (name.endswith(".xml") or name.endswith(".rels")):
+                continue
+            try:
+                root = ET.fromstring(archive.read(name))
+            except ET.ParseError as exc:
+                raise BalanceReportError(
+                    f"XML invalido en {name}: {exc}."
+                ) from exc
+            if name.endswith(".rels"):
+                source_part = (
+                    ""
+                    if name == "_rels/.rels"
+                    else name.replace("/_rels/", "/").removesuffix(".rels")
+                )
+                base = posixpath.dirname(source_part)
+                for relationship in root.findall(rel_ns + "Relationship"):
+                    if relationship.attrib.get("TargetMode") == "External":
+                        continue
+                    target = relationship.attrib["Target"]
+                    resolved = (
+                        target.lstrip("/")
+                        if target.startswith("/")
+                        else posixpath.normpath(posixpath.join(base, target))
+                    )
+                    if resolved not in name_set:
+                        raise BalanceReportError(
+                            f"Relacion OOXML colgante en {name}: {target}."
+                        )
+            if not name.startswith("xl/worksheets/") or not name.endswith(".xml"):
+                continue
+            for row in root.findall(".//m:row", ns):
+                refs = [cell.attrib.get("r") for cell in row.findall("m:c", ns)]
+                repeated = sorted(
+                    ref for ref, count in Counter(refs).items() if ref and count > 1
+                )
+                if repeated:
+                    raise BalanceReportError(
+                        f"Referencias de celda duplicadas en {name}, fila "
+                        f"{row.attrib.get('r')}: {', '.join(repeated)}."
+                    )
+
+
+def _balance_update_period_textbox(drawing_xml, period_text):
+    shape_pattern = re.compile(rb"<xdr:sp\b.*?</xdr:sp>", re.DOTALL)
+    text_pattern = re.compile(rb"(<a:t>)(.*?)(</a:t>)", re.DOTALL)
+    matches = []
+    for match in shape_pattern.finditer(drawing_xml):
+        runs = text_pattern.findall(match.group(0))
+        combined = "".join(
+            html.unescape(value.decode("utf-8")) for _, value, _ in runs
+        )
+        if _balance_normalize(combined).startswith("periodo:"):
+            matches.append((match, runs))
+    if len(matches) != 1:
+        raise BalanceReportError(
+            "No fue posible identificar univocamente el cuadro DrawingML de periodo."
+        )
+    shape_match, runs = matches[0]
+    remaining = period_text
+    new_runs = []
+    for index, (opening, original, closing) in enumerate(runs):
+        original_text = html.unescape(original.decode("utf-8"))
+        if index == len(runs) - 1:
+            chunk, remaining = remaining, ""
+        else:
+            chunk = remaining[:len(original_text)]
+            remaining = remaining[len(original_text):]
+        new_runs.append(
+            opening + html.escape(chunk, quote=False).encode("utf-8") + closing
+        )
+    iterator = iter(new_runs)
+    updated_shape = text_pattern.sub(lambda _: next(iterator), shape_match.group(0))
+    return drawing_xml[:shape_match.start()] + updated_shape + drawing_xml[shape_match.end():]
+
+
+def _balance_package_preserving_output(template_path, staged_bytes, changed_cells, start, end):
+    """Parte del OOXML maestro y sustituye solo celdas/textos autorizados."""
+    with ZipFile(template_path, "r") as archive:
+        infos = {item.filename: item for item in archive.infolist()}
+        files = {item.filename: archive.read(item.filename) for item in archive.infolist()}
+    with ZipFile(io.BytesIO(staged_bytes), "r") as archive:
+        staged_files = {item.filename: archive.read(item.filename) for item in archive.infolist()}
+
+    base_sheets = _balance_sheet_parts(files)
+    staged_sheets = _balance_sheet_parts(staged_files)
+    for sheet_name, coordinate in sorted(changed_cells):
+        base_part = base_sheets[sheet_name]
+        source_part = staged_sheets[sheet_name]
+        files[base_part] = _balance_replace_cell_xml(
+            files[base_part], staged_files[source_part], coordinate
+        )
+
+    _balance_apply_f10_dark_font(files, base_sheets["Resumen"])
+
+    period_text = _balance_period_text("Periodo:", start, end) + "."
+    for part in (
+        "xl/drawings/drawing1.xml",
+        "xl/drawings/drawing2.xml",
+        "xl/drawings/drawing3.xml",
+    ):
+        files[part] = _balance_update_period_textbox(files[part], period_text)
+
+    output = io.BytesIO()
+    with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+        for name, data in files.items():
+            archive.writestr(infos[name], data)
+    result = output.getvalue()
+    validate_balance_output_package(result)
+    return result
+
+
+def _balance_enable_full_calculation(wb):
+    calc = getattr(wb, "calculation", None) or getattr(wb, "calculation_properties", None)
+    if calc is None:
+        return
+    for attr, value in (
+        ("calcMode", "auto"),
+        ("fullCalcOnLoad", True),
+        ("forceFullCalc", True),
+    ):
+        if hasattr(calc, attr):
+            setattr(calc, attr, value)
+
+
+def _balance_validate_template_contract(wb):
+    """Valida la geometria observada en el template maestro oficial."""
+    missing_sheets = [name for name in _BALANCE_ALL_SHEETS if name not in wb.sheetnames]
+    if missing_sheets:
+        raise BalanceReportError(
+            "El template de Balance no contiene las hojas oficiales: "
+            + ", ".join(missing_sheets)
+            + "."
+        )
+
+    ws_data = wb[_BALANCE_SHEETS[0]]
+    rows_data, flow_col_data = _balance_flow_rows(ws_data)
+    expected_data_rows = {f"F{i}": i + 2 for i in range(1, 121)}
+    if flow_col_data != 2 or rows_data != expected_data_rows:
+        raise BalanceReportError(
+            "La tabla F1-F120 de Datos Reconciliados ya no ocupa B3:B122."
+        )
+    required_data_merges = {"B2:C2", "D1:F1", "G1:I1", "K2:M2"}
+    actual_data_merges = {str(item) for item in ws_data.merged_cells.ranges}
+    if not required_data_merges.issubset(actual_data_merges):
+        raise BalanceReportError(
+            "La estructura de encabezados combinados de Datos Reconciliados cambio."
+        )
+    cols_data = _balance_columns_reconciliados(ws_data, flow_col_data, 3)
+    expected_data_cols = {
+        "period_masa": 4,
+        "period_ley": 5,
+        "period_fino": 6,
+        "accum_masa": 7,
+        "accum_ley": 8,
+        "accum_fino": 9,
+    }
+    if cols_data != expected_data_cols:
+        raise BalanceReportError(
+            "Las columnas Periodo/Acumulado de Datos Reconciliados cambiaron."
+        )
+
+    ws_analysis = wb[_BALANCE_SHEETS[1]]
+    rows_analysis, flow_col_analysis = _balance_flow_rows(ws_analysis)
+    expected_analysis_rows = {f"F{i}": i + 3 for i in range(1, 121)}
+    if flow_col_analysis != 2 or rows_analysis != expected_analysis_rows:
+        raise BalanceReportError(
+            "La tabla F1-F120 de Analisis Variacion-Tolerancias ya no ocupa B4:B123."
+        )
+    required_analysis_merges = {
+        "D1:D3", "E1:E3", "F1:M1", "F2:I2", "J2:M2"
+    }
+    actual_analysis_merges = {
+        str(item) for item in ws_analysis.merged_cells.ranges
+    }
+    if not required_analysis_merges.issubset(actual_analysis_merges):
+        raise BalanceReportError(
+            "La estructura de encabezados combinados de Analisis "
+            "Variacion-Tolerancias cambio."
+        )
+    cols_analysis = _balance_columns_analysis(ws_analysis, flow_col_analysis, 4)
+    expected_analysis_cols = {
+        "tol_masa": 4,
+        "tol_ley": 5,
+        "med_masa": 6,
+        "rec_masa": 7,
+        "med_fino": 10,
+        "rec_fino": 11,
+    }
+    if cols_analysis != expected_analysis_cols:
+        raise BalanceReportError(
+            "Las columnas escribibles de Analisis Variacion-Tolerancias cambiaron."
+        )
+    for row in range(4, 124):
+        for column in (8, 9, 12, 13):
+            if ws_analysis.cell(row, column).data_type != "f":
+                raise BalanceReportError(
+                    "Falta una formula protegida en Analisis "
+                    f"Variacion-Tolerancias!{ws_analysis.cell(row, column).coordinate}."
+                )
+
+    return (
+        ws_data,
+        rows_data,
+        cols_data,
+        ws_analysis,
+        rows_analysis,
+        cols_analysis,
+    )
+
+
+def export_balance_reconciliacion_to_template(
+    df_periodo, df_acumulado, metadata, template_path
+):
+    """Inyecta solamente inputs del reconciliador en el template oficial."""
+    try:
+        template_hash = validate_balance_template_hash(template_path)
+    except (OSError, ValueError) as exc:
+        raise BalanceReportError(str(exc)) from exc
+    print(f"[BALANCE EXPORT] template_hash={template_hash}")
+    data, accumulated, meta, start, end, mtd_start = _balance_validate_inputs(
+        df_periodo, df_acumulado, metadata
+    )
+    wb = _load_balance_template(template_path)
+    (
+        ws_data,
+        rows_data,
+        cols_data,
+        ws_analysis,
+        rows_analysis,
+        cols_analysis,
+    ) = _balance_validate_template_contract(wb)
+    original_cells = _balance_cell_snapshot(wb)
+    for code, row in rows_data.items():
+        source = data.loc[code]
+        _balance_write_cell(ws_data, row, cols_data["period_masa"], source["masa_reconciliada"])
+        _balance_write_cell(ws_data, row, cols_data["period_ley"], source["ley_cu_reconciliada"])
+        _balance_write_cell(ws_data, row, cols_data["period_fino"], source["fino_cu_reconciliado"])
+        accumulated_source = accumulated.loc[code]
+        _balance_write_cell(ws_data, row, cols_data["accum_masa"], accumulated_source["masa_reconciliada_acumulada"])
+        _balance_write_cell(ws_data, row, cols_data["accum_ley"], accumulated_source["ley_cu_reconciliada_acumulada"])
+        _balance_write_cell(ws_data, row, cols_data["accum_fino"], accumulated_source["fino_cu_reconciliado_acumulado"])
+
+    for code, row in rows_analysis.items():
+        source = data.loc[code]
+        _balance_write_cell(ws_analysis, row, cols_analysis["tol_masa"], source["tolerancia_masa"])
+        # La plantilla llama "Tolerancia Cu" a tolerancia_ley; la BD no
+        # posee una tolerancia_fino_cu independiente.
+        _balance_write_cell(ws_analysis, row, cols_analysis["tol_ley"], source["tolerancia_ley"])
+        _balance_write_cell(ws_analysis, row, cols_analysis["med_masa"], source["masa_medida"])
+        _balance_write_cell(ws_analysis, row, cols_analysis["rec_masa"], source["masa_reconciliada"])
+        _balance_write_cell(ws_analysis, row, cols_analysis["med_fino"], source["fino_cu_medido"])
+        _balance_write_cell(ws_analysis, row, cols_analysis["rec_fino"], source["fino_cu_reconciliado"])
+
+    _balance_write_cell(ws_data, 3, 12, (end - start).days + 1)
+    _balance_write_cell(ws_data, 4, 12, (end - mtd_start).days + 1)
+    display_metadata = dict(meta)
+    display_metadata.setdefault("fecha_inicio_acumulado", mtd_start)
+    display_metadata.setdefault("fecha_fin_acumulado", end)
+    _balance_update_headers_and_metadata(
+        wb, display_metadata, start, end, mtd_start
+    )
+    _balance_enable_full_calculation(wb)
+    current_cells = _balance_cell_snapshot(wb)
+    changed_cells = {
+        key for key, value in current_cells.items()
+        if original_cells.get(key) != value
+    }
+    changed_formulas = [
+        key for key in changed_cells
+        if original_cells.get(key, (None, None))[1] == "f"
+        or current_cells.get(key, (None, None))[1] == "f"
+    ]
+    if changed_formulas:
+        raise BalanceReportError(
+            "La exportacion intento modificar formulas protegidas: "
+            + ", ".join(f"{sheet}!{cell}" for sheet, cell in changed_formulas)
+        )
+    staged = io.BytesIO()
+    wb.save(staged)
+    result = _balance_package_preserving_output(
+        template_path, staged.getvalue(), changed_cells, start, end
+    )
+    print("[BALANCE EXPORT] validacion_ooxml=OK")
+    return result
 
 
 def obtener_fecha_actualizacion(df: pd.DataFrame):

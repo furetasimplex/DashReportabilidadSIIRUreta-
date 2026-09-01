@@ -12,6 +12,8 @@ from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 
 from report_export.report_export import (
+    BalanceReportError,
+    fetch_recon_balance_official_cases,
     fetch_report_data,
     refrescar_historico_apilado_report,
     actualizar_datos_conciliados_report,
@@ -54,6 +56,7 @@ from report_export.report_export import (
 )
 from report_export.export_to_excel import (
     DependenciaDatosExportError,
+    export_balance_reconciliacion_to_template,
     export_dataframe_with_template,
     export_datos_conciliados_to_template,
 )
@@ -69,6 +72,14 @@ from report_export.xlsx_to_pdf import (
 _REPORT_EXPORT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 _PROJECT_DIR = os.path.dirname(_REPORT_EXPORT_DIR)
 TEMPLATE_XLSX_PATH = os.path.join(_PROJECT_DIR, "reporte", "Template_DatosConcialiados.xlsx")
+BALANCE_TEMPLATE_XLSX_PATH = os.path.join(
+    _PROJECT_DIR, "reporte", "Template_Balance_Planta_Hidrometalurgia.xlsx"
+)
+from report_export.balance_service import (
+    build_balance_official_report,
+    get_balance_case_status,
+)
+from report_export.balance_contract import build_balance_report_identity
 _NOMBRE_REPORTE_REPRESENTATIVIDAD_TORRES = "Representatividad Torres"
 _TEXTO_CONFIRMACION_BORRADO = "confirmar borrado"
 
@@ -1215,6 +1226,136 @@ clientside_callback(
     Input("report-tabla", "children"),
     prevent_initial_call=True,
 )
+
+
+@callback(
+    Output("report-balance-caso", "options"),
+    Output("report-balance-caso", "value"),
+    Input("report-subtabs", "value"),
+    State("report-balance-caso", "value"),
+)
+def cargar_casos_oficiales_balance(tab_activo, caso_actual):
+    if tab_activo != "tab-semanales":
+        return no_update, no_update
+    try:
+        cases = fetch_recon_balance_official_cases()
+    except BalanceReportError as exc:
+        print(f"[BALANCE] no fue posible cargar selector: {exc}")
+        return [], None
+    if cases.empty:
+        return [], None
+    options = []
+    seen = set()
+    for _, row in cases.iterrows():
+        case_id = int(row["caso_id"])
+        if case_id in seen:
+            continue
+        seen.add(case_id)
+        start = pd.to_datetime(row["fecha_inicio"]).date()
+        end = pd.to_datetime(row["fecha_fin"]).date()
+        options.append({
+            "label": (
+                f"Caso {case_id} — {row.get('nombre_caso') or 'Sin nombre'} — "
+                f"{start:%d/%m/%Y} al {end:%d/%m/%Y}"
+            ),
+            "value": case_id,
+        })
+    values = {option["value"] for option in options}
+    selected = caso_actual if caso_actual in values else options[0]["value"]
+    return options, selected
+
+
+def _balance_status_content(status):
+    available = bool(status["mtd_disponible"])
+    items = [
+        (
+            "Caso seleccionado",
+            f"Caso {status['caso_id']} — {status.get('nombre_caso') or 'Sin nombre'}",
+        ),
+        (
+            "Período",
+            f"{status['fecha_inicio']:%d-%m-%Y} al {status['fecha_fin']:%d-%m-%Y}",
+        ),
+        ("Run oficial", str(status["solver_run_id"])),
+        ("Estado Run", str(status.get("estado_run") or "Sin estado")),
+    ]
+    if available:
+        items.extend([
+            (
+                "Período acumulado",
+                f"{status['mtd_fecha_inicio']:%d-%m-%Y} al "
+                f"{status['mtd_fecha_fin']:%d-%m-%Y}",
+            ),
+            ("Casos MTD", ", ".join(map(str, status["mtd_casos"]))),
+        ])
+    rows = [
+        html.Div([
+            html.Small(label, className="text-muted d-block"),
+            html.Span(value, className="fw-semibold"),
+        ], className="mb-2")
+        for label, value in items
+    ]
+    rows.insert(4, html.Div([
+        html.Small("Acumulado MTD", className="text-muted d-block"),
+        dbc.Badge(
+            "Disponible" if available else "No disponible",
+            color="success" if available else "warning",
+            pill=True,
+        ),
+    ], className="mb-2"))
+    if not available:
+        rows.append(html.Div([
+            html.Small("Motivo", className="text-muted d-block"),
+            html.Span(status.get("mensaje_mtd") or "Cobertura MTD no disponible."),
+        ]))
+    return dbc.Alert(
+        rows,
+        color="success" if available else "warning",
+        className="mb-0 py-2",
+    )
+
+
+@callback(
+    Output("report-balance-status", "children"),
+    Output(
+        {"type": "report-export-btn", "tipo": "balance"},
+        "disabled",
+        allow_duplicate=True,
+    ),
+    Input("report-balance-caso", "value"),
+    prevent_initial_call=True,
+)
+def actualizar_estado_balance(caso_id):
+    if caso_id is None:
+        return (
+            dbc.Alert(
+                "Seleccione un Caso oficial para consultar su estado.",
+                color="secondary",
+                className="mb-0 py-2",
+            ),
+            True,
+        )
+    print(f"[BALANCE UI] caso seleccionado={caso_id}")
+    try:
+        status = get_balance_case_status(int(caso_id))
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        print(f"[BALANCE UI] error tecnico={exc}")
+        return (
+            dbc.Alert(
+                "No fue posible consultar el estado del Caso. "
+                "Intente nuevamente o contacte a soporte.",
+                color="danger",
+                className="mb-0 py-2",
+            ),
+            True,
+        )
+    print(f"[BALANCE UI] run oficial={status['solver_run_id']}")
+    print(f"[BALANCE UI] mtd_disponible={status['mtd_disponible']}")
+    if status.get("mensaje_mtd"):
+        print(f"[BALANCE UI] motivo={status['mensaje_mtd']}")
+    return _balance_status_content(status), not status["mtd_disponible"]
 
 
 @callback(
@@ -7519,6 +7660,7 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
     State("report-fecha-modo", "value"),
+    State("report-balance-caso", "value"),
     prevent_initial_call=True,
     running=[
         (
@@ -7528,7 +7670,9 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         ),
     ],
 )
-def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
+def exportar_excel(
+    n_clicks_list, f_ini, f_fin, modo_fecha=None, balance_caso_id=None
+):
     triggered = ctx.triggered_id
     print("[RTO] Callback generación Excel disparado")
     print(f"[RTO] n_clicks={n_clicks_list}")
@@ -7815,7 +7959,45 @@ def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
             return _enviar_descarga(xbytes, filename), status, _done, False, no_update
 
         # ------------------------------------------------------------
-        # BALANCE / CONCILIACIÓN U OTROS REPORTES ANTIGUOS
+        # BALANCE PLANTA HIDROMETALURGIA - CASO/RUN OFICIAL
+        # ------------------------------------------------------------
+        if tipo == "balance":
+            if balance_caso_id is None:
+                raise BalanceReportError(
+                    "Debe seleccionar un Caso oficial para generar el Balance."
+                )
+            df_periodo, df_acumulado, metadata = build_balance_official_report(
+                int(balance_caso_id)
+            )
+            identity = build_balance_report_identity(metadata)
+            print(
+                "[BALANCE EXPORT] "
+                f"caso_id={identity['caso_id']} "
+                f"run_id={identity['run_id']} "
+                f"periodo={identity['fecha_inicio']}..{identity['fecha_fin']} "
+                f"mtd={identity['mtd_fecha_inicio']}..{identity['mtd_fecha_fin']} "
+                f"mtd_casos={metadata.get('casos_mtd', [])}"
+            )
+            print("[BALANCE] exportando template...")
+            xbytes = export_balance_reconciliacion_to_template(
+                df_periodo,
+                df_acumulado,
+                metadata,
+                BALANCE_TEMPLATE_XLSX_PATH,
+            )
+            filename = identity["filename"]
+            print(f"[BALANCE EXPORT] output={filename}")
+            status = (
+                "Balance generado correctamente | "
+                f"{identity['caso_label']} | {identity['run_label']} | "
+                f"{identity['periodo_label']} | {identity['mtd_label']}"
+            )
+            return (
+                _enviar_descarga(xbytes, filename), status, _done, False, no_update
+            )
+
+        # ------------------------------------------------------------
+        # CONCILIACIÓN U OTROS REPORTES ANTIGUOS
         # ------------------------------------------------------------
         print(f"[EXCEL] Fetching report_data tipo={tipo} end={fin_d}")
         df = fetch_report_data(end_date=fin_d)
@@ -7837,6 +8019,17 @@ def exportar_excel(n_clicks_list, f_ini, f_fin, modo_fecha=None):
             f"{pd.to_datetime(f_fin).strftime('%Y%m%d')}.xlsx"
         )
         return _enviar_descarga(xbytes, filename), f"Exportado: {filename} ({len(df)} registros)", _done, False, no_update
+
+    except BalanceReportError as exc:
+        import traceback
+        traceback.print_exc()
+        return (
+            no_update,
+            f"No se genero el Balance: {exc}",
+            html.Div(),
+            True,
+            html.P(str(exc), className="mb-0"),
+        )
 
     except DependenciaDatosExportError as exc:
         import traceback

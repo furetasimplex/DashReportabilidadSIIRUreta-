@@ -10,6 +10,11 @@ except Exception as e:
     raise RuntimeError("No se pudo importar get_engine desde db_connection.py") from e
 
 from sqlalchemy import text as _sa_text
+from report_export.balance_contract import BALANCE_RECON_SOURCE
+
+
+class BalanceReportError(ValueError):
+    """Error de validacion del reporte Balance apto para mostrar en Dash."""
 
 
 def _get_engine():
@@ -17,6 +22,324 @@ def _get_engine():
     if engine is None:
         raise RuntimeError("get_engine() devolvio None: revisar configuracion de DB.")
     return engine
+
+
+def fetch_recon_balance_run_report(run_id: int):
+    """Lee y valida los 120 flujos de un Run del reconciliador (solo SELECT)."""
+    try:
+        run_id = int(run_id)
+    except (TypeError, ValueError) as exc:
+        raise BalanceReportError("run_id debe ser un entero valido.") from exc
+
+    sql_flujos = _sa_text(f"""
+        SELECT
+            rf.codigo_flujo,
+            rf.tolerancia_masa,
+            rf.tolerancia_ley,
+            rf.masa_medida,
+            rf.masa_reconciliada,
+            rf.ley_cu_medida,
+            rf.ley_cu_reconciliada,
+            rf.fino_cu_medido,
+            rf.fino_cu_reconciliado
+        FROM {BALANCE_RECON_SOURCE}.recon_resultado_flujo AS rf
+        WHERE rf.run_id = :run_id
+    """)
+    sql_metadata = _sa_text(f"""
+        SELECT
+            sr.id AS run_id,
+            sr.caso_id,
+            sr.estado AS estado_run,
+            sr.solver_name,
+            sr.solver_version,
+            sr.started_at,
+            sr.finished_at,
+            c.nombre_caso,
+            c.fecha_inicio,
+            c.fecha_fin,
+            c.modelo_id,
+            CASE WHEN co.solver_run_id = sr.id THEN 1 ELSE 0 END AS es_oficial
+        FROM {BALANCE_RECON_SOURCE}.recon_solver_run AS sr
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_caso AS c ON c.id = sr.caso_id
+        LEFT JOIN {BALANCE_RECON_SOURCE}.recon_caso_oficial AS co
+          ON co.caso_id = sr.caso_id
+         AND co.solver_run_id = sr.id
+        WHERE sr.id = :run_id
+    """)
+
+    try:
+        with _get_engine().connect() as conn:
+            df_metadata = pd.read_sql_query(
+                sql_metadata, conn, params={"run_id": run_id}
+            )
+            df_run = pd.read_sql_query(
+                sql_flujos, conn, params={"run_id": run_id}
+            )
+    except BalanceReportError:
+        raise
+    except Exception as exc:
+        raise BalanceReportError(
+            "No fue posible consultar los resultados oficiales del Balance."
+        ) from exc
+
+    if df_metadata.empty:
+        raise BalanceReportError(f"El Run {run_id} no existe.")
+    if len(df_metadata) != 1:
+        raise BalanceReportError(
+            f"El Run {run_id} devolvio metadata ambigua ({len(df_metadata)} filas)."
+        )
+
+    metadata = df_metadata.iloc[0].to_dict()
+    if str(metadata.get("estado_run", "")).strip().lower() != "success":
+        raise BalanceReportError(
+            f"El Run {run_id} no finalizo con estado success."
+        )
+
+    if len(df_run) != 120:
+        raise BalanceReportError(
+            f"El Run {run_id} posee {len(df_run)} flujos; se esperaban 120."
+        )
+    if "codigo_flujo" not in df_run.columns:
+        raise BalanceReportError("La consulta del Run no devolvio codigo_flujo.")
+    codigos = df_run["codigo_flujo"]
+    if codigos.isna().any():
+        raise BalanceReportError(f"El Run {run_id} contiene codigo_flujo NULL.")
+    codigos = codigos.astype(str).str.strip()
+    duplicados = sorted(codigos[codigos.duplicated(keep=False)].unique())
+    if duplicados:
+        raise BalanceReportError(
+            "El Run contiene codigos duplicados: " + ", ".join(duplicados) + "."
+        )
+    esperados = {f"F{i}" for i in range(1, 121)}
+    recibidos = set(codigos)
+    faltantes = sorted(esperados - recibidos, key=lambda x: int(x[1:]))
+    extras = sorted(recibidos - esperados)
+    if faltantes:
+        raise BalanceReportError("Faltan flujos: " + ", ".join(faltantes) + ".")
+    if extras:
+        raise BalanceReportError("Existen flujos no esperados: " + ", ".join(extras) + ".")
+
+    df_run = df_run.copy()
+    df_run["codigo_flujo"] = codigos
+    if df_run["codigo_flujo"].nunique() != 120:
+        raise BalanceReportError(
+            f"El Run {run_id} no posee 120 codigo_flujo distintos."
+        )
+    metadata["es_oficial"] = bool(metadata.get("es_oficial"))
+    return df_run.set_index("codigo_flujo", drop=False), metadata
+
+
+def validate_recon_balance_result(df_run, metadata, identifier):
+    """Valida el contrato comun de cualquier Run de Balance F1-F120."""
+    if df_run is None or len(df_run) != 120:
+        count = 0 if df_run is None else len(df_run)
+        raise BalanceReportError(
+            f"{identifier} posee {count} flujos; se esperaban 120."
+        )
+    if "codigo_flujo" not in df_run.columns:
+        raise BalanceReportError(f"{identifier} no devolvio codigo_flujo.")
+    codes = df_run["codigo_flujo"]
+    if codes.isna().any():
+        raise BalanceReportError(f"{identifier} contiene codigo_flujo NULL.")
+    codes = codes.astype(str).str.strip()
+    duplicates = sorted(codes[codes.duplicated(keep=False)].unique())
+    if duplicates:
+        raise BalanceReportError(
+            f"{identifier} contiene codigos duplicados: "
+            + ", ".join(duplicates)
+            + "."
+        )
+    expected = {f"F{i}" for i in range(1, 121)}
+    received = set(codes)
+    missing = sorted(expected - received, key=lambda value: int(value[1:]))
+    extras = sorted(received - expected)
+    if missing:
+        raise BalanceReportError("Faltan flujos: " + ", ".join(missing) + ".")
+    if extras:
+        raise BalanceReportError(
+            "Existen flujos no esperados: " + ", ".join(extras) + "."
+        )
+    state = str(metadata.get("estado_run", "")).strip().lower()
+    if state != "success":
+        raise BalanceReportError(
+            f"{identifier} no finalizo con estado success."
+        )
+    validated = df_run.copy()
+    validated["codigo_flujo"] = codes
+    return validated.set_index("codigo_flujo", drop=False)
+
+
+def fetch_recon_balance_official_cases():
+    """Lista Casos con una relacion oficial para el selector de Balance."""
+    sql = _sa_text(f"""
+        SELECT
+            c.id AS caso_id,
+            c.nombre_caso,
+            c.fecha_inicio,
+            c.fecha_fin,
+            c.modelo_id,
+            co.solver_run_id,
+            sr.estado AS estado_run
+        FROM {BALANCE_RECON_SOURCE}.recon_caso AS c
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_caso_oficial AS co
+            ON co.caso_id = c.id
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_solver_run AS sr
+            ON sr.id = co.solver_run_id
+           AND sr.caso_id = c.id
+        ORDER BY c.fecha_fin DESC, c.fecha_inicio DESC, c.id DESC
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            return pd.read_sql_query(sql, conn)
+    except Exception as exc:
+        raise BalanceReportError(
+            f"No fue posible listar los Casos oficiales de Balance: {exc}"
+        ) from exc
+
+
+def fetch_recon_balance_official_case(caso_id):
+    """Resuelve caso_id -> Run oficial y devuelve sus 120 resultados."""
+    try:
+        caso_id = int(caso_id)
+    except (TypeError, ValueError) as exc:
+        raise BalanceReportError("caso_id debe ser un entero valido.") from exc
+
+    sql_case = _sa_text(f"""
+        SELECT id AS caso_id
+        FROM {BALANCE_RECON_SOURCE}.recon_caso
+        WHERE id = :caso_id
+    """)
+    sql_metadata = _sa_text(f"""
+        SELECT
+            c.id AS caso_id,
+            c.nombre_caso,
+            c.fecha_inicio,
+            c.fecha_fin,
+            c.modelo_id,
+            sr.id AS solver_run_id,
+            sr.id AS run_id,
+            sr.estado AS estado_run,
+            sr.solver_name,
+            sr.solver_version,
+            sr.started_at,
+            sr.finished_at,
+            co.oficializado_en,
+            CAST(1 AS bit) AS es_oficial
+        FROM {BALANCE_RECON_SOURCE}.recon_caso AS c
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_caso_oficial AS co
+            ON co.caso_id = c.id
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_solver_run AS sr
+            ON sr.id = co.solver_run_id
+           AND sr.caso_id = c.id
+        WHERE c.id = :caso_id
+    """)
+    sql_flows = _sa_text(f"""
+        SELECT
+            rf.codigo_flujo,
+            rf.tolerancia_masa,
+            rf.tolerancia_ley,
+            rf.masa_medida,
+            rf.masa_reconciliada,
+            rf.ley_cu_medida,
+            rf.ley_cu_reconciliada,
+            rf.fino_cu_medido,
+            rf.fino_cu_reconciliado
+        FROM {BALANCE_RECON_SOURCE}.recon_caso AS c
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_caso_oficial AS co
+            ON co.caso_id = c.id
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_solver_run AS sr
+            ON sr.id = co.solver_run_id
+           AND sr.caso_id = c.id
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_resultado_flujo AS rf
+            ON rf.run_id = sr.id
+           AND rf.caso_id = c.id
+        WHERE c.id = :caso_id
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            exists = pd.read_sql_query(
+                sql_case, conn, params={"caso_id": caso_id}
+            )
+            metadata_df = pd.read_sql_query(
+                sql_metadata, conn, params={"caso_id": caso_id}
+            )
+            flows = pd.read_sql_query(
+                sql_flows, conn, params={"caso_id": caso_id}
+            )
+    except Exception as exc:
+        raise BalanceReportError(
+            "No fue posible consultar los resultados oficiales del Balance."
+        ) from exc
+
+    if exists.empty:
+        raise BalanceReportError(f"El Caso {caso_id} no existe.")
+    if metadata_df.empty:
+        raise BalanceReportError(f"El Caso {caso_id} no posee un Run oficial.")
+    if len(metadata_df) != 1:
+        raise BalanceReportError(
+            f"El Caso {caso_id} posee {len(metadata_df)} Runs oficiales; "
+            "se esperaba exactamente uno."
+        )
+    metadata = metadata_df.iloc[0].to_dict()
+    metadata["es_oficial"] = True
+    validated = validate_recon_balance_result(
+        flows, metadata, f"El Run oficial {int(metadata['solver_run_id'])}"
+    )
+    return validated, metadata
+
+
+def fetch_recon_balance_mtd_candidates(modelo_id, fecha_inicio, fecha_fin):
+    """Lee resultados de Casos oficiales que intersectan la ventana MTD."""
+    sql = _sa_text(f"""
+        SELECT
+            c.id AS caso_id,
+            c.nombre_caso,
+            c.fecha_inicio,
+            c.fecha_fin,
+            c.modelo_id,
+            sr.id AS solver_run_id,
+            sr.estado AS estado_run,
+            sr.solver_name,
+            sr.solver_version,
+            co.oficializado_en,
+            rf.codigo_flujo,
+            rf.tolerancia_masa,
+            rf.tolerancia_ley,
+            rf.masa_medida,
+            rf.masa_reconciliada,
+            rf.ley_cu_medida,
+            rf.ley_cu_reconciliada,
+            rf.fino_cu_medido,
+            rf.fino_cu_reconciliado
+        FROM {BALANCE_RECON_SOURCE}.recon_caso AS c
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_caso_oficial AS co
+            ON co.caso_id = c.id
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_solver_run AS sr
+            ON sr.id = co.solver_run_id
+           AND sr.caso_id = c.id
+        INNER JOIN {BALANCE_RECON_SOURCE}.recon_resultado_flujo AS rf
+            ON rf.run_id = sr.id
+           AND rf.caso_id = c.id
+        WHERE c.modelo_id = :modelo_id
+          AND c.fecha_fin >= :fecha_inicio
+          AND c.fecha_inicio <= :fecha_fin
+        ORDER BY c.fecha_inicio, c.fecha_fin, c.id, rf.codigo_flujo
+    """)
+    try:
+        with _get_engine().connect() as conn:
+            return pd.read_sql_query(
+                sql,
+                conn,
+                params={
+                    "modelo_id": int(modelo_id),
+                    "fecha_inicio": fecha_inicio,
+                    "fecha_fin": fecha_fin,
+                },
+            )
+    except Exception as exc:
+        raise BalanceReportError(
+            "No fue posible consultar los resultados oficiales del Balance."
+        ) from exc
 
 
 def log_db_destino_reporte_torre() -> dict:

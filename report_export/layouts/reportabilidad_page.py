@@ -80,6 +80,28 @@ def _report_card(title, description, tipo):
                className="rp-btn-pdf", n_clicks=0),
         ]
 
+    balance_selector = html.Div()
+    if tipo == "balance":
+        balance_selector = html.Div([
+            dbc.Label("Caso oficial", className="rp-fecha-label"),
+            dcc.Dropdown(
+                id="report-balance-caso",
+                options=[],
+                value=None,
+                clearable=False,
+                placeholder="Seleccione un Caso oficial",
+            ),
+            html.Div(
+                dbc.Alert(
+                    "Seleccione un Caso oficial para consultar su estado.",
+                    color="secondary",
+                    className="mb-0 py-2",
+                ),
+                id="report-balance-status",
+                className="mt-3",
+            ),
+        ], className="mb-3")
+
     return dbc.Card([
         dbc.CardBody([
             # Icon + title + badge
@@ -96,6 +118,7 @@ def _report_card(title, description, tipo):
 
             # Description
             html.P(description, className="rp-card-desc"),
+            balance_selector,
 
             # Buttons
             html.Div([
@@ -110,7 +133,8 @@ def _report_card(title, description, tipo):
                     html.I(className="bi bi-file-earmark-excel me-2"),
                     "Exportar Excel",
                 ], id={"type": "report-export-btn", "tipo": tipo},
-                   className="rp-btn-export me-2", n_clicks=0)
+                   className="rp-btn-export me-2", n_clicks=0,
+                   disabled=(tipo == "balance"))
                 if tipo != "representatividad_torres"
                 else html.Div(),
                 *botones_pdf,
