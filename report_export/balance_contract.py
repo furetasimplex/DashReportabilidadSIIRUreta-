@@ -26,7 +26,12 @@ def _configured_identifier(env_name, fallback=None):
 
 BALANCE_RECON_DATABASE = _configured_identifier(
     "BALANCE_RECON_DATABASE",
-    os.getenv("SQLSERVER_NAME") or os.getenv("SQLSERVER_DATABASE")
+    os.getenv("SQLSERVER_NAME")
+    or (
+        "PROD_SIIR"
+        if os.getenv("ENVIRONMENT", "").strip().lower() == "production"
+        else "DEV_SIIR"
+    ),
 )
 BALANCE_RECON_SCHEMA = _configured_identifier("BALANCE_RECON_SCHEMA", "hidro")
 BALANCE_RECON_SOURCE = (

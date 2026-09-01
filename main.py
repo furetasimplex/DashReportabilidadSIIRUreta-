@@ -1,18 +1,21 @@
 import os
-from dash import Dash
-import dash_bootstrap_components as dbc
-from layout import create_layout, register_callbacks
 from dotenv import load_dotenv
-from flask import session, redirect, request
-from auth import auth_bp
-from report_export.callbacks.reportabilidad_cb import setup_download_route
 
 load_dotenv()
 
-# Chequeo de DB/objetos SQL al arranque (main y wsgi). Ver db_startup_check.py
+# Debe ejecutarse antes de importar layout/auth/report_export: esos módulos
+# construyen nombres SQL al importarse y no deben ocultar un .env PROD inválido.
 from db_startup_check import run_startup_db_check
 
 run_startup_db_check()
+
+from dash import Dash
+import dash_bootstrap_components as dbc
+from flask import session, redirect, request
+
+from auth import auth_bp
+from layout import create_layout, register_callbacks
+from report_export.callbacks.reportabilidad_cb import setup_download_route
 
 external_stylesheets = [
     dbc.themes.FLATLY,

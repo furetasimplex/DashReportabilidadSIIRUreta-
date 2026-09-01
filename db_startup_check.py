@@ -32,6 +32,9 @@ SCHEMA_RECLAMO = "reclamo"
 INVENTAR_DB_DEV = "inventar_SpcHidr"
 INVENTAR_DB_PROD = "inventar_SpcHidr_PROD"
 INVENTAR_DBS = (INVENTAR_DB_DEV, INVENTAR_DB_PROD)
+PRODUCTION_ENVIRONMENT = "production"
+PRODUCTION_LOGIN_DATABASE = "PROD_SIIR.dbo.auth_user"
+PRODUCTION_BALANCE_DATABASE = "PROD_SIIR"
 
 # Dependencias cross-DB (schema.hidro) que los SP/vistas de inventar_* referencian.
 # El prefijo de base (DEV_SIIR / PROD_SIIR) se elige segun SQLSERVER_DB.
@@ -39,6 +42,10 @@ CROSS_DB_HIDRO_OBJECTS = (
     "hidro.imp_csv",
     "hidro.v_imp_chancado_normalizado",
     "hidro.v_imp_conciliacion_chancado",
+    "hidro.recon_caso",
+    "hidro.recon_caso_oficial",
+    "hidro.recon_solver_run",
+    "hidro.recon_resultado_flujo",
 )
 
 
@@ -233,6 +240,36 @@ def _resolver_ambiente(db_efectiva: str | None) -> AmbientePerfil:
     return perfil
 
 
+def _is_production_environment() -> bool:
+    return os.getenv("ENVIRONMENT", "").strip().lower() == PRODUCTION_ENVIRONMENT
+
+
+def _production_config_errors(
+    *,
+    sqlserver_db: str | None,
+    login_database: str | None,
+    balance_recon_database: str | None = None,
+) -> list[str]:
+    """Invariantes que nunca se pueden relajar en ENVIRONMENT=production."""
+    errors: list[str] = []
+    if (sqlserver_db or "").strip() != INVENTAR_DB_PROD:
+        errors.append(
+            f"SQLSERVER_DB debe ser {INVENTAR_DB_PROD} "
+            f"(actual={(sqlserver_db or '(no definido)').strip()})"
+        )
+    if (login_database or "").strip() != PRODUCTION_LOGIN_DATABASE:
+        errors.append(
+            f"LOGIN_DATABASE debe ser {PRODUCTION_LOGIN_DATABASE} "
+            f"(actual={(login_database or '(no definido)').strip()})"
+        )
+    if balance_recon_database and balance_recon_database.strip() != PRODUCTION_BALANCE_DATABASE:
+        errors.append(
+            f"BALANCE_RECON_DATABASE debe ser {PRODUCTION_BALANCE_DATABASE} "
+            f"(actual={balance_recon_database.strip()})"
+        )
+    return errors
+
+
 def _modulos_con_patron(conn, patron: str) -> list[str]:
     """Objetos cuyo texto SQL contiene el patron (p.ej. DEV_SIIR / PROD_SIIR)."""
     rows = conn.execute(
@@ -247,6 +284,24 @@ def _modulos_con_patron(conn, patron: str) -> list[str]:
             """
         ),
         {"patron": f"%{patron}%"},
+    ).scalars().all()
+    return list(rows)
+
+
+def _modulos_con_database_referenciada(conn, database: str) -> list[str]:
+    """Módulos con dependencia real de tres/cuatro partes hacia database."""
+    rows = conn.execute(
+        text(
+            """
+            SELECT DISTINCT s.name + '.' + o.name AS fqn
+            FROM sys.sql_expression_dependencies AS d
+            JOIN sys.objects AS o ON o.object_id = d.referencing_id
+            JOIN sys.schemas AS s ON s.schema_id = o.schema_id
+            WHERE d.referenced_database_name = :database
+            ORDER BY 1
+            """
+        ),
+        {"database": database},
     ).scalars().all()
     return list(rows)
 
@@ -426,11 +481,18 @@ def run_startup_db_check(*, strict: bool | None = None) -> bool:
 
     load_dotenv()
 
-    if os.getenv("DB_STARTUP_CHECK", "1").strip() in {"0", "false", "no"}:
+    production = _is_production_environment()
+    if not production and os.getenv("DB_STARTUP_CHECK", "1").strip() in {
+        "0", "false", "no"
+    }:
         logger.info("[DB-CHECK] Omitido (DB_STARTUP_CHECK=0)")
         return True
 
-    if strict is None:
+    if production:
+        # Producción siempre bloquea el arranque ante una configuración o
+        # dependencia incorrecta, aunque DB_STARTUP_CHECK_STRICT=0.
+        strict = True
+    elif strict is None:
         strict = os.getenv("DB_STARTUP_CHECK_STRICT", "0").strip() in {
             "1",
             "true",
@@ -439,6 +501,21 @@ def run_startup_db_check(*, strict: bool | None = None) -> bool:
 
     sqlserver_db_env = os.getenv("SQLSERVER_DB") or "(no definido)"
     login_database = os.getenv("LOGIN_DATABASE", "")
+    config_errors = (
+        _production_config_errors(
+            sqlserver_db=None if sqlserver_db_env == "(no definido)" else sqlserver_db_env,
+            login_database=login_database,
+            balance_recon_database=os.getenv("BALANCE_RECON_DATABASE")
+            or os.getenv("SQLSERVER_NAME"),
+        )
+        if production
+        else []
+    )
+    if config_errors:
+        detalle = "; ".join(config_errors)
+        raise RuntimeError(
+            "[DB-CHECK] Configuracion production invalida: " + detalle
+        )
 
     try:
         from db_connection import get_engine
@@ -482,6 +559,22 @@ def run_startup_db_check(*, strict: bool | None = None) -> bool:
                 lineas.append(
                     "!! AVISO: SQLSERVER_DB del .env NO coincide con DB_NAME()"
                 )
+            if production:
+                lineas.append("-" * 72)
+                lineas.append("Seccion: Guardas obligatorias de produccion")
+                if db_actual != INVENTAR_DB_PROD:
+                    config_errors.append(
+                        f"DB efectiva debe ser {INVENTAR_DB_PROD} (actual={db_actual})"
+                    )
+                if config_errors:
+                    for error in config_errors:
+                        lineas.append(f"  [FALTA] {error}")
+                        faltantes_required.append(f"production-config:{error}")
+                else:
+                    lineas.append(f"  [OK] DB efectiva={INVENTAR_DB_PROD}")
+                    lineas.append(
+                        f"  [OK] LOGIN_DATABASE={PRODUCTION_LOGIN_DATABASE}"
+                    )
 
             hidro_ok = destino.get("schema_hidro_id") is not None
             reclamo_ok = destino.get("schema_reclamo_id") is not None
@@ -595,6 +688,28 @@ def run_startup_db_check(*, strict: bool | None = None) -> bool:
                         f"{perfil.siir_db_prohibida} en {fqn}"
                     )
 
+            # En PROD tampoco puede sobrevivir una referencia de tres/cuatro
+            # partes al catálogo inventar de DEV. Los nombres de dos partes
+            # inventar_SpcHidr.objeto son schema.objeto y sí son correctos.
+            if production:
+                mods_inventar_dev = _modulos_con_database_referenciada(
+                    conn, INVENTAR_DB_DEV
+                )
+                if not mods_inventar_dev:
+                    lineas.append(
+                        f"  [OK] ningun modulo fija el catalogo {INVENTAR_DB_DEV}"
+                    )
+                else:
+                    lineas.append(
+                        f"  [FALTA] {len(mods_inventar_dev)} modulo(s) fijan "
+                        f"el catalogo DEV {INVENTAR_DB_DEV}"
+                    )
+                    for fqn in mods_inventar_dev:
+                        lineas.append(f"  [FALTA] {fqn}")
+                        faltantes_required.append(
+                            f"catalogo {INVENTAR_DB_DEV} en {fqn}"
+                        )
+
             # --- Peer inventar_* (solo desde DEV; en PROD no se revisa la otra base) ---
             check_both = os.getenv(
                 "DB_STARTUP_CHECK_BOTH_INVENTAR", "1"
@@ -653,9 +768,14 @@ def run_startup_db_check(*, strict: bool | None = None) -> bool:
     reporte = "\n".join(lineas)
     print(reporte)
     if faltantes_required:
-        logger.error(reporte)
+        # El reporte completo ya fue enviado a stdout. Repetirlo mediante el
+        # logger (stderr) duplica cientos de líneas en consola/containers.
+        logger.error(
+            "[DB-CHECK] Fallaron %s requisitos; ver reporte anterior.",
+            len(faltantes_required),
+        )
     else:
-        logger.info(reporte)
+        logger.info("[DB-CHECK] Validacion completada correctamente.")
 
     if strict and faltantes_required:
         raise RuntimeError(
