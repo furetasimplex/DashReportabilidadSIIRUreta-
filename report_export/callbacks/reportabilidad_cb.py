@@ -951,7 +951,7 @@ def _tabla_historial_representatividad(df_hist: pd.DataFrame):
             html.Td(int(fila.get("filas") or 0)),
             html.Td([
                 dbc.Button(
-                    "Excel de esta versión",
+                    "Excel",
                     size="sm",
                     color="success",
                     outline=True,
@@ -960,7 +960,7 @@ def _tabla_historial_representatividad(df_hist: pd.DataFrame):
                     id={"type": "rep-hist-xlsx", "id_reporte": id_reporte},
                 ),
                 dbc.Button(
-                    "PDF Químico de esta versión",
+                    "PDF Químico",
                     size="sm",
                     color="danger",
                     outline=True,
@@ -969,7 +969,7 @@ def _tabla_historial_representatividad(df_hist: pd.DataFrame):
                     id={"type": "rep-hist-pdf", "id_reporte": id_reporte, "subtipo": "quimico"},
                 ),
                 dbc.Button(
-                    "PDF Físico de esta versión",
+                    "PDF Físico",
                     size="sm",
                     color="danger",
                     outline=True,
@@ -978,13 +978,13 @@ def _tabla_historial_representatividad(df_hist: pd.DataFrame):
                     id={"type": "rep-hist-pdf", "id_reporte": id_reporte, "subtipo": "fisico"},
                 ),
                 dbc.Button(
-                    "PDF SRR de esta versión", size="sm", color="danger", outline=True,
+                    "PDF SRR", size="sm", color="danger", outline=True,
                     className="me-1 mb-1",
                     title="Descargar el PDF SRR de esta versión publicada",
                     id={"type": "rep-hist-pdf", "id_reporte": id_reporte, "subtipo": "srr"},
                 ),
                 dbc.Button(
-                    "Reabrir versión",
+                    "Reabrir",
                     size="sm",
                     color="primary",
                     outline=True,
@@ -993,7 +993,7 @@ def _tabla_historial_representatividad(df_hist: pd.DataFrame):
                     id={"type": "rep-hist-reabrir", "id_reporte": id_reporte},
                 ),
                 dbc.Button(
-                    "Eliminar versión",
+                    "Eliminar",
                     size="sm",
                     color="secondary",
                     outline=True,
