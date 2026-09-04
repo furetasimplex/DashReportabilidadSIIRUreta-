@@ -1,0 +1,15 @@
+Comando equivalente ejecutado desde la raiz:
+rg -n "def recalcular" .
+
+Coincidencias Python relevantes (excluyendo venv/.git):
+reclamo\db.py:553:def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
+scripts\admin\migrar_snapshot_representatividad_fy.py:134:def recalcular(metadata: MetadataReporte, fetch_fn: Callable = fetch_gestion_representatividad_fy) -> dict:
+
+La segunda coincidencia pertenece a una migracion de representatividad FY y no al modulo Control de Reclamo.
+
+Historia Git determinante:
+- commit 6cd9288 (2026-08-02): recalcular llama sync + calcular; no llama auto_mantener.
+- commit a9fd8da (2026-08-05 13:18 -04): recalcular llama sync + cargar_cv25 + calcular; no llama auto_mantener.
+- commit bd5568f (2026-08-05 18:34 -04): agrega sql_mantener y conn.execute(sql_mantener) antes del sync.
+
+El patron SQL observado despues de la ejecucion 447 (sync y calcular, sin auto_mantener) es compatible con 6cd9288 y, si tambien se observo cargar_cv25, coincide especificamente con a9fd8da.

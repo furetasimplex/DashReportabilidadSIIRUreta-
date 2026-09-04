@@ -1,0 +1,3 @@
+﻿pad_id,nombre,material,parcelas,modulos_por_parcela,modulos_totales,modulo_numero_min,modulo_numero_max,observacion
+1,PAD Oxido,OXIDO,32,2,64,1,64,Posiciones fijas reutilizadas por campaña. Confirmado por el usuario el 30-07-2026 y coherente con el reinicio M64 a M1 del 15-07-2025.
+2,PAD Sulfuro,SULFURO,28,5,140,1,140,Posiciones fijas reutilizadas por campaña. Coherente con los modulos hasta M140 observados en disponible_rotopalas.
