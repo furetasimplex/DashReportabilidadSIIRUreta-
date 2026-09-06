@@ -477,9 +477,9 @@ def _chequear_peer_inventar(
 
 def run_startup_db_check(*, strict: bool | None = None) -> bool:
     """Ejecuta el chequeo. True si todo lo required esta OK."""
-    from dotenv import load_dotenv
+    from env_loader import load_app_env
 
-    load_dotenv()
+    load_app_env()
 
     production = _is_production_environment()
     if not production and os.getenv("DB_STARTUP_CHECK", "1").strip() in {

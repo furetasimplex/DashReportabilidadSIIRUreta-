@@ -115,6 +115,51 @@ puede deshabilitarse con `DB_STARTUP_CHECK=0`.
 | `smoke_test_production_db.py` | 1 | Configuración, objetos o referencias incorrectas |
 | `smoke_test_production_db.py` | 2 | `ENVIRONMENT` no es `production` |
 
+## Promoción de drift real DEV → PROD
+
+El parche anterior corrige una lista fija de referencias cross-DB. Para promover
+cambios de lógica hechos en DEV (vistas, funciones y SP) se usa:
+
+```powershell
+python scripts\sync_modules_dev_to_prod.py                                  # preflight
+python scripts\sync_modules_dev_to_prod.py --only reclamo.                  # filtra
+python scripts\sync_modules_dev_to_prod.py --apply --confirm inventar_SpcHidr_PROD
+```
+
+Antes de comparar, cada definición de DEV se reescribe a los nombres canónicos
+de producción (`DEV_SIIR`→`PROD_SIIR`, `test_DEV_SIIR`→`test_PROD_SIIR`, y los
+tres-partes `inventar_SpcHidr.inventar_SpcHidr.x` a dos partes). Por eso los 12
+módulos cross-DB conocidos **no** aparecen como drift: solo se lista divergencia
+real. Un módulo que conserve un token sin mapeo canónico (`PR_SIIR`,
+`SIIR_PROD`) se marca `[BLOQUEADO]` y no se promueve.
+
+Al aplicar: respaldo de las definiciones actuales en `backups/`, un solo
+`ALTER` transaccional con `XACT_ABORT`, validación con
+`sp_refreshview`/`sp_refreshsqlmodule` antes del commit, y luego el smoke test.
+Si el smoke falla, el script imprime el `--restore` exacto.
+
+```powershell
+python scripts\sync_modules_dev_to_prod.py --restore backups\prod_modules_antes_<sello>.sql
+python scripts\sync_modules_dev_to_prod.py --self-test   # valida las reescrituras, sin BD
+```
+
+Objetos que existen solo en DEV se listan como `[SOLO DEV]` y no se crean: el
+script solo hace `ALTER`. Crear objetos nuevos sigue siendo manual.
+
+### Interfaz web
+
+```powershell
+python scripts\sync_web.py     # http://127.0.0.1:8070
+```
+
+Misma lógica, con pantalla: formulario de conexión DEV (PROD sale del `.env` y
+se muestra solo para confirmar), checklist de módulos con diff por módulo, y los
+botones **Dry-run**, **Transferir a PROD** (exige escribir
+`inventar_SpcHidr_PROD`) y **Solo smoke test**. La salida del motor se muestra
+tal cual. Los respaldos de `backups/` aparecen en un desplegable para restaurar.
+
+Escucha solo en `127.0.0.1`: puede sobrescribir producción, no debe exponerse.
+
 ## Cómo incorporar nuevos módulos
 
 El ejecutor actual corrige una lista controlada en

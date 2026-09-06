@@ -4,10 +4,10 @@ from datetime import date, datetime
 import hashlib
 import os
 import re
-from dotenv import load_dotenv
+from env_loader import load_app_env
 
 
-load_dotenv()
+load_app_env()
 
 
 BALANCE_TEMPLATE_SHA256 = (

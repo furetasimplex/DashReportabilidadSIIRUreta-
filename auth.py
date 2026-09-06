@@ -1,13 +1,13 @@
 import os
 import re
 
-from dotenv import load_dotenv
 from flask import Blueprint, request, session, redirect, render_template
 from sqlalchemy import text
 from passlib.hash import django_pbkdf2_sha256
 from db_connection import get_engine
+from env_loader import load_app_env
 
-load_dotenv()
+load_app_env()
 
 auth_bp = Blueprint("auth", __name__, template_folder="templatesFrontend")
 

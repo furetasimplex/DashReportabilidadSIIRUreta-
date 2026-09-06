@@ -1,7 +1,7 @@
 import os
-from dotenv import load_dotenv
+from env_loader import load_app_env
 
-load_dotenv()
+load_app_env()
 
 # Debe ejecutarse antes de importar layout/auth/report_export: esos módulos
 # construyen nombres SQL al importarse y no deben ocultar un .env PROD inválido.

@@ -1,8 +1,8 @@
 import os
 
-from dotenv import load_dotenv
+from env_loader import load_app_env
 
-load_dotenv()
+load_app_env()
 
 from main import server
 

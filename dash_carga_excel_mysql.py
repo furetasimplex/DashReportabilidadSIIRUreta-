@@ -5,9 +5,9 @@ import pandas as pd
 import base64
 import io
 import os
-from dotenv import load_dotenv
+from env_loader import load_app_env
 from db_connection import get_engine
-load_dotenv()
+load_app_env()
 engine = get_engine()
 
 # Función para limpiar y preparar los datos de la hoja "Datos filtrados"

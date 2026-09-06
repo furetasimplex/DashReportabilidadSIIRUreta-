@@ -11,13 +11,13 @@ import cv2
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from dotenv import load_dotenv
+from env_loader import load_app_env
 from dash import Dash
 from db_connection import get_connection
 from datetime import date
 import math
 
-load_dotenv()
+load_app_env()
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 
