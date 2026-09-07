@@ -27,11 +27,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from env_loader import load_app_env
+
+load_app_env()
 
 from . import db
 

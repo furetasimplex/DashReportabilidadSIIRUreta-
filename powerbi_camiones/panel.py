@@ -22,11 +22,9 @@ import dash
 from dash import dcc, html, dash_table, Input, Output, State, callback
 import pandas as pd
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from env_loader import load_app_env
+
+load_app_env()
 
 from . import db
 

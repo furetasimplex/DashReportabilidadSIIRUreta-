@@ -6,10 +6,10 @@ from sqlalchemy import create_engine
 import base64
 import io
 from db_connection import get_engine
-from dotenv import load_dotenv
+from env_loader import load_app_env
 import os
 
-load_dotenv()
+load_app_env()
 engine =get_engine()
 
 # App Dash

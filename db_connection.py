@@ -1,11 +1,11 @@
 # db_connection.py
 import os
-from dotenv import load_dotenv
+from env_loader import load_app_env
 from sqlalchemy import create_engine
 from urllib.parse import quote_plus
 import pyodbc
 
-load_dotenv()
+load_app_env()
 
 ENTORNO = int(os.getenv("ENTORNO", 4))  # 3=SQL Server ODBC, 4=SQL Server ODBC18
 _engine = None
