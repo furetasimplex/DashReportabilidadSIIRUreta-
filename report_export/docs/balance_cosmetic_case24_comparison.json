@@ -1,0 +1,62 @@
+{
+  "formula_count": 2774,
+  "business_formulas_changed": 0,
+  "numeric_values_changed": 0,
+  "changes": [
+    [
+      "Datos Reconciliados",
+      "B2",
+      "Flujos Proceso Hidrometalurgía",
+      "Flujos Proceso Hidrometalurgia"
+    ],
+    [
+      "Datos Reconciliados",
+      "C110",
+      "Inventrio Cobre Colgado",
+      "Inventario Cobre Colgado"
+    ],
+    [
+      "Análisis Variación-Tolerancias",
+      "C111",
+      "Inventrio Cobre colgado",
+      "Inventario Cobre colgado"
+    ],
+    [
+      "Proceso Área Seca",
+      "T4",
+      "Codigo :",
+      "Código:"
+    ],
+    [
+      "Proceso Área Seca",
+      "B6",
+      "#VALUE!",
+      null
+    ],
+    [
+      "Proceso Área Húmeda",
+      "Y4",
+      "Codigo :",
+      "Código:"
+    ],
+    [
+      "Proceso Área Húmeda",
+      "B6",
+      "#VALUE!",
+      null
+    ],
+    [
+      "Proceso Área Cátodos",
+      "T4",
+      "Codigo :",
+      "Código:"
+    ],
+    [
+      "Proceso Área Cátodos",
+      "B6",
+      "#VALUE!",
+      null
+    ]
+  ],
+  "comparison": "Valores y fórmulas; copia anterior guardada por Excel con 67 partes, salida final 66"
+}

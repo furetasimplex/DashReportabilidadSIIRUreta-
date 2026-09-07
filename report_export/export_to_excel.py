@@ -457,14 +457,12 @@ def _balance_columns_analysis(ws, flow_col, first_row):
     def fine(ctx): return "fino" in ctx
     def ton(ctx): return "tonel" in ctx or "masa" in ctx
     def measured(ctx): return "medido" in ctx
-    def reconciled(ctx): return "reconciliado" in ctx
     return {
         "tol_masa": _balance_find_column(ws, flow_col, first_row, "Tolerancia", lambda c: "tolerancia" in c and "cu" not in c and "ley" not in c),
         "tol_ley": _balance_find_column(ws, flow_col, first_row, "Tolerancia Cu", lambda c: "tolerancia" in c and ("cu" in c or "ley" in c)),
         "med_masa": _balance_find_column(ws, flow_col, first_row, "Medido Tonelaje", lambda c: measured(c) and ton(c)),
-        "rec_masa": _balance_find_column(ws, flow_col, first_row, "Reconciliado Tonelaje", lambda c: reconciled(c) and ton(c)),
+        "med_ley": _balance_find_column(ws, flow_col, first_row, "Medido Ley Cu", lambda c: measured(c) and "ley" in c and not fine(c)),
         "med_fino": _balance_find_column(ws, flow_col, first_row, "Medido Cu fino", lambda c: measured(c) and fine(c)),
-        "rec_fino": _balance_find_column(ws, flow_col, first_row, "Reconciliado Cu fino", lambda c: reconciled(c) and fine(c)),
     }
 
 
@@ -500,10 +498,10 @@ def _balance_update_authorized_visible_metadata(wb, metadata, start, end):
         ("Resumen", "F10"): (
             f"{identity['caso_label']} | {identity['run_label']}"
         ),
-        ("Resumen", "E11"): f"Periodo {start.day:02d} al {end.day:02d}",
+        ("Resumen", "E11"): f"Período {start.day:02d} al {end.day:02d}",
         ("Resumen", "F11"): f"Acumulado al {end.day:02d}",
         ("Proceso Área Seca", "P14"): period_without_year,
-        ("Proceso Área Húmeda", "U14"): period_without_year,
+        ("Proceso Área Húmeda", "U17"): period_without_year,
         ("Proceso Área Húmeda", "U105"): period_without_year,
         ("Proceso Área Cátodos", "P14"): period_without_year,
     }
@@ -737,6 +735,13 @@ def validate_balance_output_package(xlsx_bytes):
         if corrupt:
             raise BalanceReportError(f"CRC invalido en la parte XLSX {corrupt}.")
         name_set = set(names)
+        sheet_parts = _balance_sheet_parts({name: archive.read(name) for name in names})
+        permitted_ref_parts = {
+            sheet_parts[sheet] for sheet in (
+                "Proceso Área Seca", "Proceso Área Húmeda", "Proceso Área Cátodos"
+            )
+        }
+        accepted_ref_parts = set()
         ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
         rel_ns = "{http://schemas.openxmlformats.org/package/2006/relationships}"
         content_ns = "{http://schemas.openxmlformats.org/package/2006/content-types}"
@@ -769,6 +774,20 @@ def validate_balance_output_package(xlsx_bytes):
                 raise BalanceReportError(
                     f"XML invalido en {name}: {exc}."
                 ) from exc
+            # Strict exception: one preexisting list validation at C11 per process sheet.
+            if name in permitted_ref_parts:
+                for validation in root.findall("m:dataValidations/m:dataValidation", ns):
+                    formula = validation.find("m:formula1", ns)
+                    if (validation.attrib.get("sqref") == "C11"
+                            and validation.attrib.get("type") == "list"
+                            and formula is not None and formula.text == "#REF!"):
+                        if name in accepted_ref_parts:
+                            raise BalanceReportError(f"#REF! autorizado duplicado en {name}.")
+                        accepted_ref_parts.add(name)
+                        # Only the parsed audit tree changes; archive bytes remain untouched.
+                        formula.text = ""
+            if "#REF!" in ET.tostring(root, encoding="unicode"):
+                raise BalanceReportError(f"#REF! no autorizado en {name}.")
             if name.endswith(".rels"):
                 source_part = (
                     ""
@@ -801,6 +820,8 @@ def validate_balance_output_package(xlsx_bytes):
                         f"Referencias de celda duplicadas en {name}, fila "
                         f"{row.attrib.get('r')}: {', '.join(repeated)}."
                     )
+        if accepted_ref_parts != permitted_ref_parts:
+            raise BalanceReportError("Deben conservarse exactamente los tres #REF! autorizados en C11.")
 
 
 def _balance_update_period_textbox(drawing_xml, period_text):
@@ -836,6 +857,36 @@ def _balance_update_period_textbox(drawing_xml, period_text):
     return drawing_xml[:shape_match.start()] + updated_shape + drawing_xml[shape_match.end():]
 
 
+def _balance_set_initial_view(files, sheet_parts):
+    """Normaliza solo atributos de apertura en la copia OOXML en memoria."""
+    def patch_tag(xml, tag, attributes):
+        pattern = rb"<" + tag + rb"\b[^>]*>"
+        matches = list(re.finditer(pattern, xml))
+        if len(matches) != 1:
+            raise BalanceReportError("La vista inicial de Balance no es univoca.")
+        match = matches[0]
+        opening = match.group()
+        for attribute, value in attributes.items():
+            attr_pattern = rb'\s+' + attribute + rb'="[^"]*"'
+            replacement = b'' if value is None else b' ' + attribute + b'="' + value + b'"'
+            if re.search(attr_pattern, opening):
+                opening = re.sub(attr_pattern, lambda _: replacement, opening)
+            elif value is not None:
+                end = -2 if opening.endswith(b'/>') else -1
+                opening = opening[:end] + replacement + opening[end:]
+        return xml[:match.start()] + opening + xml[match.end():]
+
+    if next(iter(sheet_parts)) != "Resumen":
+        raise BalanceReportError("Resumen debe ser la primera hoja del Balance.")
+    files["xl/workbook.xml"] = patch_tag(
+        files["xl/workbook.xml"], b'workbookView',
+        {b'activeTab': b'0', b'firstSheet': b'0'},
+    )
+    for sheet, part in sheet_parts.items():
+        attributes = {b'tabSelected': b'1', b'topLeftCell': b'A1'} if sheet == 'Resumen' else {b'tabSelected': None}
+        files[part] = patch_tag(files[part], b'sheetView', attributes)
+
+
 def _balance_package_preserving_output(template_path, staged_bytes, changed_cells, start, end):
     """Parte del OOXML maestro y sustituye solo celdas/textos autorizados."""
     with ZipFile(template_path, "r") as archive:
@@ -855,7 +906,7 @@ def _balance_package_preserving_output(template_path, staged_bytes, changed_cell
 
     _balance_apply_f10_dark_font(files, base_sheets["Resumen"])
 
-    period_text = _balance_period_text("Periodo:", start, end) + "."
+    period_text = _balance_period_text("Período:", start, end) + "."
     for part in (
         "xl/drawings/drawing1.xml",
         "xl/drawings/drawing2.xml",
@@ -863,6 +914,7 @@ def _balance_package_preserving_output(template_path, staged_bytes, changed_cell
     ):
         files[part] = _balance_update_period_textbox(files[part], period_text)
 
+    _balance_set_initial_view(files, base_sheets)
     output = io.BytesIO()
     with ZipFile(output, "w", ZIP_DEFLATED) as archive:
         for name, data in files.items():
@@ -930,7 +982,7 @@ def _balance_validate_template_contract(wb):
             "La tabla F1-F120 de Analisis Variacion-Tolerancias ya no ocupa B4:B123."
         )
     required_analysis_merges = {
-        "D1:D3", "E1:E3", "F1:M1", "F2:I2", "J2:M2"
+        "D1:D3", "E1:E3", "F1:Q1", "F2:I2", "J2:M2", "N2:Q2"
     }
     actual_analysis_merges = {
         str(item) for item in ws_analysis.merged_cells.ranges
@@ -945,21 +997,33 @@ def _balance_validate_template_contract(wb):
         "tol_masa": 4,
         "tol_ley": 5,
         "med_masa": 6,
-        "rec_masa": 7,
-        "med_fino": 10,
-        "rec_fino": 11,
+        "med_ley": 10,
+        "med_fino": 14,
     }
     if cols_analysis != expected_analysis_cols:
         raise BalanceReportError(
             "Las columnas escribibles de Analisis Variacion-Tolerancias cambiaron."
         )
     for row in range(4, 124):
-        for column in (8, 9, 12, 13):
+        for column in (7, 8, 9, 11, 12, 13, 15, 16, 17):
             if ws_analysis.cell(row, column).data_type != "f":
                 raise BalanceReportError(
                     "Falta una formula protegida en Analisis "
                     f"Variacion-Tolerancias!{ws_analysis.cell(row, column).coordinate}."
                 )
+
+    for sheet_name, coordinate in (
+        ("Proceso Área Seca", "P14"),
+        ("Proceso Área Húmeda", "U17"),
+        ("Proceso Área Húmeda", "U105"),
+        ("Proceso Área Cátodos", "P14"),
+    ):
+        if wb[sheet_name][coordinate].value != "Período 01 al 23 de Agosto":
+            raise BalanceReportError(f"Encabezado contractual inesperado en {sheet_name}!{coordinate}.")
+    for row in range(4, 124):
+        for column, source_column in ((7, "D"), (11, "E"), (15, "F")):
+            if ws_analysis.cell(row, column).value != f"='Datos Reconciliados'!{source_column}{row - 1}":
+                raise BalanceReportError(f"Enlace reconciliado inesperado en Analisis, fila {row}.")
 
     return (
         ws_data,
@@ -1010,9 +1074,8 @@ def export_balance_reconciliacion_to_template(
         # posee una tolerancia_fino_cu independiente.
         _balance_write_cell(ws_analysis, row, cols_analysis["tol_ley"], source["tolerancia_ley"])
         _balance_write_cell(ws_analysis, row, cols_analysis["med_masa"], source["masa_medida"])
-        _balance_write_cell(ws_analysis, row, cols_analysis["rec_masa"], source["masa_reconciliada"])
+        _balance_write_cell(ws_analysis, row, cols_analysis["med_ley"], source["ley_cu_medida"])
         _balance_write_cell(ws_analysis, row, cols_analysis["med_fino"], source["fino_cu_medido"])
-        _balance_write_cell(ws_analysis, row, cols_analysis["rec_fino"], source["fino_cu_reconciliado"])
 
     _balance_write_cell(ws_data, 3, 12, (end - start).days + 1)
     _balance_write_cell(ws_data, 4, 12, (end - mtd_start).days + 1)

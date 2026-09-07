@@ -368,19 +368,19 @@ class BalanceExcelPhase2Tests(unittest.TestCase):
             cell.value
             for row in analysis.iter_rows(min_row=4, max_row=123)
             for cell in row
-            if cell.column in (8, 9, 12, 13)
+            if cell.column in (7, 8, 9, 11, 12, 13, 15, 16, 17)
         ]
-        self.assertEqual(len(protected_formulas), 480)
+        self.assertEqual(len(protected_formulas), 1080)
         self.assertTrue(all(
             isinstance(value, str) and value.startswith("=")
             for value in protected_formulas
         ))
 
         expected_visible = {
-            ("Resumen", "E11"): "Periodo 01 al 23",
+            ("Resumen", "E11"): "Período 01 al 23",
             ("Resumen", "F11"): "Acumulado al 23",
             ("Proceso Área Seca", "P14"): "Período 01 al 23 de Agosto",
-            ("Proceso Área Húmeda", "U14"): "Período 01 al 23 de Agosto",
+            ("Proceso Área Húmeda", "U17"): "Período 01 al 23 de Agosto",
             ("Proceso Área Húmeda", "U105"): "Período 01 al 23 de Agosto",
             ("Proceso Área Cátodos", "P14"): "Período 01 al 23 de Agosto",
         }
@@ -395,10 +395,10 @@ class BalanceExcelPhase2Tests(unittest.TestCase):
         )
         self.assertNotIn("01 al 16", visible_text)
         self.assertNotIn("Septiembre", visible_text)
-        self.assertEqual(workbook["Proceso Área Seca"]["R14"].value, "Acumulado Agosto")
-        self.assertEqual(workbook["Proceso Área Húmeda"]["W14"].value, "Acumulado Agosto")
-        self.assertEqual(workbook["Proceso Área Húmeda"]["W105"].value, "Acumulado Agosto")
-        self.assertEqual(workbook["Proceso Área Cátodos"]["R14"].value, "Acumulado Agosto")
+        self.assertEqual(workbook["Proceso Área Seca"]["R14"].value, "Acumulado al 23 de Agosto")
+        self.assertEqual(workbook["Proceso Área Húmeda"]["W17"].value, "Acumulado al 23 de Agosto")
+        self.assertEqual(workbook["Proceso Área Húmeda"]["W105"].value, "Acumulado al 23 de Agosto")
+        self.assertEqual(workbook["Proceso Área Cátodos"]["R14"].value, "Acumulado al 23 de Agosto")
         self.assertEqual(workbook["Resumen"]["F10"].value, "Caso 24 | Run oficial 150")
         self.assertEqual(sheet["L3"].value, 23)
         self.assertEqual(sheet["L4"].value, 23)
@@ -519,7 +519,7 @@ class BalanceExcelPhase2Tests(unittest.TestCase):
                     self.assertEqual(
                         ET.tostring(after_root), ET.tostring(before_root), name
                     )
-                    self.assertIn("Periodo: 01 al 23 de Agosto 2026.", texts)
+                    self.assertIn("Período: 01 al 23 de Agosto 2026.", texts)
                 else:
                     self.assertEqual(after, before, name)
 
