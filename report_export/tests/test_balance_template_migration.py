@@ -67,6 +67,9 @@ class TemplateMigrationTests(unittest.TestCase):
         for row in range(4, 124):
             for col in 'G H I K L M O P Q'.split():
                 ref = f'{col}{row}'
+                cache = before[ref].find('m:v', NS)
+                if cache is not None:
+                    before[ref].remove(cache)
                 self.assertEqual(ET.tostring(before[ref]), ET.tostring(after[ref]), ref)
                 self.assertIsNotNone(after[ref].find('m:f', NS))
                 protected += 1
@@ -117,11 +120,32 @@ class TemplateMigrationTests(unittest.TestCase):
             else:
                 expected.pop('tabSelected', None)
             self.assertEqual(new.attrib, expected)
+            if number == 1:
+                old.find('m:selection', NS).attrib.update(activeCell='A1', sqref='A1')
             self.assertEqual([ET.tostring(c) for c in old], [ET.tostring(c) for c in new])
             if new.attrib.get('tabSelected') == '1':
                 selected.append(number)
         self.assertEqual(selected, [1])
         self.assertEqual(TEMPLATE.read_bytes(), self.source)
+
+    def test_calcpr_and_all_formula_caches_removed_only(self):
+        before_calc = ET.fromstring(self.before['xl/workbook.xml']).find('m:calcPr', NS)
+        after_calc = ET.fromstring(self.after['xl/workbook.xml']).find('m:calcPr', NS)
+        self.assertEqual(after_calc.attrib, dict(before_calc.attrib,
+                         calcMode='auto', fullCalcOnLoad='1', forceFullCalc='1'))
+        formulas = 0
+        for part, data in self.after.items():
+            if not part.startswith('xl/worksheets/') or not part.endswith('.xml'):
+                continue
+            for cell in ET.fromstring(data).findall('.//m:sheetData/m:row/m:c', NS):
+                if cell.find('m:f', NS) is not None:
+                    formulas += 1
+                    self.assertIsNone(cell.find('m:v', NS), (part, cell.attrib['r']))
+        self.assertEqual(formulas, 2774)
+        for number, ref in ((1, 'E12'), (2, 'F15'), (6, 'G4'), (6, 'K4'), (6, 'O4')):
+            cell = ET.fromstring(self.after[f'xl/worksheets/sheet{number}.xml']).find(f'.//m:c[@r="{ref}"]', NS)
+            self.assertIsNotNone(cell.find('m:f', NS))
+            self.assertIsNone(cell.find('m:v', NS))
 
     def test_historical_flow_references(self):
         def formulas(number):

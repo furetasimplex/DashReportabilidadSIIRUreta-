@@ -857,34 +857,61 @@ def _balance_update_period_textbox(drawing_xml, period_text):
     return drawing_xml[:shape_match.start()] + updated_shape + drawing_xml[shape_match.end():]
 
 
+def _balance_patch_single_tag_attributes(xml, tag, attributes):
+    """Parchea atributos sin reserializar el elemento ni el documento."""
+    matches = list(re.finditer(rb"<" + tag + rb"\b[^>]*>", xml))
+    if len(matches) != 1:
+        raise BalanceReportError(f"El elemento OOXML {tag.decode()} no es univoco.")
+    match = matches[0]
+    opening = match.group()
+    for attribute, value in attributes.items():
+        attr_pattern = rb'\s+' + attribute + rb'="[^"]*"'
+        replacement = b'' if value is None else b' ' + attribute + b'="' + value + b'"'
+        if re.search(attr_pattern, opening):
+            opening = re.sub(attr_pattern, lambda _: replacement, opening)
+        elif value is not None:
+            end = -2 if opening.endswith(b'/>') else -1
+            opening = opening[:end] + replacement + opening[end:]
+    return xml[:match.start()] + opening + xml[match.end():]
+
+
 def _balance_set_initial_view(files, sheet_parts):
     """Normaliza solo atributos de apertura en la copia OOXML en memoria."""
-    def patch_tag(xml, tag, attributes):
-        pattern = rb"<" + tag + rb"\b[^>]*>"
-        matches = list(re.finditer(pattern, xml))
-        if len(matches) != 1:
-            raise BalanceReportError("La vista inicial de Balance no es univoca.")
-        match = matches[0]
-        opening = match.group()
-        for attribute, value in attributes.items():
-            attr_pattern = rb'\s+' + attribute + rb'="[^"]*"'
-            replacement = b'' if value is None else b' ' + attribute + b'="' + value + b'"'
-            if re.search(attr_pattern, opening):
-                opening = re.sub(attr_pattern, lambda _: replacement, opening)
-            elif value is not None:
-                end = -2 if opening.endswith(b'/>') else -1
-                opening = opening[:end] + replacement + opening[end:]
-        return xml[:match.start()] + opening + xml[match.end():]
-
     if next(iter(sheet_parts)) != "Resumen":
         raise BalanceReportError("Resumen debe ser la primera hoja del Balance.")
-    files["xl/workbook.xml"] = patch_tag(
+    files["xl/workbook.xml"] = _balance_patch_single_tag_attributes(
         files["xl/workbook.xml"], b'workbookView',
         {b'activeTab': b'0', b'firstSheet': b'0'},
     )
     for sheet, part in sheet_parts.items():
         attributes = {b'tabSelected': b'1', b'topLeftCell': b'A1'} if sheet == 'Resumen' else {b'tabSelected': None}
-        files[part] = patch_tag(files[part], b'sheetView', attributes)
+        files[part] = _balance_patch_single_tag_attributes(files[part], b'sheetView', attributes)
+    summary = sheet_parts['Resumen']
+    files[summary] = _balance_patch_single_tag_attributes(
+        files[summary], b'selection', {b'activeCell': b'A1', b'sqref': b'A1'},
+    )
+
+
+def _balance_clear_formula_caches(files, sheet_parts):
+    """Elimina solo <v> de celdas con <f>; Excel calcula al abrir."""
+    files['xl/workbook.xml'] = _balance_patch_single_tag_attributes(
+        files['xl/workbook.xml'], b'calcPr',
+        {b'calcMode': b'auto', b'fullCalcOnLoad': b'1', b'forceFullCalc': b'1'},
+    )
+    removed = 0
+    def clear_cell(match):
+        nonlocal removed
+        cell = match.group()
+        if not re.search(rb'<f\b', cell):
+            return cell
+        cell, count = re.subn(rb'<v\b[^>]*?(?:/>|>.*?</v>)', b'', cell, flags=re.DOTALL)
+        removed += count
+        return cell
+    for part in sheet_parts.values():
+        files[part] = re.sub(
+            rb'<c\b[^>]*?(?:/>|>.*?</c>)', clear_cell, files[part], flags=re.DOTALL,
+        )
+    return removed
 
 
 def _balance_package_preserving_output(template_path, staged_bytes, changed_cells, start, end):
@@ -915,6 +942,8 @@ def _balance_package_preserving_output(template_path, staged_bytes, changed_cell
         files[part] = _balance_update_period_textbox(files[part], period_text)
 
     _balance_set_initial_view(files, base_sheets)
+    removed_caches = _balance_clear_formula_caches(files, base_sheets)
+    print(f"[BALANCE EXPORT] caches_formula_eliminados={removed_caches}")
     output = io.BytesIO()
     with ZipFile(output, "w", ZIP_DEFLATED) as archive:
         for name, data in files.items():
