@@ -7,6 +7,7 @@ from datetime import datetime
 
 from tabs import tab_report
 import report_export.callbacks.reportabilidad_cb
+import callbacks.reportabilidad_callbacks
 from reclamo import panel as reclamo_panel  # registra sus @callback al importarse
 from powerbi_camiones import panel as powerbi_panel  # registra sus @callback al importarse
 

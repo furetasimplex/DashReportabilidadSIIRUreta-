@@ -1,6 +1,7 @@
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 import calendar
+from report_export.layouts.tab_reconciliacion_ajustes import layout as layout_reconciliacion
 import datetime as dt
 
 _MONTHS_ES = {
@@ -279,6 +280,15 @@ def layout():
                             "conciliacion",
                         ), md=4, className="mb-4"),
                     ], className="g-4 mt-3"),
+                ),
+
+                # ── DATOS RECONCILIADOS ────────────────────────────────
+                dcc.Tab(
+                    label="Datos Reconciliados",
+                    value="tab-reconciliacion",
+                    className="rp-tab",
+                    selected_className="rp-tab--selected",
+                    children=layout_reconciliacion(),
                 ),
             ],
         ),
