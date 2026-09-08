@@ -1365,12 +1365,19 @@ def actualizar_estado_balance(caso_id):
     Output("report-fecha-final", "date", allow_duplicate=True),
     Output("report-fecha-inicio", "initial_visible_month"),
     Output("report-fecha-final", "initial_visible_month"),
+    Output("report-fecha-inicio", "max_date_allowed"),
+    Output("report-fecha-final", "max_date_allowed"),
     Input("report-fecha-modo", "value"),
     Input("report-fecha-mes", "value"),
     prevent_initial_call="initial_duplicate",
 )
 def sync_modo_y_mes(modo, mes_val):
-    """Alterna controles visibles y sincroniza fechas al elegir mes completo."""
+    """Alterna controles visibles y sincroniza fechas al elegir mes completo.
+
+    También refresca max_date_allowed a la fecha de hoy del servidor en cada
+    carga/cambio de modo, para que no quede congelada al arranque del proceso.
+    """
+    hoy = date.today().isoformat()
     if modo == "rango":
         return (
             {"display": "none"},
@@ -1379,6 +1386,8 @@ def sync_modo_y_mes(modo, mes_val):
             no_update,
             no_update,
             no_update,
+            hoy,
+            hoy,
         )
 
     if not mes_val:
@@ -1389,6 +1398,8 @@ def sync_modo_y_mes(modo, mes_val):
             no_update,
             no_update,
             no_update,
+            hoy,
+            hoy,
         )
 
     year, month = map(int, mes_val.split("-"))
@@ -1402,6 +1413,8 @@ def sync_modo_y_mes(modo, mes_val):
         fin,
         ini,
         fin,
+        hoy,
+        hoy,
     )
 
 

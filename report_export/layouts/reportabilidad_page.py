@@ -49,8 +49,15 @@ _DATEPICKER_KWARGS = {
     "first_day_of_week": 1,
     "clearable": False,
     "className": "rp-fecha-picker",
-    "max_date_allowed": _max_date_allowed(),
 }
+
+
+def _datepicker_kwargs():
+    """Kwargs del datepicker con tope = hoy (evaluado al construir el control)."""
+    return {
+        **_DATEPICKER_KWARGS,
+        "max_date_allowed": _max_date_allowed(),
+    }
 
 
 def _month_options():
@@ -197,7 +204,7 @@ def layout():
                                                     id="report-fecha-inicio",
                                                     date=_default_dates()[0],
                                                     initial_visible_month=_default_dates()[0],
-                                                    **_DATEPICKER_KWARGS,
+                                                    **_datepicker_kwargs(),
                                                 ),
                                             ], width="auto"),
                                             dbc.Col([
@@ -206,7 +213,7 @@ def layout():
                                                     id="report-fecha-final",
                                                     date=_default_dates()[1],
                                                     initial_visible_month=_default_dates()[1],
-                                                    **_DATEPICKER_KWARGS,
+                                                    **_datepicker_kwargs(),
                                                 ),
                                             ], width="auto"),
                                         ], className="g-3 align-items-end rp-fecha-rango-row"),
