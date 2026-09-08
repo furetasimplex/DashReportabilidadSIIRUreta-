@@ -776,13 +776,18 @@ def _sin_datos(mensaje: str = "Sin datos para el periodo seleccionado") -> go.Fi
     return fig
 
 
-def _tabla(df: pd.DataFrame, id_: str, condicionales=None, page_size=None) -> dash_table.DataTable:
+def _tabla(df: pd.DataFrame, id_: str, condicionales=None, page_size=None):
+    """
+    Renderiza tabla DataTable con soporte para scroll horizontal en pantallas pequeñas.
+    Envuelve la tabla en un div con overflow-x: auto cuando el contenido es muy ancho.
+    """
     estilo = dict(TABLA_ESTILO)
     if condicionales:
         estilo["style_data_conditional"] = estilo["style_data_conditional"] + condicionales
     if page_size:
         estilo["page_size"] = page_size
-    return dash_table.DataTable(
+
+    tabla = dash_table.DataTable(
         id=id_,
         columns=[{"name": c, "id": c,
                   "type": "numeric" if pd.api.types.is_numeric_dtype(df[c]) else "text",
@@ -790,6 +795,21 @@ def _tabla(df: pd.DataFrame, id_: str, condicionales=None, page_size=None) -> da
                  for c in df.columns],
         data=df.to_dict("records"),
         **estilo,
+    )
+
+    # Envolver tabla en div con overflow-x: auto para scroll horizontal en tablas anchas
+    # Ajustes responsive: min-width garantiza que las columnas tengan espacio mínimo
+    # border y border-radius dan apariencia de contenedor
+    return html.Div(
+        tabla,
+        style={
+            "overflowX": "auto",
+            "overflowY": "visible",
+            "borderRadius": "4px",
+            "border": "1px solid #E8EAED",
+            "minWidth": "100%",  # Asegurar que ocupa todo el ancho disponible
+            "WebkitOverflowScrolling": "touch",  # Scroll suave en dispositivos móviles
+        }
     )
 
 
