@@ -1,0 +1,29 @@
+{
+  "template_sha256": "C8F5AE2730EAE6827E083031D7A907432B385D9BFFA941E472F44A5D01EEBF8D",
+  "cases": [
+    {
+      "case": 18,
+      "run": 113,
+      "mtd_fecha_fin": "2026-07-15",
+      "headers": {
+        "Proceso Área Seca!R14": "Acumulado al 15 de Julio",
+        "Proceso Área Húmeda!W17": "Acumulado al 15 de Julio",
+        "Proceso Área Húmeda!W105": "Acumulado al 15 de Julio",
+        "Proceso Área Cátodos!R14": "Acumulado al 15 de Julio"
+      },
+      "output": "report_export\\exports\\Balance_Planta_Hidrometalurgia_20260708_20260715_Caso18_Run113.xlsx"
+    },
+    {
+      "case": 24,
+      "run": 147,
+      "mtd_fecha_fin": "2026-08-23",
+      "headers": {
+        "Proceso Área Seca!R14": "Acumulado al 23 de Agosto",
+        "Proceso Área Húmeda!W17": "Acumulado al 23 de Agosto",
+        "Proceso Área Húmeda!W105": "Acumulado al 23 de Agosto",
+        "Proceso Área Cátodos!R14": "Acumulado al 23 de Agosto"
+      },
+      "output": "report_export\\exports\\Balance_Planta_Hidrometalurgia_20260801_20260823_Caso24_Run147.xlsx"
+    }
+  ]
+}

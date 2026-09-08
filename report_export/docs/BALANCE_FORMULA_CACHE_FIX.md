@@ -106,3 +106,25 @@ El hash contractual sigue siendo
 No se modificó ningún objeto ni registro de base de datos.
 
 No se modificó ninguna query, vista, SP ni lógica MTD.
+
+Ampliación: fórmulas especiales y calcChain.
+
+La inspección del template confirma 794 nodos `<f t="shared">`, incluidos
+26 maestros con `ref`, y 1.980 fórmulas sin atributos especiales. No hay
+fórmulas `t="array"` ni marcadores `dynamicArrayProperties`/`XLDAPR` de
+matrices dinámicas. Existe `xl/calcChain.xml`, que se conserva sin modificación
+ni reconstrucción desde Python. También se conserva `xl/metadata.xml`.
+
+Se compararon los 2.774 nodos `<f>` byte a byte en los exportables de los Casos
+21 y 24: ninguno cambió, incluidos texto y atributos `ref`, `si`, `t` y
+cualquier atributo adicional. `calcChain.xml` y `metadata.xml` también son
+idénticos al template. La limpieza continúa limitada a los `<v>` cacheados.
+Se permite que Excel gestione su cadena de cálculo al abrir, manteniendo
+calcMode=auto, fullCalcOnLoad=1 y forceFullCalc=1.
+
+La prueba `test_formula_nodes_and_calcchain_preserved_byte_for_byte` compara
+cada fórmula cruda asociada a su coordenada, además de calcChain, metadata y
+las relaciones del workbook. Resultado de esta ampliación:
+`python -m unittest report_export.tests.test_balance_template_migration.TemplateMigrationTests -q`:
+**9 pruebas aprobadas**. No fue necesario modificar el exportador ni regenerar
+los archivos entregados. Evidencia: `balance_special_formulas_audit.json`.

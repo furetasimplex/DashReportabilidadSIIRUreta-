@@ -147,6 +147,63 @@ class TemplateMigrationTests(unittest.TestCase):
             self.assertIsNotNone(cell.find('m:f', NS))
             self.assertIsNone(cell.find('m:v', NS))
 
+    def test_formula_nodes_and_calcchain_preserved_byte_for_byte(self):
+        pattern = rb'<f\b[^>]*?(?:/>|>.*?</f>)'
+        count = 0
+        for part, original in self.before.items():
+            if not part.startswith('xl/worksheets/') or not part.endswith('.xml'):
+                continue
+            # Pair each raw formula with its cell so relocation cannot pass.
+            def raw_formulas(data):
+                return {
+                    re.search(rb'\br="([^"]+)"', cell).group(1): re.search(pattern, cell, re.DOTALL).group()
+                    for cell in re.findall(rb'<c\b[^>]*?(?:/>|>.*?</c>)', data, re.DOTALL)
+                    if re.search(pattern, cell, re.DOTALL)
+                }
+            before = raw_formulas(original)
+            self.assertEqual(before, raw_formulas(self.after[part]), part)
+            count += len(before)
+        self.assertEqual(count, 2774)
+        for part in ('xl/calcChain.xml', 'xl/metadata.xml', 'xl/_rels/workbook.xml.rels'):
+            self.assertEqual(self.before.get(part), self.after.get(part), part)
+
+    def test_accumulated_process_headers_case18_and_case24(self):
+        from openpyxl import load_workbook
+        from report_export.export_to_excel import export_balance_reconciliacion_to_template
+        for case, run, start, end, month in (
+            (18, 113, date(2026, 7, 8), date(2026, 7, 15), 'Julio'),
+            (24, 147, date(2026, 8, 1), date(2026, 8, 23), 'Agosto'),
+        ):
+            period = fixtures._flows()
+            accumulated = period[['codigo_flujo']].copy()
+            accumulated['masa_reconciliada_acumulada'] = 300
+            accumulated['ley_cu_reconciliada_acumulada'] = 2
+            accumulated['fino_cu_reconciliado_acumulado'] = 6
+            meta = fixtures._metadata(case, run, start, end)
+            meta.update(fecha_inicio_acumulado=end.replace(day=1), fecha_fin_acumulado=end,
+                        mtd_fecha_fin=end)
+            output = export_balance_reconciliacion_to_template(period, accumulated, meta, str(TEMPLATE))
+            wb = load_workbook(BytesIO(output))
+            for sheet, coord in [('Proceso Área Seca', 'R14'), ('Proceso Área Húmeda', 'W17'),
+                                 ('Proceso Área Húmeda', 'W105'), ('Proceso Área Cátodos', 'R14')]:
+                self.assertEqual(wb[sheet][coord].value, f'Acumulado al {end.day:02d} de {month}')
+            for sheet, coord in [('Proceso Área Seca', 'P14'), ('Proceso Área Húmeda', 'U17'),
+                                 ('Proceso Área Húmeda', 'U105'), ('Proceso Área Cátodos', 'P14')]:
+                self.assertEqual(wb[sheet][coord].value, f'Período {start.day:02d} al {end.day:02d} de {month}')
+            wb.close()
+
+    def test_accumulated_label_uses_mtd_metadata_not_case_end(self):
+        from openpyxl import load_workbook
+        from report_export.export_to_excel import _balance_update_authorized_visible_metadata
+        wb = load_workbook(TEMPLATE)
+        meta = fixtures._metadata(18, 113, date(2026, 7, 8), date(2026, 7, 15))
+        meta.update(fecha_inicio_acumulado=date(2026, 7, 1), fecha_fin_acumulado=date(2026, 7, 15),
+                    mtd_fecha_fin=date(2026, 6, 9))
+        # Formatter-only test: differing dates deliberately distinguish the data source.
+        _balance_update_authorized_visible_metadata(wb, meta, date(2026, 7, 8), date(2026, 7, 15))
+        self.assertEqual(wb['Proceso Área Seca']['R14'].value, 'Acumulado al 09 de Junio')
+        wb.close()
+
     def test_historical_flow_references(self):
         def formulas(number):
             root = ET.fromstring(self.after[f'xl/worksheets/sheet{number}.xml'])

@@ -484,7 +484,7 @@ def _balance_period_text(prefix, start, end):
 
 
 def _balance_update_authorized_visible_metadata(wb, metadata, start, end):
-    """Actualiza solo los seis textos visibles autorizados por auditoria."""
+    """Actualiza los textos visibles autorizados de período, MTD e identidad."""
     months = (
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
@@ -494,6 +494,10 @@ def _balance_update_authorized_visible_metadata(wb, metadata, start, end):
         f"Período {start.day:02d} al {end.day:02d} de {month}"
     )
     identity = build_balance_report_identity(metadata)
+    mtd_end = pd.to_datetime(metadata.get("mtd_fecha_fin"), errors="coerce")
+    if pd.isna(mtd_end):
+        raise BalanceReportError("Falta mtd_fecha_fin válida para las cabeceras acumuladas.")
+    accumulated_label = f"Acumulado al {mtd_end.day:02d} de {months[mtd_end.month - 1]}"
     values = {
         ("Resumen", "F10"): (
             f"{identity['caso_label']} | {identity['run_label']}"
@@ -504,6 +508,10 @@ def _balance_update_authorized_visible_metadata(wb, metadata, start, end):
         ("Proceso Área Húmeda", "U17"): period_without_year,
         ("Proceso Área Húmeda", "U105"): period_without_year,
         ("Proceso Área Cátodos", "P14"): period_without_year,
+        ("Proceso Área Seca", "R14"): accumulated_label,
+        ("Proceso Área Húmeda", "W17"): accumulated_label,
+        ("Proceso Área Húmeda", "W105"): accumulated_label,
+        ("Proceso Área Cátodos", "R14"): accumulated_label,
     }
     for (sheet_name, coordinate), value in values.items():
         cell = wb[sheet_name][coordinate]
@@ -1109,6 +1117,8 @@ def export_balance_reconciliacion_to_template(
     _balance_write_cell(ws_data, 3, 12, (end - start).days + 1)
     _balance_write_cell(ws_data, 4, 12, (end - mtd_start).days + 1)
     display_metadata = dict(meta)
+    # Alias de la fecha MTD entregada por el servicio; nunca usar fecha_fin del Caso.
+    display_metadata.setdefault("mtd_fecha_fin", meta.get("fecha_fin_acumulado"))
     display_metadata.setdefault("fecha_inicio_acumulado", mtd_start)
     display_metadata.setdefault("fecha_fin_acumulado", end)
     _balance_update_headers_and_metadata(
