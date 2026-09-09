@@ -26,7 +26,10 @@ def layout():
             ),
             dbc.CardBody([
                 dbc.Row([
-                    # Caso de balance
+                    # Caso de balance (las fechas del periodo se autocompletan
+                    # internamente desde este caso - ver autofill_fechas_caso -
+                    # y ya no se piden por separado al usuario, per solicitud
+                    # de Luis del 2026-09-09)
                     dbc.Col([
                         dbc.Label("Caso Balance", className="fw-semibold"),
                         dcc.Dropdown(
@@ -34,9 +37,12 @@ def layout():
                             placeholder="Seleccione caso",
                             clearable=False,
                         ),
-                    ], md=3, className="mb-3"),
-                    
-                    # Rango de fechas
+                    ], md=5, className="mb-3"),
+
+                    # Rango de fechas: ya NO se muestran al usuario (se
+                    # autocompletan desde el caso elegido y se usan de forma
+                    # interna por los demás callbacks). Se mantienen montados
+                    # pero ocultos para no romper los State/Input existentes.
                     dbc.Col([
                         dbc.Label("Fecha Inicio", className="fw-semibold"),
                         dcc.DatePickerSingle(
@@ -44,8 +50,8 @@ def layout():
                             display_format="DD-MM-YYYY",
                             placeholder="DD-MM-YYYY",
                         ),
-                    ], md=2, className="mb-3"),
-                    
+                    ], md=2, className="mb-3", style={"display": "none"}),
+
                     dbc.Col([
                         dbc.Label("Fecha Fin", className="fw-semibold"),
                         dcc.DatePickerSingle(
@@ -53,18 +59,27 @@ def layout():
                             display_format="DD-MM-YYYY",
                             placeholder="DD-MM-YYYY",
                         ),
-                    ], md=2, className="mb-3"),
-                    
-                    # Run ID
+                    ], md=2, className="mb-3", style={"display": "none"}),
+
+                    # Run ID: sólo se muestra cuando existe una corrida previa
+                    # real entre la cual elegir (ver load_run_ids). Si el caso
+                    # nunca se ha corrido, se oculta y se usa "nuevo ajuste"
+                    # de forma automática/interna.
                     dbc.Col([
-                        dbc.Label("Run ID", className="fw-semibold"),
+                        dbc.Label("Run ID", className="fw-semibold", id="label-run-id-recon"),
                         dcc.Dropdown(
                             id="dropdown-run-id-recon",
                             placeholder="Seleccione run",
                             clearable=False,
                         ),
-                    ], md=3, className="mb-3"),
-                    
+                        html.Div(
+                            "Se ejecutará un ajuste nuevo automáticamente (sin corridas previas).",
+                            id="caption-run-id-auto",
+                            className="small text-muted",
+                            style={"display": "none"},
+                        ),
+                    ], md=4, className="mb-3", id="col-run-id-recon"),
+
                     # Botón procesar
                     dbc.Col([
                         html.Div(className="mb-2"),  # Spacer para alinear con las labels
@@ -75,7 +90,7 @@ def layout():
                             n_clicks=0,
                             className="w-100",
                         ),
-                    ], md=2, className="mb-3"),
+                    ], md=3, className="mb-3"),
                 ], className="g-3 align-items-end"),
             ]),
         ], className="mb-4"),
@@ -396,4 +411,6 @@ def layout():
 
         # Store para inicialización de casos
         dcc.Store(id="store-init-casos", data={"initialized": True}),
+        # Cache de casos (id, fecha_inicio, fecha_fin) para autocompletar fechas al elegir un caso
+        dcc.Store(id="store-casos-data", data=[]),
     ])

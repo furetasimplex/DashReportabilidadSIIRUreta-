@@ -1,0 +1,358 @@
+====================================================================================================
+Definiciones de SPs de apoyo (periodo, log_start, log_end, sync_schema)
+====================================================================================================
+
+>>> inventar_SpcHidr.sp_rep_get_periodo_caso <<<
+CREATE   PROCEDURE inventar_SpcHidr.sp_rep_get_periodo_caso
+    @caso_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- EJEMPLO: reemplaza por tu tabla real
+    SELECT
+        c.caso_id,
+        CAST(c.fecha_ini AS DATE) AS fecha_inicio,
+        CAST(c.fecha AS
+ DATE) AS fecha_fin
+    FROM inventar_SpcHidr.casos_balance c
+    WHERE c.caso_id = @caso_id;
+END
+
+>>> inventar_SpcHidr.sp_rep_log_end <<<
+CREATE   PROCEDURE inventar_SpcHidr.sp_rep_log_end
+    @run_id UNIQUEIDENTIFIER,
+    @ok BIT,
+    @mensaje NVARCHAR(2000) = NULL,
+    @totales_json NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    UPDATE inventar_SpcHidr.rep_prod_ajuste_log
+    SET ts_fin = SYSUTCDATETI
+ME(),
+        ok = @ok,
+        mensaje = @mensaje,
+        totales_json = @totales_json
+    WHERE run_id = @run_id;
+END
+
+>>> inventar_SpcHidr.sp_rep_log_start <<<
+CREATE   PROCEDURE inventar_SpcHidr.sp_rep_log_start
+    @run_id UNIQUEIDENTIFIER,
+    @caso_id INT,
+    @fecha_ini DATE,
+    @fecha_fin DATE
+AS
+BEGIN
+    INSERT INTO inventar_SpcHidr.rep_prod_ajuste_log (run_id, caso_id, fecha_ini, fecha_fin)
+    VALUES 
+(@run_id, @caso_id, @fecha_ini, @fecha_fin);
+END
+
+>>> inventar_SpcHidr.sp_rep_prod_sync_schema <<<
+CREATE   PROCEDURE inventar_SpcHidr.sp_rep_prod_sync_schema
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @schema SYSNAME = 'inventar_SpcHidr';
+    DECLARE @src_table SYSNAME = 'Datos_conciliados_of';
+    DECLARE @tgt1 SYSNAME = 'rep_prod_ajustado';
+    DECLA
+RE @tgt2 SYSNAME = 'rep_prod_ajustado_stg';
+
+    DECLARE @missing TABLE
+    (
+        target_table SYSNAME,
+        column_name SYSNAME,
+        data_type SYSNAME,
+        char_len INT NULL,
+        num_prec INT NULL,
+        num_scale INT NULL,
+        d
+t_prec INT NULL
+    );
+
+    -- missing para rep_prod_ajustado
+    INSERT INTO @missing (target_table, column_name, data_type, char_len, num_prec, num_scale, dt_prec)
+    SELECT
+        @tgt1,
+        s.COLUMN_NAME,
+        s.DATA_TYPE,
+        s.CHARACTER
+_MAXIMUM_LENGTH,
+        s.NUMERIC_PRECISION,
+        s.NUMERIC_SCALE,
+        s.DATETIME_PRECISION
+    FROM INFORMATION_SCHEMA.COLUMNS s
+    LEFT JOIN INFORMATION_SCHEMA.COLUMNS t
+        ON  t.TABLE_SCHEMA = s.TABLE_SCHEMA
+        AND t.TABLE_NAME   = @
+tgt1
+        AND t.COLUMN_NAME  = s.COLUMN_NAME
+    WHERE s.TABLE_SCHEMA = @schema
+      AND s.TABLE_NAME   = @src_table
+      AND t.COLUMN_NAME IS NULL;
+
+    -- missing para rep_prod_ajustado_stg
+    INSERT INTO @missing (target_table, column_name, data_
+type, char_len, num_prec, num_scale, dt_prec)
+    SELECT
+        @tgt2,
+        s.COLUMN_NAME,
+        s.DATA_TYPE,
+        s.CHARACTER_MAXIMUM_LENGTH,
+        s.NUMERIC_PRECISION,
+        s.NUMERIC_SCALE,
+        s.DATETIME_PRECISION
+    FROM INFORMATION
+_SCHEMA.COLUMNS s
+    LEFT JOIN INFORMATION_SCHEMA.COLUMNS t
+        ON  t.TABLE_SCHEMA = s.TABLE_SCHEMA
+        AND t.TABLE_NAME   = @tgt2
+        AND t.COLUMN_NAME  = s.COLUMN_NAME
+    WHERE s.TABLE_SCHEMA = @schema
+      AND s.TABLE_NAME   = @src_table
+
+      AND t.COLUMN_NAME IS NULL;
+
+    DECLARE @sql NVARCHAR(MAX) = N'';
+
+    SELECT @sql = @sql +
+        N'ALTER TABLE ' + QUOTENAME(@schema) + N'.' + QUOTENAME(m.target_table) +
+        N' ADD ' + QUOTENAME(m.column_name) + N' ' +
+        CASE
+        
+    WHEN m.data_type IN ('varchar','nvarchar','char','nchar') THEN
+                m.data_type + N'(' + CASE WHEN m.char_len = -1 THEN N'MAX' ELSE CAST(m.char_len AS NVARCHAR(20)) END + N')'
+            WHEN m.data_type IN ('decimal','numeric') THEN
+     
+           m.data_type + N'(' + CAST(m.num_prec AS NVARCHAR(10)) + N',' + CAST(m.num_scale AS NVARCHAR(10)) + N')'
+            WHEN m.data_type = 'datetime2' THEN
+                m.data_type + N'(' + CAST(COALESCE(m.dt_prec, 7) AS NVARCHAR(10)) + N')'
+   
+         ELSE
+                m.data_type
+        END
+        + N' NULL;'
+        + CHAR(10)
+    FROM @missing m;
+
+    IF LEN(@sql) > 0
+    BEGIN
+        EXEC sp_executesql @sql;
+    END
+END
+
+====================================================================================================
+Columnas de Data_balance_rec
+====================================================================================================
+  COLUMN_NAME DATA_TYPE IS_NULLABLE
+        bm_id       int          NO
+        Flujo   varchar         YES
+  Masa_medida     float         YES
+   Masa_recon     float         YES
+Ley_medida_Cu     float         YES
+ Ley_recon_Cu     float         YES
+ Error_ley_Cu     float         YES
+   Error_masa     float         YES
+       Codigo   varchar         YES
+ Masa_Medida2     float         YES
+           Cu     float         YES
+          FCu     float         YES
+   Tolerancia     float         YES
+     id_flujo       int         YES
+Tolerancia_cu       int         YES
+      caso_id       int         YES
+     fecha_bm      date         YES
+
+====================================================================================================
+Columnas de rep_prod_ajustado_stg
+====================================================================================================
+                       COLUMN_NAME        DATA_TYPE IS_NULLABLE
+                            run_id uniqueidentifier          NO
+                           caso_id              int          NO
+                             Fecha             date          NO
+                 Chancado_TMS_Real            float         YES
+                   Humedad_Turno_A            float         YES
+                   Humedad_Turno_B            float         YES
+              Humedad_promedio_dia            float         YES
+                       Sal_turno_A            float         YES
+                       Sal_Turno_B            float         YES
+                  Sal_promedio_dia            float         YES
+               Apilado_TMH_turno_A            float         YES
+               Apilado_TMH_turno_B            float         YES
+          Apilado_TMH_promedio_dia            float         YES
+                  Apilado_TMS_Real            float         YES
+                  Apilado_TMS_Plan            float         YES
+                      Ley_CuT_Real            float         YES
+           Cobre_fino_Apilado_Real            float         YES
+                            estado          varchar         YES
+                    version_reglas              int          NO
+                         ts_ajuste        datetime2          NO
+                   factor_chancado            float         YES
+                        factor_sal            float         YES
+                      factor_finos            float         YES
+               TMS_Rotopala_1_Real            float         YES
+               TMS_Rotopala_2_Real            float         YES
+       Camiones_TMS_Reclamo_Oxidos            float         YES
+     Camiones_TMS_Reclamo_Sulfuros            float         YES
+Total_Ripios_Incluye_Camiones_Real            float         YES
+                   Campana_apilado         nvarchar         YES
+                    Modulo_apilado              int         YES
+                    Avance_apilado            float         YES
+                      Ley_CuT_Plan            float         YES
+           Cobre_fino_Apilado_Plan            float         YES
+               TMS_Rotopala_1_Plan            float         YES
+            Campana_reclamo_oxidos         nvarchar         YES
+             Modulo_reclamo_oxidos              int         YES
+             Avance_reclamo_oxidos            float         YES
+               TMS_Rotopala_2_Plan            float         YES
+          Campana_reclamo_sulfuros         nvarchar         YES
+           modulo_reclamo_sulfuros              int         YES
+           Avance_reclamo_sulfuros            float         YES
+                            Movido         nvarchar         YES
+                          Extraido         nvarchar         YES
+                Camiones_TMS_total            float         YES
+                 Camiones_TMS_plan              int         YES
+          Campana_reclamo_camiones         nvarchar         YES
+           Modulo_reclamo_camiones         nvarchar         YES
+Total_Ripios_Incluye_Camiones_Plan            float         YES
+           Produccion_Catodos_Real            float         YES
+           Produccion_Catodos_Plan              int         YES
+                   SRR_TMS_Turno_A            float         YES
+                   SRR_TMS_Turno_B            float         YES
+              SRR_TMS_promedio_dia            float         YES
+                      SRR_TMS_Plan            float         YES
+                  Ley_CuT_Real_srr            float         YES
+                  Ley_CuT_Plan_srr            float         YES
+
+====================================================================================================
+Columnas de rep_prod_ajustado
+====================================================================================================
+                       COLUMN_NAME        DATA_TYPE IS_NULLABLE
+                           caso_id              int          NO
+                             Fecha             date          NO
+                 Chancado_TMS_Real            float         YES
+                   Humedad_Turno_A            float         YES
+                   Humedad_Turno_B            float         YES
+              Humedad_promedio_dia            float         YES
+                       Sal_turno_A            float         YES
+                       Sal_Turno_B            float         YES
+                  Sal_promedio_dia            float         YES
+               Apilado_TMH_turno_A            float         YES
+               Apilado_TMH_turno_B            float         YES
+          Apilado_TMH_promedio_dia            float         YES
+                  Apilado_TMS_Real            float         YES
+                  Apilado_TMS_Plan            float         YES
+                      Ley_CuT_Real            float         YES
+           Cobre_fino_Apilado_Real            float         YES
+                            estado          varchar         YES
+                    version_reglas              int          NO
+                         ts_ajuste        datetime2          NO
+                   factor_chancado            float         YES
+                        factor_sal            float         YES
+                      factor_finos            float         YES
+               TMS_Rotopala_1_Real            float         YES
+               TMS_Rotopala_2_Real            float         YES
+       Camiones_TMS_Reclamo_Oxidos            float         YES
+     Camiones_TMS_Reclamo_Sulfuros            float         YES
+Total_Ripios_Incluye_Camiones_Real            float         YES
+                            run_id uniqueidentifier         YES
+                   Campana_apilado         nvarchar         YES
+                    Modulo_apilado              int         YES
+                    Avance_apilado            float         YES
+                      Ley_CuT_Plan            float         YES
+           Cobre_fino_Apilado_Plan            float         YES
+               TMS_Rotopala_1_Plan            float         YES
+            Campana_reclamo_oxidos         nvarchar         YES
+             Modulo_reclamo_oxidos              int         YES
+             Avance_reclamo_oxidos            float         YES
+               TMS_Rotopala_2_Plan            float         YES
+          Campana_reclamo_sulfuros         nvarchar         YES
+           modulo_reclamo_sulfuros              int         YES
+           Avance_reclamo_sulfuros            float         YES
+                            Movido         nvarchar         YES
+                          Extraido         nvarchar         YES
+                Camiones_TMS_total            float         YES
+                 Camiones_TMS_plan              int         YES
+          Campana_reclamo_camiones         nvarchar         YES
+           Modulo_reclamo_camiones         nvarchar         YES
+Total_Ripios_Incluye_Camiones_Plan            float         YES
+           Produccion_Catodos_Real            float         YES
+           Produccion_Catodos_Plan              int         YES
+                   SRR_TMS_Turno_A            float         YES
+                   SRR_TMS_Turno_B            float         YES
+              SRR_TMS_promedio_dia            float         YES
+                      SRR_TMS_Plan            float         YES
+                  Ley_CuT_Real_srr            float         YES
+                  Ley_CuT_Plan_srr            float         YES
+
+====================================================================================================
+Columnas de Datos_conciliados_of
+====================================================================================================
+                       COLUMN_NAME DATA_TYPE IS_NULLABLE
+                             Fecha      date         YES
+                 Chancado_TMS_Real     float         YES
+                   Humedad_Turno_A     float         YES
+                   Humedad_Turno_B     float         YES
+              Humedad_promedio_dia     float         YES
+                       Sal_turno_A     float         YES
+                       Sal_Turno_B     float         YES
+                  Sal_promedio_dia     float         YES
+               Apilado_TMH_turno_A     float         YES
+               Apilado_TMH_turno_B     float         YES
+          Apilado_TMH_promedio_dia     float         YES
+                  Apilado_TMS_Real     float         YES
+                  Apilado_TMS_Plan     float         YES
+                   Campana_apilado  nvarchar         YES
+                    Modulo_apilado       int         YES
+                    Avance_apilado     float         YES
+                      Ley_CuT_Real     float         YES
+                      Ley_CuT_Plan     float         YES
+           Cobre_fino_Apilado_Real     float         YES
+           Cobre_fino_Apilado_Plan     float         YES
+               TMS_Rotopala_1_Real     float         YES
+               TMS_Rotopala_1_Plan     float         YES
+            Campana_reclamo_oxidos  nvarchar         YES
+             Modulo_reclamo_oxidos       int         YES
+             Avance_reclamo_oxidos     float         YES
+               TMS_Rotopala_2_Real     float         YES
+               TMS_Rotopala_2_Plan     float         YES
+          Campana_reclamo_sulfuros  nvarchar         YES
+           modulo_reclamo_sulfuros       int         YES
+           Avance_reclamo_sulfuros     float         YES
+       Camiones_TMS_Reclamo_Oxidos     float         YES
+     Camiones_TMS_Reclamo_Sulfuros     float         YES
+                            Movido  nvarchar         YES
+                          Extraido  nvarchar         YES
+                Camiones_TMS_total     float         YES
+                 Camiones_TMS_plan       int         YES
+          Campana_reclamo_camiones  nvarchar         YES
+           Modulo_reclamo_camiones  nvarchar         YES
+Total_Ripios_Incluye_Camiones_Real     float         YES
+Total_Ripios_Incluye_Camiones_Plan     float         YES
+           Produccion_Catodos_Real     float         YES
+           Produccion_Catodos_Plan       int         YES
+                   SRR_TMS_Turno_A     float         YES
+                   SRR_TMS_Turno_B     float         YES
+              SRR_TMS_promedio_dia     float         YES
+                      SRR_TMS_Plan     float         YES
+                  Ley_CuT_Real_srr     float         YES
+                  Ley_CuT_Plan_srr     float         YES
+                            estado       int         YES
+                             dc_id       int          NO
+
+====================================================================================================
+Muestra Data_balance_rec para caso_id=70
+====================================================================================================
+ERROR: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'Data_balance_rec'. (208) (SQLExecDirectW)")
+[SQL: SELECT * FROM Data_balance_rec WHERE caso_id = 70 ORDER BY Flujo]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+====================================================================================================
+rep_prod_ajustado: filas existentes para caso_id=70 (TOP 5 mas recientes)
+====================================================================================================
+ERROR: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'rep_prod_ajustado'. (208) (SQLExecDirectW)")
+[SQL: SELECT TOP 5 * FROM rep_prod_ajustado WHERE caso_id = 70 ORDER BY Fecha DESC]
+(Background on this error at: https://sqlalche.me/e/20/f405)

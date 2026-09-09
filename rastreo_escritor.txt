@@ -1,0 +1,50 @@
+====================================================================================================
+QUIEN LEE/ESCRIBE cada tabla (sys.sql_expression_dependencies, objetos tipo P=SP, V=vista, FN=funcion)
+====================================================================================================
+
+--- Dependencias de: rep_prod_ajustado_stg ---
+             objeto_dependiente                 tipo    schema_objeto
+          sp_rep_merge_ajustado SQL_STORED_PROCEDURE inventar_SpcHidr
+sp_rep_publish_oficial_validado SQL_STORED_PROCEDURE inventar_SpcHidr
+
+--- Dependencias de: rep_prod_targets ---
+         objeto_dependiente                 tipo    schema_objeto
+  sp_rep_build_targets_caso SQL_STORED_PROCEDURE inventar_SpcHidr
+sp_rep_conductor_pre_ajuste SQL_STORED_PROCEDURE inventar_SpcHidr
+
+--- Dependencias de: rep_prod_reglas ---
+  (sin dependencias registradas via sql_expression_dependencies)
+
+====================================================================================================
+Contenido COMPLETO de rep_prod_reglas (sin truncar)
+====================================================================================================
+ERROR leyendo rep_prod_reglas: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'rep_prod_reglas'. (208) (SQLExecDirectW)")
+[SQL: SELECT * FROM rep_prod_reglas]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+====================================================================================================
+Buscar SPs que mencionen 'rep_prod_ajustado_stg' o 'factor_chancado' en su definicion (texto plano)
+====================================================================================================
+                           name            type_desc
+sp_rep_publish_oficial_validado SQL_STORED_PROCEDURE
+          sp_rep_merge_ajustado SQL_STORED_PROCEDURE
+        sp_rep_prod_sync_schema SQL_STORED_PROCEDURE
+      sp_rep_merge_ajustado_dyn SQL_STORED_PROCEDURE
+   sp_rep_conductor_post_ajuste SQL_STORED_PROCEDURE
+
+--- Definiciones completas ---
+
+>>> sp_rep_publish_oficial_validado <<<
+None
+
+>>> sp_rep_merge_ajustado <<<
+None
+
+>>> sp_rep_prod_sync_schema <<<
+None
+
+>>> sp_rep_merge_ajustado_dyn <<<
+None
+
+>>> sp_rep_conductor_post_ajuste <<<
+None
