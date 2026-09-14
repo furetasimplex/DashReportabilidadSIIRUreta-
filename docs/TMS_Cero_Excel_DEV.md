@@ -1,5 +1,8 @@
 # Ceros válidos en Análisis TM
 
+> Registro histórico: la regla de vaciar analitos sin masa fue reemplazada
+> por la regla definitiva documentada en Valores_SQL_Excel_DEV.md.
+
 Cambio limitado a `preparar_df_reporte_turno_excel` y
 `preparar_df_generador_reporte_excel` en report_export/report_export.py.
 El TMS real se excluye de las listas que vacían variables dependientes

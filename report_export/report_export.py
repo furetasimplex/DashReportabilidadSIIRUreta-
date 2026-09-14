@@ -3637,86 +3637,7 @@ def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
             })
         )
 
-    # ------------------------------------------------------------
-    # PRESENTACIÓN EN EXCEL: CEROS SIN INFORMACIÓN -> CELDAS VACÍAS
-    #
-    # No se ocultan ceros válidos. Por ejemplo, MINA = 0 se conserva
-    # cuando sí existe apilado real. Solo se limpian bloques sin datos.
-    # ------------------------------------------------------------
-    columnas_reales_dependientes_apilado = [
-        "STOCK",
-        "MINA",
-        "SRR",
-        "CuT_Real",
-        "CuS_Real",
-        "Solubilidad_Real",
-        "CO3_Real",
-        "CuFe_Real",
-        "FeT_Real",
-        "FeS_Real",
-        "ConsH_Real",
-        "Malla_Menos_1_2_Real",
-        "Malla_Menos_100_Real",
-        "CaolBeta_Real",
-        "Dosis_Acido_Ideal_TM",
-    ]
-
-    if "Apilado_TMS_Real" in df.columns:
-        apilado_real = pd.to_numeric(
-            df["Apilado_TMS_Real"],
-            errors="coerce",
-        )
-        sin_apilado_real = apilado_real.fillna(0).eq(0)
-
-        for col in columnas_reales_dependientes_apilado:
-            if col in df.columns:
-                df.loc[sin_apilado_real, col] = np.nan
-
-    columnas_plan_mensual = [
-        "Apilado_TMS_Plan_Mensual",
-        "CuT_Plan_Mensual",
-        "CuS_Plan_Mensual",
-        "Solubilidad_Plan_Mensual",
-        "CO3_Plan_Mensual",
-        "CuFe_Plan_Mensual",
-        "Malla_Menos_100_Plan_Mensual",
-        "CaolBeta_Plan_Mensual",
-    ]
-
-    if "Apilado_TMS_Plan_Mensual" in df.columns:
-        apilado_plan = pd.to_numeric(
-            df["Apilado_TMS_Plan_Mensual"],
-            errors="coerce",
-        )
-        sin_plan_mensual = apilado_plan.fillna(0).eq(0)
-
-        for col in columnas_plan_mensual:
-            if col in df.columns:
-                df.loc[sin_plan_mensual, col] = np.nan
-
-    # Las variables de programa químico/granulométrico en cero
-    # representan ausencia de programa en la fuente.
-    columnas_programa = [
-        "CuT_Plan_Semanal",
-        "CuS_Plan_Semanal",
-        "Solubilidad_Plan_Semanal",
-        "CO3_Plan_Semanal",
-        "CuFe_Plan_Semanal",
-        "Malla_Menos_100_Plan_Semanal",
-        "CaolBeta_Plan_Semanal",
-        "Dosis_Acido_Programa_Semanal",
-    ]
-
-    for col in columnas_programa:
-        if col in df.columns:
-            valores = pd.to_numeric(df[col], errors="coerce")
-            df.loc[valores.eq(0), col] = np.nan
-
-    # ------------------------------------------------------------
-    # PRESENTACIÓN FINAL EN EXCEL:
-    # Se preservan NULL del TMS y vacíos de reales sin apilado.
-    # Los campos descriptivos permanecen como texto.
-    # ------------------------------------------------------------
+    # Conservar ceros y NULL de origen, sin inferirlos desde el tonelaje.
     columnas_texto_export = {
         "Fecha",
         "Turno",
@@ -3733,19 +3654,34 @@ def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
 
     for col in df.columns:
         if col not in columnas_texto_export:
-            valores = pd.to_numeric(df[col], errors="coerce")
-            df[col] = valores if col == "Apilado_TMS_Real" else valores.fillna(0)
-            if col in columnas_reales_dependientes_apilado and "Apilado_TMS_Real" in df.columns:
-                df.loc[sin_apilado_real, col] = np.nan
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    if "Malla_Menos_1_2_Plan_Semanal" in df.columns:
-        df["Malla_Menos_1_2_Plan_Semanal"] = (
-            df["Malla_Menos_1_2_Plan_Semanal"]
-            .replace({"": "0", "nan": "0", "None": "0", "NULL": "0"})
-            .fillna("0")
-        )
+    # Solo para Excel: rellenar NULL reales si el TMS es exactamente cero.
+    # TMS nulo no implica cero; planes y valores existentes se conservan.
+    columnas_reales = [
+        'STOCK',
+        'MINA',
+        'SRR',
+        'CuT_Real',
+        'CuS_Real',
+        'Solubilidad_Real',
+        'CO3_Real',
+        'CuFe_Real',
+        'FeT_Real',
+        'FeS_Real',
+        'ConsH_Real',
+        'Malla_Menos_1_2_Real',
+        'Malla_Menos_100_Real',
+        'CaolBeta_Real',
+        'Dosis_Acido_Ideal_TM',
+    ]
+    if 'Apilado_TMS_Real' in df.columns:
+        sin_apilado = pd.to_numeric(df['Apilado_TMS_Real'], errors="coerce").eq(0)
+        reales_presentes = [col for col in columnas_reales if col in df.columns]
+        df.loc[sin_apilado, reales_presentes] = df.loc[sin_apilado, reales_presentes].fillna(0)
 
     return df
+
 def preparar_df_generador_reporte_excel(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -3753,7 +3689,7 @@ def preparar_df_generador_reporte_excel(
     Prepara la capa diaria para exportación.
 
     Importante:
-    - Los valores numéricos sin información se muestran como 0 en Excel.
+    - Solo los NULL reales con TMS cero se presentan como cero.
     - La base de datos y el SP no se modifican.
     - Avance pasa de escala 0-1 a escala 0-100.
     - STOCK, MINA y SRR ya vienen en escala 0-100.
@@ -3813,7 +3749,7 @@ def preparar_df_generador_reporte_excel(
     df["Campaña"] = (
         pd.to_numeric(df["Campania"], errors="coerce")
         if "Campania" in df.columns
-        else 0
+        else np.nan
     )
     df["Material"] = (
         df["Material_Operacion"]
@@ -3890,107 +3826,36 @@ def preparar_df_generador_reporte_excel(
 
     columnas = [col for col in columnas if col in df.columns]
 
-    # NormalizaciÃ³n general previa a los vacÃ­os semÃ¡nticos por tonelaje.
-    columnas_texto_export = {
-        "Fecha",
-        "Material",
-        "Malla_Menos_1_2_Programa",
-    }
-
+    # Conservar ceros y NULL de origen, incluidos planes y programas.
+    columnas_texto_export = {"Fecha", "Material", "Malla_Menos_1_2_Programa"}
     for col in columnas:
         if col not in columnas_texto_export:
-            valores = pd.to_numeric(df[col], errors="coerce")
-            # El TMS real distingue cero v?lido de ausencia de dato.
-            df[col] = valores if col == "Apilado_TMS_Real_Dia" else valores.fillna(0)
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    if "Malla_Menos_1_2_Programa" in df.columns:
-        df["Malla_Menos_1_2_Programa"] = (
-            df["Malla_Menos_1_2_Programa"]
-            .replace({"": "0", "nan": "0", "None": "0", "NULL": "0"})
-            .fillna("0")
-        )
-
-    # ------------------------------------------------------------
-    # PRESENTACIÓN EN EXCEL: BLOQUES SIN DATOS -> CELDAS VACÍAS
-    # ------------------------------------------------------------
-    columnas_reales_dependientes_apilado = [
-        "STOCK_Dia",
-        "MINA_Dia",
-        "SRR_Dia",
-        "CuT_Real_Dia",
-        "CuS_Real_Dia",
-        "Solubilidad_Real_Dia",
-        "CO3_Real_Dia",
-        "CuFe_Real_Dia",
-        "FeT_Real_Dia",
-        "FeS_Real_Dia",
-        "ConsH_Real_Dia",
-        "Malla_Menos_1_2_Real_Dia",
-        "Malla_Menos_100_Real_Dia",
-        "CaolBeta_Real_Dia",
-        "Dosis_Acido_Ideal_Dia",
+    # Solo para Excel: rellenar NULL reales si el TMS es exactamente cero.
+    # TMS nulo no implica cero; planes y valores existentes se conservan.
+    columnas_reales = [
+        'STOCK_Dia',
+        'MINA_Dia',
+        'SRR_Dia',
+        'CuT_Real_Dia',
+        'CuS_Real_Dia',
+        'Solubilidad_Real_Dia',
+        'CO3_Real_Dia',
+        'CuFe_Real_Dia',
+        'FeT_Real_Dia',
+        'FeS_Real_Dia',
+        'ConsH_Real_Dia',
+        'Malla_Menos_1_2_Real_Dia',
+        'Malla_Menos_100_Real_Dia',
+        'CaolBeta_Real_Dia',
+        'Dosis_Acido_Ideal_Dia',
     ]
+    if 'Apilado_TMS_Real_Dia' in df.columns:
+        sin_apilado = pd.to_numeric(df['Apilado_TMS_Real_Dia'], errors="coerce").eq(0)
+        reales_presentes = [col for col in columnas_reales if col in df.columns]
+        df.loc[sin_apilado, reales_presentes] = df.loc[sin_apilado, reales_presentes].fillna(0)
 
-    if "Apilado_TMS_Real_Dia" in df.columns:
-        apilado_real = pd.to_numeric(
-            df["Apilado_TMS_Real_Dia"],
-            errors="coerce",
-        )
-        sin_apilado_real = apilado_real.fillna(0).eq(0)
-
-        for col in columnas_reales_dependientes_apilado:
-            if col in df.columns:
-                df.loc[sin_apilado_real, col] = np.nan
-
-    columnas_programa = [
-        "Apilado_TMS_Programa",
-        "CuT_Programa",
-        "CuS_Programa",
-        "Solubilidad_Programa",
-        "CO3_Programa",
-        "CuFe_Programa",
-        "Malla_Menos_100_Programa",
-        "CaolBeta_Programa",
-        "Dosis_Acido_Programa_Semanal",
-    ]
-
-    if "Apilado_TMS_Programa" in df.columns:
-        apilado_programa = pd.to_numeric(
-            df["Apilado_TMS_Programa"],
-            errors="coerce",
-        )
-        sin_programa = apilado_programa.fillna(0).eq(0)
-
-        for col in columnas_programa:
-            if col in df.columns:
-                df.loc[sin_programa, col] = np.nan
-
-    columnas_plan = [
-        "Apilado_TMS_Plan",
-        "CuT_Plan",
-        "CuS_Plan",
-        "Solubilidad_Plan",
-        "CO3_Plan",
-        "CuFe_Plan",
-        "Malla_Menos_100_Plan",
-        "CaolBeta_Plan",
-    ]
-
-    if "Apilado_TMS_Plan" in df.columns:
-        apilado_plan = pd.to_numeric(
-            df["Apilado_TMS_Plan"],
-            errors="coerce",
-        )
-        sin_plan = apilado_plan.fillna(0).eq(0)
-
-        for col in columnas_plan:
-            if col in df.columns:
-                df.loc[sin_plan, col] = np.nan
-
-    # ------------------------------------------------------------
-    # PRESENTACIÓN FINAL EN EXCEL:
-    # los vacíos semánticos aplicados por tonelaje permanecen como NaN.
-    # ------------------------------------------------------------
     return df[columnas]
 
 def agregar_hoja_generador_reporte(
@@ -5464,25 +5329,25 @@ def _agregar_hoja_reconst_mod_srr(wb, df_reconst_srr, df_turno=None):
     # El exportador crea un workbook nuevo en cada llamada: la hoja se agrega
     # una sola vez al final, sin reabrir/regrabar ni reordenar las otras hojas.
     ws = wb.add_worksheet("Reconst Mod SRR")
-    base = {"font_name": "Arial", "font_size": 10, "border": 1,
-            "border_color": "#A6B8C5", "valign": "vcenter"}
-    titulo = wb.add_format({"font_name": "Arial", "font_size": 17,
-                            "bold": True, "font_color": "#FFFFFF", "bg_color": "#17365D"})
-    grupo = wb.add_format(dict(base, bold=True, font_color="#FFFFFF",
-                              bg_color="#305496", align="center", text_wrap=True))
-    sub = wb.add_format(dict(base, bold=True, bg_color="#D9E2F3", align="center"))
-    nota = wb.add_format({"font_name": "Arial", "font_size": 10,
+    base = {"font_name": "Calibri", "font_size": 10, "border": 1,
+            "border_color": "#808080", "valign": "vcenter"}
+    titulo = wb.add_format({"font_name": "Calibri", "font_size": 16,
+                            "bold": True, "font_color": "#FFFFFF", "bg_color": "#018982"})
+    grupo = wb.add_format(dict(base, bold=True, font_size=12, border=2, font_color="#FFFFFF",
+                              bg_color="#018982", align="center", text_wrap=True))
+    sub = wb.add_format(dict(base, bold=True, font_size=12, border=2, font_color="#FFFFFF", bg_color="#018982", align="center", text_wrap=True))
+    nota = wb.add_format({"font_name": "Calibri", "font_size": 10,
                           "font_color": "#526579", "valign": "vcenter"})
     formatos = {}
-    for banda, color in enumerate(("#FFFFFF", "#EEF3F8")):
-        for tipo, formato in {"tmh": "#,##0.00", "ley": "0.000000",
-                              "fis": "0.0000", "origen": '0.00"%"',
+    for banda, color in enumerate(("#FFFFFF", "#FFFFFF")):
+        for tipo, formato in {"tmh": "#,##0", "ley": "0.00",
+                              "fis": "0.00", "origen": "0.00",
                               "fecha": "dd-mm-yyyy", "dia": "0"}.items():
             formatos[banda, tipo] = wb.add_format(dict(
                 base, bg_color=color, num_format=formato,
-                align="center" if tipo in {"fecha", "dia"} else "right"))
+                align="center"))
     ws.hide_gridlines(2)
-    ws.set_zoom(70)
+    ws.set_zoom(100)
     ws.set_column("A:B", 2.5)
     ws.set_column("C:C", 13)
     ws.set_column("D:I", 14)
@@ -5498,8 +5363,8 @@ def _agregar_hoja_reconst_mod_srr(wb, df_reconst_srr, df_turno=None):
     ws.merge_range("C4:AL4", f"Período: {inicio:%d-%m-%Y} al {fin:%d-%m-%Y}", nota)
     ws.merge_range("C5:AL5", "Leyes SRR diarias repetidas en A/B; tonelaje individual por turno. Celdas vacías: sin dato de origen.", nota)
     ws.merge_range("C6:AL6", "TMH neto: total de Datos Conciliados; Tambor 2 con factor y descuento proporcional de sal; Tambor 1 por diferencia.", nota)
-    ws.set_row(6, 34)
-    ws.set_row(7, 22)
+    ws.set_row(6, 46.5)
+    ws.set_row(7, 26.1)
     ws.merge_range("C7:C8", "Fecha", grupo)
     ws.merge_range("L7:L8", "Día", grupo)
     grupos = [(3, "Total Apilado TMH"), (5, "Tambor 1 Apilado TMH"),
@@ -5527,7 +5392,7 @@ def _agregar_hoja_reconst_mod_srr(wb, df_reconst_srr, df_turno=None):
         def escribir(col, valor, tipo):
             ws.write(row, col, None if pd.isna(valor) else valor, formatos[banda, tipo])
 
-        ws.set_row(row, 21)
+        ws.set_row(row, 19)
         escribir(2, fecha.to_pydatetime(), "fecha")
         escribir(11, fecha.day, "dia")
         turnos = diario.set_index("Turno").to_dict("index")
@@ -5539,13 +5404,12 @@ def _agregar_hoja_reconst_mod_srr(wb, df_reconst_srr, df_turno=None):
                 escribir(col + offset, registro.get(campo), tipo)
         for col, campo in enumerate(columnas_mb, 33):
             escribir(col, diario.iloc[0][campo], "fis" if col in (35, 36) else "ley")
-    ws.freeze_panes(8, 3)
     ws.set_landscape()
     ws.set_paper(8)  # A3
-    ws.fit_to_pages(1, 1)
+    ws.fit_to_pages(1, 0)
     ws.repeat_rows(6, 7)
     ws.print_area(1, 2, 7 + datos["Fecha"].nunique(), 37)
-    ws.set_margins(0.25, 0.25, 0.3, 0.3)
+    ws.set_margins(0.35, 0.35, 0.35, 0.35)
 
 
 def export_reporte_turno_estilo_leyes_finos(

@@ -60,9 +60,18 @@ def test_preserves_null_daily_laws_zero_shift_and_original_inputs():
     assert all(ws.cell(11, c).value is None for c in range(21, 33))
     assert ws["M9"].value == 12.345678 and ws["O9"].value == 0
     assert ws["Q9"].value == 87.654322
-    assert ws["U9"].number_format == "0.000000"
-    assert ws["Y9"].number_format == "0.0000"
-    assert ws.freeze_panes == "D9"
+    assert ws["U9"].number_format == "0.00"
+    assert ws["Y9"].number_format == "0.00"
+    assert ws.freeze_panes is None
+    assert ws["U9"].font.name == wb["Reporte por Turno"]["N23"].font.name
+    assert ws["U9"].alignment.horizontal == "center"
+    assert ws["D7"].fill.fgColor.rgb == "FF018982"
+    assert ws["D7"].font.sz == 12
+    assert ws["D9"].number_format == "#,##0"
+    assert ws["C9"].number_format == "dd-mm-yyyy"
+    assert ws.auto_filter.ref is None
+    assert ws.page_setup.fitToHeight == 0
+    assert ws.sheet_view.showGridLines is False
     for row in range(9, 14):
         assert [ws.cell(row, col).value for col in range(4, 10)] == [1100, 1100, 660, 660, 440, 440]
     assert all(c.data_type != "f" for row in ws for c in row)
