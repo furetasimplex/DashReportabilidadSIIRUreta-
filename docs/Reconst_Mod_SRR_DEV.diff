@@ -1,0 +1,278 @@
+diff --git a/report_export/callbacks/reportabilidad_cb.py b/report_export/callbacks/reportabilidad_cb.py
+index 7aabfe2..5f48f23 100644
+--- a/report_export/callbacks/reportabilidad_cb.py
++++ b/report_export/callbacks/reportabilidad_cb.py
+@@ -37,6 +37,7 @@ from report_export.report_export import (
+     fetch_trazabilidad_analitos_report,
+     fetch_curva_granulometrica_report,
+     fetch_generador_reporte_diario_emision,
++    fetch_reconstitucion_srr_report,
+     export_reporte_turno_estilo_leyes_finos,
+     write_reporte_torre_oficial,
+     armar_paquete_reporte_torre_oficial,
+@@ -7848,6 +7849,14 @@ def exportar_excel(
+             print(f"[EXCEL-T] sp_generador_reporte_diario_emision_test: {time.perf_counter() - _t0:.2f}s")
+             print(f"[EXCEL] generador rows={len(df_generador)}")
+ 
++            print(f"[EXCEL] Fetching Reconst Mod SRR {ini_d} -> {fin_sql_exclusivo}")
++            _t0 = time.perf_counter()
++            df_reconst_srr = fetch_reconstitucion_srr_report(
++                start_date=ini_d, end_date=fin_sql_exclusivo,
++            )
++            print(f"[EXCEL-T] Reconst Mod SRR: {time.perf_counter() - _t0:.2f}s")
++            print(f"[EXCEL] Reconst Mod SRR rows={len(df_reconst_srr)}")
++
+             inicio_mes_resumen = ini_d.replace(day=1)
+             if inicio_mes_resumen < ini_d:
+                 print(
+@@ -7873,6 +7882,7 @@ def exportar_excel(
+                 df_curva_granulometrica=df_curva_granulometrica,
+                 periodo_inicio=ini_d,
+                 periodo_fin=fin_d,
++                df_reconst_srr=df_reconst_srr,
+             )
+             output.seek(0)
+             xbytes = output.getvalue()
+diff --git a/report_export/report_export.py b/report_export/report_export.py
+index 568616c..724b563 100644
+--- a/report_export/report_export.py
++++ b/report_export/report_export.py
+@@ -2468,6 +2468,59 @@ def fetch_generador_reporte_diario_emision(start_date: date, end_date: date) ->
+         return pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
+ 
+ 
++def _normalizar_claves_reconst_srr(df: pd.DataFrame) -> pd.DataFrame:
++    """Copia local con claves diarias únicas; no transforma las leyes."""
++    datos = df.copy()
++    datos["Fecha"] = pd.to_datetime(datos["Fecha"]).dt.normalize()
++    datos["Turno"] = datos["Turno"].map(
++        lambda v: _normalizar_turno_rep(v) if pd.notna(v) else ""
++    ).replace({"TA": "A", "TB": "B"})
++    if datos["Fecha"].isna().any() or not datos["Turno"].isin(["A", "B"]).all():
++        raise ValueError("Reconst Mod SRR contiene claves Fecha/Turno inválidas.")
++    duplicados = datos.duplicated(subset=["Fecha", "Turno"], keep=False)
++    if duplicados.any():
++        raise ValueError("Reconst Mod SRR contiene duplicados Fecha/Turno.")
++    return datos.sort_values(["Fecha", "Turno"], kind="stable").reset_index(drop=True)
++
++
++def fetch_reconstitucion_srr_report(start_date: date, end_date: date) -> pd.DataFrame:
++    """Insumos SRR independientes; inicio inclusivo y fin exclusivo."""
++    if start_date is None or end_date is None or start_date >= end_date:
++        raise ValueError("Reconst Mod SRR requiere inicio anterior al fin exclusivo.")
++    sql = _sa_text("""
++        SELECT t.Fecha, t.Turno, t.SRR_TMS_Turno,
++               t.CuT_SRR, t.CuS_SRR, t.ClayBeta_SRR, t.Malla100_SRR,
++               t.CO3_SRR, t.Recuperacion_SRR,
++               d.CuT_MinaStock, d.CuS_MinaStock, d.ClayBeta_MinaStock,
++               d.Malla100_MinaStock, d.CO3_MinaStock,
++               d.SRR_TMS_Dia, d.Participacion_SRR,
++               d.Factor_Sensibilidad_Reconstitucion,
++               d.Flag_Reconstitucion, d.Flag_Sensibilidad,
++               CASE t.Turno WHEN 'A' THEN c.Apilado_TMH_turno_A
++                            WHEN 'B' THEN c.Apilado_TMH_turno_B END AS TMH_Total_Conciliado,
++               CASE t.Turno WHEN 'A' THEN c.Sal_turno_A
++                            WHEN 'B' THEN c.Sal_Turno_B END AS Sal_Turno,
++               CASE t.Turno WHEN 'A' THEN b.TMH_CV008_A
++                            WHEN 'B' THEN b.TMH_CV008_B END AS TMH_CV008,
++               CASE t.Turno WHEN 'A' THEN b.TMH_CV108_A
++                            WHEN 'B' THEN b.TMH_CV108_B END AS TMH_CV108,
++               f.Factor_Aplicacion_Reportes
++        FROM inventar_SpcHidr.fn_reconstitucion_srr_turno_emision_test(
++            :start, :end
++        ) AS t
++        LEFT JOIN inventar_SpcHidr.fn_reconstitucion_srr_emision_test(
++            :start, :end
++        ) AS d ON d.Fecha = t.Fecha
++        LEFT JOIN inventar_SpcHidr.Datos_conciliados_of AS c ON c.Fecha = t.Fecha
++        LEFT JOIN inventar_SpcHidr.v_datos_apilado_tmh_v2 AS b ON b.Fecha = t.Fecha
++        LEFT JOIN inventar_SpcHidr.v_ajuste_camiones_emision_test AS f ON f.Fecha = t.Fecha
++        ORDER BY t.Fecha, CASE t.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
++    """)
++    with _get_engine().connect() as conn:
++        datos = pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
++    return _normalizar_claves_reconst_srr(datos)
++
++
+ RTO_CAB_TABLE = "inventar_SpcHidr.reporte_torre_oficial_cab"
+ RTO_SNAPSHOT_TABLE = "inventar_SpcHidr.reporte_torre_oficial_snapshot"
+ RTO_DETALLE_TABLE = "inventar_SpcHidr.reporte_torre_oficial_detalle"
+@@ -5223,6 +5276,154 @@ def agregar_hoja_trazabilidad_analitos(
+     worksheet.fit_to_pages(1, 0)
+ 
+ 
++def _calcular_tmh_reconst_srr(df: pd.DataFrame) -> pd.DataFrame:
++    """TMH neto por turno: total publicado, TM2 con factor/sal y TM1 residual.
++
++    Solo consume insumos independientes de SRR; no modifica Datos Conciliados.
++    """
++    datos = df.copy()
++    columnas = ["TMH_Total_Conciliado", "TMH_CV008", "TMH_CV108",
++                "Sal_Turno", "Factor_Aplicacion_Reportes"]
++    faltantes = sorted(set(columnas) - set(datos.columns))
++    if faltantes:
++        raise ValueError(f"Reconst Mod SRR: faltan insumos TMH {faltantes}.")
++    insumos = datos[columnas].apply(pd.to_numeric, errors="coerce")
++    if not np.isfinite(insumos.to_numpy(dtype=float)).all():
++        raise ValueError("Reconst Mod SRR: insumos TMH incompletos o no finitos.")
++    bruto = insumos["TMH_CV008"] + insumos["TMH_CV108"]
++    sin_bruto = bruto.eq(0)
++    if (sin_bruto & (insumos["Sal_Turno"].ne(0) | insumos["TMH_Total_Conciliado"].ne(0))).any():
++        raise ValueError("Reconst Mod SRR: total bruto TMH cero con sal o total conciliado distinto de cero.")
++    # Sin actividad y sin sal, la asignación TM2 es cero; no divide por cero.
++    sal_tm2 = pd.Series(0.0, index=datos.index)
++    activos = ~sin_bruto
++    sal_tm2.loc[activos] = (
++        insumos.loc[activos, "Sal_Turno"] * insumos.loc[activos, "TMH_CV108"]
++        / bruto.loc[activos]
++    )
++    datos["TMH_TM2_Final"] = insumos["TMH_CV108"] * insumos["Factor_Aplicacion_Reportes"] - sal_tm2
++    # Metodología validada: TM1 = total AUTORITATIVO de Datos Conciliados - TM2.
++    datos["TMH_TM1_Final"] = insumos["TMH_Total_Conciliado"] - datos["TMH_TM2_Final"]
++    diferencia = datos["TMH_TM1_Final"] + datos["TMH_TM2_Final"] - insumos["TMH_Total_Conciliado"]
++    if not np.isfinite(diferencia).all() or diferencia.abs().gt(0.001).any():
++        raise ValueError("Reconst Mod SRR: cuadratura TM1 + TM2 difiere del total en más de 0.001 TMH.")
++    return datos
++
++
++def _agregar_hoja_reconst_mod_srr(wb, df_reconst_srr, df_turno=None):
++    """Agrega únicamente la hoja SRR al workbook XlsxWriter del exportador.
++
++    Una fila por fecha; leyes SQL por turno, MB una vez al día. Las fuentes
++    auxiliares se copian y nunca se incorporan a los DataFrames productivos.
++    """
++    datos = _normalizar_claves_reconst_srr(df_reconst_srr)
++    columnas_mb = ["CuT_MinaStock", "CuS_MinaStock", "ClayBeta_MinaStock",
++                   "Malla100_MinaStock", "CO3_MinaStock"]
++    columnas_requeridas = columnas_mb + [
++        "SRR_TMS_Dia", "SRR_TMS_Turno", "CuT_SRR", "CuS_SRR",
++        "ClayBeta_SRR", "Malla100_SRR", "CO3_SRR", "Recuperacion_SRR",
++    ]
++    faltantes = sorted(set(columnas_requeridas) - set(datos.columns))
++    if faltantes:
++        raise ValueError(f"Reconst Mod SRR: faltan columnas SQL {faltantes}.")
++    # El LEFT JOIN diario debe entregar el mismo bloque MB para A/B.
++    columnas_diarias = columnas_mb + ["SRR_TMS_Dia"]
++    if (datos.groupby("Fecha")[columnas_diarias].nunique(dropna=False) > 1).any().any():
++        raise ValueError("Reconst Mod SRR contiene datos diarios inconsistentes entre A/B.")
++    datos = _calcular_tmh_reconst_srr(datos)
++    if df_turno is not None and not df_turno.empty:
++        origen = _normalizar_claves_reconst_srr(
++            df_turno[["Fecha", "Turno", "STOCK", "MINA", "SRR"]].copy()
++        )
++        datos = datos.merge(origen, on=["Fecha", "Turno"], how="left", validate="one_to_one")
++
++    # El exportador crea un workbook nuevo en cada llamada: la hoja se agrega
++    # una sola vez al final, sin reabrir/regrabar ni reordenar las otras hojas.
++    ws = wb.add_worksheet("Reconst Mod SRR")
++    base = {"font_name": "Arial", "font_size": 10, "border": 1,
++            "border_color": "#A6B8C5", "valign": "vcenter"}
++    titulo = wb.add_format({"font_name": "Arial", "font_size": 17,
++                            "bold": True, "font_color": "#FFFFFF", "bg_color": "#17365D"})
++    grupo = wb.add_format(dict(base, bold=True, font_color="#FFFFFF",
++                              bg_color="#305496", align="center", text_wrap=True))
++    sub = wb.add_format(dict(base, bold=True, bg_color="#D9E2F3", align="center"))
++    nota = wb.add_format({"font_name": "Arial", "font_size": 10,
++                          "font_color": "#526579", "valign": "vcenter"})
++    formatos = {}
++    for banda, color in enumerate(("#FFFFFF", "#EEF3F8")):
++        for tipo, formato in {"tmh": "#,##0.00", "ley": "0.000000",
++                              "fis": "0.0000", "origen": '0.00"%"',
++                              "fecha": "dd-mm-yyyy", "dia": "0"}.items():
++            formatos[banda, tipo] = wb.add_format(dict(
++                base, bg_color=color, num_format=formato,
++                align="center" if tipo in {"fecha", "dia"} else "right"))
++    ws.hide_gridlines(2)
++    ws.set_zoom(70)
++    ws.set_column("A:B", 2.5)
++    ws.set_column("C:C", 13)
++    ws.set_column("D:I", 14)
++    ws.set_column("J:K", 3)
++    ws.set_column("L:L", 5)
++    ws.set_column("M:R", 10)
++    ws.set_column("S:T", 15)
++    ws.set_column("U:AF", 13)
++    ws.set_column("AG:AG", 3)
++    ws.set_column("AH:AL", 13)
++    ws.merge_range("C2:AL3", "Reconstitución de Módulos SRR", titulo)
++    inicio, fin = datos["Fecha"].min(), datos["Fecha"].max()
++    ws.merge_range("C4:AL4", f"Período: {inicio:%d-%m-%Y} al {fin:%d-%m-%Y}", nota)
++    ws.merge_range("C5:AL5", "Leyes SRR diarias repetidas en A/B; tonelaje individual por turno. Celdas vacías: sin dato de origen.", nota)
++    ws.merge_range("C6:AL6", "TMH neto: total de Datos Conciliados; Tambor 2 con factor y descuento proporcional de sal; Tambor 1 por diferencia.", nota)
++    ws.set_row(6, 34)
++    ws.set_row(7, 22)
++    ws.merge_range("C7:C8", "Fecha", grupo)
++    ws.merge_range("L7:L8", "Día", grupo)
++    grupos = [(3, "Total Apilado TMH"), (5, "Tambor 1 Apilado TMH"),
++              (7, "Tambor 2 Apilado TMH"), (12, "Stock"), (14, "Mina"),
++              (16, "SRR"), (18, "Tonelaje SRR (TMS)"), (20, "CuT SRR"),
++              (22, "CuS SRR"), (24, "ClayBeta SRR"), (26, "Malla 100 SRR"),
++              (28, "CO3 SRR"), (30, "Recuperación SRR")]
++    for col, label in grupos:
++        ws.merge_range(6, col, 6, col + 1, label, grupo)
++        ws.write(7, col, "A", sub)
++        ws.write(7, col + 1, "B", sub)
++    ws.merge_range("AH7:AL7", "Datos MB Mina + Stock sin SRR", grupo)
++    for col, label in enumerate(["CuT", "CuS", "ClayBeta", "Malla 100", "CO3"], 33):
++        ws.write(7, col, label, sub)
++    ws.write_comment("D7", "Fuente autoritativa: Datos_conciliados_of.Apilado_TMH_turno_A/B. TM2 = CV108 * Factor_Aplicacion_Reportes - Sal_Turno * CV108 / (CV008 + CV108). TM1 = Total - TM2. Correas operacionales: v_datos_apilado_tmh_v2; sal: Datos_conciliados_of; factor: v_ajuste_camiones_emision_test.")
++    ws.write_comment("M7", "STOCK, MINA y SRR se copian del Reporte por Turno en su escala original 0–100.")
++
++    campos = [(12, "STOCK", "origen"), (14, "MINA", "origen"), (16, "SRR", "origen"),
++              (18, "SRR_TMS_Turno", "tmh"), (20, "CuT_SRR", "ley"),
++              (22, "CuS_SRR", "ley"), (24, "ClayBeta_SRR", "fis"),
++              (26, "Malla100_SRR", "fis"), (28, "CO3_SRR", "ley"),
++              (30, "Recuperacion_SRR", "fis")]
++    for row, (fecha, diario) in enumerate(datos.groupby("Fecha", sort=True), 8):
++        banda = (row - 8) % 2
++        def escribir(col, valor, tipo):
++            ws.write(row, col, None if pd.isna(valor) else valor, formatos[banda, tipo])
++
++        ws.set_row(row, 21)
++        escribir(2, fecha.to_pydatetime(), "fecha")
++        escribir(11, fecha.day, "dia")
++        turnos = diario.set_index("Turno").to_dict("index")
++        for offset, turno in enumerate(("A", "B")):
++            registro = turnos.get(turno, {})
++            for col, campo in ((3, "TMH_Total_Conciliado"), (5, "TMH_TM1_Final"), (7, "TMH_TM2_Final")):
++                escribir(col + offset, registro.get(campo), "tmh")
++            for col, campo, tipo in campos:
++                escribir(col + offset, registro.get(campo), tipo)
++        for col, campo in enumerate(columnas_mb, 33):
++            escribir(col, diario.iloc[0][campo], "fis" if col in (35, 36) else "ley")
++    ws.freeze_panes(8, 3)
++    ws.set_landscape()
++    ws.set_paper(8)  # A3
++    ws.fit_to_pages(1, 1)
++    ws.repeat_rows(6, 7)
++    ws.print_area(1, 2, 7 + datos["Fecha"].nunique(), 37)
++    ws.set_margins(0.25, 0.25, 0.3, 0.3)
++
++
+ def export_reporte_turno_estilo_leyes_finos(
+     df: pd.DataFrame,
+     output,
+@@ -5233,6 +5434,7 @@ def export_reporte_turno_estilo_leyes_finos(
+     df_curva_granulometrica: pd.DataFrame = None,
+     periodo_inicio: date = None,
+     periodo_fin: date = None,
++    df_reconst_srr: pd.DataFrame = None,
+ ):
+     """
+     Exporta el reporte por turno con formato visual similar al archivo:
+@@ -5245,6 +5447,7 @@ def export_reporte_turno_estilo_leyes_finos(
+     - Celdas verticales combinadas entre TA/TB para variables comunes del día.
+     """
+ 
++    df_turno_reconst = df.copy() if df_reconst_srr is not None and not df_reconst_srr.empty else None
+     df = preparar_df_reporte_turno_excel(df)
+ 
+     columnas = [
+@@ -5842,3 +6045,7 @@ def export_reporte_turno_estilo_leyes_finos(
+                 df_trazabilidad_analitos=df_trazabilidad_analitos,
+                 df_cobertura_operacional=cobertura_operacional,
+             )
++        if df_reconst_srr is not None and not df_reconst_srr.empty:
++            _agregar_hoja_reconst_mod_srr(
++                workbook, df_reconst_srr, df_turno=df_turno_reconst,
++            )

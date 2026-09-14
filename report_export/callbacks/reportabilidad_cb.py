@@ -29,14 +29,14 @@ from report_export.report_export import (
     fetch_fecha_corte_representatividad,
     refrescar_representatividad_para_exportacion,
     fetch_reporte_turno_report,
-    actualizar_apilado_tmh_v2_report,
-    actualizar_factor_ajuste_camiones_v2_report,
+    refrescar_dependencias_reporte_turno_emision,
     actualizar_reporte_turno_cache_emision,
     fetch_reporte_turno_cache_emision,
     fetch_clays_cufe_report,
     fetch_trazabilidad_analitos_report,
     fetch_curva_granulometrica_report,
     fetch_generador_reporte_diario_emision,
+    fetch_reconstitucion_srr_report,
     export_reporte_turno_estilo_leyes_finos,
     write_reporte_torre_oficial,
     armar_paquete_reporte_torre_oficial,
@@ -7465,15 +7465,8 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         print("ENTRÓ A REPORTE TURNO")
         print("fecha fin SQL exclusiva:", fin_sql_exclusivo)
         try:
-            fecha_fin_factor = fin_sql_exclusivo - pd.Timedelta(days=1)
-            actualizar_factor_ajuste_camiones_v2_report(
-                start_date=ini,
-                end_date=fecha_fin_factor,
-                dias_reproceso=0,
-            )
-            actualizar_reporte_turno_cache_emision(
-                start_date=ini,
-                end_date=fin_sql_exclusivo,
+            refrescar_dependencias_reporte_turno_emision(
+                start_date=ini, end_date=fin,
             )
             df_turno = fetch_reporte_turno_cache_emision(
                 start_date=ini,
@@ -7784,30 +7777,11 @@ def exportar_excel(
             # ------------------------------------------------------------
             _t_export_ini = time.perf_counter()
 
-            fecha_fin_factor = fin_sql_exclusivo - pd.Timedelta(days=1)
-
             _t0 = time.perf_counter()
-            actualizar_apilado_tmh_v2_report(
-                start_date=ini_d,
-                end_date=fecha_fin_factor,
-                dias_reproceso=7,
+            refrescar_dependencias_reporte_turno_emision(
+                start_date=ini_d, end_date=fin_d,
             )
-            print(f"[EXCEL-T] sp_mantiene_apilado_tmh_v2_test: {time.perf_counter() - _t0:.2f}s")
-
-            _t0 = time.perf_counter()
-            actualizar_factor_ajuste_camiones_v2_report(
-                start_date=ini_d,
-                end_date=fecha_fin_factor,
-                dias_reproceso=0,
-            )
-            print(f"[EXCEL-T] sp_mantiene_factor_ajuste_camiones_v2_test: {time.perf_counter() - _t0:.2f}s")
-
-            _t0 = time.perf_counter()
-            actualizar_reporte_turno_cache_emision(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
-            )
-            print(f"[EXCEL-T] actualizar_reporte_turno_cache_emision (clays_cufe + sp_actualizar_reporte_turno_cache_emision_test): {time.perf_counter() - _t0:.2f}s")
+            print(f"[EXCEL-T] Preparacion Reporte por Turno: {time.perf_counter() - _t0:.2f}s")
 
             print(f"[EXCEL] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
             _t0 = time.perf_counter()
@@ -7848,6 +7822,14 @@ def exportar_excel(
             print(f"[EXCEL-T] sp_generador_reporte_diario_emision_test: {time.perf_counter() - _t0:.2f}s")
             print(f"[EXCEL] generador rows={len(df_generador)}")
 
+            print(f"[EXCEL] Fetching Reconst Mod SRR {ini_d} -> {fin_sql_exclusivo}")
+            _t0 = time.perf_counter()
+            df_reconst_srr = fetch_reconstitucion_srr_report(
+                start_date=ini_d, end_date=fin_sql_exclusivo,
+            )
+            print(f"[EXCEL-T] Reconst Mod SRR: {time.perf_counter() - _t0:.2f}s")
+            print(f"[EXCEL] Reconst Mod SRR rows={len(df_reconst_srr)}")
+
             inicio_mes_resumen = ini_d.replace(day=1)
             if inicio_mes_resumen < ini_d:
                 print(
@@ -7873,6 +7855,7 @@ def exportar_excel(
                 df_curva_granulometrica=df_curva_granulometrica,
                 periodo_inicio=ini_d,
                 periodo_fin=fin_d,
+                df_reconst_srr=df_reconst_srr,
             )
             output.seek(0)
             xbytes = output.getvalue()
@@ -8220,15 +8203,8 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
 
         # ── REPORTE POR TURNO ─────────────────────────────────────────
         if tipo in {"reporte_turno", "reporte_turno_turno", "reporte_turno_generador"}:
-            fecha_fin_factor = fin_sql_exclusivo - pd.Timedelta(days=1)
-            actualizar_factor_ajuste_camiones_v2_report(
-                start_date=ini_d,
-                end_date=fecha_fin_factor,
-                dias_reproceso=0,
-            )
-            actualizar_reporte_turno_cache_emision(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
+            refrescar_dependencias_reporte_turno_emision(
+                start_date=ini_d, end_date=fin_d,
             )
             print(f"[PDF] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
             df_turno = fetch_reporte_turno_cache_emision(
