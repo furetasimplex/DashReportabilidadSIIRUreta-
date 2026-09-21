@@ -664,6 +664,19 @@ def publicar(desde, hasta, dias_reproceso: int = 7) -> str:
         """
     )
     with get_engine().begin() as conn:
+        # Mismo contrato F4; local para no acoplar Reclamo a helpers privados
+        # de report_export/PI-TUM. Centralizar cuando exista un módulo común.
+        rc = conn.execute(text("""
+            DECLARE @resultado int;
+            EXEC @resultado = sys.sp_getapplock
+                @Resource = 'SIIR_CONTINGENCIA_PI_APILADO',
+                @LockMode = 'Exclusive',
+                @LockOwner = 'Transaction',
+                @LockTimeout = 10000;
+            SELECT @resultado;
+        """)).scalar()
+        if rc is None or rc < 0:
+            raise RuntimeError("No se pudo adquirir el bloqueo global para publicar Reclamo.")
         conn.execute(sql, {"desde": desde, "hasta": hasta, "dias": dias_reproceso})
     return f"Dato conciliado publicado para {desde} a {hasta}."
 

@@ -1,0 +1,51 @@
+{
+  "viewport": 1418,
+  "sidebar": 230,
+  "sidebarScroll": 233,
+  "sidebarClient": 229,
+  "mainLeft": 230,
+  "globalOverflow": false,
+  "font": "Inter, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+  "links": [
+    {
+      "label": "Reportabilidad",
+      "active": false,
+      "textRight": 136.609375,
+      "linkRight": 229,
+      "textFits": true,
+      "iconLeft": 19,
+      "scrollWidth": 226,
+      "clientWidth": 226
+    },
+    {
+      "label": "Administración de Reclamo",
+      "active": false,
+      "textRight": 218.125,
+      "linkRight": 229,
+      "textFits": true,
+      "iconLeft": 19,
+      "scrollWidth": 226,
+      "clientWidth": 226
+    },
+    {
+      "label": "Carga PowerBI Camiones",
+      "active": false,
+      "textRight": 205.59375,
+      "linkRight": 229,
+      "textFits": true,
+      "iconLeft": 19,
+      "scrollWidth": 226,
+      "clientWidth": 226
+    },
+    {
+      "label": "Monitoreo Correas Área Seca",
+      "active": true,
+      "textRight": 232.765625,
+      "linkRight": 229,
+      "textFits": false,
+      "iconLeft": 19,
+      "scrollWidth": 230,
+      "clientWidth": 226
+    }
+  ]
+}

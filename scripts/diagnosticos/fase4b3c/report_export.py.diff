@@ -1,0 +1,471 @@
+--- report_export/report_export.py (antes 4B3C)
++++ report_export/report_export.py
+@@ -1,7 +1,7 @@
+ import os
+ import io
+ import calendar
+-from contextlib import nullcontext
++from contextlib import contextmanager, nullcontext
+ import pandas as pd
+ import numpy as np
+ from datetime import date, timedelta
+@@ -1176,19 +1176,19 @@
+         ).dt.normalize()
+     return df.sort_values("Fecha", kind="stable").reset_index(drop=True)
+ 
+-def fetch_representatividad_torres_report(start_date: date, end_date: date) -> pd.DataFrame:
++def fetch_representatividad_torres_report(start_date: date, end_date: date, *, conn=None) -> pd.DataFrame:
+     """
+     Consulta representatividad de torres via sp_reporte_representatividad_torres.
+     """
+-    engine = _get_engine()
++    engine = _get_engine() if conn is None else None
+     sql = """
+     EXEC inventar_SpcHidr.sp_reporte_representatividad_torres
+         @fecha_inicio = :start,
+         @fecha_fin = :end
+     """
+     try:
+-        with engine.connect() as conn:
+-            df = pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
++        with (nullcontext(conn) if conn is not None else engine.connect()) as db_conn:
++            df = pd.read_sql(_sa_text(sql), db_conn, params={"start": start_date, "end": end_date})
+     except Exception as e:
+         raise RuntimeError(f"Error al leer representatividad de torres: {e}") from e
+     # El SP actual ya entrega SRR con estos nombres canónicos. Solo se completa
+@@ -1208,7 +1208,7 @@
+     if not faltantes:
+         return df
+ 
+-    bd_srr = fetch_bd_ton_report(start_date, end_date)
++    bd_srr = fetch_bd_ton_report(start_date, end_date, conn=conn)
+     disponibles = ["Fecha", *[col for col in faltantes if col in bd_srr.columns]]
+     if len(disponibles) > 1:
+         srr = bd_srr[disponibles].rename(columns={"Fecha": "Dia", **faltantes})
+@@ -1289,6 +1289,7 @@
+ def fetch_pesos_representatividad_report(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """Lee los pesos teoricos y reales usados por representatividad."""
+     if start_date is None or end_date is None:
+@@ -1327,8 +1328,8 @@
+                  CASE teo.Torre WHEN 'T1' THEN 1 WHEN 'T2' THEN 2 WHEN 'SRR' THEN 3 ELSE 4 END;
+     """)
+     try:
+-        with _get_engine().connect() as conn:
+-            df = pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
++        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as db_conn:
++            df = pd.read_sql(sql, db_conn, params={"start": start_date, "end": end_date})
+     except Exception as exc:
+         raise RuntimeError(f"Error al leer trazabilidad de pesos: {exc}") from exc
+     return validar_pesos_representatividad(df)
+@@ -1495,32 +1496,9 @@
+         raise RuntimeError("Representatividad perdi? su transacci?n o el lock global PI/TUM.")
+ 
+ 
+-def refrescar_representatividad_para_exportacion(
+-    start_date: date,
+-    end_date: date,
+-) -> date:
+-    """Refresca RTO y las tres capas de Torres en una ?nica transacci?n.
+-
+-    Orden de locks: mensual Session -> global Transaction. El mensual se
+-    conserva hasta salir de la transacci?n y se libera tambi?n ante error.
+-    No cambia el corte de Torres: si RTO no puede cubrirlo, aborta.
+-    """
+-    if start_date is None or end_date is None or start_date > end_date:
+-        raise ValueError("Rango inclusivo inv?lido para Representatividad de Torres.")
+-    pasos = (
+-        ("inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM", """
+-            EXEC inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM
+-                @FechaInicio = :start, @FechaFin = :end;
+-        """),
+-        ("inventar_SpcHidr.sp_refrescar_representatividad_torres", """
+-            EXEC inventar_SpcHidr.sp_refrescar_representatividad_torres
+-                @fecha_inicio = :start, @fecha_fin = :end;
+-        """),
+-        ("inventar_SpcHidr.sp_sincronizar_bd_ton", """
+-            EXEC inventar_SpcHidr.sp_sincronizar_bd_ton
+-                @fecha_inicio = :start, @fecha_fin = :end;
+-        """),
+-    )
++@contextmanager
++def _transaccion_representatividad(end_date: date):
++    """Owner F4C: mensual Session, transacci?n de datos y release antes del pool."""
+     recurso = _recurso_lock_representatividad(end_date)
+     with _get_engine().connect() as conn:
+         try:
+@@ -1542,36 +1520,7 @@
+         error_refresco = None
+         try:
+             with conn.begin():
+-                # Protege tambi?n la determinaci?n del corte. RTO vuelve a
+-                # adquirir el MISMO recurso, reentrante en esta transacci?n.
+-                _adquirir_lock_refresco_turno(conn)
+-                fecha_corte = fetch_fecha_corte_operacional_representatividad(
+-                    start_date, end_date, conn=conn,
+-                )
+-                if fecha_corte is None:
+-                    raise RuntimeError(
+-                        "No existe una fecha operacional cerrada para exportar "
+-                        "Representatividad de Torres."
+-                    )
+-                if not start_date <= fecha_corte <= end_date:
+-                    raise RuntimeError("Corte de Representatividad fuera del rango solicitado.")
+-                refresco = refrescar_dependencias_reporte_turno_emision(
+-                    start_date=start_date, end_date=fecha_corte,
+-                    dias_reproceso=7, conn=conn,
+-                )
+-                if refresco["fecha_corte_operacional"] != fecha_corte:
+-                    raise RuntimeError(
+-                        f"Cortes incompatibles: Representatividad={fecha_corte}; "
+-                        f"RTO={refresco['fecha_corte_operacional']}. Refresco revertido."
+-                    )
+-                for nombre_sp, sql in pasos:
+-                    try:
+-                        conn.execute(
+-                            _sa_text(sql), {"start": start_date, "end": fecha_corte},
+-                        ).close()
+-                    except Exception as exc:
+-                        raise RuntimeError(f"Error al ejecutar {nombre_sp}: {exc}") from exc
+-                _validar_refresco_representatividad(conn)
++                yield conn
+         except BaseException as exc:
+             error_refresco = exc
+             raise
+@@ -1580,6 +1529,11 @@
+                 conn.execute(
+                     _sa_text(SQL_RELEASEAPPLOCK_REFRESCO_REP), {"recurso": recurso},
+                 )
++                modo = conn.execute(_sa_text(
++                    "SELECT APPLOCK_MODE('public', :recurso, 'Session')"
++                ), {"recurso": recurso}).scalar()
++                if modo != "NoLock":
++                    raise RuntimeError("No se pudo liberar el lock mensual de Representatividad.")
+                 # La transacci?n de datos ya termin?; solo cierra el release.
+                 conn.commit()
+             except BaseException as exc:
+@@ -1587,11 +1541,77 @@
+                 if error_refresco is not None:
+                     raise error_refresco from exc
+                 raise
++
++
++def refrescar_representatividad_para_exportacion(
++    start_date: date,
++    end_date: date,
++    *, conn=None,
++) -> date:
++    """Refresca RTO y las tres capas de Torres en una ?nica transacci?n.
++
++    Orden de locks: mensual Session -> global Transaction. El mensual se
++    conserva hasta salir de la transacci?n y se libera tambi?n ante error.
++    No cambia el corte de Torres: si RTO no puede cubrirlo, aborta.
++    Con conn externa el caller mantiene el mensual y administra la transacción;
++    este cuerpo no hace begin/commit/rollback/close ni release mensual propios.
++    """
++    if start_date is None or end_date is None or start_date > end_date:
++        raise ValueError("Rango inclusivo inv?lido para Representatividad de Torres.")
++    pasos = (
++        ("inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM", """
++            EXEC inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM
++                @FechaInicio = :start, @FechaFin = :end;
++        """),
++        ("inventar_SpcHidr.sp_refrescar_representatividad_torres", """
++            EXEC inventar_SpcHidr.sp_refrescar_representatividad_torres
++                @fecha_inicio = :start, @fecha_fin = :end;
++        """),
++        ("inventar_SpcHidr.sp_sincronizar_bd_ton", """
++            EXEC inventar_SpcHidr.sp_sincronizar_bd_ton
++                @fecha_inicio = :start, @fecha_fin = :end;
++        """),
++    )
++    if conn is None:
++        with _transaccion_representatividad(end_date) as db_conn:
++            return refrescar_representatividad_para_exportacion(start_date, end_date, conn=db_conn)
++    # Protege tambi?n la determinaci?n del corte. RTO vuelve a
++    # adquirir el MISMO recurso, reentrante en esta transacci?n.
++    _adquirir_lock_refresco_turno(conn)
++    fecha_corte = fetch_fecha_corte_operacional_representatividad(
++        start_date, end_date, conn=conn,
++    )
++    if fecha_corte is None:
++        raise RuntimeError(
++            "No existe una fecha operacional cerrada para exportar "
++            "Representatividad de Torres."
++        )
++    if not start_date <= fecha_corte <= end_date:
++        raise RuntimeError("Corte de Representatividad fuera del rango solicitado.")
++    refresco = refrescar_dependencias_reporte_turno_emision(
++        start_date=start_date, end_date=fecha_corte,
++        dias_reproceso=7, conn=conn,
++    )
++    if refresco["fecha_corte_operacional"] != fecha_corte:
++        raise RuntimeError(
++            f"Cortes incompatibles: Representatividad={fecha_corte}; "
++            f"RTO={refresco['fecha_corte_operacional']}. Refresco revertido."
++        )
++    for nombre_sp, sql in pasos:
++        try:
++            conn.execute(
++                _sa_text(sql), {"start": start_date, "end": fecha_corte},
++            ).close()
++        except Exception as exc:
++            raise RuntimeError(f"Error al ejecutar {nombre_sp}: {exc}") from exc
++    _validar_refresco_representatividad(conn)
+     return fecha_corte
++
+ 
+ def fetch_bd_ton_report(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """
+     Consulta la capa histórica persistente de BD Ton.
+@@ -1600,7 +1620,7 @@
+         Fecha >= start_date
+         Fecha <= end_date
+     """
+-    conn_or_engine = _get_engine()
++    conn_or_engine = conn if conn is not None else _get_engine()
+ 
+     if conn_or_engine is None:
+         raise RuntimeError(
+@@ -1722,10 +1742,10 @@
+ 
+         # Engine SQLAlchemy
+         else:
+-            with conn_or_engine.connect() as conn:
++            with (nullcontext(conn) if conn is not None else conn_or_engine.connect()) as db_conn:
+                 df = pd.read_sql_query(
+                     _sa_text(sql_sa),
+-                    conn,
++                    db_conn,
+                     params={
+                         "start": start_date,
+                         "end": end_date,
+@@ -1764,6 +1784,7 @@
+     alcance: str = "COMBINADO",
+     objetivo: float = 0.85,
+     fecha_corte: date | None = None,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """Consulta los indicadores de gestión de representatividad del FY."""
+     tipo = str(tipo).strip().upper()
+@@ -1785,7 +1806,7 @@
+             f"Valor recibido: {objetivo!r}"
+         )
+ 
+-    conn_or_engine = _get_engine()
++    conn_or_engine = conn if conn is not None else _get_engine()
+ 
+     if conn_or_engine is None:
+         raise RuntimeError("get_engine() devolvió None.")
+@@ -1832,10 +1853,10 @@
+                 ),
+             )
+ 
+-        with conn_or_engine.connect() as conn:
++        with (nullcontext(conn) if conn is not None else conn_or_engine.connect()) as db_conn:
+             return pd.read_sql(
+                 _sa_text(sql_sa),
+-                conn,
++                db_conn,
+                 params=parametros,
+             )
+     except Exception as exc:
+@@ -1849,6 +1870,7 @@
+ def fetch_estado_apilado_turno_representatividad(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """
+     Obtiene la evaluabilidad oficial de cada Fecha + Turno para el
+@@ -1872,7 +1894,7 @@
+     from sqlalchemy import text
+     from db_connection import get_engine
+ 
+-    engine = get_engine()
++    engine = get_engine() if conn is None else conn
+ 
+     if engine is None:
+         raise RuntimeError(
+@@ -1929,10 +1951,10 @@
+     """)
+ 
+     try:
+-        with engine.connect() as conn:
++        with (nullcontext(conn) if conn is not None else engine.connect()) as db_conn:
+             df = pd.read_sql_query(
+                 query,
+-                conn,
++                db_conn,
+                 params={
+                     "start_date": start_date,
+                     "end_date": end_date,
+@@ -3148,7 +3170,7 @@
+     )
+ 
+ 
+-def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=None) -> dict:
++def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=None, *, conn=None) -> dict:
+     fin_d = pd.to_datetime(fecha_fin).date()
+     corte_d = pd.to_datetime(fecha_corte_operacional or fin_d).date()
+     rango_fy = _obtener_rango_fiscal_hasta_mes(corte_d)
+@@ -3156,13 +3178,13 @@
+     fecha_fin_mes = fin_d
+     fecha_corte_exclusiva = (pd.Timestamp(corte_d) + pd.Timedelta(days=1)).date()
+ 
+-    df_bd_ton_mes = fetch_bd_ton_report(start_date=fecha_inicio_mes, end_date=corte_d)
++    df_bd_ton_mes = fetch_bd_ton_report(start_date=fecha_inicio_mes, end_date=corte_d, conn=conn)
+     if df_bd_ton_mes.empty:
+         raise RuntimeError("BD Ton no entregó datos para el mes evaluado.")
+ 
+     df_turno_mes = fetch_estado_apilado_turno_representatividad(
+         start_date=fecha_inicio_mes,
+-        end_date=fecha_corte_exclusiva,
++        end_date=fecha_corte_exclusiva, conn=conn,
+     )
+     if df_turno_mes.empty:
+         raise RuntimeError(
+@@ -3174,7 +3196,7 @@
+         tipo="QUIMICO",
+         alcance="COMBINADO",
+         objetivo=0.85,
+-        fecha_corte=corte_d,
++        fecha_corte=corte_d, conn=conn,
+     )
+     if df_gestion_fy_quimico.empty:
+         raise RuntimeError("La gestión FY química no entregó resultados.")
+@@ -3184,7 +3206,7 @@
+         tipo="FISICO",
+         alcance="COMBINADO",
+         objetivo=0.85,
+-        fecha_corte=corte_d,
++        fecha_corte=corte_d, conn=conn,
+     )
+     if df_gestion_fy_fisico.empty:
+         raise RuntimeError("La gestión FY física no entregó resultados.")
+@@ -3201,9 +3223,34 @@
+     }
+ 
+ 
+-def armar_paquete_reporte_torre_oficial(
++def armar_paquete_reporte_torre_oficial(periodo_inicio: date, periodo_fin: date) -> dict:
++    """Paquete vivo oficial materializado; construcci?n y publicaci?n fuera de SQL."""
++    periodo_inicio, periodo_fin, _ = normalizar_periodo_mes(periodo_inicio, periodo_fin)
++    with _transaccion_representatividad(periodo_fin) as conn:
++        paquete = _materializar_paquete_reporte_torre_oficial(periodo_inicio, periodo_fin, conn=conn)
++    return paquete
++
++
++def preparar_paquete_editor_representatividad(ini, fin, *, periodo_mes=None) -> dict:
++    """Fuentes del editor vivo, incluidas sus notas, bajo el mismo owner F4C."""
++    ini, fin = pd.to_datetime(ini).date(), pd.to_datetime(fin).date()
++    if ini > fin:
++        raise ValueError("Rango inv?lido para Representatividad.")
++    with _transaccion_representatividad(fin) as conn:
++        corte = refrescar_representatividad_para_exportacion(fin.replace(day=1), fin, conn=conn)
++        fuentes = _fetch_fuentes_mensuales_torres_oficial(fin, corte, conn=conn)
++        if periodo_mes:
++            comentarios = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes, conn=conn)
++        else:
++            comentarios = fetch_comentarios_representatividad_periodo(ini, fin, conn=conn)
++        fuentes["comentarios"] = comentarios
++    return fuentes
++
++
++def _materializar_paquete_reporte_torre_oficial(
+     periodo_inicio: date,
+     periodo_fin: date,
++    *, conn,
+ ) -> dict:
+     """
+     Ejecuta SPs y consultas pesadas una vez (solo al publicar).
+@@ -3216,7 +3263,7 @@
+ 
+     fecha_corte_operacional = refrescar_representatividad_para_exportacion(
+         start_date=periodo_inicio,
+-        end_date=periodo_fin,
++        end_date=periodo_fin, conn=conn,
+     )
+     if fecha_corte_operacional is None:
+         raise RuntimeError(
+@@ -3225,14 +3272,14 @@
+ 
+     df_rep_real = fetch_representatividad_torres_report(
+         start_date=periodo_inicio,
+-        end_date=fecha_corte_operacional,
++        end_date=fecha_corte_operacional, conn=conn,
+     )
+     if df_rep_real.empty:
+         raise RuntimeError("Sin datos de representatividad para el rango seleccionado.")
+ 
+     df_pesos_turno = fetch_pesos_representatividad_report(
+         start_date=periodo_inicio,
+-        end_date=fecha_corte_operacional,
++        end_date=fecha_corte_operacional, conn=conn,
+     )
+     print(f"[RTO] Filas trazabilidad pesos: {len(df_pesos_turno)}")
+ 
+@@ -3245,17 +3292,20 @@
+     rango_fy = _obtener_rango_fiscal_hasta_mes(fecha_corte_operacional)
+     df_bd_ton_fy = fetch_bd_ton_report(
+         start_date=rango_fy["fecha_inicio"],
+-        end_date=fecha_corte_operacional,
++        end_date=fecha_corte_operacional, conn=conn,
+     )
+     if df_bd_ton_fy.empty:
+         raise RuntimeError("BD Ton no entregó datos históricos para el año fiscal.")
+ 
+     fuentes = _fetch_fuentes_mensuales_torres_oficial(
+         periodo_fin,
+-        fecha_corte_operacional,
++        fecha_corte_operacional, conn=conn,
+     )
+ 
++    comentarios = fetch_comentarios_representatividad_periodo(periodo_inicio, periodo_fin, conn=conn)
++
+     return {
++        "comentarios": comentarios,
+         "rep_torres": df_rep,
+         "bd_ton_fy": df_bd_ton_fy,
+         "bd_ton_mes": fuentes["df_bd_ton_mes"],
+@@ -3545,6 +3595,7 @@
+ def fetch_reporte_torre_oficial_detalle(
+     id_reporte: int | None = None,
+     periodo_mes: str | None = None,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     if id_reporte is not None:
+         sql = _sa_text(f"""
+@@ -3569,8 +3620,8 @@
+     else:
+         return pd.DataFrame()
+ 
+-    with _get_engine().connect() as conn:
+-        df = pd.read_sql(sql, conn, params=params)
++    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as db_conn:
++        df = pd.read_sql(sql, db_conn, params=params)
+ 
+     if "Fecha" in df.columns:
+         df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+@@ -3885,12 +3936,13 @@
+ def fetch_comentarios_representatividad_periodo(
+     periodo_inicio: date,
+     periodo_fin: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     try:
+         _, _, periodo_mes = normalizar_periodo_mes(periodo_inicio, periodo_fin)
+     except ValueError:
+         return pd.DataFrame()
+-    return fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
++    return fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes, conn=conn)
+ 
+ 
+ def soft_delete_representatividad_por_mes(periodo_mes: str, usuario: str) -> None:

@@ -1,0 +1,11 @@
+--- report_export/tests/test_orquestacion_reporte_turno.py (antes F4B3A)
++++ report_export/tests/test_orquestacion_reporte_turno.py
+@@ -293,7 +293,7 @@
+             if not isinstance(fn, ast.FunctionDef):
+                 continue
+             calls = [n.func.id for n in ast.walk(fn) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
+-            if "refrescar_dependencias_reporte_turno_emision" in calls:
++            if "preparar_paquete_reporte_turno_emision" in calls:
+                 consumidores.append(fn.name)
+                 self.assertNotIn("actualizar_apilado_tmh_v2_report", calls)
+                 self.assertNotIn("actualizar_factor_ajuste_camiones_v2_report", calls)

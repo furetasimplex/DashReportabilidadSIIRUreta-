@@ -1,6 +1,7 @@
 import os
 import io
 import calendar
+from contextlib import contextmanager, nullcontext
 import pandas as pd
 import numpy as np
 from datetime import date, timedelta
@@ -685,8 +686,9 @@ def refrescar_historico_apilado_report(
     start_date: date,
     end_date: date,
     dias_reproceso: int = 0,
+    *, conn=None,
 ) -> None:
-    """Refresca el histórico de apilado antes de mantener Datos Conciliados."""
+    """Refresca Histórico; con conn usa la transacción del caller sin confirmarla."""
     if start_date is None or end_date is None:
         raise ValueError("FechaInicio y FechaFin son obligatorias para refrescar el histórico de apilado.")
     if start_date > end_date:
@@ -700,8 +702,8 @@ def refrescar_historico_apilado_report(
             @DiasReproceso = :dias_reproceso
     """)
     try:
-        with _get_engine().begin() as conn:
-            conn.execute(
+        with (nullcontext(conn) if conn is not None else _get_engine().begin()) as db_conn:
+            db_conn.execute(
                 sql,
                 {
                     "fecha_inicio": start_date,
@@ -777,33 +779,56 @@ def actualizar_datos_conciliados_emision_report(
     start_date: date,
     end_date: date,
     dias_reproceso: int = 0,
+    refrescar_factor: bool = True,
+    *,
+    conn=None,
 ) -> None:
-    """Actualiza exclusivamente Datos Conciliados de emision."""
+    """
+    Actualiza exclusivamente Datos Conciliados de emisión.
+
+    Con ``conn`` participa en la transacción del caller sin hacer
+    begin/commit propio. Sin ``conn`` conserva el comportamiento
+    standalone anterior.
+    """
     if start_date is None or end_date is None:
         raise ValueError(
             "FechaInicio y FechaFin son obligatorias para actualizar "
             "Datos Conciliados de emision."
         )
+
     if start_date > end_date:
-        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
+        raise ValueError(
+            "FechaInicio no puede ser posterior a FechaFin."
+        )
 
     sql = _sa_text(f"""
         SET NOCOUNT ON;
+
         EXEC {SP_MANTIENE_DATOS_CONCILIADOS_EMISION}
-            @FechaInicio   = :fecha_inicio,
-            @FechaFin      = :fecha_fin,
-            @DiasReproceso = :dias_reproceso;
+            @FechaInicio      = :fecha_inicio,
+            @FechaFin         = :fecha_fin,
+            @DiasReproceso    = :dias_reproceso,
+            @RefrescarFactor  = :refrescar_factor;
     """)
+
     try:
-        with _get_engine().begin() as conn:
-            conn.execute(
+        with (
+            nullcontext(conn)
+            if conn is not None
+            else _get_engine().begin()
+        ) as db_conn:
+            db_conn.execute(
                 sql,
                 {
                     "fecha_inicio": start_date,
                     "fecha_fin": end_date,
                     "dias_reproceso": int(dias_reproceso),
+                    "refrescar_factor": int(
+                        bool(refrescar_factor)
+                    ),
                 },
             )
+
     except Exception as exc:
         raise RuntimeError(
             "Error al actualizar Datos Conciliados de emision mediante "
@@ -814,6 +839,7 @@ def actualizar_datos_conciliados_emision_report(
 def fetch_datos_conciliados_emision_report(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """Consulta exclusivamente Datos Conciliados de emision."""
     if start_date is None or end_date is None:
@@ -832,7 +858,7 @@ def fetch_datos_conciliados_emision_report(
         ORDER BY [Fecha] ASC;
     """)
     try:
-        with _get_engine().connect() as conn:
+        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
             df = pd.read_sql(
                 sql,
                 conn,
@@ -852,6 +878,7 @@ def fetch_datos_conciliados_emision_report(
 def fetch_factor_ajuste_camiones_report(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """Lee el factor oficial de camiones ya calculado por el mantenedor."""
     if start_date is None or end_date is None:
@@ -905,7 +932,7 @@ def fetch_factor_ajuste_camiones_report(
         ORDER BY Fecha;
     """)
     try:
-        with _get_engine().connect() as conn:
+        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
             df = pd.read_sql(
                 sql,
                 conn,
@@ -944,6 +971,7 @@ def fetch_factor_ajuste_camiones_report(
 def fetch_balance_chancado_report(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """Lee el balance diario de chancado sin ejecutar mantenedores."""
     if start_date is None or end_date is None:
@@ -1124,7 +1152,7 @@ def fetch_balance_chancado_report(
         ORDER BY Fecha;
     """)
     try:
-        with _get_engine().connect() as conn:
+        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
             df = pd.read_sql(
                 sql,
                 conn,
@@ -1150,19 +1178,19 @@ def fetch_balance_chancado_report(
         ).dt.normalize()
     return df.sort_values("Fecha", kind="stable").reset_index(drop=True)
 
-def fetch_representatividad_torres_report(start_date: date, end_date: date) -> pd.DataFrame:
+def fetch_representatividad_torres_report(start_date: date, end_date: date, *, conn=None) -> pd.DataFrame:
     """
     Consulta representatividad de torres via sp_reporte_representatividad_torres.
     """
-    engine = _get_engine()
+    engine = _get_engine() if conn is None else None
     sql = """
     EXEC inventar_SpcHidr.sp_reporte_representatividad_torres
         @fecha_inicio = :start,
         @fecha_fin = :end
     """
     try:
-        with engine.connect() as conn:
-            df = pd.read_sql(_sa_text(sql), conn, params={"start": start_date, "end": end_date})
+        with (nullcontext(conn) if conn is not None else engine.connect()) as db_conn:
+            df = pd.read_sql(_sa_text(sql), db_conn, params={"start": start_date, "end": end_date})
     except Exception as e:
         raise RuntimeError(f"Error al leer representatividad de torres: {e}") from e
     # El SP actual ya entrega SRR con estos nombres canónicos. Solo se completa
@@ -1182,7 +1210,7 @@ def fetch_representatividad_torres_report(start_date: date, end_date: date) -> p
     if not faltantes:
         return df
 
-    bd_srr = fetch_bd_ton_report(start_date, end_date)
+    bd_srr = fetch_bd_ton_report(start_date, end_date, conn=conn)
     disponibles = ["Fecha", *[col for col in faltantes if col in bd_srr.columns]]
     if len(disponibles) > 1:
         srr = bd_srr[disponibles].rename(columns={"Fecha": "Dia", **faltantes})
@@ -1263,6 +1291,7 @@ def validar_pesos_representatividad(df: pd.DataFrame) -> pd.DataFrame:
 def fetch_pesos_representatividad_report(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """Lee los pesos teoricos y reales usados por representatividad."""
     if start_date is None or end_date is None:
@@ -1301,8 +1330,8 @@ def fetch_pesos_representatividad_report(
                  CASE teo.Torre WHEN 'T1' THEN 1 WHEN 'T2' THEN 2 WHEN 'SRR' THEN 3 ELSE 4 END;
     """)
     try:
-        with _get_engine().connect() as conn:
-            df = pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
+        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as db_conn:
+            df = pd.read_sql(sql, db_conn, params={"start": start_date, "end": end_date})
     except Exception as exc:
         raise RuntimeError(f"Error al leer trazabilidad de pesos: {exc}") from exc
     return validar_pesos_representatividad(df)
@@ -1372,6 +1401,7 @@ def fetch_fecha_corte_representatividad(
 def fetch_fecha_corte_operacional_representatividad(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> date | None:
     """
     Devuelve la ultima fecha operacional completamente cubierta por el
@@ -1380,7 +1410,6 @@ def fetch_fecha_corte_operacional_representatividad(
     El rango solicitado es inclusivo y el calculo no depende de capas
     derivadas de apilado o representatividad.
     """
-    engine = _get_engine()
     sql = """
         ;WITH max_totalizador AS
         (
@@ -1405,10 +1434,10 @@ def fetch_fecha_corte_operacional_representatividad(
     """
 
     try:
-        with engine.connect() as conn:
+        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as db_conn:
             df = pd.read_sql_query(
                 _sa_text(sql),
-                conn,
+                db_conn,
                 params={"start": start_date, "end": end_date},
             )
     except Exception as exc:
@@ -1457,124 +1486,134 @@ def _recurso_lock_representatividad(end_date: date) -> str:
     return f"rep_torres_refresco:{end_date:%Y-%m}"
 
 
+def _validar_refresco_representatividad(conn):
+    """Punto final de validaci?n/instrumentaci?n, todav?a dentro de la transacci?n."""
+    estado = conn.execute(_sa_text("""
+        SELECT @@TRANCOUNT AS trancount, XACT_STATE() AS xact_state,
+            APPLOCK_MODE('public', 'SIIR_CONTINGENCIA_PI_APILADO',
+                         'Transaction') AS lock_global;
+    """)).mappings().one()
+    if (estado["trancount"] != 1 or estado["xact_state"] != 1
+            or estado["lock_global"] != "Exclusive"):
+        raise RuntimeError("Representatividad perdi? su transacci?n o el lock global PI/TUM.")
+
+
+@contextmanager
+def _transaccion_representatividad(end_date: date):
+    """Owner F4C: mensual Session, transacci?n de datos y release antes del pool."""
+    recurso = _recurso_lock_representatividad(end_date)
+    with _get_engine().connect() as conn:
+        try:
+            rc = conn.execute(
+                _sa_text(SQL_GETAPPLOCK_REFRESCO_REP),
+                {"recurso": recurso, "timeout": LOCK_REFRESCO_REP_TIMEOUT_MS},
+            ).scalar()
+            # Solo termina la transacci?n de adquisici?n: a?n no hay DML.
+            # El lock Session sobrevive al commit.
+            conn.commit()
+        except BaseException:
+            conn.invalidate()  # No devolver al pool una sesi?n con lock incierto.
+            raise
+        if rc is None or int(rc) < 0:
+            raise RuntimeError(
+                "Otro proceso esta actualizando la representatividad de "
+                f"{recurso.split(':')[1]}. Espere a que termine y reintente."
+            )
+        error_refresco = None
+        try:
+            with conn.begin():
+                yield conn
+        except BaseException as exc:
+            error_refresco = exc
+            raise
+        finally:
+            try:
+                conn.execute(
+                    _sa_text(SQL_RELEASEAPPLOCK_REFRESCO_REP), {"recurso": recurso},
+                )
+                modo = conn.execute(_sa_text(
+                    "SELECT APPLOCK_MODE('public', :recurso, 'Session')"
+                ), {"recurso": recurso}).scalar()
+                if modo != "NoLock":
+                    raise RuntimeError("No se pudo liberar el lock mensual de Representatividad.")
+                # La transacci?n de datos ya termin?; solo cierra el release.
+                conn.commit()
+            except BaseException as exc:
+                conn.invalidate()
+                if error_refresco is not None:
+                    raise error_refresco from exc
+                raise
+
+
 def refrescar_representatividad_para_exportacion(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> date:
-    """
-    Calcula el corte operacional y refresca, en orden, las capas requeridas
-    antes de que el exportador realice cualquier lectura:
-    apilado TMH v2 (Turno_Evaluable) -> resumen intervalo -> representatividad
-    -> BD Ton. El apilado va primero porque los otros tres no lo tocan y la
-    grilla decide con su flag si el dia se muestra.
+    """Refresca RTO y las tres capas de Torres en una ?nica transacci?n.
 
-    Serializado por mes con un applock de sesion: dos refrescos del mismo
-    periodo no pueden entrelazarse (uno reescribiendo
-    representatividad_torres_resultado mientras el otro sincroniza BD Ton
-    desde esa misma tabla).
+    Orden de locks: mensual Session -> global Transaction. El mensual se
+    conserva hasta salir de la transacci?n y se libera tambi?n ante error.
+    No cambia el corte de Torres: si RTO no puede cubrirlo, aborta.
+    Con conn externa el caller mantiene el mensual y administra la transacción;
+    este cuerpo no hace begin/commit/rollback/close ni release mensual propios.
     """
+    if start_date is None or end_date is None or start_date > end_date:
+        raise ValueError("Rango inclusivo inv?lido para Representatividad de Torres.")
+    pasos = (
+        ("inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM", """
+            EXEC inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM
+                @FechaInicio = :start, @FechaFin = :end;
+        """),
+        ("inventar_SpcHidr.sp_refrescar_representatividad_torres", """
+            EXEC inventar_SpcHidr.sp_refrescar_representatividad_torres
+                @fecha_inicio = :start, @fecha_fin = :end;
+        """),
+        ("inventar_SpcHidr.sp_sincronizar_bd_ton", """
+            EXEC inventar_SpcHidr.sp_sincronizar_bd_ton
+                @fecha_inicio = :start, @fecha_fin = :end;
+        """),
+    )
+    if conn is None:
+        with _transaccion_representatividad(end_date) as db_conn:
+            return refrescar_representatividad_para_exportacion(start_date, end_date, conn=db_conn)
+    # Protege tambi?n la determinaci?n del corte. RTO vuelve a
+    # adquirir el MISMO recurso, reentrante en esta transacci?n.
+    _adquirir_lock_refresco_turno(conn)
     fecha_corte = fetch_fecha_corte_operacional_representatividad(
-        start_date=start_date,
-        end_date=end_date,
+        start_date, end_date, conn=conn,
     )
     if fecha_corte is None:
         raise RuntimeError(
             "No existe una fecha operacional cerrada para exportar "
             "Representatividad de Torres."
         )
-
-    print(f"[RTO] Fecha corte operacional: {fecha_corte:%Y-%m-%d}")
-    pasos = (
-        (
-            # Primero: Control_Apilado_TMH_v2_test alimenta, via
-            # v_datos_apilado_tmh_v2, el Turno_Evaluable que
-            # _preparar_material_por_turno usa como flag oficial desde 2026.
-            # Sin este paso un dia congelado antes del cierre de turno queda
-            # con Flag_Apilado_Valido=0 para siempre: BD Ton se refresca y
-            # muestra tonelaje, pero la grilla oculta el dia igual.
-            # ponytail: @DiasReproceso fijo en 7 (mismo valor que ya usa el
-            # flujo de reporte_turno); parametrizar solo si hace falta
-            # reprocesar ventanas mas largas.
-            "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test",
-            "[RTO] Refrescando Control_Apilado_TMH_v2_test (Turno_Evaluable)...",
-            """
-                EXEC inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test
-                    @FechaInicio = :start,
-                    @FechaFin = :end,
-                    @DiasReproceso = 7
-            """,
-        ),
-        (
-            "inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM",
-            "[RTO] Recalculando Resumen_Intervalo_TotTM...",
-            """
-                EXEC inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM
-                    @FechaInicio = :start,
-                    @FechaFin = :end
-            """,
-        ),
-        (
-            "inventar_SpcHidr.sp_refrescar_representatividad_torres",
-            "[RTO] Refrescando representatividad_torres_resultado...",
-            """
-                EXEC inventar_SpcHidr.sp_refrescar_representatividad_torres
-                    @fecha_inicio = :start,
-                    @fecha_fin = :end
-            """,
-        ),
-        (
-            "inventar_SpcHidr.sp_sincronizar_bd_ton",
-            "[RTO] Sincronizando BD Ton...",
-            """
-                EXEC inventar_SpcHidr.sp_sincronizar_bd_ton
-                    @fecha_inicio = :start,
-                    @fecha_fin = :end
-            """,
-        ),
+    if not start_date <= fecha_corte <= end_date:
+        raise RuntimeError("Corte de Representatividad fuera del rango solicitado.")
+    refresco = refrescar_dependencias_reporte_turno_emision(
+        start_date=start_date, end_date=fecha_corte,
+        dias_reproceso=7, conn=conn,
     )
-
-    recurso = _recurso_lock_representatividad(end_date)
-    engine = _get_engine()
-    with engine.connect() as conn:
-        rc = conn.execute(
-            _sa_text(SQL_GETAPPLOCK_REFRESCO_REP),
-            {"recurso": recurso, "timeout": LOCK_REFRESCO_REP_TIMEOUT_MS},
-        ).scalar()
-        conn.commit()  # el lock de sesion sobrevive al commit
-        if rc is None or int(rc) < 0:
-            raise RuntimeError(
-                "Otro proceso esta actualizando la representatividad de "
-                f"{recurso.split(':')[1]}. Espere a que termine y reintente."
-            )
-        print(f"[RTO] Lock {recurso} tomado (rc={rc})")
+    if refresco["fecha_corte_operacional"] != fecha_corte:
+        raise RuntimeError(
+            f"Cortes incompatibles: Representatividad={fecha_corte}; "
+            f"RTO={refresco['fecha_corte_operacional']}. Refresco revertido."
+        )
+    for nombre_sp, sql in pasos:
         try:
-            for nombre_sp, mensaje, sql in pasos:
-                print(mensaje)
-                try:
-                    with conn.begin():
-                        conn.execute(
-                            _sa_text(sql),
-                            {"start": start_date, "end": fecha_corte},
-                        )
-                except Exception as exc:
-                    raise RuntimeError(
-                        f"Error al ejecutar {nombre_sp}: {exc}"
-                    ) from exc
-        finally:
-            # Sin este release el lock viaja de vuelta al pool y bloquea al
-            # resto hasta pool_recycle (30 min).
             conn.execute(
-                _sa_text(SQL_RELEASEAPPLOCK_REFRESCO_REP),
-                {"recurso": recurso},
-            )
-            conn.commit()
-
+                _sa_text(sql), {"start": start_date, "end": fecha_corte},
+            ).close()
+        except Exception as exc:
+            raise RuntimeError(f"Error al ejecutar {nombre_sp}: {exc}") from exc
+    _validar_refresco_representatividad(conn)
     return fecha_corte
 
 
 def fetch_bd_ton_report(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """
     Consulta la capa histórica persistente de BD Ton.
@@ -1583,7 +1622,7 @@ def fetch_bd_ton_report(
         Fecha >= start_date
         Fecha <= end_date
     """
-    conn_or_engine = _get_engine()
+    conn_or_engine = conn if conn is not None else _get_engine()
 
     if conn_or_engine is None:
         raise RuntimeError(
@@ -1705,10 +1744,10 @@ def fetch_bd_ton_report(
 
         # Engine SQLAlchemy
         else:
-            with conn_or_engine.connect() as conn:
+            with (nullcontext(conn) if conn is not None else conn_or_engine.connect()) as db_conn:
                 df = pd.read_sql_query(
                     _sa_text(sql_sa),
-                    conn,
+                    db_conn,
                     params={
                         "start": start_date,
                         "end": end_date,
@@ -1747,6 +1786,7 @@ def fetch_gestion_representatividad_fy(
     alcance: str = "COMBINADO",
     objetivo: float = 0.85,
     fecha_corte: date | None = None,
+    *, conn=None,
 ) -> pd.DataFrame:
     """Consulta los indicadores de gestión de representatividad del FY."""
     tipo = str(tipo).strip().upper()
@@ -1768,7 +1808,7 @@ def fetch_gestion_representatividad_fy(
             f"Valor recibido: {objetivo!r}"
         )
 
-    conn_or_engine = _get_engine()
+    conn_or_engine = conn if conn is not None else _get_engine()
 
     if conn_or_engine is None:
         raise RuntimeError("get_engine() devolvió None.")
@@ -1815,10 +1855,10 @@ def fetch_gestion_representatividad_fy(
                 ),
             )
 
-        with conn_or_engine.connect() as conn:
+        with (nullcontext(conn) if conn is not None else conn_or_engine.connect()) as db_conn:
             return pd.read_sql(
                 _sa_text(sql_sa),
-                conn,
+                db_conn,
                 params=parametros,
             )
     except Exception as exc:
@@ -1832,6 +1872,7 @@ def fetch_gestion_representatividad_fy(
 def fetch_estado_apilado_turno_representatividad(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """
     Obtiene la evaluabilidad oficial de cada Fecha + Turno para el
@@ -1855,7 +1896,7 @@ def fetch_estado_apilado_turno_representatividad(
     from sqlalchemy import text
     from db_connection import get_engine
 
-    engine = get_engine()
+    engine = get_engine() if conn is None else conn
 
     if engine is None:
         raise RuntimeError(
@@ -1912,10 +1953,10 @@ def fetch_estado_apilado_turno_representatividad(
     """)
 
     try:
-        with engine.connect() as conn:
+        with (nullcontext(conn) if conn is not None else engine.connect()) as db_conn:
             df = pd.read_sql_query(
                 query,
-                conn,
+                db_conn,
                 params={
                     "start_date": start_date,
                     "end_date": end_date,
@@ -2015,7 +2056,7 @@ def actualizar_reporte_turno_cache(start_date: date, end_date: date) -> None:
         ) from exc
 
 
-def fetch_fecha_corte_apilado_tmh_report(start_date: date, end_date: date) -> date | None:
+def fetch_fecha_corte_apilado_tmh_report(start_date: date, end_date: date, *, conn=None) -> date | None:
     """Último día con las cuatro claves CV008/CV108 A/B resolubles.
 
     Fuente: diagnóstico PI/TUM, anterior al resolver y a Control_Apilado.
@@ -2023,6 +2064,7 @@ def fetch_fecha_corte_apilado_tmh_report(start_date: date, end_date: date) -> da
     Desde septiembre exige PI utilizable según el resolver vigente o TUM
     disponible no negativo, incluido TUM=0. No calcula tonelajes ni flags.
     No depende de SRR ni de la materialización que se va a refrescar.
+    Con conn consulta dentro de la conexión/transacción del caller.
     """
     if start_date is None or end_date is None or start_date > end_date:
         raise ValueError("Rango inclusivo inválido para el corte de apilado TMH.")
@@ -2048,8 +2090,8 @@ def fetch_fecha_corte_apilado_tmh_report(start_date: date, end_date: date) -> da
         )
         SELECT MAX(fecha_operacional) FROM dias_cerrados;
     """)
-    with _get_engine().connect() as conn:
-        corte = conn.execute(sql, {"inicio": start_date, "fin": end_date}).scalar()
+    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as db_conn:
+        corte = db_conn.execute(sql, {"inicio": start_date, "fin": end_date}).scalar()
     return None if corte is None else pd.Timestamp(corte).date()
 
 
@@ -2078,64 +2120,454 @@ def _validar_frescura_cache_turno(filas, inicio, fin_exclusivo, corte, regenerad
         raise RuntimeError(f"El cache no contiene ambos turnos A/B del corte {corte}.")
 
 
-def refrescar_dependencias_reporte_turno_emision(
-    start_date: date, end_date: date, dias_reproceso: int = 7,
-) -> dict:
-    """Preparación común de preview y Excel; fechas solicitadas inclusivas.
+def _adquirir_lock_refresco_turno(conn):
+    """Mismo contrato de exclusión PI/TUM; dura hasta el fin de la transacción."""
+    resultado = conn.execute(_sa_text('''DECLARE @resultado int;
+        EXEC @resultado=sys.sp_getapplock @Resource='SIIR_CONTINGENCIA_PI_APILADO',
+            @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000;
+        SELECT @resultado;''')).scalar()
+    if resultado is None or resultado < 0:
+        raise RuntimeError('No se pudo adquirir el bloqueo PI/TUM para refrescar Reporte por Turno.')
 
-    Sólo el fin del mantenedor de apilado se ancla al corte. Factor conserva
-    su rango inclusivo y Clays/cache el rango solicitado, con fin exclusivo
-    para cache. No recorta plantilla, generador ni exportación.
+
+def refrescar_dependencias_reporte_turno_emision(
+    start_date: date,
+    end_date: date,
+    dias_reproceso: int = 7,
+    *,
+    conn=None,
+) -> dict:
+    """Preparación común de Preview, Excel y PDF; fechas inclusivas.
+
+    Apilado -> Histórico -> Factor -> Clays -> Cache, hasta el corte operacional.
+    Histórico copia únicamente los días recalculados, sin ampliar su rango.
+
+    Con ``conn`` participa en la transacción del caller.
+    Sin ``conn`` conserva una única transacción propia.
     """
     if start_date is None or end_date is None or start_date > end_date:
-        raise ValueError("Rango inclusivo inválido para Reporte por Turno.")
+        raise ValueError(
+            "Rango inclusivo inválido para Reporte por Turno."
+        )
+
     if not isinstance(dias_reproceso, int) or dias_reproceso < 1:
-        raise ValueError("DiasReproceso debe ser un entero positivo.")
-    corte = fetch_fecha_corte_apilado_tmh_report(start_date, end_date)
-    if corte is None:
-        raise RuntimeError("No existe una fecha operacional cerrada para actualizar el apilado TMH.")
-    fin_efectiva = min(end_date, corte)
-    if fin_efectiva < start_date:
-        raise RuntimeError("La fecha de corte de apilado está fuera del rango solicitado.")
-    ventana = max(start_date, fin_efectiva - timedelta(days=dias_reproceso - 1))
-    fin_exclusivo = end_date + timedelta(days=1)
-    print(f"[RTO] Periodo solicitado: {start_date} -> {end_date}")
-    print(f"[RTO] Fecha corte apilado: {fin_efectiva}")
-    print(f"[RTO] Dias reproceso: {dias_reproceso}")
-    print(f"[RTO] Ventana efectiva reproceso: {ventana} -> {fin_efectiva}")
-    with _get_engine().connect() as conn:
-        desde = conn.execute(_sa_text("SELECT SYSDATETIME()")).scalar()
-    actualizar_apilado_tmh_v2_report(start_date, fin_efectiva, dias_reproceso)
-    print(f"[RTO] Apilado TMH actualizado: {start_date} -> {fin_efectiva}")
-    actualizar_factor_ajuste_camiones_v2_report(start_date, end_date, dias_reproceso=0)
-    print(f"[RTO] Factor ajuste actualizado: {start_date} -> {end_date}")
-    actualizar_reporte_turno_cache_emision(start_date, fin_exclusivo)
-    with _get_engine().connect() as conn:
-        filas = conn.execute(_sa_text(f"""
-            SELECT Fecha, Turno, Fecha_Actualizacion
-            FROM {TABLE_REPORTE_TURNO_CACHE_EMISION}
-            WHERE Fecha >= :inicio AND Fecha < :fin
-        """), {"inicio": start_date, "fin": fin_exclusivo}).mappings().all()
-        apilado = conn.execute(_sa_text("""
-            SELECT Fecha, Fecha_Calculo
-            FROM inventar_SpcHidr.Control_Apilado_TMH_v2_test
-            WHERE Fecha >= :inicio AND Fecha <= :fin
-        """), {"inicio": ventana, "fin": fin_efectiva}).mappings().all()
-    if not any(pd.Timestamp(f["Fecha"]).date() == fin_efectiva for f in apilado):
-        raise RuntimeError("El apilado actualizado no contiene el último día operacional.")
-    if any(f["Fecha_Calculo"] is None or f["Fecha_Calculo"] < desde for f in apilado):
-        raise RuntimeError("El apilado conserva filas obsoletas en la ventana de reproceso.")
-    _validar_frescura_cache_turno(filas, start_date, fin_exclusivo, fin_efectiva, desde)
-    print(f"[RTO] Validación cache: OK; filas={len(filas)}; corte={fin_efectiva}; A/B presentes")
-    return {"inicio": start_date, "fin_solicitada": end_date,
-            "fecha_corte_operacional": fin_efectiva, "inicio_ventana": ventana,
-            "fin_sql_exclusivo": fin_exclusivo, "filas_cache": len(filas)}
+        raise ValueError(
+            "DiasReproceso debe ser un entero positivo."
+        )
+
+    with (
+        nullcontext(conn)
+        if conn is not None
+        else _get_engine().begin()
+    ) as db_conn:
+
+        # -----------------------------------------------------
+        # Lock global compartido con PI/TUM.
+        # LockOwner=Transaction: permanece hasta el final de
+        # esta transacción o de la transacción exterior.
+        # -----------------------------------------------------
+        _adquirir_lock_refresco_turno(db_conn)
+
+        corte = fetch_fecha_corte_apilado_tmh_report(
+            start_date,
+            end_date,
+            conn=db_conn,
+        )
+
+        if corte is None:
+            raise RuntimeError(
+                "No existe una fecha operacional cerrada para "
+                "actualizar el apilado TMH."
+            )
+
+        fin_efectiva = min(end_date, corte)
+
+        if fin_efectiva < start_date:
+            raise RuntimeError(
+                "La fecha de corte de apilado está fuera del "
+                "rango solicitado."
+            )
+
+        ventana = max(
+            start_date,
+            fin_efectiva - timedelta(
+                days=dias_reproceso - 1
+            ),
+        )
+
+        fin_exclusivo = (
+            fin_efectiva + timedelta(days=1)
+        )
+
+        print(
+            f"[RTO] Periodo solicitado: "
+            f"{start_date} -> {end_date}"
+        )
+        print(
+            f"[RTO] Fecha corte apilado: "
+            f"{fin_efectiva}"
+        )
+        print(
+            f"[RTO] Dias reproceso: "
+            f"{dias_reproceso}"
+        )
+        print(
+            f"[RTO] Ventana efectiva reproceso: "
+            f"{ventana} -> {fin_efectiva}"
+        )
+
+        desde = db_conn.execute(
+            _sa_text("SELECT SYSDATETIME()")
+        ).scalar()
+
+        # -----------------------------------------------------
+        # 1. Apilado
+        # -----------------------------------------------------
+        actualizar_apilado_tmh_v2_report(
+            start_date,
+            fin_efectiva,
+            dias_reproceso,
+            conn=db_conn,
+        )
+
+        print(
+            f"[RTO] Apilado TMH actualizado: "
+            f"{start_date} -> {fin_efectiva}"
+        )
+
+        apilado = db_conn.execute(
+            _sa_text("""
+                SELECT
+                    Fecha,
+                    Fecha_Calculo
+                FROM inventar_SpcHidr.Control_Apilado_TMH_v2_test
+                WHERE Fecha >= :inicio
+                  AND Fecha <= :fin
+            """),
+            {
+                "inicio": start_date,
+                "fin": fin_efectiva,
+            },
+        ).mappings().all()
+
+        if not any(
+            pd.Timestamp(f["Fecha"]).date()
+            == fin_efectiva
+            for f in apilado
+        ):
+            raise RuntimeError(
+                "El apilado actualizado no contiene "
+                "el último día operacional."
+            )
+
+        if any(
+            (
+                f["Fecha_Calculo"] is None
+                or f["Fecha_Calculo"] < desde
+            )
+            for f in apilado
+            if pd.Timestamp(f["Fecha"]).date()
+            >= ventana
+        ):
+            raise RuntimeError(
+                "El apilado conserva filas obsoletas "
+                "en la ventana de reproceso."
+            )
+
+        # -----------------------------------------------------
+        # Fechas realmente materializadas en esta ejecución.
+        # -----------------------------------------------------
+        fechas = sorted({
+            pd.Timestamp(f["Fecha"]).date()
+            for f in apilado
+            if (
+                f["Fecha_Calculo"] is not None
+                and f["Fecha_Calculo"] >= desde
+            )
+        })
+
+        rangos = []
+
+        for fecha in fechas:
+            if (
+                rangos
+                and fecha
+                == rangos[-1][1] + timedelta(days=1)
+            ):
+                rangos[-1] = (
+                    rangos[-1][0],
+                    fecha,
+                )
+            else:
+                rangos.append(
+                    (fecha, fecha)
+                )
+
+        # -----------------------------------------------------
+        # 2. Histórico
+        # -----------------------------------------------------
+        for inicio_historico, fin_historico in rangos:
+            refrescar_historico_apilado_report(
+                inicio_historico,
+                fin_historico,
+                dias_reproceso=0,
+                conn=db_conn,
+            )
+
+            print(
+                f"[RTO] Histórico actualizado: "
+                f"{inicio_historico} -> "
+                f"{fin_historico}"
+            )
+
+        # -----------------------------------------------------
+        # 3. Factor
+        # -----------------------------------------------------
+        actualizar_factor_ajuste_camiones_v2_report(
+            start_date,
+            fin_efectiva,
+            dias_reproceso=0,
+            conn=db_conn,
+        )
+
+        print(
+            f"[RTO] Factor ajuste actualizado: "
+            f"{start_date} -> {fin_efectiva}"
+        )
+
+        # -----------------------------------------------------
+        # 4. Clays + 5. Cache
+        # -----------------------------------------------------
+        actualizar_reporte_turno_cache_emision(
+            start_date,
+            fin_exclusivo,
+            conn=db_conn,
+        )
+
+        # -----------------------------------------------------
+        # Validación final en la misma conexión.
+        # -----------------------------------------------------
+        filas = db_conn.execute(
+            _sa_text(f"""
+                SELECT
+                    Fecha,
+                    Turno,
+                    Fecha_Actualizacion
+                FROM {TABLE_REPORTE_TURNO_CACHE_EMISION}
+                WHERE Fecha >= :inicio
+                  AND Fecha < :fin
+            """),
+            {
+                "inicio": start_date,
+                "fin": fin_exclusivo,
+            },
+        ).mappings().all()
+
+        _validar_frescura_cache_turno(
+            filas,
+            start_date,
+            fin_exclusivo,
+            fin_efectiva,
+            desde,
+        )
+
+        print(
+            "[RTO] Validación cache: OK; "
+            f"filas={len(filas)}; "
+            f"corte={fin_efectiva}; "
+            "A/B presentes"
+        )
+
+        return {
+            "inicio": start_date,
+            "fin_solicitada": end_date,
+            "fecha_corte_operacional": fin_efectiva,
+            "inicio_ventana": ventana,
+            "fin_sql_exclusivo": fin_exclusivo,
+            "filas_cache": len(filas),
+            "rangos_historico": rangos,
+        }
+
+def refrescar_dependencias_datos_conciliados_emision(
+    start_date: date,
+    end_date: date,
+    *, conn=None,
+) -> dict:
+    """
+    Prepara una única fotografía transaccional para Datos Conciliados:
+
+        Apilado
+        -> Histórico
+        -> Factor
+        -> Clays
+        -> Cache
+        -> Datos Conciliados
+
+    Reporte por Turno respeta el corte operacional.
+    Datos Conciliados mantiene el período calendario completo solicitado.
+
+    El factor no se recalcula dentro del mantenedor de Datos Conciliados:
+    la fotografía válida es la generada previamente por el coordinador RTO.
+    Con conn externa participa sin begin/commit/rollback/close propios.
+    """
+    if start_date is None or end_date is None:
+        raise ValueError(
+            "FechaInicio y FechaFin son obligatorias para refrescar "
+            "Datos Conciliados."
+        )
+
+    if start_date > end_date:
+        raise ValueError(
+            "FechaInicio no puede ser posterior a FechaFin."
+        )
+
+    with (nullcontext(conn) if conn is not None else _get_engine().begin()) as conn:
+
+        # -----------------------------------------------------
+        # 1. Fotografía Reporte por Turno.
+        #
+        # Esta llamada adquiere el applock global
+        # SIIR_CONTINGENCIA_PI_APILADO con LockOwner=Transaction.
+        #
+        # Al recibir esta conexión externa NO hace commit propio,
+        # por lo que el lock continúa retenido hasta el final de
+        # toda esta transacción, incluyendo Datos Conciliados.
+        # -----------------------------------------------------
+        refresco_turno = (
+            refrescar_dependencias_reporte_turno_emision(
+                start_date=start_date,
+                end_date=end_date,
+                conn=conn,
+            )
+        )
+
+        fin_efectiva = refresco_turno[
+            "fecha_corte_operacional"
+        ]
+
+        print(
+            "[DATOS-CONCILIADOS] 1/2 Dependencias Reporte por Turno "
+            "actualizadas "
+            f"({start_date} -> {fin_efectiva})"
+        )
+
+        # -----------------------------------------------------
+        # 2. Datos Conciliados.
+        #
+        # IMPORTANTE:
+        # - start_date -> end_date = calendario completo pedido.
+        # - NO limitar end_date al corte operacional.
+        # - NO recalcular Factor por segunda vez.
+        # - usa la MISMA conexión/transacción que RTO.
+        # -----------------------------------------------------
+        actualizar_datos_conciliados_emision_report(
+            start_date=start_date,
+            end_date=end_date,
+            dias_reproceso=0,
+            refrescar_factor=False,
+            conn=conn,
+        )
+
+        print(
+            "[DATOS-CONCILIADOS] 2/2 Datos conciliados actualizados "
+            f"({start_date} -> {end_date}, periodo completo; "
+            f"corte operacional={fin_efectiva})"
+        )
+
+        return refresco_turno
+def preparar_paquete_datos_conciliados_emision(
+    start_date: date,
+    end_date: date,
+    *, salida: str,
+) -> dict:
+    """Refresca y materializa DC bajo el global F4, antes de construir la UI.
+
+    DC conserva calendario completo; Factor/Balance usan corte operacional.
+    La garantía de coherencia alcanza a writers cooperativos con el applock.
+    """
+    if start_date is None or end_date is None or start_date > end_date:
+        raise ValueError("Se requiere un rango válido para preparar Datos Conciliados.")
+    if salida not in {"preview", "excel"}:
+        raise ValueError("Salida DC no válida: use preview o excel.")
+    with _get_engine().begin() as conn:
+        refresco = refrescar_dependencias_datos_conciliados_emision(
+            start_date=start_date, end_date=end_date, conn=conn,
+        )
+        fin_efectiva = refresco["fecha_corte_operacional"]
+        datos = fetch_datos_conciliados_emision_report(
+            start_date=start_date, end_date=end_date, conn=conn,
+        )
+        paquete = {"refresco": refresco, "df_datos": datos, "salida": salida}
+        if salida == "excel":
+            inicio_mes = start_date.replace(day=1)
+            paquete["df_datos_visible"] = datos
+            paquete["df_resumen_mtd"] = (
+                fetch_datos_conciliados_emision_report(
+                    start_date=inicio_mes, end_date=end_date, conn=conn,
+                ) if inicio_mes < start_date else datos
+            )
+        paquete["df_factor"] = fetch_factor_ajuste_camiones_report(
+            start_date=start_date, end_date=fin_efectiva, conn=conn,
+        )
+        paquete["df_balance"] = fetch_balance_chancado_report(
+            start_date=start_date, end_date=fin_efectiva, conn=conn,
+        )
+    return paquete
+
+
+def preparar_paquete_reporte_turno_emision(
+    start_date: date,
+    end_date: date,
+    *, salida: str = "preview",
+) -> dict:
+    """Materializa RTO bajo una transacción y el global de su coordinador.
+
+    Protege frente a writers F4 cooperativos. El caller construye el artefacto
+    después del retorno, cuando ya terminó la transacción. Los auxiliares
+    conservan el fin solicitado y el cache el corte operacional del refresco.
+    """
+    if start_date is None or end_date is None or start_date > end_date:
+        raise ValueError("Se requiere un rango válido para preparar Reporte por Turno.")
+    if salida not in {"preview", "excel", "pdf"}:
+        raise ValueError("Salida RTO no válida: use preview, excel o pdf.")
+    fin_auxiliar = end_date + timedelta(days=1)
+    with _get_engine().begin() as conn:
+        refresco = refrescar_dependencias_reporte_turno_emision(
+            start_date=start_date, end_date=end_date, conn=conn,
+        )
+        paquete = {"refresco": refresco, "salida": salida}
+        paquete["df_turno"] = fetch_reporte_turno_cache_emision(
+            start_date=start_date, end_date=refresco["fin_sql_exclusivo"], conn=conn,
+        )
+        if salida != "preview" and not paquete["df_turno"].empty:
+            if salida == "excel":
+                for clave, fetch in (
+                    ("df_clays_cufe", fetch_clays_cufe_report),
+                    ("df_trazabilidad_analitos", fetch_trazabilidad_analitos_report),
+                    ("df_curva_granulometrica", fetch_curva_granulometrica_report),
+                ):
+                    paquete[clave] = fetch(start_date=start_date, end_date=fin_auxiliar, conn=conn)
+            paquete["df_generador"] = fetch_generador_reporte_diario_emision(
+                start_date=start_date, end_date=fin_auxiliar, conn=conn,
+            )
+            if salida == "excel":
+                paquete["df_reconst_srr"] = fetch_reconstitucion_srr_report(
+                    start_date=start_date, end_date=fin_auxiliar, conn=conn,
+                )
+                inicio_mes = start_date.replace(day=1)
+                paquete["df_generador_resumen"] = (
+                    fetch_generador_reporte_diario_emision(
+                        start_date=inicio_mes, end_date=fin_auxiliar, conn=conn,
+                    ) if inicio_mes < start_date else paquete["df_generador"]
+                )
+    return paquete
 
 
 def actualizar_apilado_tmh_v2_report(
     start_date: date,
     end_date: date,
     dias_reproceso: int = 7,
+    *, conn=None,
 ) -> None:
     """
     Refresca la tabla congelada Control_Apilado_TMH_v2_test (TMH bruto de
@@ -2146,6 +2578,7 @@ def actualizar_apilado_tmh_v2_report(
     todavia no tenga fila en la tabla -- ver encabezado de
     sp_mantiene_apilado_tmh_v2_test para el detalle de esa ventana.
     ``start_date`` y ``end_date`` son inclusivos.
+    Con conn participa en la transacción del caller, sin begin/commit propio.
     """
     sql = _sa_text("""
         SET NOCOUNT ON;
@@ -2156,8 +2589,8 @@ def actualizar_apilado_tmh_v2_report(
             @DiasReproceso = :dias_reproceso;
     """)
 
-    with _get_engine().begin() as conn:
-        conn.execute(
+    with (nullcontext(conn) if conn is not None else _get_engine().begin()) as db_conn:
+        db_conn.execute(
             sql,
             {
                 "fecha_inicio": start_date,
@@ -2171,8 +2604,9 @@ def actualizar_factor_ajuste_camiones_v2_report(
     start_date: date,
     end_date: date,
     dias_reproceso: int = 0,
+    *, conn=None,
 ) -> None:
-    """Refresca los factores V2; ``start_date`` y ``end_date`` son inclusivos."""
+    """Rango inclusivo; con conn participa sin confirmar la transacción del caller."""
     sql = _sa_text("""
         SET NOCOUNT ON;
 
@@ -2182,8 +2616,8 @@ def actualizar_factor_ajuste_camiones_v2_report(
             @DiasReproceso = :dias_reproceso;
     """)
 
-    with _get_engine().begin() as conn:
-        conn.execute(
+    with (nullcontext(conn) if conn is not None else _get_engine().begin()) as db_conn:
+        db_conn.execute(
             sql,
             {
                 "fecha_inicio": start_date,
@@ -2196,11 +2630,14 @@ def actualizar_factor_ajuste_camiones_v2_report(
 def actualizar_reporte_turno_cache_emision(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> None:
     """
     Actualiza Clays_CuFe y luego el cache de emision.
 
     ``start_date`` es inclusiva y ``end_date`` es exclusiva.
+    Con conn ambos pasos comparten la transacción del caller. Sin conn conserva
+    una transacción independiente por paso, como los callers standalone esperan.
     """
     if start_date is None or end_date is None:
         raise ValueError(
@@ -2223,8 +2660,8 @@ def actualizar_reporte_turno_cache_emision(
                 @SoloVistaPrevia = 0;
         """)
         try:
-            with _get_engine().begin() as conn:
-                conn.execute(
+            with (nullcontext(conn) if conn is not None else _get_engine().begin()) as db_conn:
+                db_conn.execute(
                     sql_clays,
                     {
                         "fecha_inicio": fecha_inicio_clays,
@@ -2246,8 +2683,8 @@ def actualizar_reporte_turno_cache_emision(
             @fecha_fin = :fecha_fin;
     """)
     try:
-        with _get_engine().begin() as conn:
-            conn.execute(
+        with (nullcontext(conn) if conn is not None else _get_engine().begin()) as db_conn:
+            db_conn.execute(
                 sql_cache,
                 {"fecha_inicio": start_date, "fecha_fin": end_date},
             )
@@ -2263,6 +2700,7 @@ def actualizar_reporte_turno_cache_emision(
 def fetch_clays_cufe_report(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """Consulta Clays/CuFe y su fuente real; ``end_date`` es exclusiva.
 
@@ -2401,7 +2839,7 @@ def fetch_clays_cufe_report(
             CASE c.Torre WHEN 'TM1' THEN 1 WHEN 'TM2' THEN 2 ELSE 3 END,
             CASE c.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
     """)
-    with _get_engine().connect() as conn:
+    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
         return pd.read_sql(
             sql,
             conn,
@@ -2412,6 +2850,7 @@ def fetch_clays_cufe_report(
 def fetch_trazabilidad_analitos_report(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """Lee la trazabilidad final persistida por el SP; fin exclusivo."""
     if start_date is None or end_date is None or start_date >= end_date:
@@ -2437,7 +2876,7 @@ def fetch_trazabilidad_analitos_report(
           CASE t.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
           t.Analito;
     """)
-    with _get_engine().connect() as conn:
+    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
         return pd.read_sql(
             sql, conn, params={"start_date": start_date, "end_date": end_date}
         )
@@ -2446,6 +2885,7 @@ def fetch_trazabilidad_analitos_report(
 def fetch_curva_granulometrica_report(
     start_date: date,
     end_date: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     """Lee la curva granulometrica oficial ya ponderada; fin exclusivo."""
     if start_date is None or end_date is None or start_date >= end_date:
@@ -2460,7 +2900,7 @@ def fetch_curva_granulometrica_report(
         WHERE Fecha >= :start_date AND Fecha < :end_date
         ORDER BY Fecha, CASE Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
     """)
-    with _get_engine().connect() as conn:
+    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
         return pd.read_sql(
             sql, conn, params={"start_date": start_date, "end_date": end_date}
         )
@@ -2533,7 +2973,7 @@ def fetch_reporte_turno_cache(start_date: date, end_date: date) -> pd.DataFrame:
     return df
 
 
-def fetch_reporte_turno_cache_emision(start_date: date, end_date: date) -> pd.DataFrame:
+def fetch_reporte_turno_cache_emision(start_date: date, end_date: date, *, conn=None) -> pd.DataFrame:
     """Lee exclusivamente el cache de emision; ``end_date`` es exclusivo."""
     sql = f"""
     SELECT
@@ -2555,7 +2995,7 @@ def fetch_reporte_turno_cache_emision(start_date: date, end_date: date) -> pd.Da
     WHERE Fecha >= :start AND Fecha < :end
     ORDER BY Fecha, Turno;
     """
-    with _get_engine().connect() as conn:
+    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
         return pd.read_sql(
             _sa_text(sql), conn, params={"start": start_date, "end": end_date}
         )
@@ -2578,14 +3018,14 @@ def fetch_generador_reporte_diario(start_date: date, end_date: date) -> pd.DataF
         raise RuntimeError(f"Error al ejecutar sp_generador_reporte_diario: {exc}") from exc
 
 
-def fetch_generador_reporte_diario_emision(start_date: date, end_date: date) -> pd.DataFrame:
+def fetch_generador_reporte_diario_emision(start_date: date, end_date: date, *, conn=None) -> pd.DataFrame:
     """Ejecuta exclusivamente el generador diario de emision."""
     sql = _sa_text(f"""
         EXEC {SP_GENERADOR_REPORTE_DIARIO_EMISION}
             @fecha_inicio = :start,
             @fecha_fin = :end;
     """)
-    with _get_engine().connect() as conn:
+    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
         return pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
 
 
@@ -2604,7 +3044,7 @@ def _normalizar_claves_reconst_srr(df: pd.DataFrame) -> pd.DataFrame:
     return datos.sort_values(["Fecha", "Turno"], kind="stable").reset_index(drop=True)
 
 
-def fetch_reconstitucion_srr_report(start_date: date, end_date: date) -> pd.DataFrame:
+def fetch_reconstitucion_srr_report(start_date: date, end_date: date, *, conn=None) -> pd.DataFrame:
     """Insumos SRR independientes; inicio inclusivo y fin exclusivo."""
     if start_date is None or end_date is None or start_date >= end_date:
         raise ValueError("Reconst Mod SRR requiere inicio anterior al fin exclusivo.")
@@ -2637,7 +3077,7 @@ def fetch_reconstitucion_srr_report(start_date: date, end_date: date) -> pd.Data
         LEFT JOIN inventar_SpcHidr.v_ajuste_camiones_emision_test AS f ON f.Fecha = t.Fecha
         ORDER BY t.Fecha, CASE t.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
     """)
-    with _get_engine().connect() as conn:
+    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
         datos = pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
     return _normalizar_claves_reconst_srr(datos)
 
@@ -2732,7 +3172,7 @@ def _completar_calendario_representatividad(
     )
 
 
-def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=None) -> dict:
+def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=None, *, conn=None) -> dict:
     fin_d = pd.to_datetime(fecha_fin).date()
     corte_d = pd.to_datetime(fecha_corte_operacional or fin_d).date()
     rango_fy = _obtener_rango_fiscal_hasta_mes(corte_d)
@@ -2740,13 +3180,13 @@ def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=N
     fecha_fin_mes = fin_d
     fecha_corte_exclusiva = (pd.Timestamp(corte_d) + pd.Timedelta(days=1)).date()
 
-    df_bd_ton_mes = fetch_bd_ton_report(start_date=fecha_inicio_mes, end_date=corte_d)
+    df_bd_ton_mes = fetch_bd_ton_report(start_date=fecha_inicio_mes, end_date=corte_d, conn=conn)
     if df_bd_ton_mes.empty:
         raise RuntimeError("BD Ton no entregó datos para el mes evaluado.")
 
     df_turno_mes = fetch_estado_apilado_turno_representatividad(
         start_date=fecha_inicio_mes,
-        end_date=fecha_corte_exclusiva,
+        end_date=fecha_corte_exclusiva, conn=conn,
     )
     if df_turno_mes.empty:
         raise RuntimeError(
@@ -2758,7 +3198,7 @@ def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=N
         tipo="QUIMICO",
         alcance="COMBINADO",
         objetivo=0.85,
-        fecha_corte=corte_d,
+        fecha_corte=corte_d, conn=conn,
     )
     if df_gestion_fy_quimico.empty:
         raise RuntimeError("La gestión FY química no entregó resultados.")
@@ -2768,7 +3208,7 @@ def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=N
         tipo="FISICO",
         alcance="COMBINADO",
         objetivo=0.85,
-        fecha_corte=corte_d,
+        fecha_corte=corte_d, conn=conn,
     )
     if df_gestion_fy_fisico.empty:
         raise RuntimeError("La gestión FY física no entregó resultados.")
@@ -2785,9 +3225,34 @@ def _fetch_fuentes_mensuales_torres_oficial(fecha_fin, fecha_corte_operacional=N
     }
 
 
-def armar_paquete_reporte_torre_oficial(
+def armar_paquete_reporte_torre_oficial(periodo_inicio: date, periodo_fin: date) -> dict:
+    """Paquete vivo oficial materializado; construcci?n y publicaci?n fuera de SQL."""
+    periodo_inicio, periodo_fin, _ = normalizar_periodo_mes(periodo_inicio, periodo_fin)
+    with _transaccion_representatividad(periodo_fin) as conn:
+        paquete = _materializar_paquete_reporte_torre_oficial(periodo_inicio, periodo_fin, conn=conn)
+    return paquete
+
+
+def preparar_paquete_editor_representatividad(ini, fin, *, periodo_mes=None) -> dict:
+    """Fuentes del editor vivo, incluidas sus notas, bajo el mismo owner F4C."""
+    ini, fin = pd.to_datetime(ini).date(), pd.to_datetime(fin).date()
+    if ini > fin:
+        raise ValueError("Rango inv?lido para Representatividad.")
+    with _transaccion_representatividad(fin) as conn:
+        corte = refrescar_representatividad_para_exportacion(fin.replace(day=1), fin, conn=conn)
+        fuentes = _fetch_fuentes_mensuales_torres_oficial(fin, corte, conn=conn)
+        if periodo_mes:
+            comentarios = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes, conn=conn)
+        else:
+            comentarios = fetch_comentarios_representatividad_periodo(ini, fin, conn=conn)
+        fuentes["comentarios"] = comentarios
+    return fuentes
+
+
+def _materializar_paquete_reporte_torre_oficial(
     periodo_inicio: date,
     periodo_fin: date,
+    *, conn,
 ) -> dict:
     """
     Ejecuta SPs y consultas pesadas una vez (solo al publicar).
@@ -2800,7 +3265,7 @@ def armar_paquete_reporte_torre_oficial(
 
     fecha_corte_operacional = refrescar_representatividad_para_exportacion(
         start_date=periodo_inicio,
-        end_date=periodo_fin,
+        end_date=periodo_fin, conn=conn,
     )
     if fecha_corte_operacional is None:
         raise RuntimeError(
@@ -2809,14 +3274,14 @@ def armar_paquete_reporte_torre_oficial(
 
     df_rep_real = fetch_representatividad_torres_report(
         start_date=periodo_inicio,
-        end_date=fecha_corte_operacional,
+        end_date=fecha_corte_operacional, conn=conn,
     )
     if df_rep_real.empty:
         raise RuntimeError("Sin datos de representatividad para el rango seleccionado.")
 
     df_pesos_turno = fetch_pesos_representatividad_report(
         start_date=periodo_inicio,
-        end_date=fecha_corte_operacional,
+        end_date=fecha_corte_operacional, conn=conn,
     )
     print(f"[RTO] Filas trazabilidad pesos: {len(df_pesos_turno)}")
 
@@ -2829,17 +3294,20 @@ def armar_paquete_reporte_torre_oficial(
     rango_fy = _obtener_rango_fiscal_hasta_mes(fecha_corte_operacional)
     df_bd_ton_fy = fetch_bd_ton_report(
         start_date=rango_fy["fecha_inicio"],
-        end_date=fecha_corte_operacional,
+        end_date=fecha_corte_operacional, conn=conn,
     )
     if df_bd_ton_fy.empty:
         raise RuntimeError("BD Ton no entregó datos históricos para el año fiscal.")
 
     fuentes = _fetch_fuentes_mensuales_torres_oficial(
         periodo_fin,
-        fecha_corte_operacional,
+        fecha_corte_operacional, conn=conn,
     )
 
+    comentarios = fetch_comentarios_representatividad_periodo(periodo_inicio, periodo_fin, conn=conn)
+
     return {
+        "comentarios": comentarios,
         "rep_torres": df_rep,
         "bd_ton_fy": df_bd_ton_fy,
         "bd_ton_mes": fuentes["df_bd_ton_mes"],
@@ -3129,6 +3597,7 @@ def fetch_reporte_torre_oficial_snapshot(id_reporte: int) -> dict:
 def fetch_reporte_torre_oficial_detalle(
     id_reporte: int | None = None,
     periodo_mes: str | None = None,
+    *, conn=None,
 ) -> pd.DataFrame:
     if id_reporte is not None:
         sql = _sa_text(f"""
@@ -3153,8 +3622,8 @@ def fetch_reporte_torre_oficial_detalle(
     else:
         return pd.DataFrame()
 
-    with _get_engine().connect() as conn:
-        df = pd.read_sql(sql, conn, params=params)
+    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as db_conn:
+        df = pd.read_sql(sql, db_conn, params=params)
 
     if "Fecha" in df.columns:
         df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
@@ -3469,12 +3938,13 @@ def fetch_representatividad_guardado(id_reporte: int) -> pd.DataFrame:
 def fetch_comentarios_representatividad_periodo(
     periodo_inicio: date,
     periodo_fin: date,
+    *, conn=None,
 ) -> pd.DataFrame:
     try:
         _, _, periodo_mes = normalizar_periodo_mes(periodo_inicio, periodo_fin)
     except ValueError:
         return pd.DataFrame()
-    return fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
+    return fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes, conn=conn)
 
 
 def soft_delete_representatividad_por_mes(periodo_mes: str, usuario: str) -> None:
@@ -3565,7 +4035,42 @@ def _promedio_ponderado_periodo(
     return float((valores.loc[validos] * pesos.loc[validos]).sum() / denominador)
 
 
-def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
+def _presentar_derivados_programa_plan(df, programa, plan, masa_programa=None):
+    """Ajusta solo indicadores visuales; nunca recalcula las fórmulas SQL."""
+    for sufijo, masa_externa in [(programa, masa_programa), (plan, None)]:
+        masa_col = f"Apilado_TMS_{sufijo}"
+        if masa_externa is None:
+            if masa_col not in df.columns:
+                continue
+            masa = pd.to_numeric(df[masa_col], errors="coerce")
+        else:
+            masa = masa_externa
+        indicadores = [f"Solubilidad_{sufijo}"]
+        if sufijo == programa:
+            indicadores.append("Dosis_Acido_Programa_Semanal")
+        presentes = [c for c in [f"CuT_{sufijo}", f"CuS_{sufijo}",
+                                f"CO3_{sufijo}", *indicadores] if c in df.columns]
+        cero = masa.eq(0)
+        if masa_externa is not None:
+            # No poblar TB si la fuente guarda el día solo en la primera fila.
+            cero &= df[presentes].notna().any(axis=1)
+        for indicador in indicadores:
+            if indicador not in df.columns:
+                continue
+            requeridos = [f"CuT_{sufijo}", f"CuS_{sufijo}"]
+            if indicador == "Dosis_Acido_Programa_Semanal":
+                requeridos.append(f"CO3_{sufijo}")
+            faltantes = pd.Series(False, index=df.index)
+            for col in requeridos:
+                if col in df.columns:
+                    faltantes |= pd.to_numeric(df[col], errors="coerce").isna()
+            df.loc[masa.gt(0) & faltantes, indicador] = np.nan
+            df.loc[cero, indicador] = 0.0
+
+
+def preparar_df_reporte_turno_excel(
+    df: pd.DataFrame, df_generador: pd.DataFrame = None,
+) -> pd.DataFrame:
     df = df.copy()
 
     # Campaña se presenta igual que Módulo: como número entero.
@@ -3680,6 +4185,20 @@ def preparar_df_reporte_turno_excel(df: pd.DataFrame) -> pd.DataFrame:
         reales_presentes = [col for col in columnas_reales if col in df.columns]
         df.loc[sin_apilado, reales_presentes] = df.loc[sin_apilado, reales_presentes].fillna(0)
 
+    masa_programa = None
+    if (df_generador is not None and not df_generador.empty
+            and "Fecha" in df.columns and "Fecha" in df_generador.columns
+            and "Apilado_TMS_Programa" in df_generador.columns):
+        diario = df_generador[["Fecha", "Apilado_TMS_Programa"]].copy()
+        diario["Fecha"] = pd.to_datetime(diario["Fecha"], errors="coerce").dt.normalize()
+        diario = diario.dropna(subset=["Fecha"]).drop_duplicates()
+        if diario["Fecha"].duplicated().any():
+            raise ValueError("Masa Programa ambigua para una misma fecha.")
+        masa_programa = pd.to_numeric(
+            df["Fecha"].dt.normalize().map(diario.set_index("Fecha")["Apilado_TMS_Programa"]),
+            errors="coerce",
+        )
+    _presentar_derivados_programa_plan(df, "Plan_Semanal", "Plan_Mensual", masa_programa)
     return df
 
 def preparar_df_generador_reporte_excel(
@@ -3856,6 +4375,7 @@ def preparar_df_generador_reporte_excel(
         reales_presentes = [col for col in columnas_reales if col in df.columns]
         df.loc[sin_apilado, reales_presentes] = df.loc[sin_apilado, reales_presentes].fillna(0)
 
+    _presentar_derivados_programa_plan(df, "Programa", "Plan")
     return df[columnas]
 
 def agregar_hoja_generador_reporte(
@@ -5436,7 +5956,7 @@ def export_reporte_turno_estilo_leyes_finos(
     """
 
     df_turno_reconst = df.copy() if df_reconst_srr is not None and not df_reconst_srr.empty else None
-    df = preparar_df_reporte_turno_excel(df)
+    df = preparar_df_reporte_turno_excel(df, df_generador=df_generador)
 
     columnas = [
         "Fecha",

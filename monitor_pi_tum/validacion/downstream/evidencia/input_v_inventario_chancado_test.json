@@ -1,0 +1,26 @@
+[
+  {
+    "Fecha": "2026-09-10",
+    "Fecha_Lectura_D1": "2026-09-10",
+    "Primera_Fila_Bloque": "2026-09-10 08:00:00",
+    "Ultima_Fila_Bloque": "2026-09-11 07:00:00",
+    "Cantidad_Filas_Bloque": 24,
+    "Flag_Bloque_Archive_Valido": 1,
+    "Nivel_Inventario_Silo": 84.00132751464844,
+    "Nivel_Inventario_Harnero": 71.06670379638672,
+    "Nivel_Inventario_Chancado": 66.32023773193359,
+    "TMH_Silo": 2612.589738776916,
+    "TMH_Harnero": 2237.281057471985,
+    "TMH_Chancado": 2077.3097573611744,
+    "Tolva_Compensacion_TMH": 1200.0,
+    "Total_Inventario_Chancado_TMH": 8127.180553610075,
+    "Humedad_Inventario": 3.3,
+    "Total_Inventario_Chancado_TMS": 7858.983595340942,
+    "Fecha_Inventario_Anterior": "2026-09-09",
+    "Inventario_Chancado_TMS_Anterior": 7858.983595340942,
+    "Fuente_Inventario_Anterior": "LAG_VISTA",
+    "Delta_Inventario_Chancado_TMS": 0.0,
+    "Flag_Continuidad_Diaria": 1,
+    "Flag_Inventario_Valido": 1
+  }
+]

@@ -448,6 +448,7 @@ class PublicacionSeguraTM3Tests(unittest.TestCase):
                 return_value=25,
             ) as writer,
             patch.object(cb, "fetch_historial_reporte_torre_oficial", return_value=pd.DataFrame()),
+            patch.object(cb, "fetch_reporte_torre_oficial_detalle", return_value=pd.DataFrame()),
         ):
             resultado = cb.publicar_reporte_representatividad(
                 1,  # rep-publicar-trigger

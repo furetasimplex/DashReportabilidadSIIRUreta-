@@ -1,0 +1,154 @@
+{
+  "inventar_SpcHidr.sp_actualizar_reporte_turno_cache_emision_test": {
+    "XACT_ABORT": [
+      "SET XACT_ABORT ON"
+    ],
+    "BEGIN_TRAN": [
+      "BEGIN TRANSACTION"
+    ],
+    "COMMIT": [
+      "COMMIT"
+    ],
+    "ROLLBACK": [
+      "ROLLBACK"
+    ],
+    "TRY": [
+      "BEGIN TRY"
+    ],
+    "CATCH": [
+      "BEGIN CATCH"
+    ],
+    "TRANCOUNT": [
+      "@@TRANCOUNT"
+    ],
+    "XACT_STATE": [],
+    "APPLOCK": [],
+    "ISOLATION": [],
+    "HOLDLOCK": []
+  },
+  "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test": {
+    "XACT_ABORT": [
+      "SET XACT_ABORT ON"
+    ],
+    "BEGIN_TRAN": [],
+    "COMMIT": [],
+    "ROLLBACK": [],
+    "TRY": [],
+    "CATCH": [],
+    "TRANCOUNT": [],
+    "XACT_STATE": [],
+    "APPLOCK": [],
+    "ISOLATION": [],
+    "HOLDLOCK": [
+      "HOLDLOCK"
+    ]
+  },
+  "inventar_SpcHidr.sp_mantiene_datos_conciliados_emision_test": {
+    "XACT_ABORT": [
+      "SET XACT_ABORT ON"
+    ],
+    "BEGIN_TRAN": [],
+    "COMMIT": [],
+    "ROLLBACK": [],
+    "TRY": [
+      "BEGIN TRY"
+    ],
+    "CATCH": [
+      "BEGIN CATCH"
+    ],
+    "TRANCOUNT": [],
+    "XACT_STATE": [],
+    "APPLOCK": [],
+    "ISOLATION": [],
+    "HOLDLOCK": []
+  },
+  "inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test": {
+    "XACT_ABORT": [
+      "SET XACT_ABORT ON"
+    ],
+    "BEGIN_TRAN": [],
+    "COMMIT": [],
+    "ROLLBACK": [],
+    "TRY": [],
+    "CATCH": [],
+    "TRANCOUNT": [],
+    "XACT_STATE": [],
+    "APPLOCK": [],
+    "ISOLATION": [],
+    "HOLDLOCK": [
+      "HOLDLOCK"
+    ]
+  },
+  "inventar_SpcHidr.sp_refrescar_clays_cufe": {
+    "XACT_ABORT": [
+      "SET XACT_ABORT ON"
+    ],
+    "BEGIN_TRAN": [
+      "BEGIN TRANSACTION"
+    ],
+    "COMMIT": [
+      "COMMIT"
+    ],
+    "ROLLBACK": [
+      "ROLLBACK"
+    ],
+    "TRY": [
+      "BEGIN TRY"
+    ],
+    "CATCH": [
+      "BEGIN CATCH"
+    ],
+    "TRANCOUNT": [
+      "@@TRANCOUNT"
+    ],
+    "XACT_STATE": [],
+    "APPLOCK": [
+      "sp_getapplock"
+    ],
+    "ISOLATION": [],
+    "HOLDLOCK": []
+  },
+  "inventar_SpcHidr.sp_refrescar_historico_apilado_test": {
+    "XACT_ABORT": [
+      "SET XACT_ABORT ON"
+    ],
+    "BEGIN_TRAN": [],
+    "COMMIT": [],
+    "ROLLBACK": [],
+    "TRY": [],
+    "CATCH": [],
+    "TRANCOUNT": [],
+    "XACT_STATE": [],
+    "APPLOCK": [],
+    "ISOLATION": [],
+    "HOLDLOCK": []
+  },
+  "inventar_SpcHidr.sp_registrar_contingencia_pi_test": {
+    "XACT_ABORT": [
+      "SET XACT_ABORT ON"
+    ],
+    "BEGIN_TRAN": [],
+    "COMMIT": [],
+    "ROLLBACK": [],
+    "TRY": [],
+    "CATCH": [],
+    "TRANCOUNT": [],
+    "XACT_STATE": [],
+    "APPLOCK": [],
+    "ISOLATION": [],
+    "HOLDLOCK": []
+  },
+  "inventar_SpcHidr.sp_reporte_turno_emision_test": {
+    "XACT_ABORT": [],
+    "BEGIN_TRAN": [],
+    "COMMIT": [],
+    "ROLLBACK": [],
+    "TRY": [],
+    "CATCH": [],
+    "TRANCOUNT": [],
+    "XACT_STATE": [],
+    "APPLOCK": [],
+    "ISOLATION": [],
+    "HOLDLOCK": []
+  }
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "fecha": "2026-09-08",
+    "tmh_dia": null,
+    "tms_dia": null,
+    "tmh_cv025tot": "41.000000000000",
+    "tmh_cv025_tot": "0E-12",
+    "tag_utilizado": "RO_CV025",
+    "flag_cv25": "PENDIENTE_TUM",
+    "diferencia_entre_tags": "41.000000000000",
+    "flag_tags": "TAG_SECUNDARIO_CERO",
+    "horas_r1": "0.000000",
+    "horas_r2": "0.000000",
+    "horas_total": "0.000000",
+    "turnos_con_dato": 2,
+    "tms_estimado_r1": null,
+    "tms_estimado_r2": null,
+    "flag_preliminar": "PENDIENTE_TUM"
+  }
+]

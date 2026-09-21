@@ -1,0 +1,59 @@
+--- report_export/tests/test_refresco_representatividad.py (antes 4B3C)
++++ report_export/tests/test_refresco_representatividad.py
+@@ -37,6 +37,8 @@
+     def execute(self, sentencia, parametros=None):
+         sql = str(sentencia)
+         self.sentencias.append((sql, parametros))
++        if "SELECT APPLOCK_MODE('public', :recurso, 'Session')" in sql:
++            return _Result("Exclusive" if self.mensual else "NoLock")
+         if "sp_releaseapplock" in sql:
+             self.eventos.append("release")
+             if self.falla == "release":
+@@ -148,7 +150,7 @@
+         self.assertIn("@LockOwner = 'Session'", sql)
+         self.assertIn("@LockMode = 'Exclusive'", sql)
+         self.assertEqual(params, {"recurso": "rep_torres_refresco:2026-09", "timeout": 180000})
+-        self.assertIn("sp_releaseapplock", conn.sentencias[-1][0])
++        self.assertIn("sp_releaseapplock", conn.sentencias[-2][0])
+ 
+     def test_fallos_abortan_tambien_rto_y_liberan_mensual(self):
+         for falla in PASOS + ["validacion"]:
+@@ -256,28 +258,20 @@
+ 
+     def test_abrir_la_grilla_refresca_el_mes_de_la_fecha_final(self):
+         llamadas = []
+-
+-        def _refresco(start_date, end_date):
++        def refresco(start_date, end_date, *, conn):
+             llamadas.append((start_date, end_date))
+             return date(2026, 7, 23)
+-
+-        def _corta(*args, **kwargs):
++        def corta(*args, **kwargs):
+             raise _Alto
+-
+-        with (
+-            patch.object(
+-                cb, "refrescar_representatividad_para_exportacion", _refresco
+-            ),
+-            patch.object(cb, "_fetch_fuentes_mensuales_torres", _corta),
+-        ):
++        conn = _Conexion()
++        with patch.object(repo, "_get_engine", return_value=_Motor(conn)), \
++             patch.object(repo, "refrescar_representatividad_para_exportacion", refresco), \
++             patch.object(repo, "_fetch_fuentes_mensuales_torres_oficial", corta):
+             with self.assertRaises(_Alto):
+-                cb._cargar_detalle_representatividad_periodo(
+-                    date(2026, 7, 10),
+-                    date(2026, 7, 28),
+-                )
+-
+-        # Rango = mes de `fin`, que es el que la grilla realmente muestra.
+-        self.assertEqual(llamadas, [(date(2026, 7, 1), date(2026, 7, 28))])
++                cb._cargar_detalle_representatividad_periodo(date(2026,7,10), date(2026,7,28))
++        self.assertEqual(llamadas, [(date(2026,7,1), date(2026,7,28))])
++        self.assertIn("rollback", conn.eventos)
++        self.assertFalse(conn.mensual)
+ 
+     def test_publicar_no_vuelve_a_refrescar(self):
+         """Con paquete armado el refresco ya corrio: repetirlo es costo puro."""

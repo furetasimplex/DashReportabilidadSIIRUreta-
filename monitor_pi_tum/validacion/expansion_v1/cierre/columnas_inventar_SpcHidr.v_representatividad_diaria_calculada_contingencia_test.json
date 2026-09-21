@@ -1,0 +1,41 @@
+[
+  {
+    "name": "Dia"
+  },
+  {
+    "name": "TM1_TurnoA_Quimico"
+  },
+  {
+    "name": "TM1_TurnoA_Fisico"
+  },
+  {
+    "name": "TM1_TurnoB_Quimico"
+  },
+  {
+    "name": "TM1_TurnoB_Fisico"
+  },
+  {
+    "name": "TM2_TurnoA_Quimico"
+  },
+  {
+    "name": "TM2_TurnoA_Fisico"
+  },
+  {
+    "name": "TM2_TurnoB_Quimico"
+  },
+  {
+    "name": "TM2_TurnoB_Fisico"
+  },
+  {
+    "name": "SRR_TurnoA_Quimico"
+  },
+  {
+    "name": "SRR_TurnoA_Fisico"
+  },
+  {
+    "name": "SRR_TurnoB_Quimico"
+  },
+  {
+    "name": "SRR_TurnoB_Fisico"
+  }
+]

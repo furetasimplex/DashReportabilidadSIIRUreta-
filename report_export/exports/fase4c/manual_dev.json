@@ -1,0 +1,286 @@
+{
+  "fecha": "2026-09-10",
+  "etapas": [
+    {
+      "etapa": "lock",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "NoLock",
+      "lock_mensual": "NoLock"
+    },
+    {
+      "etapa": "lock",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "NoLock",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "lock",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "sp_mantiene_apilado_tmh_v2_test",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "sp_refrescar_historico_apilado_test",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "sp_mantiene_factor_ajuste_camiones_v2_test",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "sp_refrescar_clays_cufe",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "sp_actualizar_reporte_turno_cache_emision_test",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "sp_calcular_resumen_intervalo_totTM",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "sp_refrescar_representatividad_torres",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "sp_sincronizar_bd_ton",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    },
+    {
+      "etapa": "validacion",
+      "dbapi": 3083943052560,
+      "spid": 52,
+      "trancount": 1,
+      "xact_state": 1,
+      "lock_global": "Exclusive",
+      "lock_mensual": "Exclusive"
+    }
+  ],
+  "estado_antes": {
+    "spid": 52,
+    "trancount": 1,
+    "xact_state": 1,
+    "lock_global": "NoLock",
+    "lock_mensual": "NoLock"
+  },
+  "antes": {
+    "Control_Apilado_TMH_v2_test": {
+      "rows": 88,
+      "sha256": "481982c61ca1e0fd724bd7ac4e0ea00143072a637d8917b98a4862235fccf13e"
+    },
+    "Historico_Apilado_Diario": {
+      "rows": 244,
+      "sha256": "e261bc451ad3adabb3536671868129f20bbecc1588a2c9e75bf1fdbe9946dca5"
+    },
+    "Control_Factor_Ajuste_Camiones_v2_test": {
+      "rows": 78,
+      "sha256": "4715657543a0f425f87fa85476d481463d9ffbf3a7ef2ef657a960285fa83f63"
+    },
+    "Clays_CuFe": {
+      "rows": 5032,
+      "sha256": "2cad6dd94dae90132a6af678e5a2e1add3b15693bccfb30d2fab28f313b9e570"
+    },
+    "Clays_CuFe_trazabilidad": {
+      "rows": 398,
+      "sha256": "2fb1ddd81d80218110cd3bdf53bd6e4cb7ed72761b0147f429cd5995c0f2377f"
+    },
+    "reporte_turno_cache_emision_test": {
+      "rows": 154,
+      "sha256": "0297704718d13ea7f70ccac80e5e74af282bbfce8b394945252ebb54f62d8201"
+    },
+    "trazabilidad_analitos_tm_emision_test": {
+      "rows": 1720,
+      "sha256": "6baf724bc71d966299a1e77dfdcd5d5ee6f7423ad688f21378f487994261a7e7"
+    },
+    "Resumen_Intervalo_TotTM": {
+      "rows": 1734,
+      "sha256": "7c570eed1ad23a52fe79c4f124390624ac81b133a03c8efab0fb1353d36c5b37"
+    },
+    "representatividad_torres_resultado": {
+      "rows": 291,
+      "sha256": "e058d3d15a92e48216370efa1bc9687e30cef17680386591261be92a394ed8ac"
+    },
+    "BD_Ton": {
+      "rows": 1509,
+      "sha256": "2541e64cb925f0943d31553214bb7edd06f3d517a0b5399d0f92e53c00b0859f"
+    }
+  },
+  "identities_antes": [
+    {
+      "tabla": "Clays_CuFe_trazabilidad",
+      "columna": "id_trazabilidad",
+      "ultimo": "419"
+    }
+  ],
+  "estado_final_interno": {
+    "spid": 52,
+    "trancount": 1,
+    "xact_state": 1,
+    "lock_global": "Exclusive",
+    "lock_mensual": "Exclusive"
+  },
+  "dentro": {
+    "Control_Apilado_TMH_v2_test": {
+      "rows": 88,
+      "sha256": "20e78727c28f6a51bd21833dcf2bed32c83ce9308dadea47006edf1d331cd6ef"
+    },
+    "Historico_Apilado_Diario": {
+      "rows": 244,
+      "sha256": "e2bccc38a5566ec9c0f9705ee3102540718fb761bbf070b24e6df489a477d27d"
+    },
+    "Control_Factor_Ajuste_Camiones_v2_test": {
+      "rows": 78,
+      "sha256": "3db3b50fd46c22d2c15ea7f9db64c4ce0007da15c99402436e3bc143469bb3d4"
+    },
+    "Clays_CuFe": {
+      "rows": 5032,
+      "sha256": "2cad6dd94dae90132a6af678e5a2e1add3b15693bccfb30d2fab28f313b9e570"
+    },
+    "Clays_CuFe_trazabilidad": {
+      "rows": 398,
+      "sha256": "2fb1ddd81d80218110cd3bdf53bd6e4cb7ed72761b0147f429cd5995c0f2377f"
+    },
+    "reporte_turno_cache_emision_test": {
+      "rows": 154,
+      "sha256": "ef5b359b65164eccec0e8aec8fe3da453aba1e754ae01388fbe05f295a728942"
+    },
+    "trazabilidad_analitos_tm_emision_test": {
+      "rows": 1720,
+      "sha256": "5879202fea080ab870628b377fb733d6eec30cb11e678bcfd82eab8d900004cc"
+    },
+    "Resumen_Intervalo_TotTM": {
+      "rows": 1734,
+      "sha256": "d7ac6367d8d6d07647e119803e73da7dc195a0cae17aff657488b08768559b96"
+    },
+    "representatividad_torres_resultado": {
+      "rows": 291,
+      "sha256": "6ea52e2c647b874c173e97fb419b5cd10a13135be7291bc54f5967fbb68da1d6"
+    },
+    "BD_Ton": {
+      "rows": 1509,
+      "sha256": "2541e64cb925f0943d31553214bb7edd06f3d517a0b5399d0f92e53c00b0859f"
+    }
+  },
+  "sentinel": "SENTINEL_FASE4C_DESPUES_VALIDACION_ANTES_COMMIT",
+  "estado_despues": {
+    "spid": 52,
+    "trancount": 1,
+    "xact_state": 1,
+    "lock_global": "NoLock",
+    "lock_mensual": "NoLock"
+  },
+  "despues": {
+    "Control_Apilado_TMH_v2_test": {
+      "rows": 88,
+      "sha256": "481982c61ca1e0fd724bd7ac4e0ea00143072a637d8917b98a4862235fccf13e"
+    },
+    "Historico_Apilado_Diario": {
+      "rows": 244,
+      "sha256": "e261bc451ad3adabb3536671868129f20bbecc1588a2c9e75bf1fdbe9946dca5"
+    },
+    "Control_Factor_Ajuste_Camiones_v2_test": {
+      "rows": 78,
+      "sha256": "4715657543a0f425f87fa85476d481463d9ffbf3a7ef2ef657a960285fa83f63"
+    },
+    "Clays_CuFe": {
+      "rows": 5032,
+      "sha256": "2cad6dd94dae90132a6af678e5a2e1add3b15693bccfb30d2fab28f313b9e570"
+    },
+    "Clays_CuFe_trazabilidad": {
+      "rows": 398,
+      "sha256": "2fb1ddd81d80218110cd3bdf53bd6e4cb7ed72761b0147f429cd5995c0f2377f"
+    },
+    "reporte_turno_cache_emision_test": {
+      "rows": 154,
+      "sha256": "0297704718d13ea7f70ccac80e5e74af282bbfce8b394945252ebb54f62d8201"
+    },
+    "trazabilidad_analitos_tm_emision_test": {
+      "rows": 1720,
+      "sha256": "6baf724bc71d966299a1e77dfdcd5d5ee6f7423ad688f21378f487994261a7e7"
+    },
+    "Resumen_Intervalo_TotTM": {
+      "rows": 1734,
+      "sha256": "7c570eed1ad23a52fe79c4f124390624ac81b133a03c8efab0fb1353d36c5b37"
+    },
+    "representatividad_torres_resultado": {
+      "rows": 291,
+      "sha256": "e058d3d15a92e48216370efa1bc9687e30cef17680386591261be92a394ed8ac"
+    },
+    "BD_Ton": {
+      "rows": 1509,
+      "sha256": "2541e64cb925f0943d31553214bb7edd06f3d517a0b5399d0f92e53c00b0859f"
+    }
+  },
+  "identities_despues": [
+    {
+      "tabla": "Clays_CuFe_trazabilidad",
+      "columna": "id_trazabilidad",
+      "ultimo": "419"
+    }
+  ],
+  "checks": {
+    "validacion_final_alcanzada": true,
+    "orden": true,
+    "una_sesion": true,
+    "una_dbapi": true,
+    "global_exclusive_en_todos_los_sp": true,
+    "mensual_exclusive_en_todos_los_sp": true,
+    "transaccion_externa_unica": true,
+    "filas_restauradas": true,
+    "identities_iguales": true
+  }
+}

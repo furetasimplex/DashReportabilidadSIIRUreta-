@@ -1,0 +1,62 @@
+[
+  {
+    "id": 8338,
+    "campaña": 18.0,
+    "modulo": 33.0,
+    "volumen_total_estimado_m3": 29072.0,
+    "volumen_diario_m3": 0.0,
+    "volumen_acumulado_final_apilado_m3": 29072.039,
+    "avance_porcentaje": 1.000001341496973,
+    "altura_promedio_m": 7.9,
+    "promedio_grado": 39.0,
+    "fecha": "2026-09-10 00:00:00",
+    "pad_id": 1,
+    "modulo_id": 33,
+    "campaña_id": 11
+  },
+  {
+    "id": 8339,
+    "campaña": 11.0,
+    "modulo": 136.0,
+    "volumen_total_estimado_m3": 101780.0,
+    "volumen_diario_m3": 34699.487,
+    "volumen_acumulado_final_apilado_m3": 101780.39199999999,
+    "avance_porcentaje": 1.000003851444292,
+    "altura_promedio_m": 9.0,
+    "promedio_grado": 38.0,
+    "fecha": "2026-09-10 00:00:00",
+    "pad_id": 2,
+    "modulo_id": 200,
+    "campaña_id": 10
+  },
+  {
+    "id": 8340,
+    "campaña": 11.0,
+    "modulo": 137.0,
+    "volumen_total_estimado_m3": 98000.0,
+    "volumen_diario_m3": 9727.61,
+    "volumen_acumulado_final_apilado_m3": 9727.61,
+    "avance_porcentaje": 0.099261326530612,
+    "altura_promedio_m": 10.0,
+    "promedio_grado": 38.0,
+    "fecha": "2026-09-10 00:00:00",
+    "pad_id": 2,
+    "modulo_id": 201,
+    "campaña_id": 10
+  },
+  {
+    "id": 8341,
+    "campaña": 18.0,
+    "modulo": 34.0,
+    "volumen_total_estimado_m3": 26290.0,
+    "volumen_diario_m3": 0.0,
+    "volumen_acumulado_final_apilado_m3": 12609.859999999999,
+    "avance_porcentaje": 0.4796447318372,
+    "altura_promedio_m": 7.9,
+    "promedio_grado": 39.0,
+    "fecha": "2026-09-10 00:00:00",
+    "pad_id": 1,
+    "modulo_id": 34,
+    "campaña_id": 11
+  }
+]

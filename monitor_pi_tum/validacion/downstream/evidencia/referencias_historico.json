@@ -1,0 +1,18 @@
+[
+  "inventar_SpcHidr.sp_factor_ajuste_camiones_srr_origen_test",
+  "inventar_SpcHidr.sp_factor_ajuste_camiones_test",
+  "inventar_SpcHidr.v_datos_apilado_tmh_v2",
+  "inventar_SpcHidr.sp_mantiene_datos_conciliados_emision_test",
+  "inventar_SpcHidr.v_contingencia_totalizador_resuelto_turno",
+  "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test",
+  "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v4_7_1_test",
+  "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v4_8_1_test",
+  "inventar_SpcHidr.sp_refrescar_historico_apilado_diario",
+  "inventar_SpcHidr.sp_factor_ajuste_camiones_srr_tag_test",
+  "inventar_SpcHidr.sp_mantiene_datos_conciliados_of",
+  "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v4_9_test",
+  "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v4_3_test",
+  "inventar_SpcHidr.sp_refrescar_historico_apilado_test",
+  "inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_test",
+  "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v2_ajustado_test"
+]

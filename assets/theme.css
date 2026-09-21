@@ -17,7 +17,7 @@
   --siir-bg:            #F5F6FA;
   --siir-white:         #FFFFFF;
   --siir-green:         #22C55E;
-  --siir-sidebar-w:     230px;
+  --siir-sidebar-w:     250px;
   --siir-radius:        8px;
   --siir-radius-card:   10px;
   --siir-transition:    0.18s ease;
@@ -138,6 +138,10 @@ a:hover { color: var(--siir-orange-hover); text-decoration: none; }
   border-left-color: var(--siir-orange);
 }
 
+.siir-nav-link > .bi {
+  flex-shrink: 0;
+}
+
 .siir-nav-link.active,
 .siir-nav-link.active:focus {
   background: var(--siir-orange-light) !important;
@@ -154,6 +158,27 @@ a:hover { color: var(--siir-orange-hover); text-decoration: none; }
   padding: 24px 32px;
   overflow-x: hidden;
   min-width: 0;
+}
+
+/* Keep the existing side-by-side layout without imposing desktop width on phones. */
+@media (max-width: 767px) {
+  .siir-sidebar {
+    width: min(var(--siir-sidebar-w), 40vw);
+  }
+
+  .siir-nav-link {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .siir-sidebar-brand > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .siir-main {
+    padding: 16px;
+  }
 }
 
 /* ================================================================

@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 import sys
 import os
 from datetime import date
@@ -16,24 +17,44 @@ INI = date(2026, 8, 1)
 FIN = date(2026, 8, 10)
 
 
-def main():
-    engine = get_engine()
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Validación histórica de trazabilidad; solo lectura SQL por defecto."
+    )
+    parser.add_argument(
+        "--execute-write", action="store_true",
+        help="Autoriza el refresco histórico de cache exclusivamente en DEV. "
+             "TRAZ_READ_ONLY=1 prevalece sobre este flag.",
+    )
+    args = parser.parse_args(argv)
+    execute_write = args.execute_write and os.environ.get("TRAZ_READ_ONLY") != "1"
+    if execute_write:
+        # Reutiliza la protección DEV existente, sin modificar los flujos F4.
+        from monitor_pi_tum.db import _engine_dev, _assert_dev_connection
+        engine = _engine_dev()
+    else:
+        print("[TRAZABILIDAD] Modo READ-ONLY. No se realizarán escrituras SQL.", flush=True)
+        engine = get_engine()
     baseline = pd.read_csv(OUT / "baseline_cache_20260801_20260809.csv")
-    if os.environ.get("TRAZ_READ_ONLY") != "1":
-        print("[1/4] ejecutando cache DEV", flush=True)
-        raw = engine.raw_connection()
-        try:
+    if execute_write:
+        with engine.connect() as conn:
+            # Verifica servidor/base efectivos en la misma conexión del EXEC.
+            _assert_dev_connection(conn)
+            print("[TRAZABILIDAD] Modo WRITE DEV autorizado explícitamente.", flush=True)
+            print("[1/4] ejecutando cache DEV", flush=True)
+            raw = conn.connection
             cur = raw.cursor()
-            cur.execute(
-                "EXEC inventar_SpcHidr.sp_actualizar_reporte_turno_cache_emision_test "
-                "@fecha_inicio=?, @fecha_fin=?",
-                INI, FIN,
-            )
-            while cur.nextset():
-                pass
-            raw.commit()
-        finally:
-            raw.close()
+            try:
+                cur.execute(
+                    "EXEC inventar_SpcHidr.sp_actualizar_reporte_turno_cache_emision_test "
+                    "@fecha_inicio=?, @fecha_fin=?",
+                    INI, FIN,
+                )
+                while cur.nextset():
+                    pass
+                raw.commit()
+            finally:
+                cur.close()
     else:
         print("[1/4] validación de solo lectura", flush=True)
     print("[2/4] leyendo resultados", flush=True)

@@ -1,0 +1,178 @@
+[
+  {
+    "name": "Fecha",
+    "tipo": "date"
+  },
+  {
+    "name": "Campania",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Material",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Modulo",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Avance",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Turno",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Apilado_TMS_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Apilado_TMS_Plan_Mensual",
+    "tipo": "decimal"
+  },
+  {
+    "name": "STOCK",
+    "tipo": "decimal"
+  },
+  {
+    "name": "MINA",
+    "tipo": "decimal"
+  },
+  {
+    "name": "SRR",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuT_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuT_Plan_Mensual",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuT_Plan_Semanal",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuS_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuS_Plan_Mensual",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuS_Plan_Semanal",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Solubilidad_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Solubilidad_Plan_Mensual",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Solubilidad_Plan_Semanal",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CO3_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CO3_Plan_Mensual",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CO3_Plan_Semanal",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuFe_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuFe_Plan_Mensual",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CuFe_Plan_Semanal",
+    "tipo": "decimal"
+  },
+  {
+    "name": "FeT_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "FeS_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "ConsH_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Malla_Menos_1_2_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Malla_Menos_1_2_Plan_Semanal",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Malla_Menos_100_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Malla_Menos_100_Plan_Mensual",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Malla_Menos_100_Plan_Semanal",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CaolBeta_Real",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CaolBeta_Plan_Mensual",
+    "tipo": "decimal"
+  },
+  {
+    "name": "CaolBeta_Plan_Semanal",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Dosis_Acido_Ideal_TM",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Dosis_Acido_Programa_Semanal",
+    "tipo": "decimal"
+  },
+  {
+    "name": "Muestra_Quimica",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Muestra_Fisica",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Fecha_Actualizacion",
+    "tipo": "datetime2"
+  },
+  {
+    "name": "Fuente_Info_Quimica",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Fuente_Info_Fisica",
+    "tipo": "varchar"
+  }
+]

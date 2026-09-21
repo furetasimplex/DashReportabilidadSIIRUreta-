@@ -1,0 +1,8 @@
+[
+  {
+    "consumidor": "inventar_SpcHidr.sp_refrescar_historico_apilado_diario",
+    "base": null,
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_refrescar_historico_apilado_test"
+  }
+]

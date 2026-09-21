@@ -1,0 +1,14 @@
+{
+  "inicio": "2026-09-04",
+  "fin_solicitada": "2026-09-10",
+  "fecha_corte_operacional": "2026-09-10",
+  "inicio_ventana": "2026-09-04",
+  "fin_sql_exclusivo": "2026-09-11",
+  "filas_cache": 14,
+  "rangos_historico": [
+    [
+      "2026-09-04",
+      "2026-09-10"
+    ]
+  ]
+}

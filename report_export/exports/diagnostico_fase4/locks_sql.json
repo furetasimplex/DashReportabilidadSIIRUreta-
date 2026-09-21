@@ -1,0 +1,27 @@
+[
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_clays_cufe",
+    "linea": 966,
+    "texto": "EXEC @ResultadoLock = sys.sp_getapplock"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_clays_cufe",
+    "linea": 968,
+    "texto": "@Resource ="
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_clays_cufe",
+    "linea": 972,
+    "texto": "@LockMode = N'Exclusive',"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_clays_cufe",
+    "linea": 974,
+    "texto": "@LockOwner = N'Transaction',"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_clays_cufe",
+    "linea": 976,
+    "texto": "@LockTimeout = 10000;"
+  }
+]

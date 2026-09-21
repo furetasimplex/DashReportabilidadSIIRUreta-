@@ -13,6 +13,7 @@ import dash_bootstrap_components as dbc
 
 from report_export.report_export import (
     BalanceReportError,
+    refrescar_dependencias_datos_conciliados_emision,
     fetch_recon_balance_official_cases,
     fetch_report_data,
     refrescar_historico_apilado_report,
@@ -30,6 +31,8 @@ from report_export.report_export import (
     refrescar_representatividad_para_exportacion,
     fetch_reporte_turno_report,
     refrescar_dependencias_reporte_turno_emision,
+    preparar_paquete_reporte_turno_emision,
+    preparar_paquete_datos_conciliados_emision,
     actualizar_reporte_turno_cache_emision,
     fetch_reporte_turno_cache_emision,
     fetch_clays_cufe_report,
@@ -40,6 +43,7 @@ from report_export.report_export import (
     export_reporte_turno_estilo_leyes_finos,
     write_reporte_torre_oficial,
     armar_paquete_reporte_torre_oficial,
+    preparar_paquete_editor_representatividad,
     fetch_historial_reporte_torre_oficial,
     fetch_reporte_torre_oficial_detalle,
     fetch_reporte_torre_oficial_snapshot,
@@ -121,34 +125,29 @@ _COLUMNAS_OBLIGATORIAS_TM3 = (
     "Comentario_TM3_Fisico",
 )
 
-
 def _refrescar_dependencias_datos_conciliados(
     ini_d: date,
     fin_d: date,
     fin_sql_exclusivo: date,
-) -> None:
-    refrescar_historico_apilado_report(
-        start_date=ini_d, end_date=fin_d, dias_reproceso=0,
-    )
-    print(
-        "[DATOS-CONCILIADOS] 1/3 Histórico apilado actualizado "
-        f"({ini_d} -> {fin_d}, fin inclusivo)"
-    )
+) -> dict:
+    """
+    Prepara Datos Conciliados mediante una única fotografía atómica:
 
-    actualizar_reporte_turno_cache_emision(
-        start_date=ini_d, end_date=fin_sql_exclusivo,
-    )
-    print(
-        "[DATOS-CONCILIADOS] 2/3 Cache reporte turno actualizado "
-        f"({ini_d} -> {fin_sql_exclusivo}, fin exclusivo)"
-    )
+        Apilado -> Histórico -> Factor -> Clays -> Cache
+        -> Datos Conciliados
 
-    actualizar_datos_conciliados_emision_report(
-        start_date=ini_d, end_date=fin_d, dias_reproceso=0,
-    )
-    print(
-        "[DATOS-CONCILIADOS] 3/3 Datos conciliados actualizados "
-        f"({ini_d} -> {fin_d}, fin inclusivo)"
+    fin_sql_exclusivo se mantiene en la firma por compatibilidad con
+    consumidores existentes.
+
+    El coordinador:
+    - determina el corte operacional para las dependencias reales;
+    - conserva el período calendario completo solicitado para
+      Datos Conciliados;
+    - evita recalcular Factor dentro de Datos Conciliados.
+    """
+    return refrescar_dependencias_datos_conciliados_emision(
+        start_date=ini_d,
+        end_date=fin_d,
     )
 
 _ETIQUETAS_DEPENDENCIAS_DATOS = {
@@ -840,20 +839,8 @@ def _cargar_detalle_representatividad_periodo(
                 "necesarias para construir el detalle."
             )
     else:
-        # Mismo refresco que usa la publicacion, sobre el mes que la grilla
-        # realmente muestra (_fetch_fuentes_mensuales_torres trabaja el mes de
-        # `fin`). Sin esto el editor mostraba el estado que dejo la ultima
-        # publicacion o PDF, y ademas cortaba por una fecha distinta a la que
-        # despues usa el reporte final. El refresco serializa por mes con
-        # sp_getapplock (ver refrescar_representatividad_para_exportacion).
-        fecha_corte_operacional = refrescar_representatividad_para_exportacion(
-            start_date=pd.to_datetime(fin).date().replace(day=1),
-            end_date=fin,
-        )
-        fuentes = _fetch_fuentes_mensuales_torres(
-            fin,
-            fecha_corte_operacional,
-        )
+        fuentes = preparar_paquete_editor_representatividad(ini, fin, periodo_mes=periodo_mes)
+        fecha_corte_operacional = fuentes["fecha_corte_operacional"]
     df_turno_preparado = _preparar_material_por_turno(fuentes["df_turno_mes"])
     df_quimico = _preparar_detalle_mensual_torres(
         df_bd_ton=fuentes["df_bd_ton_mes"],
@@ -885,13 +872,7 @@ def _cargar_detalle_representatividad_periodo(
         # deben proceder exclusivamente del paquete recien refrescado.
         if paquete is not None:
             return detalle, pd.to_datetime(fecha_corte_operacional).date()
-        if periodo_mes:
-            guardado = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
-        elif es_mes_completo(ini, fin):
-            _, _, pm = normalizar_periodo_mes(ini, fin)
-            guardado = fetch_reporte_torre_oficial_detalle(periodo_mes=pm)
-        else:
-            guardado = fetch_comentarios_representatividad_periodo(ini, fin)
+        guardado = fuentes["comentarios"]
         if not guardado.empty:
             detalle = _fusionar_solo_comentarios_en_detalle_vivo(
                 detalle,
@@ -6695,21 +6676,14 @@ def _construir_fuente_unica_representatividad(
     mapa_comentarios: dict | None = None,
 ) -> tuple[dict, bytes, dict]:
     """Construye una vez paquete vivo + workbook para XLSX y los tres PDF."""
-    if mapa_comentarios is None:
-        try:
-            guardado = fetch_comentarios_representatividad_periodo(
-                fecha_inicio,
-                fecha_fin,
-            )
-            if not guardado.empty:
-                mapa_comentarios = comentarios_mapa_desde_dataframe(guardado)
-        except Exception:
-            mapa_comentarios = None
-
     paquete = armar_paquete_reporte_torre_oficial(
         pd.to_datetime(fecha_inicio).date(),
         pd.to_datetime(fecha_fin).date(),
     )
+    if mapa_comentarios is None:
+        guardado = paquete["comentarios"]
+        if not guardado.empty:
+            mapa_comentarios = comentarios_mapa_desde_dataframe(guardado)
     xlsx_bytes = _export_representatividad_desde_paquete(
         paquete,
         mapa_comentarios=mapa_comentarios,
@@ -7465,13 +7439,10 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         print("ENTRÓ A REPORTE TURNO")
         print("fecha fin SQL exclusiva:", fin_sql_exclusivo)
         try:
-            refrescar_dependencias_reporte_turno_emision(
-                start_date=ini, end_date=fin,
+            paquete_turno = preparar_paquete_reporte_turno_emision(
+                start_date=ini, end_date=fin, salida="preview",
             )
-            df_turno = fetch_reporte_turno_cache_emision(
-                start_date=ini,
-                end_date=fin_sql_exclusivo
-            )
+            df_turno = paquete_turno["df_turno"]
             print("Columnas reporte turno:", df_turno.columns.tolist())
             print("Filas reporte turno:", len(df_turno))
         except Exception as e:
@@ -7534,14 +7505,26 @@ def generar_reporte(n_clicks_list, f_ini, f_fin, modo_fecha):
         ini_d = pd.to_datetime(f_ini).date()
         fin_d = pd.to_datetime(f_fin).date()
         try:
-            print(f"[PREVIEW][DATOS_CONCILIADOS_EMISION] Actualizando {ini_d} -> {fin_d}")
-            _refrescar_dependencias_datos_conciliados(
-                ini_d=ini_d,
-                fin_d=fin_d,
-                fin_sql_exclusivo=fin_sql_exclusivo,
+            print(
+                f"[PREVIEW][DATOS_CONCILIADOS_EMISION] "
+                f"Actualizando {ini_d} -> {fin_d}"
             )
-            df = fetch_datos_conciliados_emision_report(ini_d, fin_d)
-            print(f"[PREVIEW][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
+
+            paquete_dc = preparar_paquete_datos_conciliados_emision(
+                start_date=ini_d, end_date=fin_d, salida="preview",
+            )
+            fin_efectiva = paquete_dc["refresco"]["fecha_corte_operacional"]
+
+            print(
+                "[PREVIEW][DATOS_CONCILIADOS_EMISION] "
+                f"Corte operacional efectivo={fin_efectiva}"
+            )
+
+            df = paquete_dc["df_datos"]
+
+            print(
+                f"[PREVIEW][DATOS_CONCILIADOS_EMISION] rows={len(df)}"
+            )
         except Exception as exc:
             return (
                 dbc.Alert(f"Error al consultar Datos Conciliados de emision: {exc}", color="danger"),
@@ -7777,71 +7760,18 @@ def exportar_excel(
             # ------------------------------------------------------------
             _t_export_ini = time.perf_counter()
 
-            _t0 = time.perf_counter()
-            refrescar_dependencias_reporte_turno_emision(
-                start_date=ini_d, end_date=fin_d,
+            paquete_turno = preparar_paquete_reporte_turno_emision(
+                start_date=ini_d, end_date=fin_d, salida="excel",
             )
-            print(f"[EXCEL-T] Preparacion Reporte por Turno: {time.perf_counter() - _t0:.2f}s")
-
-            print(f"[EXCEL] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
-            _t0 = time.perf_counter()
-            df_turno = fetch_reporte_turno_cache_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
-            print(f"[EXCEL-T] SELECT reporte_turno_cache_emision_test: {time.perf_counter() - _t0:.2f}s")
-            print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
-
+            df_turno = paquete_turno["df_turno"]
             if df_turno.empty:
                 return no_update, "Sin datos para el rango seleccionado.", _done, False, no_update
-
-            df_clays_cufe = fetch_clays_cufe_report(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
-            )
-            print(f"[EXCEL] Clays-CuFe rows={len(df_clays_cufe)}")
-
-            df_trazabilidad_analitos = fetch_trazabilidad_analitos_report(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
-            )
-            print(
-                f"[EXCEL] Trazabilidad Analitos rows="
-                f"{len(df_trazabilidad_analitos)}"
-            )
-
-            df_curva_granulometrica = fetch_curva_granulometrica_report(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
-            )
-            print(
-                f"[EXCEL] Curva Granulométrica rows="
-                f"{len(df_curva_granulometrica)}"
-            )
-
-            print(f"[EXCEL] Fetching generador_reporte_diario {ini_d} -> {fin_sql_exclusivo}")
-            _t0 = time.perf_counter()
-            df_generador = fetch_generador_reporte_diario_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
-            print(f"[EXCEL-T] sp_generador_reporte_diario_emision_test: {time.perf_counter() - _t0:.2f}s")
-            print(f"[EXCEL] generador rows={len(df_generador)}")
-
-            print(f"[EXCEL] Fetching Reconst Mod SRR {ini_d} -> {fin_sql_exclusivo}")
-            _t0 = time.perf_counter()
-            df_reconst_srr = fetch_reconstitucion_srr_report(
-                start_date=ini_d, end_date=fin_sql_exclusivo,
-            )
-            print(f"[EXCEL-T] Reconst Mod SRR: {time.perf_counter() - _t0:.2f}s")
-            print(f"[EXCEL] Reconst Mod SRR rows={len(df_reconst_srr)}")
-
-            inicio_mes_resumen = ini_d.replace(day=1)
-            if inicio_mes_resumen < ini_d:
-                print(
-                    f"[EXCEL] Fetching generador resumen mensual "
-                    f"{inicio_mes_resumen} -> {fin_sql_exclusivo}"
-                )
-                df_generador_resumen = fetch_generador_reporte_diario_emision(
-                    start_date=inicio_mes_resumen,
-                    end_date=fin_sql_exclusivo,
-                )
-            else:
-                df_generador_resumen = df_generador
+            df_clays_cufe = paquete_turno["df_clays_cufe"]
+            df_trazabilidad_analitos = paquete_turno["df_trazabilidad_analitos"]
+            df_curva_granulometrica = paquete_turno["df_curva_granulometrica"]
+            df_generador = paquete_turno["df_generador"]
+            df_reconst_srr = paquete_turno["df_reconst_srr"]
+            df_generador_resumen = paquete_turno["df_generador_resumen"]
 
             _t0 = time.perf_counter()
             output = io.BytesIO()
@@ -7879,31 +7809,20 @@ def exportar_excel(
                 f"[EXCEL][DATOS_CONCILIADOS_EMISION] "
                 f"Actualizando {ini_d} -> {fin_d}"
             )
-            _refrescar_dependencias_datos_conciliados(
-                ini_d=ini_d,
-                fin_d=fin_d,
-                fin_sql_exclusivo=fin_sql_exclusivo,
+            paquete_dc = preparar_paquete_datos_conciliados_emision(
+                start_date=ini_d, end_date=fin_d, salida="excel",
             )
-            df = fetch_datos_conciliados_emision_report(
-                start_date=ini_d,
-                end_date=fin_d
+            fin_efectiva = paquete_dc["refresco"]["fecha_corte_operacional"]
+
+            print(
+                "[EXCEL][DATOS_CONCILIADOS_EMISION] "
+                f"Corte operacional efectivo={fin_efectiva}"
             )
-            fecha_inicio_mtd = fin_d.replace(day=1)
-            if ini_d <= fecha_inicio_mtd:
-                df_mtd = df
-            else:
-                df_mtd = fetch_datos_conciliados_emision_report(
-                    start_date=fecha_inicio_mtd,
-                    end_date=fin_d,
-                )
-            df_factor = fetch_factor_ajuste_camiones_report(
-                start_date=ini_d,
-                end_date=fin_d,
-            )
-            df_balance_chancado = fetch_balance_chancado_report(
-                start_date=ini_d,
-                end_date=fin_d,
-            )
+
+            df = paquete_dc["df_datos_visible"]
+            df_mtd = paquete_dc["df_resumen_mtd"]
+            df_factor = paquete_dc["df_factor"]
+            df_balance_chancado = paquete_dc["df_balance"]
             print(
                 "[EXCEL][BALANCE_CHANCADO] "
                 f"rows={len(df_balance_chancado)}"
@@ -8203,14 +8122,10 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
 
         # ── REPORTE POR TURNO ─────────────────────────────────────────
         if tipo in {"reporte_turno", "reporte_turno_turno", "reporte_turno_generador"}:
-            refrescar_dependencias_reporte_turno_emision(
-                start_date=ini_d, end_date=fin_d,
+            paquete_turno = preparar_paquete_reporte_turno_emision(
+                start_date=ini_d, end_date=fin_d, salida="pdf",
             )
-            print(f"[PDF] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
-            df_turno = fetch_reporte_turno_cache_emision(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
-            )
+            df_turno = paquete_turno["df_turno"]
             print(f"[PDF] reporte_turno rows={len(df_turno)}")
             if df_turno.empty:
                 return (
@@ -8221,10 +8136,7 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                     no_update,
                 )
 
-            df_generador = fetch_generador_reporte_diario_emision(
-                start_date=ini_d,
-                end_date=fin_sql_exclusivo,
-            )
+            df_generador = paquete_turno["df_generador"]
             print(f"[PDF] generador rows={len(df_generador)}")
 
             output = io.BytesIO()
@@ -8273,27 +8185,28 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 f"[PDF][DATOS_CONCILIADOS_EMISION] "
                 f"Actualizando {ini_d} -> {fin_d}"
             )
-            _refrescar_dependencias_datos_conciliados(
+
+            refresco_dc = _refrescar_dependencias_datos_conciliados(
                 ini_d=ini_d,
                 fin_d=fin_d,
                 fin_sql_exclusivo=fin_sql_exclusivo,
             )
+
+            fin_efectiva = refresco_dc["fecha_corte_operacional"]
+
+            print(
+                "[PDF][DATOS_CONCILIADOS_EMISION] "
+                f"Corte operacional efectivo={fin_efectiva}"
+            )
+
             df = fetch_datos_conciliados_emision_report(
                 start_date=ini_d,
-                end_date=fin_d,
+                end_date=fin_efectiva,
             )
-            print(f"[PDF][DATOS_CONCILIADOS_EMISION] rows={len(df)}")
-            if df.empty:
-                return (
-                    no_update,
-                    "Sin datos para generar PDF.",
-                    _done,
-                    False,
-                    no_update,
-                )
 
-            pdf_bytes = generar_pdf_datos_conciliados(df, f_ini, f_fin)
-            print(f"[PDF] prod pdf size={len(pdf_bytes)} bytes")
+            print(
+                f"[PDF][DATOS_CONCILIADOS_EMISION] rows={len(df)}"
+            )
             filename = (
                 f"Produccion_Diaria_"
                 f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"
@@ -8325,8 +8238,15 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
                 no_update,
             )
 
-        pdf_bytes = generar_pdf_datos_conciliados(df, f_ini, f_fin)
-        print(f"[PDF] {tipo} pdf size={len(pdf_bytes)} bytes")
+        fin_pdf = pd.to_datetime(fin_efectiva).strftime("%Y-%m-%d")
+
+        pdf_bytes = generar_pdf_datos_conciliados(
+            df,
+            f_ini,
+            fin_pdf,
+        )
+
+        print(f"[PDF] prod pdf size={len(pdf_bytes)} bytes")
         filename = (
             f"Reporte_{tipo}_"
             f"{pd.to_datetime(f_ini).strftime('%Y%m%d')}_"

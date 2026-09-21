@@ -1,0 +1,20 @@
+[
+  {
+    "job": "syspolicy_purge_history",
+    "step_id": 1,
+    "database_name": "master",
+    "command": "IF (msdb.dbo.fn_syspolicy_is_automation_enabled() != 1)\r\n        BEGIN\r\n            RAISERROR(34022, 16, 1)\r\n        END"
+  },
+  {
+    "job": "syspolicy_purge_history",
+    "step_id": 2,
+    "database_name": "master",
+    "command": "EXEC msdb.dbo.sp_syspolicy_purge_history"
+  },
+  {
+    "job": "syspolicy_purge_history",
+    "step_id": 3,
+    "database_name": "master",
+    "command": "if ('$(ESCAPE_SQUOTE(INST))' -eq 'MSSQLSERVER') {$a = '\\DEFAULT'} ELSE {$a = ''};\r\n(Get-Item SQLSERVER:\\SQLPolicy\\$(ESCAPE_NONE(SRVR))$a).EraseSystemHealthPhantomRecords()"
+  }
+]

@@ -14,6 +14,7 @@ from report_export.export_to_excel import (
     calcular_resumen_mtd,
     export_datos_conciliados_to_template,
     obtener_fecha_actualizacion,
+    DependenciaDatosExportError,
 )
 from report_export.report_export import COLUMNAS_DATOS_CONCILIADOS
 
@@ -398,8 +399,13 @@ def test_fecha_corte_no_salta_un_dia_incompleto():
 
 def test_fecha_corte_informa_columnas_estructurales_faltantes():
     df = _datos_mtd("2026-07-01", 1, 1).drop(columns=["Camiones_TMS_plan"])
-    with pytest.raises(ValueError, match="Camiones_TMS_plan"):
+    with pytest.raises(DependenciaDatosExportError) as captura:
         _obtener_fecha_corte_resumen_datos_conciliados(df)
+
+    assert "Faltan columnas requeridas para construir el resumen MTD." in str(
+        captura.value
+    )
+    assert "Camiones_TMS_plan" in captura.value.campos
 
 
 def test_fecha_corte_rechaza_primera_fecha_incompleta():

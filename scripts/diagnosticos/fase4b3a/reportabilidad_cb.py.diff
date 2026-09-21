@@ -1,0 +1,143 @@
+--- report_export/callbacks/reportabilidad_cb.py (antes F4B3A)
++++ report_export/callbacks/reportabilidad_cb.py
+@@ -31,6 +31,7 @@
+     refrescar_representatividad_para_exportacion,
+     fetch_reporte_turno_report,
+     refrescar_dependencias_reporte_turno_emision,
++    preparar_paquete_reporte_turno_emision,
+     actualizar_reporte_turno_cache_emision,
+     fetch_reporte_turno_cache_emision,
+     fetch_clays_cufe_report,
+@@ -7461,13 +7462,10 @@
+         print("ENTRÓ A REPORTE TURNO")
+         print("fecha fin SQL exclusiva:", fin_sql_exclusivo)
+         try:
+-            refresco_turno = refrescar_dependencias_reporte_turno_emision(
+-                start_date=ini, end_date=fin,
+-            )
+-            df_turno = fetch_reporte_turno_cache_emision(
+-                start_date=ini,
+-                end_date=refresco_turno["fin_sql_exclusivo"]
+-            )
++            paquete_turno = preparar_paquete_reporte_turno_emision(
++                start_date=ini, end_date=fin, salida="preview",
++            )
++            df_turno = paquete_turno["df_turno"]
+             print("Columnas reporte turno:", df_turno.columns.tolist())
+             print("Filas reporte turno:", len(df_turno))
+         except Exception as e:
+@@ -7791,73 +7789,18 @@
+             # ------------------------------------------------------------
+             _t_export_ini = time.perf_counter()
+ 
+-            _t0 = time.perf_counter()
+-            refresco_turno = refrescar_dependencias_reporte_turno_emision(
+-                start_date=ini_d, end_date=fin_d,
+-            )
+-            print(f"[EXCEL-T] Preparacion Reporte por Turno: {time.perf_counter() - _t0:.2f}s")
+-
+-            print(f"[EXCEL] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
+-            _t0 = time.perf_counter()
+-            df_turno = fetch_reporte_turno_cache_emision(
+-                start_date=ini_d, end_date=refresco_turno["fin_sql_exclusivo"],
+-            )
+-            print(f"[EXCEL-T] SELECT reporte_turno_cache_emision_test: {time.perf_counter() - _t0:.2f}s")
+-            print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
+-
++            paquete_turno = preparar_paquete_reporte_turno_emision(
++                start_date=ini_d, end_date=fin_d, salida="excel",
++            )
++            df_turno = paquete_turno["df_turno"]
+             if df_turno.empty:
+                 return no_update, "Sin datos para el rango seleccionado.", _done, False, no_update
+-
+-            df_clays_cufe = fetch_clays_cufe_report(
+-                start_date=ini_d,
+-                end_date=fin_sql_exclusivo,
+-            )
+-            print(f"[EXCEL] Clays-CuFe rows={len(df_clays_cufe)}")
+-
+-            df_trazabilidad_analitos = fetch_trazabilidad_analitos_report(
+-                start_date=ini_d,
+-                end_date=fin_sql_exclusivo,
+-            )
+-            print(
+-                f"[EXCEL] Trazabilidad Analitos rows="
+-                f"{len(df_trazabilidad_analitos)}"
+-            )
+-
+-            df_curva_granulometrica = fetch_curva_granulometrica_report(
+-                start_date=ini_d,
+-                end_date=fin_sql_exclusivo,
+-            )
+-            print(
+-                f"[EXCEL] Curva Granulométrica rows="
+-                f"{len(df_curva_granulometrica)}"
+-            )
+-
+-            print(f"[EXCEL] Fetching generador_reporte_diario {ini_d} -> {fin_sql_exclusivo}")
+-            _t0 = time.perf_counter()
+-            df_generador = fetch_generador_reporte_diario_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
+-            print(f"[EXCEL-T] sp_generador_reporte_diario_emision_test: {time.perf_counter() - _t0:.2f}s")
+-            print(f"[EXCEL] generador rows={len(df_generador)}")
+-
+-            print(f"[EXCEL] Fetching Reconst Mod SRR {ini_d} -> {fin_sql_exclusivo}")
+-            _t0 = time.perf_counter()
+-            df_reconst_srr = fetch_reconstitucion_srr_report(
+-                start_date=ini_d, end_date=fin_sql_exclusivo,
+-            )
+-            print(f"[EXCEL-T] Reconst Mod SRR: {time.perf_counter() - _t0:.2f}s")
+-            print(f"[EXCEL] Reconst Mod SRR rows={len(df_reconst_srr)}")
+-
+-            inicio_mes_resumen = ini_d.replace(day=1)
+-            if inicio_mes_resumen < ini_d:
+-                print(
+-                    f"[EXCEL] Fetching generador resumen mensual "
+-                    f"{inicio_mes_resumen} -> {fin_sql_exclusivo}"
+-                )
+-                df_generador_resumen = fetch_generador_reporte_diario_emision(
+-                    start_date=inicio_mes_resumen,
+-                    end_date=fin_sql_exclusivo,
+-                )
+-            else:
+-                df_generador_resumen = df_generador
++            df_clays_cufe = paquete_turno["df_clays_cufe"]
++            df_trazabilidad_analitos = paquete_turno["df_trazabilidad_analitos"]
++            df_curva_granulometrica = paquete_turno["df_curva_granulometrica"]
++            df_generador = paquete_turno["df_generador"]
++            df_reconst_srr = paquete_turno["df_reconst_srr"]
++            df_generador_resumen = paquete_turno["df_generador_resumen"]
+ 
+             _t0 = time.perf_counter()
+             output = io.BytesIO()
+@@ -8231,14 +8174,10 @@
+ 
+         # ── REPORTE POR TURNO ─────────────────────────────────────────
+         if tipo in {"reporte_turno", "reporte_turno_turno", "reporte_turno_generador"}:
+-            refresco_turno = refrescar_dependencias_reporte_turno_emision(
+-                start_date=ini_d, end_date=fin_d,
+-            )
+-            print(f"[PDF] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
+-            df_turno = fetch_reporte_turno_cache_emision(
+-                start_date=ini_d,
+-                end_date=refresco_turno["fin_sql_exclusivo"],
+-            )
++            paquete_turno = preparar_paquete_reporte_turno_emision(
++                start_date=ini_d, end_date=fin_d, salida="pdf",
++            )
++            df_turno = paquete_turno["df_turno"]
+             print(f"[PDF] reporte_turno rows={len(df_turno)}")
+             if df_turno.empty:
+                 return (
+@@ -8249,10 +8188,7 @@
+                     no_update,
+                 )
+ 
+-            df_generador = fetch_generador_reporte_diario_emision(
+-                start_date=ini_d,
+-                end_date=fin_sql_exclusivo,
+-            )
++            df_generador = paquete_turno["df_generador"]
+             print(f"[PDF] generador rows={len(df_generador)}")
+ 
+             output = io.BytesIO()

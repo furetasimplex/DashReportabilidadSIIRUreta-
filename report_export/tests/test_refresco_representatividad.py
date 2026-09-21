@@ -1,291 +1,256 @@
+from contextlib import contextmanager
 from datetime import date
 import unittest
 from unittest.mock import patch
-
 import pandas as pd
-
 from report_export import report_export as repo
 from report_export.callbacks import reportabilidad_cb as cb
 
 
 class _Alto(Exception):
-    """Corta la ejecucion apenas se llega al punto que interesa medir."""
+    """Sentinel de las pruebas de consumidores."""
 
 
 class _Result:
-    def __init__(self, valor):
+    def __init__(self, valor=None):
         self.valor = valor
-
     def scalar(self):
         return self.valor
-
-
-class _Contexto:
-    def __init__(self, conexion):
-        self.conexion = conexion
-
-    def __enter__(self):
-        return self.conexion
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
+    def mappings(self):
+        return self
+    def one(self):
+        return self.valor
+    def close(self):
+        pass
 
 
 class _Conexion:
-    """Registra cada sentencia; devuelve rc para sp_getapplock."""
-
-    def __init__(self, ejecuciones=None, falla_en=None, rc=0):
-        self.ejecuciones = ejecuciones if ejecuciones is not None else []
-        self.falla_en = falla_en
-        self.rc = rc
+    def __init__(self, falla=None, rc=0):
+        self.falla, self.rc = falla, rc
+        self.eventos, self.sentencias, self.confirmados = [], [], []
+        self.pendientes = []
+        self.tx = 0
+        self.global_lock = False
+        self.mensual = False
+        self.invalidada = False
 
     def execute(self, sentencia, parametros=None):
         sql = str(sentencia)
-        if self.falla_en and self.falla_en in sql:
-            raise Exception("fallo simulado")
-        self.ejecuciones.append((sql, parametros))
-        return _Result(self.rc if "sp_getapplock" in sql else None)
+        self.sentencias.append((sql, parametros))
+        if "SELECT APPLOCK_MODE('public', :recurso, 'Session')" in sql:
+            return _Result("Exclusive" if self.mensual else "NoLock")
+        if "sp_releaseapplock" in sql:
+            self.eventos.append("release")
+            if self.falla == "release":
+                raise RuntimeError("fallo release")
+            self.mensual = False
+            return _Result(0)
+        if "sp_getapplock" in sql:
+            if "SIIR_CONTINGENCIA_PI_APILADO" in sql:
+                assert self.tx == 1 and self.mensual
+                self.eventos.append("global")
+                self.global_lock = True
+                return _Result(0)
+            self.eventos.append("mensual")
+            self.mensual = self.rc >= 0
+            return _Result(self.rc)
+        if "XACT_STATE()" in sql:
+            self.eventos.append("validacion")
+            return _Result({"trancount": self.tx, "xact_state": 1,
+                            "lock_global": "None" if self.falla == "validacion" else
+                            ("Exclusive" if self.global_lock else "None")})
+        nombre = next((n for n in ("sp_calcular_resumen_intervalo_totTM",
+                                   "sp_refrescar_representatividad_torres", "sp_sincronizar_bd_ton")
+                       if n in sql), None)
+        if nombre is None:
+            raise AssertionError(sql)
+        assert self.tx == 1 and self.global_lock and self.mensual
+        self.eventos.append(nombre)
+        if self.falla == nombre:
+            raise RuntimeError("fallo " + nombre)
+        self.pendientes.append(nombre)
+        return _Result()
 
     def commit(self):
-        pass
+        assert self.tx == 0, "commit manual dentro de la transaccion de datos"
+        self.eventos.append("control_commit")
 
+    def invalidate(self):
+        self.invalidada = True
+
+    @contextmanager
     def begin(self):
-        return _Contexto(self)
+        assert self.tx == 0
+        self.tx = 1
+        self.eventos.append("begin")
+        try:
+            yield self
+        except BaseException:
+            self.eventos.append("rollback")
+            self.pendientes.clear()
+            raise
+        else:
+            self.eventos.append("commit")
+            self.confirmados.extend(self.pendientes)
+        finally:
+            self.tx = 0
+            self.global_lock = False
 
 
 class _Motor:
-    def __init__(self, conexion=None):
-        self.conexion = conexion or _Conexion()
-
+    def __init__(self, conn):
+        self.conn = conn
+        self.conexiones = 0
+    @contextmanager
     def connect(self):
-        return _Contexto(self.conexion)
-
-    def begin(self):
-        return _Contexto(self.conexion)
+        self.conexiones += 1
+        yield self.conn
 
 
-def _sps_en(ejecuciones):
-    """Ignora las sentencias de lock y deja solo los tres SP de refresco."""
-    out = []
-    for sql, params in ejecuciones:
-        if "sp_getapplock" in sql or "sp_releaseapplock" in sql:
-            continue
-        if "EXEC " not in sql:
-            continue
-        out.append((sql.split("EXEC ", 1)[1].split()[0], params))
-    return out
+PASOS = ["sp_calcular_resumen_intervalo_totTM", "sp_refrescar_representatividad_torres",
+         "sp_sincronizar_bd_ton"]
 
 
 class RefrescoRepresentatividadTests(unittest.TestCase):
+    def ejecutar(self, conn, corte=date(2026, 9, 15), corte_rto=None):
+        motor = _Motor(conn)
+        def rto(*, start_date, end_date, dias_reproceso, conn):
+            assert conn is motor.conn and conn.tx == 1 and conn.global_lock
+            repo._adquirir_lock_refresco_turno(conn)  # reentrada del coordinador actual
+            conn.eventos.append("RTO")
+            conn.pendientes.append("RTO")
+            return {"fecha_corte_operacional": corte_rto or end_date}
+        with patch.object(repo, "_get_engine", return_value=motor), \
+             patch.object(repo, "fetch_fecha_corte_operacional_representatividad", return_value=corte) as fetch, \
+             patch.object(repo, "refrescar_dependencias_reporte_turno_emision", side_effect=rto) as coord:
+            resultado = repo.refrescar_representatividad_para_exportacion(date(2026, 9, 1), date(2026, 9, 30))
+        self.assertEqual(motor.conexiones, 1)
+        fetch.assert_called_once_with(date(2026, 9, 1), date(2026, 9, 30), conn=conn)
+        coord.assert_called_once_with(start_date=date(2026, 9, 1), end_date=corte,
+                                      dias_reproceso=7, conn=conn)
+        return resultado
+
+    def test_orden_misma_conexion_y_una_transaccion(self):
+        conn = _Conexion()
+        self.assertEqual(self.ejecutar(conn), date(2026, 9, 15))
+        self.assertEqual(conn.eventos, ["mensual", "control_commit", "begin", "global", "global", "RTO"]
+                         + PASOS + ["validacion", "commit", "release", "control_commit"])
+        self.assertEqual(conn.confirmados, ["RTO"] + PASOS)
+        self.assertFalse(conn.mensual)
+        self.assertFalse(conn.global_lock)
+        self.assertFalse(any("sp_mantiene_apilado_tmh_v2_test" in s for s, _ in conn.sentencias))
+        for sql, params in conn.sentencias:
+            if any(n in sql for n in PASOS):
+                self.assertEqual(params, {"start": date(2026, 9, 1), "end": date(2026, 9, 15)})
+
+    def test_lock_mensual_conserva_contrato(self):
+        conn = _Conexion()
+        self.ejecutar(conn)
+        sql, params = conn.sentencias[0]
+        self.assertIn("@LockOwner = 'Session'", sql)
+        self.assertIn("@LockMode = 'Exclusive'", sql)
+        self.assertEqual(params, {"recurso": "rep_torres_refresco:2026-09", "timeout": 180000})
+        self.assertIn("sp_releaseapplock", conn.sentencias[-2][0])
+
+    def test_fallos_abortan_tambien_rto_y_liberan_mensual(self):
+        for falla in PASOS + ["validacion"]:
+            with self.subTest(falla=falla):
+                conn = _Conexion(falla=falla)
+                with self.assertRaises(RuntimeError):
+                    self.ejecutar(conn)
+                self.assertEqual(conn.confirmados, [])
+                self.assertIn("rollback", conn.eventos)
+                self.assertNotIn("commit", conn.eventos)
+                self.assertFalse(conn.mensual)
+                self.assertFalse(conn.global_lock)
+                if falla in PASOS:
+                    self.assertEqual([e for e in conn.eventos if e in PASOS], PASOS[:PASOS.index(falla)+1])
+
+    def test_fallo_rto_aborta_antes_de_resumen(self):
+        conn = _Conexion()
+        with patch.object(repo, "_get_engine", return_value=_Motor(conn)), \
+             patch.object(repo, "fetch_fecha_corte_operacional_representatividad", return_value=date(2026,9,15)), \
+             patch.object(repo, "refrescar_dependencias_reporte_turno_emision", side_effect=RuntimeError("fallo RTO")):
+            with self.assertRaisesRegex(RuntimeError, "fallo RTO"):
+                repo.refrescar_representatividad_para_exportacion(date(2026,9,1),date(2026,9,30))
+        self.assertFalse(any(e in PASOS for e in conn.eventos))
+        self.assertIn("rollback",conn.eventos)
+        self.assertFalse(conn.mensual)
+
+    def test_sentinel_tras_validacion_real_revierte_y_libera(self):
+        conn = _Conexion()
+        original = repo._validar_refresco_representatividad
+        def sentinel(c):
+            original(c)
+            self.assertEqual(c.tx, 1)
+            self.assertTrue(c.global_lock and c.mensual)
+            self.assertEqual(c.pendientes, ["RTO"] + PASOS)
+            raise _Alto("SENTINEL antes de commit")
+        with patch.object(repo, "_validar_refresco_representatividad", side_effect=sentinel):
+            with self.assertRaisesRegex(_Alto, "SENTINEL"):
+                self.ejecutar(conn)
+        self.assertEqual(conn.confirmados, [])
+        self.assertEqual(conn.eventos[-3:], ["rollback", "release", "control_commit"])
+        self.assertFalse(conn.mensual)
+
+    def test_corte_rto_menor_aborta_sin_recortar_representatividad(self):
+        conn = _Conexion()
+        with self.assertRaisesRegex(RuntimeError, "Cortes incompatibles"):
+            self.ejecutar(conn, corte_rto=date(2026,9,14))
+        self.assertEqual(conn.confirmados, [])
+        self.assertFalse(any(e in PASOS for e in conn.eventos))
+        self.assertFalse(conn.mensual)
+
+    def test_sin_corte_no_ejecuta_rto(self):
+        conn = _Conexion()
+        with self.assertRaisesRegex(RuntimeError, "No existe una fecha operacional"):
+            self.ejecutar(conn, corte=None)
+        self.assertNotIn("RTO",conn.eventos)
+        self.assertIn("rollback",conn.eventos)
+        self.assertFalse(conn.mensual)
+
+    def test_lock_mensual_rechazado_no_abre_transaccion_de_datos(self):
+        conn = _Conexion(rc=-1)
+        with self.assertRaisesRegex(RuntimeError, "2026-09"):
+            self.ejecutar(conn)
+        self.assertEqual(conn.eventos, ["mensual","control_commit"])
+        self.assertFalse(conn.mensual)
+
+    def test_release_fallido_invalida_sesion(self):
+        conn = _Conexion(falla="release")
+        with self.assertRaisesRegex(RuntimeError, "fallo release"):
+            self.ejecutar(conn)
+        self.assertTrue(conn.invalidada)
+
+    def test_error_original_no_se_oculta_si_release_falla(self):
+        conn = _Conexion(falla="release")
+        with patch.object(repo, "_get_engine", return_value=_Motor(conn)), \
+             patch.object(repo, "_adquirir_lock_refresco_turno", side_effect=RuntimeError("fallo global")):
+            with self.assertRaisesRegex(RuntimeError, "fallo global"):
+                repo.refrescar_representatividad_para_exportacion(date(2026,9,1),date(2026,9,30))
+        self.assertTrue(conn.invalidada)
+        self.assertIn("rollback",conn.eventos)
+
     def test_fecha_corte_usa_totalizador_y_bitacora_y_respeta_rango(self):
-        esperado = date(2026, 7, 23)
-        motor = _Motor()
+        motor = _Motor(_Conexion())
+        with patch.object(repo,"_get_engine",return_value=motor), \
+             patch.object(repo.pd,"read_sql_query",return_value=pd.DataFrame(
+                 {"Fecha_Maxima_Exportable":[pd.Timestamp("2026-09-15")]})) as leer:
+            resultado=repo.fetch_fecha_corte_operacional_representatividad(date(2026,9,1),date(2026,9,30))
+        self.assertEqual(resultado,date(2026,9,15))
+        sql=str(leer.call_args.args[0])
+        for literal in ("inventar_SpcHidr.tot_TM","inventar_SpcHidr.v_bitacora_rangos_norm",
+                        "r.Max_ts_fin_dia <= mt.Max_Fecha_Totalizador"):
+            self.assertIn(literal,sql)
+        self.assertEqual(leer.call_args.kwargs["params"],{"start":date(2026,9,1),"end":date(2026,9,30)})
 
-        with (
-            patch.object(repo, "_get_engine", return_value=motor),
-            patch.object(
-                repo.pd,
-                "read_sql_query",
-                return_value=pd.DataFrame(
-                    {"Fecha_Maxima_Exportable": [pd.Timestamp(esperado)]}
-                ),
-            ) as leer,
-        ):
-            resultado = repo.fetch_fecha_corte_operacional_representatividad(
-                date(2026, 7, 1),
-                date(2026, 7, 31),
-            )
-
-        self.assertEqual(resultado, esperado)
-        sql = str(leer.call_args.args[0])
-        self.assertIn("inventar_SpcHidr.tot_TM", sql)
-        self.assertIn("inventar_SpcHidr.v_bitacora_rangos_norm", sql)
-        self.assertIn(
-            "r.Max_ts_fin_dia <= mt.Max_Fecha_Totalizador",
-            sql,
-        )
-        self.assertEqual(
-            leer.call_args.kwargs["params"],
-            {
-                "start": date(2026, 7, 1),
-                "end": date(2026, 7, 31),
-            },
-        )
-
-    def test_refresco_ejecuta_los_sp_en_orden_con_corte_inclusivo(self):
-        ejecuciones = []
-        motor = _Motor(_Conexion(ejecuciones))
-        inicio = date(2026, 7, 1)
-        corte = date(2026, 7, 23)
-
-        with (
-            patch.object(
-                repo,
-                "fetch_fecha_corte_operacional_representatividad",
-                return_value=corte,
-            ),
-            patch.object(repo, "_get_engine", return_value=motor),
-        ):
-            resultado = repo.refrescar_representatividad_para_exportacion(
-                inicio,
-                date(2026, 7, 31),
-            )
-
-        self.assertEqual(resultado, corte)
-        sps = _sps_en(ejecuciones)
-        self.assertEqual(
-            [nombre for nombre, _ in sps],
-            [
-                # Primero el apilado: alimenta Turno_Evaluable, del que
-                # dependen las tres capas siguientes para decidir que dias
-                # son evaluables.
-                "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test",
-                "inventar_SpcHidr.sp_calcular_resumen_intervalo_totTM",
-                "inventar_SpcHidr.sp_refrescar_representatividad_torres",
-                "inventar_SpcHidr.sp_sincronizar_bd_ton",
-            ],
-        )
-        self.assertTrue(
-            all(
-                parametros == {"start": inicio, "end": corte}
-                for _, parametros in sps
-            )
-        )
-
-    def test_apilado_reprocesa_dias_ya_congelados(self):
-        """Con @DiasReproceso=0 un dia congelado antes del cierre de turno
-        se quedaria con Flag_Apilado_Valido=0 para siempre."""
-        ejecuciones = []
-        motor = _Motor(_Conexion(ejecuciones))
-
-        with (
-            patch.object(
-                repo,
-                "fetch_fecha_corte_operacional_representatividad",
-                return_value=date(2026, 7, 23),
-            ),
-            patch.object(repo, "_get_engine", return_value=motor),
-        ):
-            repo.refrescar_representatividad_para_exportacion(
-                date(2026, 7, 1),
-                date(2026, 7, 31),
-            )
-
-        sql_apilado = next(
-            sql for sql, _ in ejecuciones
-            if "sp_mantiene_apilado_tmh_v2_test" in sql
-        )
-        self.assertIn("@DiasReproceso = 7", sql_apilado)
-
-    def test_refresco_informa_si_no_hay_fecha_operacional_cerrada(self):
-        with patch.object(
-            repo,
-            "fetch_fecha_corte_operacional_representatividad",
-            return_value=None,
-        ):
-            with self.assertRaisesRegex(
-                RuntimeError,
-                "No existe una fecha operacional cerrada",
-            ):
-                repo.refrescar_representatividad_para_exportacion(
-                    date(2026, 7, 1),
-                    date(2026, 7, 31),
-                )
-
-    def test_refresco_identifica_el_sp_que_falla(self):
-        nombre = "inventar_SpcHidr.sp_refrescar_representatividad_torres"
-        motor = _Motor(_Conexion(falla_en=nombre))
-
-        with (
-            patch.object(
-                repo,
-                "fetch_fecha_corte_operacional_representatividad",
-                return_value=date(2026, 7, 23),
-            ),
-            patch.object(repo, "_get_engine", return_value=motor),
-        ):
-            with self.assertRaisesRegex(RuntimeError, nombre):
-                repo.refrescar_representatividad_para_exportacion(
-                    date(2026, 7, 1),
-                    date(2026, 7, 31),
-                )
-
-    def test_toma_y_libera_el_applock_del_mes(self):
-        ejecuciones = []
-        motor = _Motor(_Conexion(ejecuciones))
-
-        with (
-            patch.object(
-                repo,
-                "fetch_fecha_corte_operacional_representatividad",
-                return_value=date(2026, 7, 23),
-            ),
-            patch.object(repo, "_get_engine", return_value=motor),
-        ):
-            repo.refrescar_representatividad_para_exportacion(
-                date(2026, 7, 1),
-                date(2026, 7, 31),
-            )
-
-        self.assertIn("sp_getapplock", ejecuciones[0][0])
-        self.assertEqual(
-            ejecuciones[0][1],
-            {
-                "recurso": "rep_torres_refresco:2026-07",
-                "timeout": repo.LOCK_REFRESCO_REP_TIMEOUT_MS,
-            },
-        )
-        self.assertIn("@LockOwner = 'Session'", ejecuciones[0][0])
-        self.assertIn("sp_releaseapplock", ejecuciones[-1][0])
-        self.assertEqual(
-            ejecuciones[-1][1],
-            {"recurso": "rep_torres_refresco:2026-07"},
-        )
-
-    def test_lock_no_obtenido_aborta_sin_ejecutar_sp(self):
-        ejecuciones = []
-        motor = _Motor(_Conexion(ejecuciones, rc=-1))
-
-        with (
-            patch.object(
-                repo,
-                "fetch_fecha_corte_operacional_representatividad",
-                return_value=date(2026, 7, 23),
-            ),
-            patch.object(repo, "_get_engine", return_value=motor),
-        ):
-            with self.assertRaisesRegex(RuntimeError, "2026-07"):
-                repo.refrescar_representatividad_para_exportacion(
-                    date(2026, 7, 1),
-                    date(2026, 7, 31),
-                )
-
-        self.assertEqual(_sps_en(ejecuciones), [])
-        self.assertEqual(len(ejecuciones), 1)
-        self.assertIn("sp_getapplock", ejecuciones[0][0])
-
-    def test_libera_el_lock_aunque_falle_un_sp(self):
-        nombre = "inventar_SpcHidr.sp_refrescar_representatividad_torres"
-        ejecuciones = []
-        motor = _Motor(_Conexion(ejecuciones, falla_en=nombre))
-
-        with (
-            patch.object(
-                repo,
-                "fetch_fecha_corte_operacional_representatividad",
-                return_value=date(2026, 7, 23),
-            ),
-            patch.object(repo, "_get_engine", return_value=motor),
-        ):
-            with self.assertRaisesRegex(RuntimeError, nombre):
-                repo.refrescar_representatividad_para_exportacion(
-                    date(2026, 7, 1),
-                    date(2026, 7, 31),
-                )
-
-        self.assertTrue(
-            any("sp_releaseapplock" in sql for sql, _ in ejecuciones)
-        )
+    def test_corte_con_conn_no_abre_otra_conexion(self):
+        conn = _Conexion()
+        with patch.object(repo,"_get_engine",side_effect=AssertionError("conexion extra")), \
+             patch.object(repo.pd,"read_sql_query",return_value=pd.DataFrame(
+                 {"Fecha_Maxima_Exportable":[pd.Timestamp("2026-09-15")]})) as leer:
+            repo.fetch_fecha_corte_operacional_representatividad(date(2026,9,1),date(2026,9,30),conn=conn)
+        self.assertIs(leer.call_args.args[1],conn)
 
 
 class GrillaRefrescaAlAbrirTests(unittest.TestCase):
@@ -293,28 +258,20 @@ class GrillaRefrescaAlAbrirTests(unittest.TestCase):
 
     def test_abrir_la_grilla_refresca_el_mes_de_la_fecha_final(self):
         llamadas = []
-
-        def _refresco(start_date, end_date):
+        def refresco(start_date, end_date, *, conn):
             llamadas.append((start_date, end_date))
             return date(2026, 7, 23)
-
-        def _corta(*args, **kwargs):
+        def corta(*args, **kwargs):
             raise _Alto
-
-        with (
-            patch.object(
-                cb, "refrescar_representatividad_para_exportacion", _refresco
-            ),
-            patch.object(cb, "_fetch_fuentes_mensuales_torres", _corta),
-        ):
+        conn = _Conexion()
+        with patch.object(repo, "_get_engine", return_value=_Motor(conn)), \
+             patch.object(repo, "refrescar_representatividad_para_exportacion", refresco), \
+             patch.object(repo, "_fetch_fuentes_mensuales_torres_oficial", corta):
             with self.assertRaises(_Alto):
-                cb._cargar_detalle_representatividad_periodo(
-                    date(2026, 7, 10),
-                    date(2026, 7, 28),
-                )
-
-        # Rango = mes de `fin`, que es el que la grilla realmente muestra.
-        self.assertEqual(llamadas, [(date(2026, 7, 1), date(2026, 7, 28))])
+                cb._cargar_detalle_representatividad_periodo(date(2026,7,10), date(2026,7,28))
+        self.assertEqual(llamadas, [(date(2026,7,1), date(2026,7,28))])
+        self.assertIn("rollback", conn.eventos)
+        self.assertFalse(conn.mensual)
 
     def test_publicar_no_vuelve_a_refrescar(self):
         """Con paquete armado el refresco ya corrio: repetirlo es costo puro."""

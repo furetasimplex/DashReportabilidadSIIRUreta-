@@ -1,0 +1,23 @@
+def obtener_tendencia_totalizador(fecha_inicio, fecha_fin, correa):
+    """Recibe fechas calendario inclusivas y consulta exclusivamente DEV."""
+    inicio = date.fromisoformat(str(fecha_inicio))
+    fin = date.fromisoformat(str(fecha_fin))
+    if inicio > fin or correa not in CORREAS:
+        raise ValueError("Seleccione un rango válido y una correa disponible.")
+    fin_exclusivo = datetime.combine(fin + timedelta(days=1), time.min)
+    if os.getenv("SQLSERVER_DB") != "inventar_SpcHidr":
+        raise RuntimeError("Monitoreo PI/TUM habilitado exclusivamente en DEV.")
+    engine = get_engine()
+    if engine is None or engine.url.database != "inventar_SpcHidr":
+        raise RuntimeError("La conexión PI/TUM debe apuntar a DEV.")
+    with engine.connect() as conn:
+        return pd.read_sql(text("""
+            EXEC inventar_SpcHidr.sp_monitor_totalizador_tendencia_test
+                @fecha_inicio = :fecha_inicio,
+                @fecha_fin = :fecha_fin,
+                @correa = :correa;
+        """), conn, params={
+            "fecha_inicio": datetime.combine(inicio, time.min),
+            "fecha_fin": fin_exclusivo,
+            "correa": correa,
+        })

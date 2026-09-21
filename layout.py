@@ -10,6 +10,7 @@ import report_export.callbacks.reportabilidad_cb
 import callbacks.reportabilidad_callbacks
 from reclamo import panel as reclamo_panel  # registra sus @callback al importarse
 from powerbi_camiones import panel as powerbi_panel  # registra sus @callback al importarse
+from monitor_pi_tum import panel as monitor_pitum_panel
 
 # === Utilidades ===
 project_folder = os.path.dirname(os.path.realpath(__file__))
@@ -66,6 +67,10 @@ def render_sidebar():
                     html.I(className="bi bi-cloud-upload me-2"),
                     "Carga PowerBI Camiones",
                 ], href="#", id="nav-powerbi", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-activity me-2"),
+                    "Monitoreo Correas Área Seca",
+                ], href="#", id="nav-monitor-pitum", className="siir-nav-link", n_clicks=0),
             ], vertical=True, pills=False),
         ]
     )
@@ -144,6 +149,11 @@ subtabs = html.Div(
             style={"display": "none"},
             children=powerbi_panel.layout(),
         ),
+        html.Div(
+            id="subtabs-monitor-pitum",
+            style={"display": "none"},
+            children=monitor_pitum_panel.layout(),
+        ),
     ]
 )
 
@@ -164,15 +174,18 @@ def register_callbacks(app):
         Output("subtabs-report", "style"),
         Output("subtabs-reclamo", "style"),
         Output("subtabs-powerbi", "style"),
+        Output("subtabs-monitor-pitum", "style"),
         Output("nav-reportabilidad", "className"),
         Output("nav-reclamo", "className"),
         Output("nav-powerbi", "className"),
+        Output("nav-monitor-pitum", "className"),
         Input("nav-reportabilidad", "n_clicks"),
         Input("nav-reclamo", "n_clicks"),
         Input("nav-powerbi", "n_clicks"),
+        Input("nav-monitor-pitum", "n_clicks"),
         prevent_initial_call=False,
     )
-    def toggle_subtabs(n_rep, n_rec, n_pbc):
+    def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum):
         # dash.ctx.triggered_id es None en la carga inicial -> por defecto
         # se muestra Reportabilidad, igual que antes.
         triggered = dash.ctx.triggered_id
@@ -181,6 +194,7 @@ def register_callbacks(app):
             "nav-reportabilidad": "reportabilidad",
             "nav-reclamo": "reclamo",
             "nav-powerbi": "powerbi",
+            "nav-monitor-pitum": "monitor-pitum",
         }
         activa = secciones.get(triggered, "reportabilidad")
 
@@ -194,9 +208,11 @@ def register_callbacks(app):
             estilo("reportabilidad"),
             estilo("reclamo"),
             estilo("powerbi"),
+            estilo("monitor-pitum"),
             clase("reportabilidad"),
             clase("reclamo"),
             clase("powerbi"),
+            clase("monitor-pitum"),
         )
 
     @app.callback(

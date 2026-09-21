@@ -1,0 +1,3 @@
+py_compile: PASS (seis archivos nuevos/modificados).
+SAFE: no se conecta ni escribe. Requiere --execute-rollback.
+No se ejecut? --execute-rollback.

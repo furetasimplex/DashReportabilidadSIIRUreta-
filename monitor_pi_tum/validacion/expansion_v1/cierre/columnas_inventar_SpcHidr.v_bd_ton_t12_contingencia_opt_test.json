@@ -1,0 +1,101 @@
+[
+  {
+    "name": "Fecha"
+  },
+  {
+    "name": "Ton_Intervalo_TM1_TA"
+  },
+  {
+    "name": "Ton_Intervalo_TM1_TB"
+  },
+  {
+    "name": "Ton_Intervalo_TM2_TA"
+  },
+  {
+    "name": "Ton_Intervalo_TM2_TB"
+  },
+  {
+    "name": "TMH_PI_Operacional_TM1_TA"
+  },
+  {
+    "name": "TMH_PI_Operacional_TM1_TB"
+  },
+  {
+    "name": "TMH_PI_Operacional_TM2_TA"
+  },
+  {
+    "name": "TMH_PI_Operacional_TM2_TB"
+  },
+  {
+    "name": "Fuente_Resolver_TM1_TA"
+  },
+  {
+    "name": "Fuente_Resolver_TM1_TB"
+  },
+  {
+    "name": "Fuente_Resolver_TM2_TA"
+  },
+  {
+    "name": "Fuente_Resolver_TM2_TB"
+  },
+  {
+    "name": "Tipo_TUM_TM1_TA"
+  },
+  {
+    "name": "Tipo_TUM_TM1_TB"
+  },
+  {
+    "name": "Tipo_TUM_TM2_TA"
+  },
+  {
+    "name": "Tipo_TUM_TM2_TB"
+  },
+  {
+    "name": "Valor_Resolver_TM1_TA"
+  },
+  {
+    "name": "Valor_Resolver_TM1_TB"
+  },
+  {
+    "name": "Valor_Resolver_TM2_TA"
+  },
+  {
+    "name": "Valor_Resolver_TM2_TB"
+  },
+  {
+    "name": "TMH_TM1_TA_Resuelto"
+  },
+  {
+    "name": "TMH_TM1_TB_Resuelto"
+  },
+  {
+    "name": "TMH_TM2_TA_Resuelto"
+  },
+  {
+    "name": "TMH_TM2_TB_Resuelto"
+  },
+  {
+    "name": "Evaluable_TM1_TA_Resuelto"
+  },
+  {
+    "name": "Evaluable_TM1_TB_Resuelto"
+  },
+  {
+    "name": "Evaluable_TM2_TA_Resuelto"
+  },
+  {
+    "name": "Evaluable_TM2_TB_Resuelto"
+  },
+  {
+    "name": "Motivo_TM1_TA"
+  },
+  {
+    "name": "Motivo_TM1_TB"
+  },
+  {
+    "name": "Motivo_TM2_TA"
+  },
+  {
+    "name": "Motivo_TM2_TB"
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "fecha_operacion"
+  },
+  {
+    "name": "campaña_id"
+  },
+  {
+    "name": "pad_id"
+  },
+  {
+    "name": "modulo_id"
+  },
+  {
+    "name": "modulo_numero"
+  },
+  {
+    "name": "rotopala_id"
+  },
+  {
+    "name": "horas_rotopala"
+  },
+  {
+    "name": "modulos_abiertos"
+  },
+  {
+    "name": "tms_preliminar_dia"
+  },
+  {
+    "name": "m3_preliminar_dia"
+  },
+  {
+    "name": "tms_preliminar_acum"
+  },
+  {
+    "name": "m3_preliminar_acum"
+  },
+  {
+    "name": "avance_preliminar_pct_total"
+  },
+  {
+    "name": "fuente_reclamo"
+  },
+  {
+    "name": "metodo_calculo"
+  },
+  {
+    "name": "flag_preliminar"
+  }
+]

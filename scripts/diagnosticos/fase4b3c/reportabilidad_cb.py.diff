@@ -1,0 +1,74 @@
+--- report_export/callbacks/reportabilidad_cb.py (antes 4B3C)
++++ report_export/callbacks/reportabilidad_cb.py
+@@ -43,6 +43,7 @@
+     export_reporte_turno_estilo_leyes_finos,
+     write_reporte_torre_oficial,
+     armar_paquete_reporte_torre_oficial,
++    preparar_paquete_editor_representatividad,
+     fetch_historial_reporte_torre_oficial,
+     fetch_reporte_torre_oficial_detalle,
+     fetch_reporte_torre_oficial_snapshot,
+@@ -838,20 +839,8 @@
+                 "necesarias para construir el detalle."
+             )
+     else:
+-        # Mismo refresco que usa la publicacion, sobre el mes que la grilla
+-        # realmente muestra (_fetch_fuentes_mensuales_torres trabaja el mes de
+-        # `fin`). Sin esto el editor mostraba el estado que dejo la ultima
+-        # publicacion o PDF, y ademas cortaba por una fecha distinta a la que
+-        # despues usa el reporte final. El refresco serializa por mes con
+-        # sp_getapplock (ver refrescar_representatividad_para_exportacion).
+-        fecha_corte_operacional = refrescar_representatividad_para_exportacion(
+-            start_date=pd.to_datetime(fin).date().replace(day=1),
+-            end_date=fin,
+-        )
+-        fuentes = _fetch_fuentes_mensuales_torres(
+-            fin,
+-            fecha_corte_operacional,
+-        )
++        fuentes = preparar_paquete_editor_representatividad(ini, fin, periodo_mes=periodo_mes)
++        fecha_corte_operacional = fuentes["fecha_corte_operacional"]
+     df_turno_preparado = _preparar_material_por_turno(fuentes["df_turno_mes"])
+     df_quimico = _preparar_detalle_mensual_torres(
+         df_bd_ton=fuentes["df_bd_ton_mes"],
+@@ -883,13 +872,7 @@
+         # deben proceder exclusivamente del paquete recien refrescado.
+         if paquete is not None:
+             return detalle, pd.to_datetime(fecha_corte_operacional).date()
+-        if periodo_mes:
+-            guardado = fetch_reporte_torre_oficial_detalle(periodo_mes=periodo_mes)
+-        elif es_mes_completo(ini, fin):
+-            _, _, pm = normalizar_periodo_mes(ini, fin)
+-            guardado = fetch_reporte_torre_oficial_detalle(periodo_mes=pm)
+-        else:
+-            guardado = fetch_comentarios_representatividad_periodo(ini, fin)
++        guardado = fuentes["comentarios"]
+         if not guardado.empty:
+             detalle = _fusionar_solo_comentarios_en_detalle_vivo(
+                 detalle,
+@@ -6693,21 +6676,14 @@
+     mapa_comentarios: dict | None = None,
+ ) -> tuple[dict, bytes, dict]:
+     """Construye una vez paquete vivo + workbook para XLSX y los tres PDF."""
+-    if mapa_comentarios is None:
+-        try:
+-            guardado = fetch_comentarios_representatividad_periodo(
+-                fecha_inicio,
+-                fecha_fin,
+-            )
+-            if not guardado.empty:
+-                mapa_comentarios = comentarios_mapa_desde_dataframe(guardado)
+-        except Exception:
+-            mapa_comentarios = None
+-
+     paquete = armar_paquete_reporte_torre_oficial(
+         pd.to_datetime(fecha_inicio).date(),
+         pd.to_datetime(fecha_fin).date(),
+     )
++    if mapa_comentarios is None:
++        guardado = paquete["comentarios"]
++        if not guardado.empty:
++            mapa_comentarios = comentarios_mapa_desde_dataframe(guardado)
+     xlsx_bytes = _export_representatividad_desde_paquete(
+         paquete,
+         mapa_comentarios=mapa_comentarios,

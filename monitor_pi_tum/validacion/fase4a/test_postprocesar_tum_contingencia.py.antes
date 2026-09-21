@@ -1,0 +1,140 @@
+"""Contrato del postproceso independiente, sin conexiones reales."""
+from datetime import date
+import unittest
+from unittest.mock import MagicMock, patch
+
+from . import postprocesar_tum_contingencia as post
+
+
+class Resultado:
+    def __init__(self, *, first=None, all_rows=None, scalar=None):
+        self._first, self._all, self._scalar = first, all_rows or [], scalar
+
+    def mappings(self):
+        return self
+
+    def first(self):
+        return self._first
+
+    def all(self):
+        return self._all
+
+    def scalar_one_or_none(self):
+        return self._scalar
+
+
+def conexion(*, estado='committed', template=post.TEMPLATE, cambios=(), contingencia=()):
+    conn = MagicMock()
+    bajo = set(contingencia)
+    def ejecutar(sql, params):
+        sql = str(sql)
+        if 'import_batch' in sql:
+            return Resultado(first=None if estado is None else
+                             {'id':params['batch_id'],'estado':estado,'template_code':template})
+        if 'import_row_history' in sql:
+            return Resultado(all_rows=[dict(fecha_operacional=f,turno=t,equipo_codigo=e)
+                                       for f,t,e in cambios])
+        if 'v_contingencia_pi_estado_turno_test' in sql:
+            return Resultado(scalar=(params['fecha'],params['turno']) in bajo)
+        if 'v_contingencia_totalizador_resuelto_operacional_test' in sql:
+            return Resultado(all_rows=[])
+        if 'Control_Apilado_TMH_v2_test' in sql:
+            return Resultado(first={'Fecha':params['fecha']})
+        raise AssertionError(sql)
+    conn.execute.side_effect = ejecutar
+    return conn
+
+
+class PostprocesarTumTests(unittest.TestCase):
+    def test_batch_inexistente_y_no_committed_bloquean(self):
+        for estado in (None,'error','preview'):
+            with self.subTest(estado=estado), self.assertRaises(ValueError):
+                post.planificar(conexion(estado=estado),150)
+
+    def test_otro_template_y_seca_sin_cambios(self):
+        for template in ('informe_tum_srr',post.TEMPLATE):
+            plan=post.planificar(conexion(template=template),150)
+            self.assertEqual(plan.fechas,())
+            self.assertEqual(plan.cambios,0)
+
+    def test_cruce_y_fechas_distintas(self):
+        cambios=[('2026-09-10','A','PRINCIPAL_CV008'),
+                 ('2026-09-11','A','PRINCIPAL_CV008'),
+                 ('2026-09-11','B','PRINCIPAL_CV108'),
+                 ('2026-09-12','A','PRINCIPAL_CV008')]
+        bajo={(date(2026,9,10),'A'),(date(2026,9,11),'A'),(date(2026,9,11),'B')}
+        plan=post.planificar(conexion(cambios=cambios,contingencia=bajo),150)
+        self.assertEqual(plan.cambios,4)
+        self.assertEqual(plan.fechas,(date(2026,9,10),date(2026,9,11)))
+        self.assertEqual(plan.fuera,((date(2026,9,12),'A'),))
+        self.assertEqual(post.agrupar_fechas(plan.fechas),((date(2026,9,10),date(2026,9,11)),))
+
+    def test_siete_senales_solo_principales_reprocesan_apilado(self):
+        cambios=[('2026-09-10','A',equipo) for equipo in post.db.EQUIPOS]
+        bajo={(date(2026,9,10),'A')}
+        plan=post.planificar(conexion(cambios=cambios,contingencia=bajo),150)
+        self.assertEqual(len(plan.bajo_equipo),7)
+        self.assertEqual(plan.fechas,(date(2026,9,10),))
+        for template,equipo in [('informe_tum_srr','SRR_CV001'),
+                                ('informe_tum_ripios','RIPIOS_CV025')]:
+            solo=post.planificar(conexion(template=template,
+                cambios=[('2026-09-10','A',equipo)],contingencia=bajo),150)
+            self.assertEqual(solo.cambios,1)
+            self.assertEqual(solo.fechas,())
+            self.assertEqual(solo.bajo_equipo,((date(2026,9,10),'A',equipo),))
+
+    def test_dry_run_y_fuera_de_contingencia_no_reprocesan(self):
+        conn=conexion(cambios=[('2026-09-12','A','PRINCIPAL_CV008')])
+        engine=MagicMock()
+        engine.connect.return_value.__enter__.return_value=conn
+        engine.begin.return_value.__enter__.return_value=conn
+        with patch.object(post.db,'_assert_dev_connection') as guard, \
+             patch.object(post.db,'reprocesar_apilado') as reproceso:
+            plan,_,_=post.ejecutar(150,False,engine)
+            self.assertEqual(plan.fechas,())
+            engine.begin.assert_not_called()
+            guard.assert_called_once_with(conn)
+            plan,_,_=post.ejecutar(150,True,engine)
+            self.assertEqual(plan.fechas,())
+            reproceso.assert_not_called()
+
+    def test_commit_repetido_recalcula_sin_acciones(self):
+        conn=conexion(cambios=[('2026-09-10','A','PRINCIPAL_CV008'),
+                              ('2026-09-11','A','PRINCIPAL_CV108'),
+                              ('2026-09-11','B','PRINCIPAL_CV008')],
+                      contingencia={(date(2026,9,10),'A'),(date(2026,9,11),'A'),(date(2026,9,11),'B')})
+        engine=MagicMock()
+        engine.begin.return_value.__enter__.return_value=conn
+        with patch.object(post.db,'_assert_dev_connection') as guard, \
+             patch.object(post.db,'reprocesar_apilado') as reproceso:
+            for _ in range(2):
+                plan,_,apilado=post.ejecutar(150,True,engine)
+                self.assertEqual(len(apilado),2)
+                self.assertEqual(plan.fechas,(date(2026,9,10),date(2026,9,11)))
+            self.assertEqual(reproceso.call_count,2)
+            for call in reproceso.call_args_list:
+                self.assertEqual(call.args,(conn,date(2026,9,10),date(2026,9,11)))
+            self.assertEqual(guard.call_count,2)
+        self.assertFalse(any('sp_registrar_contingencia_pi_test' in str(c.args[0])
+                             for c in conn.execute.call_args_list))
+
+    def test_fallo_revierte_postproceso_y_guard_bloquea(self):
+        conn=conexion(cambios=[('2026-09-10','A','PRINCIPAL_CV008')],
+                      contingencia={(date(2026,9,10),'A')})
+        engine=MagicMock()
+        engine.begin.return_value.__enter__.return_value=conn
+        # Un contexto real simulado propaga la excepción y registra el rollback.
+        with patch.object(post.db,'_assert_dev_connection'), \
+             patch.object(post.db,'reprocesar_apilado',side_effect=RuntimeError('SP falla')):
+            with self.assertRaisesRegex(RuntimeError,'SP falla'):
+                post.ejecutar(150,True,engine)
+            self.assertIs(engine.begin.return_value.__exit__.call_args.args[0],RuntimeError)
+        with patch.object(post.db,'_assert_dev_connection',side_effect=RuntimeError('DEV inválido')), \
+             patch.object(post.db,'reprocesar_apilado') as reproceso:
+            with self.assertRaisesRegex(RuntimeError,'DEV inválido'):
+                post.ejecutar(150,True,engine)
+            reproceso.assert_not_called()
+
+
+if __name__ == '__main__':
+    unittest.main()
