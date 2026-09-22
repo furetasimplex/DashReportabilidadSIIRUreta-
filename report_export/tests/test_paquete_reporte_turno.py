@@ -40,7 +40,8 @@ class Harness:
         assert self.active and kw['conn'] is self.conn
         self.lock = True
         self.events.append('RTO')
-        return {'fin_sql_exclusivo': date(2026, 9, 11)}
+        return {'fin_sql_exclusivo': date(2026, 9, 11),
+                'fecha_corte_operacional': date(2026, 9, 10)}
 
     def fetch(self, name, **kw):
         assert self.active and self.lock and kw['conn'] is self.conn
@@ -48,7 +49,8 @@ class Harness:
         self.calls.append((name, kw))
         if len(self.calls) == self.fail:
             raise RuntimeError('fetch deliberado')
-        return pd.DataFrame() if self.empty else pd.DataFrame({'valor': [123]})
+        return pd.DataFrame() if self.empty else pd.DataFrame(
+            {'valor': [123], 'Fecha': [date(2026, 9, 10)], 'Turno': ['A']})
 
     @contextmanager
     def patched(self):

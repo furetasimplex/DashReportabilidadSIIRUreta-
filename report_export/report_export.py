@@ -2515,6 +2515,31 @@ def preparar_paquete_datos_conciliados_emision(
     return paquete
 
 
+def _completar_calendario_rto(df, inicio, fin, corte, *, por_turno=False):
+    """Extiende sólo el horizonte posterior al cierre, sin propagar reales.
+
+    Los planes diarios consultados para el período se conservan. Las filas
+    del cache fuera del refresco no son una fuente de reales vigente.
+    """
+    if df.empty:
+        return df.copy()
+    datos = df.copy()
+    datos["Fecha"] = pd.to_datetime(datos["Fecha"]).dt.normalize()
+    posterior = datos["Fecha"] > pd.Timestamp(corte)
+    claves = ["Fecha", "Turno"] if por_turno else ["Fecha"]
+    planes = [c for c in datos if "Plan" in c or "Programa" in c]
+    datos.loc[posterior, datos.columns.difference(claves + planes)] = np.nan
+    fechas = pd.date_range(max(inicio, corte + timedelta(days=1)), fin)
+    calendario = (pd.MultiIndex.from_product([fechas, ["A", "B"]], names=claves).to_frame(index=False)
+                  if por_turno else pd.DataFrame({"Fecha": fechas}))
+    faltantes = calendario.merge(datos[claves], on=claves, how="left", indicator=True)
+    faltantes = faltantes.loc[faltantes["_merge"] == "left_only", claves]
+    resultado = pd.concat([datos, faltantes], ignore_index=True).sort_values(claves).reset_index(drop=True)
+    if por_turno:
+        resultado["_Calendario_Post_Corte"] = resultado["Fecha"] > pd.Timestamp(corte)
+    return resultado
+
+
 def preparar_paquete_reporte_turno_emision(
     start_date: date,
     end_date: date,
@@ -2524,7 +2549,8 @@ def preparar_paquete_reporte_turno_emision(
 
     Protege frente a writers F4 cooperativos. El caller construye el artefacto
     después del retorno, cuando ya terminó la transacción. Los auxiliares
-    conservan el fin solicitado y el cache el corte operacional del refresco.
+    conservan el fin solicitado. El cache se lee hasta el corte validado y
+    el calendario posterior se completa en memoria, sin nuevos datos reales.
     """
     if start_date is None or end_date is None or start_date > end_date:
         raise ValueError("Se requiere un rango válido para preparar Reporte por Turno.")
@@ -2539,6 +2565,10 @@ def preparar_paquete_reporte_turno_emision(
         paquete["df_turno"] = fetch_reporte_turno_cache_emision(
             start_date=start_date, end_date=refresco["fin_sql_exclusivo"], conn=conn,
         )
+        corte = refresco["fecha_corte_operacional"]
+        paquete["df_turno"] = _completar_calendario_rto(
+            paquete["df_turno"], start_date, end_date, corte, por_turno=True,
+        )
         if salida != "preview" and not paquete["df_turno"].empty:
             if salida == "excel":
                 for clave, fetch in (
@@ -2550,6 +2580,9 @@ def preparar_paquete_reporte_turno_emision(
             paquete["df_generador"] = fetch_generador_reporte_diario_emision(
                 start_date=start_date, end_date=fin_auxiliar, conn=conn,
             )
+            paquete["df_generador"] = _completar_calendario_rto(
+                paquete["df_generador"], start_date, end_date, corte,
+            )
             if salida == "excel":
                 paquete["df_reconst_srr"] = fetch_reconstitucion_srr_report(
                     start_date=start_date, end_date=fin_auxiliar, conn=conn,
@@ -2560,6 +2593,10 @@ def preparar_paquete_reporte_turno_emision(
                         start_date=inicio_mes, end_date=fin_auxiliar, conn=conn,
                     ) if inicio_mes < start_date else paquete["df_generador"]
                 )
+                if inicio_mes < start_date:
+                    paquete["df_generador_resumen"] = _completar_calendario_rto(
+                        paquete["df_generador_resumen"], inicio_mes, end_date, corte,
+                    )
     return paquete
 
 
@@ -4068,6 +4105,13 @@ def _presentar_derivados_programa_plan(df, programa, plan, masa_programa=None):
             df.loc[cero, indicador] = 0.0
 
 
+def _texto_excel_nullable(serie):
+    """Normaliza texto sin convertir faltantes a literales visibles."""
+    return serie.astype("string").str.strip().replace(
+        r"(?i)^(nan|none|nat|<na>)$", pd.NA, regex=True,
+    )
+
+
 def preparar_df_reporte_turno_excel(
     df: pd.DataFrame, df_generador: pd.DataFrame = None,
 ) -> pd.DataFrame:
@@ -4075,13 +4119,13 @@ def preparar_df_reporte_turno_excel(
 
     # Campaña se presenta igual que Módulo: como número entero.
     if "Campania" in df.columns:
-        df["Campania"] = pd.to_numeric(df["Campania"], errors="coerce")
+        df["Campania"] = pd.to_numeric(df["Campania"], errors="coerce").where(df["Campania"].notna())
 
     if "Fecha" in df.columns:
         df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
 
     if "Turno" in df.columns:
-        df["Turno"] = df["Turno"].astype(str).str.upper().str.strip()
+        df["Turno"] = _texto_excel_nullable(df["Turno"]).str.upper()
         df["Turno_excel"] = df["Turno"].map({"A": "TA", "B": "TB"}).fillna(df["Turno"])
     else:
         df["Turno_excel"] = ""
@@ -4101,7 +4145,7 @@ def preparar_df_reporte_turno_excel(
     # Avance viene desde SQL/cache en escala 0-1.
     # Para el reporte se muestra en escala 0-100.
     if "Avance" in df.columns:
-        df["Avance"] = pd.to_numeric(df["Avance"], errors="coerce") * 100
+        df["Avance"] = pd.to_numeric(df["Avance"], errors="coerce").where(df["Avance"].notna()) * 100
 
     # STOCK, MINA y SRR ya vienen en escala 0-100 desde SQL/cache.
     # No multiplicar ni dividir.
@@ -4119,8 +4163,7 @@ def preparar_df_reporte_turno_excel(
     # Ejemplo: <75% -> <75
     if "Malla_Menos_1_2_Plan_Semanal" in df.columns:
         df["Malla_Menos_1_2_Plan_Semanal"] = (
-            df["Malla_Menos_1_2_Plan_Semanal"]
-            .astype(str)
+            _texto_excel_nullable(df["Malla_Menos_1_2_Plan_Semanal"])
             .str.replace("%", "", regex=False)
             .replace({"nan": np.nan, "None": np.nan, "NULL": np.nan})
         )
@@ -4128,8 +4171,7 @@ def preparar_df_reporte_turno_excel(
     # Normalización visual de material.
     if "Material" in df.columns:
         df["Material"] = (
-            df["Material"]
-            .astype(str)
+            _texto_excel_nullable(df["Material"])
             .str.upper()
             .str.strip()
             .replace({
@@ -4159,7 +4201,10 @@ def preparar_df_reporte_turno_excel(
 
     for col in df.columns:
         if col not in columnas_texto_export:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+            df[col] = pd.to_numeric(df[col], errors="coerce").where(df[col].notna())
+        elif col in {"Fuente_Info_Quimica", "Fuente_Info_Fisica",
+                     "Muestra_Quimica", "Muestra_Fisica"}:
+            df[col] = _texto_excel_nullable(df[col])
 
     # Solo para Excel: rellenar NULL reales si el TMS es exactamente cero.
     # TMS nulo no implica cero; planes y valores existentes se conservan.
@@ -4230,8 +4275,7 @@ def preparar_df_generador_reporte_excel(
 
     if "Material_Operacion" in df.columns:
         df["Material_Operacion"] = (
-            df["Material_Operacion"]
-            .astype(str)
+            _texto_excel_nullable(df["Material_Operacion"])
             .str.upper()
             .str.strip()
             .replace(
@@ -4250,8 +4294,7 @@ def preparar_df_generador_reporte_excel(
 
     if "Clasificacion_Solubilidad" in df.columns:
         df["Clasificacion_Solubilidad"] = (
-            df["Clasificacion_Solubilidad"]
-            .astype(str)
+            _texto_excel_nullable(df["Clasificacion_Solubilidad"])
             .str.capitalize()
             .replace(
                 {
@@ -4278,8 +4321,7 @@ def preparar_df_generador_reporte_excel(
 
     if "Malla_Menos_1_2_Programa" in df.columns:
         df["Malla_Menos_1_2_Programa"] = (
-            df["Malla_Menos_1_2_Programa"]
-            .astype(str)
+            _texto_excel_nullable(df["Malla_Menos_1_2_Programa"])
             .replace(
                 {
                     "nan": "",
@@ -5819,7 +5861,8 @@ def _calcular_tmh_reconst_srr(df: pd.DataFrame) -> pd.DataFrame:
     return datos
 
 
-def _agregar_hoja_reconst_mod_srr(wb, df_reconst_srr, df_turno=None):
+def _agregar_hoja_reconst_mod_srr(wb, df_reconst_srr, df_turno=None,
+                                periodo_inicio=None, periodo_fin=None):
     """Agrega únicamente la hoja SRR al workbook XlsxWriter del exportador.
 
     Una fila por fecha; leyes SQL por turno, MB una vez al día. Las fuentes
@@ -5879,7 +5922,8 @@ def _agregar_hoja_reconst_mod_srr(wb, df_reconst_srr, df_turno=None):
     ws.set_column("AG:AG", 3)
     ws.set_column("AH:AL", 13)
     ws.merge_range("C2:AL3", "Reconstitución de Módulos SRR", titulo)
-    inicio, fin = datos["Fecha"].min(), datos["Fecha"].max()
+    inicio = pd.Timestamp(periodo_inicio) if periodo_inicio is not None else datos["Fecha"].min()
+    fin = pd.Timestamp(periodo_fin) if periodo_fin is not None else datos["Fecha"].max()
     ws.merge_range("C4:AL4", f"Período: {inicio:%d-%m-%Y} al {fin:%d-%m-%Y}", nota)
     ws.merge_range("C5:AL5", "Leyes SRR diarias repetidas en A/B; tonelaje individual por turno. Celdas vacías: sin dato de origen.", nota)
     ws.merge_range("C6:AL6", "TMH neto: total de Datos Conciliados; Tambor 2 con factor y descuento proporcional de sal; Tambor 1 por diferencia.", nota)
@@ -6548,6 +6592,12 @@ def export_reporte_turno_estilo_leyes_finos(
             columnas_cobertura = {"Fecha", "Turno", "Apilado_TMS_Real"}
             if columnas_cobertura.issubset(df.columns):
                 cobertura_operacional = df[list(columnas_cobertura)].copy()
+                if "_Calendario_Post_Corte" in df.columns:
+                    # Calendario futuro no equivale a un turno operacional
+                    # con TMS desconocido: no exigir trazabilidad inexistente.
+                    cobertura_operacional = cobertura_operacional.loc[
+                        ~df["_Calendario_Post_Corte"].fillna(False)
+                    ]
             agregar_hoja_trazabilidad_analitos(
                 writer=writer,
                 df_trazabilidad_analitos=df_trazabilidad_analitos,
@@ -6556,4 +6606,5 @@ def export_reporte_turno_estilo_leyes_finos(
         if df_reconst_srr is not None and not df_reconst_srr.empty:
             _agregar_hoja_reconst_mod_srr(
                 workbook, df_reconst_srr, df_turno=df_turno_reconst,
+                periodo_inicio=periodo_inicio, periodo_fin=periodo_fin,
             )
