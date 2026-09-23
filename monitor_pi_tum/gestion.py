@@ -1,5 +1,5 @@
 """Gestión global PI/TUM: acciones auditadas y apilado en una transacción."""
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 import logging
 from uuid import uuid4
@@ -63,7 +63,7 @@ def layout():
                    className="text-muted small mb-2"),
             dbc.Row([
                 dbc.Col([html.Label("Fecha operacional", className="d-block"),
-                         dcc.DatePickerSingle(id="pitum-gestion-fecha", date=date.today().isoformat(),
+                         dcc.DatePickerSingle(id="pitum-gestion-fecha", date=(date.today() - timedelta(days=1)).isoformat(),
                             min_date_allowed=db.CORTE.isoformat(), display_format="DD-MM-YYYY", first_day_of_week=1)], md=5),
                 dbc.Col([dbc.Label("Turno", html_for="pitum-gestion-turno"),
                          dcc.Dropdown(id="pitum-gestion-turno", options=["A", "B"], value="A", clearable=False)], md=3),

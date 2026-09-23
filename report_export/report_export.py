@@ -4117,10 +4117,6 @@ def preparar_df_reporte_turno_excel(
 ) -> pd.DataFrame:
     df = df.copy()
 
-    # Campaña se presenta igual que Módulo: como número entero.
-    if "Campania" in df.columns:
-        df["Campania"] = pd.to_numeric(df["Campania"], errors="coerce").where(df["Campania"].notna())
-
     if "Fecha" in df.columns:
         df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
 
@@ -4184,6 +4180,9 @@ def preparar_df_reporte_turno_excel(
             })
         )
 
+        # Campaña debe mostrar exactamente el mismo valor que Material.
+        df["Campania"] = df["Material"]
+
     # Conservar ceros y NULL de origen, sin inferirlos desde el tonelaje.
     columnas_texto_export = {
         "Fecha",
@@ -4191,6 +4190,7 @@ def preparar_df_reporte_turno_excel(
         "Turno_excel",
         "Fecha_Turno",
         "Semana",
+        "Campania",
         "Material",
         "Fuente_Info_Quimica",
         "Fuente_Info_Fisica",
@@ -4304,20 +4304,15 @@ def preparar_df_generador_reporte_excel(
             )
         )
 
-    # Mapeo visual según la hoja original "Generador Reporte":
-    # - Campaña mantiene el número de campaña (por ejemplo, 11).
-    # - Material mantiene el material operacional (Sulfuro/Óxido).
-    # - La clasificación por solubilidad no se muestra como columna.
-    df["Campaña"] = (
-        pd.to_numeric(df["Campania"], errors="coerce")
-        if "Campania" in df.columns
-        else np.nan
-    )
+    # Material mantiene el material operacional normalizado.
+    # Campaña debe mostrar exactamente el mismo valor que Material.
     df["Material"] = (
         df["Material_Operacion"]
         if "Material_Operacion" in df.columns
         else ""
     )
+
+    df["Campaña"] = df["Material"]
 
     if "Malla_Menos_1_2_Programa" in df.columns:
         df["Malla_Menos_1_2_Programa"] = (
@@ -4388,7 +4383,7 @@ def preparar_df_generador_reporte_excel(
     columnas = [col for col in columnas if col in df.columns]
 
     # Conservar ceros y NULL de origen, incluidos planes y programas.
-    columnas_texto_export = {"Fecha", "Material", "Malla_Menos_1_2_Programa"}
+    columnas_texto_export = {"Fecha", "Campaña", "Material", "Malla_Menos_1_2_Programa"}
     for col in columnas:
         if col not in columnas_texto_export:
             df[col] = pd.to_numeric(df[col], errors="coerce")

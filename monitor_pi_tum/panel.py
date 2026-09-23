@@ -1,5 +1,5 @@
 """Diagnóstico de totalizadores: valores originales, sin correcciones."""
-from datetime import date
+from datetime import date, timedelta
 import logging
 
 from dash import Input, Output, State, callback, dcc, html
@@ -21,7 +21,9 @@ def figura_vacia():
 
 
 def layout():
-    hoy = date.today().isoformat()
+    hoy = date.today()
+    inicio_mes = hoy.replace(day=1).isoformat()
+    ayer = (hoy - timedelta(days=1)).isoformat()
     cards = dbc.Row([
         dbc.Col(dbc.Card(dbc.CardBody([
             html.Div(titulo, className="text-muted"),
@@ -37,7 +39,7 @@ def layout():
                 dbc.Card(dbc.CardBody(dbc.Row([
                     dbc.Col([
                         html.Label("Fecha inicio / Fecha término", className="d-block"),
-                        dcc.DatePickerRange(id="pitum-fechas", start_date=hoy, end_date=hoy,
+                        dcc.DatePickerRange(id="pitum-fechas", start_date=inicio_mes, end_date=ayer,
                                             display_format="DD-MM-YYYY", first_day_of_week=1,
                                             minimum_nights=0),
                     ], md=6, className="mb-2"),
