@@ -2437,6 +2437,7 @@ def refrescar_dependencias_datos_conciliados_emision(
             refrescar_dependencias_reporte_turno_emision(
                 start_date=start_date,
                 end_date=end_date,
+                dias_reproceso=15,
                 conn=conn,
             )
         )
