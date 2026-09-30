@@ -1,0 +1,932 @@
+[
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_draft_row",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_draft_row",
+    "COLUMN_NAME": "seq",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_draft_row",
+    "COLUMN_NAME": "accion",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_draft_row",
+    "COLUMN_NAME": "data",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_draft_row",
+    "COLUMN_NAME": "batch_id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "template_code",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "archivo_nombre",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "archivo_hash",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "client_operation_id",
+    "DATA_TYPE": "char"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "request_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "processing_started_at",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "processing_finished_at",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "source_file_path",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "preview_artifact_path",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "estado",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "periodo_inicio",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "periodo_fin",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "total_filas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "filas_validas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "filas_duplicadas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "filas_conflictivas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "filas_error",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "registros_insertados",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "registros_actualizados",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "registros_omitidos",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "template_metadata_json",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "reporte_json",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "mensaje_error",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "created_at",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "updated_at",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_batch",
+    "COLUMN_NAME": "created_by_id",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "buscador",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "sloc",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "opening_balance",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "production",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "stk_trans_rec",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "consumption",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "transfer_in",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "transfer_out",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "stk_adj",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "stk_adj_motivo",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "closing_balance",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "cu_pct",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "batch_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "periodo_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "planta_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "material_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fact_batch_rollover",
+    "COLUMN_NAME": "sap_batch_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "template_type",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "archivo_nombre",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "archivo_path",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "archivo_size_kb",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "estado",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "usuario",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "fecha_creacion",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "fecha_ready",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "fecha_commit",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "job_params",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "error_message",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "total_filas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "filas_insert",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "filas_update",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "filas_skip",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "filas_reject",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "duracion_extract_ms",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "duracion_validate_ms",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "duracion_commit_ms",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "etl_import_jobs",
+    "COLUMN_NAME": "upload_history_id",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "template_type",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "archivo_nombre",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "archivo_path",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "estado",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "usuario",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "fecha_creacion",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "fecha_ready",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "fecha_commit",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "job_params",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "error_message",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "total_filas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "filas_valid",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "filas_reject",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "fuente_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_job",
+    "COLUMN_NAME": "periodo_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_staging_row",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_staging_row",
+    "COLUMN_NAME": "seq",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_staging_row",
+    "COLUMN_NAME": "accion",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_staging_row",
+    "COLUMN_NAME": "norm_data",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_staging_row",
+    "COLUMN_NAME": "errores",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_staging_row",
+    "COLUMN_NAME": "prev_hash",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "flow_material",
+    "TABLE_NAME": "fm_import_staging_row",
+    "COLUMN_NAME": "job_id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "buscador",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "sloc",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "opening_balance",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "production",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "stk_trans_rec",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "consumption",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "transfer_in",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "transfer_out",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "stk_adj",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "stk_adj_motivo",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "closing_balance",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "cu_pct",
+    "DATA_TYPE": "numeric"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "history_id",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "history_date",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "history_change_reason",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "history_type",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "batch_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "history_user_id",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "periodo_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "planta_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "material_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "dbo",
+    "TABLE_NAME": "flow_material_historicalfactbatchrollover",
+    "COLUMN_NAME": "sap_batch_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "archivo_importado",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "archivo_importado",
+    "COLUMN_NAME": "nombre_archivo",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "archivo_importado",
+    "COLUMN_NAME": "version_archivo",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "archivo_importado",
+    "COLUMN_NAME": "Caso",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "archivo_importado",
+    "COLUMN_NAME": "fecha_importacion",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "template_code",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "archivo_nombre",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "archivo_hash",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "source_file_path",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "preview_artifact_path",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "estado",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "periodo_inicio",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "periodo_fin",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "total_filas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "filas_validas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "filas_duplicadas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "filas_conflictivas",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "filas_error",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "registros_insertados",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "registros_actualizados",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "registros_omitidos",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "template_metadata_json",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "reporte_json",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "mensaje_error",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "legacy_history_id",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "created_at",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "updated_at",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "inventarios",
+    "TABLE_NAME": "conc_import_batch",
+    "COLUMN_NAME": "created_by_id",
+    "DATA_TYPE": "int"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "bigint"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "template_code",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "dataset_name",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "business_key_hash",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "business_key_json",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "before_payload_json",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "after_payload_json",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "created_at",
+    "DATA_TYPE": "datetimeoffset"
+  },
+  {
+    "TABLE_SCHEMA": "hidro",
+    "TABLE_NAME": "import_row_history",
+    "COLUMN_NAME": "batch_id",
+    "DATA_TYPE": "bigint"
+  }
+]

@@ -28,7 +28,7 @@ class MonitorTests(unittest.TestCase):
         frame = pd.DataFrame(dict(timestamp=pd.date_range("2026-09-13", periods=5, freq="10s"), valor=[100., 100., None, 5., -2.], correa="CV008", fuente="tot_TM", resolucion_segundos=10, tipo_senal="TOTALIZADOR"))
         with patch.object(panel.db, "obtener_tendencia_totalizador", return_value=frame) as consulta:
             result = panel.actualizar_tendencia(1, "2026-09-13", "2026-09-13", "CV008")
-            self.assertEqual(result[1:4], ("100.00", "-2.00", "-102.00"))
+            self.assertEqual(result[1:4], ("100,00", "-2,00", "-102,00"))
             self.assertEqual(result[0].data[0].y[0], result[0].data[0].y[1])
             self.assertTrue(pd.isna(result[0].data[0].y[2]))
             self.assertEqual(result[0].data[0].y[-1], -2)

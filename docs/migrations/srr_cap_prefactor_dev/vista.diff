@@ -1,0 +1,53 @@
+--- vista_actual
++++ vista_prefactor
+@@ -1,12 +1,18 @@
+ 
+-CREATE   VIEW [inventar_SpcHidr].[v_srr_tms_origen_turno_emision_test]
++ALTER VIEW [inventar_SpcHidr].[v_srr_tms_origen_turno_emision_test]
+ AS
+-WITH turnos_cache AS
++-- Apilado_TMS_Real is the PRE-FACTOR physical cap reference (legacy alias).
++WITH turnos_prefactor AS
+ (
+-    SELECT DISTINCT
+-        CAST(Fecha AS date) AS Fecha,
+-        UPPER(LTRIM(RTRIM(Turno))) COLLATE DATABASE_DEFAULT AS Turno
+-    FROM [inventar_SpcHidr].[reporte_turno_cache_emision_test]
++    SELECT
++        CAST(d.Fecha AS date) AS Fecha,
++        CAST(t.Turno AS varchar(10)) COLLATE DATABASE_DEFAULT AS Turno,
++        CAST(COALESCE(TRY_CONVERT(float, t.TMS), 0.0) AS decimal(38,10)) AS Apilado_TMS_Real
++    FROM inventar_SpcHidr.v_apilado_tms_sin_sal_con_srr_reporte_test AS d
++    CROSS APPLY (VALUES
++        ('A', d.TMS_Total_Sin_Sal_Con_SRR_A),
++        ('B', d.TMS_Total_Sin_Sal_Con_SRR_B)
++    ) AS t(Turno, TMS)
+ ),
+ imp_origen_turno AS
+ (
+@@ -21,7 +27,7 @@
+                       THEN ISNULL(i.Ton, 0) ELSE 0 END) AS decimal(38,10)) AS Ton_SRR_IMP,
+         CAST(SUM(ISNULL(i.Ton, 0)) AS decimal(38,10)) AS Ton_IMP_Total
+     FROM [DEV_SIIR].[hidro].[v_imp_chancado_normalizado] AS i
+-    INNER JOIN turnos_cache AS tc
++    INNER JOIN turnos_prefactor AS tc
+       ON tc.Fecha = CAST(i.Fecha AS date)
+      AND tc.Turno = CASE
+             WHEN i.Turno IN ('TA', 'A') THEN 'A'
+@@ -57,7 +63,7 @@
+              AND ISNULL(i.Ton_IMP_Total, 0) > 0 THEN 'IMP'
+             ELSE 'SIN_ORIGEN'
+         END AS Fuente_SRR
+-    FROM [inventar_SpcHidr].[reporte_turno_cache_emision_test] AS r
++    FROM turnos_prefactor AS r
+     LEFT JOIN [inventar_SpcHidr].[v_apilado_base_mina_stock_srr] AS p
+       ON p.Fecha = CAST(r.Fecha AS date)
+      AND p.Turno = UPPER(LTRIM(RTRIM(r.Turno)))
+@@ -110,5 +116,6 @@
+     Ton_Stock_Oficial,
+     Ton_Mina_Oficial,
+     Ton_IMP_Total,
+-    Fuente_Dato AS Fuente_Dato_Conciliacion
++    Fuente_Dato AS Fuente_Dato_Conciliacion,
++    Apilado_TMS_Real AS Apilado_TMS_Referencia_Cap
+ FROM origen_raw;

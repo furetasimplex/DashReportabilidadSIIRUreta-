@@ -1,0 +1,109 @@
+--- antes/sp_factor_ajuste_camiones_test
++++ despues/sp_factor_ajuste_camiones_test
+@@ -60,7 +60,7 @@
+    cualquier fecha cambiando @FechaTest).
+ ================================================================ */
+ 
+-CREATE   PROCEDURE [inventar_SpcHidr].[sp_factor_ajuste_camiones_test]
++ALTER PROCEDURE [inventar_SpcHidr].[sp_factor_ajuste_camiones_test]
+     @FechaInicio date,
+     @FechaFin    date
+ AS
+@@ -78,6 +78,31 @@
+     /* ============================================================
+        1. SRR diario desde el reporte por turno
+        ============================================================ */
++
++    -- FASE 2A: una copia consistente de las vigencias, nunca valores de respaldo.
++    -- HOLDLOCK protege la lectura completa frente al registro transaccional.
++    SELECT flota,parametro,valor,vigencia_desde,vigencia_hasta
++    INTO #ParametrosFactorV2
++    FROM inventar_SpcHidr.factor_camiones_parametro_vigencia_test WITH (HOLDLOCK)
++    WHERE activo=1 AND parametro='LIMITE_CARGA_AJUSTE';
++    ;WITH Dias AS (
++        SELECT @FechaInicio AS Fecha
++        UNION ALL SELECT DATEADD(day,1,Fecha) FROM Dias WHERE Fecha<@FechaFin
++    )
++    SELECT d.Fecha,f.flota,COUNT(p.flota) AS cantidad,CAST(MIN(p.valor) AS float) AS limite
++    INTO #LimitesFactorV2
++    FROM Dias d CROSS JOIN (VALUES ('KOM'),('CAT')) f(flota)
++    LEFT JOIN #ParametrosFactorV2 p ON p.flota=f.flota AND p.vigencia_desde<=d.Fecha
++        AND (p.vigencia_hasta IS NULL OR d.Fecha<p.vigencia_hasta)
++    GROUP BY d.Fecha,f.flota OPTION (MAXRECURSION 0);
++    DECLARE @ErrorLimite nvarchar(2048);
++    SELECT TOP(1) @ErrorLimite=CONCAT(
++        CASE WHEN cantidad=0 THEN 'No existe limite vigente ' ELSE 'Existen multiples limites vigentes ' END,
++        flota,' para ',CONVERT(varchar(10),Fecha,23),'.')
++    FROM #LimitesFactorV2 WHERE cantidad<>1 ORDER BY Fecha,flota;
++    IF @ErrorLimite IS NOT NULL THROW 51020,@ErrorLimite,1;
++    CREATE UNIQUE CLUSTERED INDEX IX_LimitesFactorV2 ON #LimitesFactorV2(Fecha,flota);
++
+     ;WITH SRR_Diario AS
+     (
+         SELECT
+@@ -491,15 +516,17 @@
+        ============================================================ */
+     SELECT
+         c.*,
++        lk.limite AS Limite_KOM_TMH_Viaje,
++        lc.limite AS Limite_CAT_TMH_Viaje,
+         CASE
+             WHEN c.Produccion_KOM_TMH = 0
+             THEN 0.0
+             WHEN c.Vueltas_KOM <= 0
+               OR c.Carga_KOM_Sin_Ajuste IS NULL
+             THEN NULL
+-            WHEN c.Carga_KOM_Sin_Ajuste <= 380.0
++            WHEN c.Carga_KOM_Sin_Ajuste <= lk.limite
+             THEN c.Chancado_KOM_TMH_Sin_Ajuste
+-            ELSE c.Vueltas_KOM * 380.0
++            ELSE c.Vueltas_KOM * lk.limite
+         END AS KOM_TMH_Corregido,
+         CASE
+             WHEN c.Produccion_CAT_TMH = 0
+@@ -507,12 +534,14 @@
+             WHEN c.Vueltas_CAT <= 0
+               OR c.Carga_CAT_Sin_Ajuste IS NULL
+             THEN NULL
+-            WHEN c.Carga_CAT_Sin_Ajuste <= 265.0
++            WHEN c.Carga_CAT_Sin_Ajuste <= lc.limite
+             THEN c.Chancado_CAT_TMH_Sin_Ajuste
+-            ELSE c.Vueltas_CAT * 265.0
++            ELSE c.Vueltas_CAT * lc.limite
+         END AS CAT_TMH_Corregido
+     INTO #FactorCorregido
+-    FROM #FactorCargas AS c;
++    FROM #FactorCargas AS c
++    JOIN #LimitesFactorV2 lk ON lk.Fecha=c.Fecha AND lk.flota='KOM'
++    JOIN #LimitesFactorV2 lc ON lc.Fecha=c.Fecha AND lc.flota='CAT';
+     CREATE UNIQUE CLUSTERED INDEX IX_FactorCorregido_Fecha
+         ON #FactorCorregido(Fecha);
+     /* ============================================================
+@@ -622,12 +651,12 @@
+             THEN 'SIN_VUELTAS'
+             WHEN ABS(c.Check_Produccion_Flotas) > 0.001
+             THEN 'ERROR_DISTRIBUCION_FLOTAS'
+-            WHEN c.Carga_KOM_Sin_Ajuste > 380.0
+-             AND c.Carga_CAT_Sin_Ajuste > 265.0
++            WHEN c.Carga_KOM_Sin_Ajuste > c.Limite_KOM_TMH_Viaje
++             AND c.Carga_CAT_Sin_Ajuste > c.Limite_CAT_TMH_Viaje
+             THEN 'OK_AJUSTE_AMBAS_FLOTAS'
+-            WHEN c.Carga_KOM_Sin_Ajuste > 380.0
++            WHEN c.Carga_KOM_Sin_Ajuste > c.Limite_KOM_TMH_Viaje
+             THEN 'OK_AJUSTE_KOM'
+-            WHEN c.Carga_CAT_Sin_Ajuste > 265.0
++            WHEN c.Carga_CAT_Sin_Ajuste > c.Limite_CAT_TMH_Viaje
+             THEN 'OK_AJUSTE_CAT'
+             ELSE 'OK_SIN_AJUSTE'
+         END AS Estado_Calculo,
+@@ -639,7 +668,9 @@
+         c.Check_Produccion_Flotas,
+         c.Flag_Continuidad_Diaria,
+         c.Flag_Inventario_Valido,
+-        c.Flag_Humedad_Inventario_Valida
++        c.Flag_Humedad_Inventario_Valida,
++        c.Limite_KOM_TMH_Viaje,
++        c.Limite_CAT_TMH_Viaje
+     FROM #FactorCorregido AS c
+     ORDER BY c.Fecha;
+ END;

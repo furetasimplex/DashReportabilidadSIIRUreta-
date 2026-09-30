@@ -1,6 +1,7 @@
 # Auto-generated on 2025-10-27 18:21:09. Edit as needed.
 import copy as copy_module
 import calendar
+import math
 import io
 import os
 import html
@@ -1696,7 +1697,15 @@ def _validar_factor_ajuste_camiones(
 
     requeridas = {
         "Fecha", "Factor_Aplicacion_Reportes", "Flag_Factor_Ajuste_Valido",
-        "Estado_Calculo", "Regla_Aplicacion",
+        "Estado_Calculo", "Regla_Aplicacion", "Factor_Ajuste_Calculado",
+        "Factor_Aplicacion_Automatica", "Modo_Aplicacion", "Regla_Aplicacion_Automatica",
+        "Id_Control_Aplicacion", "Control_Aplicacion_Motivo",
+        "Control_Aplicacion_Usuario", "Control_Aplicacion_Fecha_Registro",
+        "Apilado_TMH_Bruto_Ajustado", "Chancado_TMH_Sin_Ajuste", "Chancado_TMS_Sin_Ajuste",
+        "Chancado_TMH_Con_Ajuste", "Chancado_TMS_Con_Ajuste",
+        "Carga_KOM_TMH_Viaje_Sin_Ajuste", "Carga_CAT_TMH_Viaje_Sin_Ajuste",
+        "Carga_KOM_TMH_Viaje_Con_Ajuste", "Carga_CAT_TMH_Viaje_Con_Ajuste",
+        "Vueltas_KOM", "Vueltas_CAT",
     }
     faltantes = sorted(requeridas.difference(df_factor.columns))
     if faltantes:
@@ -1735,7 +1744,8 @@ def _validar_factor_ajuste_camiones(
 
     filas_reporte = df_factor.loc[fechas_factor.isin(fechas_operacionales)]
     for columna in (
-        "Factor_Aplicacion_Reportes", "Estado_Calculo", "Regla_Aplicacion",
+        "Factor_Aplicacion_Reportes", "Factor_Aplicacion_Automatica",
+        "Modo_Aplicacion", "Regla_Aplicacion_Automatica", "Estado_Calculo", "Regla_Aplicacion",
     ):
         if filas_reporte[columna].isna().any():
             raise ValueError(
@@ -1753,21 +1763,23 @@ def _agregar_hoja_factor_ajuste_camiones(
         del wb[nombre_hoja]
     ws = wb.create_sheet(nombre_hoja)
     ws.sheet_view.showGridLines = False
-    ws.freeze_panes = "A2"
+    ws.freeze_panes = "A3"
 
     columnas = (
         ("Fecha", "Fecha"),
-        ("TMH Sin ajuste", "Chancado_TMH_Sin_Ajuste"),
-        ("TMS Sin ajuste", "Chancado_TMS_Sin_Ajuste"),
-        ("TMH Con ajuste", "Chancado_TMH_Con_Ajuste"),
-        ("TMS Con ajuste", "Chancado_TMS_Con_Ajuste"),
-        ("Factor de Carga KOM Sin ajuste", "Carga_KOM_TMH_Viaje_Sin_Ajuste"),
-        ("Factor de Carga CAT Sin ajuste", "Carga_CAT_TMH_Viaje_Sin_Ajuste"),
-        ("Factor de Carga KOM con ajuste", "Carga_KOM_TMH_Viaje_Con_Ajuste"),
-        ("Factor de Carga CAT con ajuste", "Carga_CAT_TMH_Viaje_Con_Ajuste"),
-        ("Factor ajuste", "Factor_Ajuste_Calculado"),
-        ("n° vueltas KOM", "Vueltas_KOM"),
-        ("n° vueltas CAT", "Vueltas_CAT"),
+        ("Chancado TMH sin ajuste", "Chancado_TMH_Sin_Ajuste"),
+        ("Chancado TMH validado por KOM/CAT", "Chancado_TMH_Con_Ajuste"),
+        ("Factor calculado", "Factor_Ajuste_Calculado"),
+        ("Apilado TMH bruto automático", "Apilado_TMH_Bruto_Ajustado"),
+        ("Chancado TMS automático", "Chancado_TMS_Con_Ajuste"),
+        ("Factor aplicado", "Factor_Aplicacion_Reportes"),
+        ("Modo aplicación", "Modo_Aplicacion"),
+        ("Carga KOM sin ajuste [TMH/viaje]", "Carga_KOM_TMH_Viaje_Sin_Ajuste"),
+        ("Carga KOM corregida [TMH/viaje]", "Carga_KOM_TMH_Viaje_Con_Ajuste"),
+        ("Vueltas KOM", "Vueltas_KOM"),
+        ("Carga CAT sin ajuste [TMH/viaje]", "Carga_CAT_TMH_Viaje_Sin_Ajuste"),
+        ("Carga CAT corregida [TMH/viaje]", "Carga_CAT_TMH_Viaje_Con_Ajuste"),
+        ("Vueltas CAT", "Vueltas_CAT"),
     )
     borde_fino = Side(style="thin", color="000000")
     borde_tabla = Border(
@@ -1778,21 +1790,42 @@ def _agregar_hoja_factor_ajuste_camiones(
     relleno_blanco = PatternFill("solid", fgColor="FFFFFF")
     relleno_alterno = PatternFill("solid", fgColor="D7E1E7")
     for indice, (encabezado, _) in enumerate(columnas, start=1):
-        celda = ws.cell(1, indice, encabezado)
+        celda = ws.cell(2, indice, encabezado)
         celda.font = Font(name="Arial", size=11, bold=True, color=color_texto)
         celda.fill = relleno_blanco
         celda.alignment = Alignment(
             horizontal="center", vertical="center", wrap_text=True
         )
         celda.border = borde_tabla
-    ws.row_dimensions[1].height = 57.6
+    ws.row_dimensions[2].height = 72
+    for rango, etiqueta in (
+        ("A1", ""),
+        ("B1:F1", "Diagnóstico automático"),
+        ("G1:H1", "Aplicación efectiva"),
+        ("I1:K1", "Validación KOM"),
+        ("L1:N1", "Validación CAT"),
+    ):
+        if ":" in rango:
+            ws.merge_cells(rango)
+        celda = ws[rango.split(":")[0]]
+        celda.value = etiqueta
+        celda.font = Font(name="Arial", bold=True, color=color_texto)
+        celda.alignment = Alignment(horizontal="center", vertical="center")
+        for fila in ws.iter_rows(min_row=1, max_row=1, min_col=celda.column,
+                                 max_col=ws[rango.split(":")[-1]].column):
+            for item in fila:
+                item.fill = relleno_alterno
+                item.border = borde_tabla
+    ws.row_dimensions[1].height = 28
+    from openpyxl.comments import Comment
+    ws["C2"].comment = Comment("Diagnóstico automático. La suma corregida de flotas no es la conversión húmeda del balance TMS. Celdas vacías: no evaluable o sin dato de origen.", "SIIR")
 
-    for fila_excel, (_, fila) in enumerate(df_factor.iterrows(), start=2):
+    for fila_excel, (_, fila) in enumerate(df_factor.iterrows(), start=3):
         for col_excel, (_, columna_fuente) in enumerate(columnas, start=1):
             valor = fila[columna_fuente] if columna_fuente in df_factor.columns else None
             if pd.isna(valor):
                 valor = None
-            elif columna_fuente in {"Fecha", "Fecha_Calculo"} and hasattr(valor, "to_pydatetime"):
+            elif columna_fuente in {"Fecha", "Fecha_Calculo", "Control_Aplicacion_Fecha_Registro"} and hasattr(valor, "to_pydatetime"):
                 valor = valor.to_pydatetime()
             celda = ws.cell(fila_excel, col_excel, valor)
             celda.font = Font(
@@ -1801,22 +1834,23 @@ def _agregar_hoja_factor_ajuste_camiones(
                 color=color_texto,
             )
             celda.fill = (
-                relleno_blanco if fila_excel % 2 == 0 else relleno_alterno
+                relleno_blanco if fila_excel % 2 == 1 else relleno_alterno
             )
             celda.alignment = Alignment(horizontal="center", vertical="center")
             celda.border = borde_tabla
 
-    ultima_fila = max(2, 1 + len(df_factor))
-    for fila in range(2, ultima_fila + 1):
+    ultima_fila = max(3, 2 + len(df_factor))
+    for fila in range(3, ultima_fila + 1):
         ws.cell(fila, 1).alignment = Alignment(horizontal="center", vertical="center")
         ws.cell(fila, 1).number_format = "dd/mm/yyyy"
-        for col in range(2, 10):
-            ws.cell(fila, col).number_format = "#,##0"
-        ws.cell(fila, 10).number_format = "0.00"
-        for col in (11, 12):
+        for col in (2, 3, 5, 6, 9, 10, 12, 13):
+            ws.cell(fila, col).number_format = "#,##0.000"
+        for col in (4, 7):
+            ws.cell(fila, col).number_format = "0.000000"
+        for col in (11, 14):
             ws.cell(fila, col).number_format = "0"
 
-    anchos = (13.8, 12, 12, 12, 12, 15, 15, 15, 15, 10, 9, 9)
+    anchos = (14, 20, 28, 16, 23, 28, 18, 20, 23, 23, 12, 23, 23, 12)
     for indice, ancho in enumerate(anchos, start=1):
         ws.column_dimensions[get_column_letter(indice)].width = ancho
 
@@ -1831,7 +1865,9 @@ def _validar_balance_chancado(df_balance: pd.DataFrame) -> None:
     requeridas = {
         "Fecha", "Humedad", "Mineral_Apilado_TMH_Original", "Factor_Ajuste",
         "Mineral_Apilado_TMH_Ajustado", "Delta_Ajuste_TMH",
-        "Mineral_Chancado_Balance",
+        "Apilado_TMS_Reporte", "Delta_Inventario_Chancado_TMS", "Sal_TMH_Dia",
+        "SRR_TMS_Dia", "Chancado_TMS_Reporte", "Chancado_TMS_Real",
+        "Diferencia_vs_Datos_Conciliados", "Modo_Aplicacion", "Regla_Aplicacion",
         "Material", "Nivel_Promedio_Chancado", "Nivel_Promedio_Harneros",
         "Nivel_Promedio_Silo", "Bin_Chancado", "Bin_Harneros",
         "Tolva_Compensacion", "Silo", "Inventario_Chancado_TMH",
@@ -1858,22 +1894,39 @@ def _validar_balance_chancado(df_balance: pd.DataFrame) -> None:
     df_balance.sort_values("Fecha", kind="stable", inplace=True)
     df_balance.reset_index(drop=True, inplace=True)
 
-    originales = pd.to_numeric(
-        df_balance["Mineral_Apilado_TMH_Original"], errors="coerce"
-    )
-    ajustados = pd.to_numeric(
-        df_balance["Mineral_Apilado_TMH_Ajustado"], errors="coerce"
-    )
-    deltas = pd.to_numeric(df_balance["Delta_Ajuste_TMH"], errors="coerce")
-    comparables = originales.notna() & ajustados.notna() & deltas.notna()
-    diferencias = (deltas - (ajustados - originales)).abs()
-    inconsistentes = comparables & diferencias.gt(0.01)
-    if inconsistentes.any():
-        indice = inconsistentes[inconsistentes].index[0]
-        raise ValueError(
-            "Delta_Ajuste_TMH no coincide con ajustado menos original para "
-            f"{df_balance.loc[indice, 'Fecha']:%d-%m-%Y}."
-        )
+    def numero(nombre):
+        return pd.to_numeric(df_balance[nombre], errors="coerce")
+
+    def comprobar(variable, esperado, insumos, tolerancia):
+        obtenido = numero(variable)
+        evaluables = obtenido.notna() & esperado.notna()
+        for campo in insumos:
+            evaluables &= numero(campo).notna()
+        for indice in df_balance.index[evaluables]:
+            exp, real = float(esperado.loc[indice]), float(obtenido.loc[indice])
+            diferencia = real - exp
+            if not math.isfinite(exp) or not math.isfinite(real) or abs(diferencia) > tolerancia:
+                fecha = df_balance.loc[indice, "Fecha"]
+                raise ValueError(
+                    f"{fecha:%d-%m-%Y}: {variable}; esperado={exp:.12g}; "
+                    f"obtenido={real:.12g}; diferencia={diferencia:.12g}; "
+                    f"tolerancia={tolerancia:g}."
+                )
+
+    comprobar("Mineral_Apilado_TMH_Ajustado",
+              numero("Mineral_Apilado_TMH_Original") * numero("Factor_Ajuste"),
+              ["Mineral_Apilado_TMH_Original", "Factor_Ajuste"], 0.01)
+    comprobar("Delta_Ajuste_TMH",
+              numero("Mineral_Apilado_TMH_Ajustado") - numero("Mineral_Apilado_TMH_Original"),
+              ["Mineral_Apilado_TMH_Ajustado", "Mineral_Apilado_TMH_Original"], 0.01)
+    comprobar("Chancado_TMS_Reporte",
+              numero("Apilado_TMS_Reporte") + numero("Delta_Inventario_Chancado_TMS") - numero("SRR_TMS_Dia"),
+              ["Apilado_TMS_Reporte", "Delta_Inventario_Chancado_TMS", "SRR_TMS_Dia"], 0.01)
+    comprobar("Chancado_TMS_Real", numero("Chancado_TMS_Reporte"),
+              ["Chancado_TMS_Reporte"], 0.000001)
+    comprobar("Diferencia_vs_Datos_Conciliados",
+              numero("Chancado_TMS_Reporte") - numero("Chancado_TMS_Real"),
+              ["Chancado_TMS_Reporte", "Chancado_TMS_Real"], 0.000001)
 
 
 def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
@@ -1887,11 +1940,16 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
 
     columnas = (
         ("Fecha", "Fecha"), ("Humedad", "Humedad"),
-        ("Mineral Apilado TMH Original", "Mineral_Apilado_TMH_Original"),
-        ("Factor Ajuste", "Factor_Ajuste"),
-        ("Mineral Apilado TMH Ajustado", "Mineral_Apilado_TMH_Ajustado"),
-        ("Delta Ajuste TMH", "Delta_Ajuste_TMH"),
-        ("Mineral Chancado", "Mineral_Chancado_Balance"),
+        ("Apilado TMH bruto original", "Mineral_Apilado_TMH_Original"),
+        ("Factor aplicado", "Factor_Ajuste"),
+        ("Apilado TMH bruto aplicado", "Mineral_Apilado_TMH_Ajustado"),
+        ("Delta TMH aplicado", "Delta_Ajuste_TMH"),
+        ("Apilado TMS neto aplicado", "Apilado_TMS_Reporte"),
+        ("Variación inventario TMS", "Delta_Inventario_Chancado_TMS"),
+        ("Sal", "Sal_TMH_Dia"),
+        ("SRR TMS Balance", "SRR_TMS_Dia"),
+        ("Chancado TMS", "Chancado_TMS_Real"),
+        ("Modo aplicación", "Modo_Aplicacion"),
         ("Material", "Material"),
         ("Nivel promedio Chancado", "Nivel_Promedio_Chancado"),
         ("Nivel promedio Harneros", "Nivel_Promedio_Harneros"),
@@ -1915,9 +1973,9 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
         ("Silo A", "Nivel_Silo_A"), ("Silo B", "Nivel_Silo_B"),
     )
     grupos = (
-        ("A4:H4", "Balance diario"), ("I4:K4", "Niveles promedio"),
-        ("L4:U4", "Inventarios"), ("V4:Z4", "Niveles Harneros"),
-        ("AA4:AE4", "Niveles Chancado"), ("AF4:AG4", "Niveles Silo"),
+        ("A4:M4", "Balance diario — ruta aplicada"), ("N4:P4", "Niveles promedio"),
+        ("Q4:Z4", "Inventarios"), ("AA4:AE4", "Niveles Harneros"),
+        ("AF4:AJ4", "Niveles Chancado"), ("AK4:AL4", "Niveles Silo"),
     )
     color_texto = "476475"
     relleno_azul = PatternFill("solid", fgColor="D7E1E7")
@@ -1927,12 +1985,12 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
     lado = Side(style="thin", color="808080")
     borde = Border(left=lado, right=lado, top=lado, bottom=lado)
 
-    ws.merge_cells("A1:AG1")
+    ws.merge_cells("A1:AL1")
     ws["A1"] = "Balance Chancado"
     ws["A1"].font = Font(name="Arial", size=14, bold=True, color=color_texto)
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-    ws.merge_cells("A2:AG2")
-    ws["A2"] = "Balance diario de apilado, inventarios y mineral chancado"
+    ws.merge_cells("A2:AL2")
+    ws["A2"] = "Ruta aplicada. Apilado TMS ya neto de sal: Chancado = Apilado neto + variación inventario − SRR físico. Celdas vacías: no evaluable."
     ws["A2"].font = Font(name="Arial", size=9, italic=True, color=color_texto)
     ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
 
@@ -1998,24 +2056,24 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
         ws.cell(fila, 1).number_format = "dd-mm-yyyy"
         ws.cell(fila, 2).number_format = "0.000"
         ws.cell(fila, 4).number_format = "0.000000"
-        for col in (3, 5, 6, 7, *range(12, 22)):
-            ws.cell(fila, col).number_format = "#,##0.00"
-        for col in (*range(9, 12), *range(22, 34)):
+        for col in (3, *range(5, 12), *range(17, 27)):
+            ws.cell(fila, col).number_format = "#,##0.000"
+        for col in (*range(14, 17), *range(27, 39)):
             ws.cell(fila, col).number_format = "0.00"
 
-    anchos = (13, 10, 20, 14, 20, 16, 17, 12) + (17,) * 3 + (16,) * 10 + (12,) * 12
+    anchos = (13, 10, 22, 15, 22, 18, 22, 22, 14, 24, 22, 20, 12) + (17,) * 3 + (16,) * 10 + (12,) * 12
     for indice, ancho in enumerate(anchos, start=1):
         ws.column_dimensions[get_column_letter(indice)].width = ancho
     ws.row_dimensions[1].height = 24
     ws.row_dimensions[2].height = 18
     ws.row_dimensions[4].height = 28
-    ws.row_dimensions[5].height = 42
-    ws.auto_filter.ref = f"A5:AG{ultima_fila}"
+    ws.row_dimensions[5].height = 60
+    ws.auto_filter.ref = f"A5:AL{ultima_fila}"
     ws.page_setup.orientation = "landscape"
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
     ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.print_area = f"A1:AG{ultima_fila}"
+    ws.print_area = f"A1:AL{ultima_fila}"
 
     relleno_ajuste_manual = PatternFill("solid", fgColor="D7E1E7")
     fuente_ajuste_manual = Font(
@@ -2225,6 +2283,11 @@ def export_datos_conciliados_to_template(
     - Se copia el estilo (relleno, borde, fuente) de las dos primeras filas a todas
       las filas de datos para que la tabla crezca sin romper la estructura.
     """
+    # Fallar antes de construir el workbook, sin recalcular reglas de aplicación.
+    if df_balance_chancado is not None:
+        _validar_balance_chancado(df_balance_chancado)
+    if df_factor_ajuste is not None:
+        _validar_factor_ajuste_camiones(df, df_factor_ajuste)
     df_export = df
     df_base_resumen = df_resumen_mtd if df_resumen_mtd is not None else df_export
     fecha_corte_resumen = _obtener_fecha_corte_resumen_datos_conciliados(
@@ -2369,11 +2432,9 @@ def export_datos_conciliados_to_template(
         )
 
     if df_balance_chancado is not None:
-        _validar_balance_chancado(df_balance_chancado)
         _agregar_hoja_balance_chancado(wb, df_balance_chancado)
 
     if df_factor_ajuste is not None:
-        _validar_factor_ajuste_camiones(df, df_factor_ajuste)
         _agregar_hoja_factor_ajuste_camiones(wb, df_factor_ajuste)
 
     _agregar_hoja_datos_correo(wb, df_resumen, fecha_corte_resumen)

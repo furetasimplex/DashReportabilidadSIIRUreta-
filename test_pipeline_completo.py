@@ -48,7 +48,11 @@ with engine.connect() as conn:
         try:
             result = conn.exec_driver_sql(f"EXEC sp_helptext '{fq_name}'")
             rows = result.fetchall()
-            texto = "\n".join(r[0] for r in rows if r[0] is not None)
+            texto = "\n".join(
+                r[0].rstrip()
+                for r in rows
+                if r[0] is not None
+            )
             w(texto if texto else "(vacio)")
         except Exception as e:
             w(f"ERROR: {e}")

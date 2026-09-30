@@ -1,0 +1,259 @@
+"""Administración DEV: registrar configuración nunca recalcula resultados."""
+from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
+import json
+import logging
+from uuid import uuid4
+
+import pandas as pd
+from flask import has_request_context, session
+from dash import Input, Output, State, callback, ctx, dcc, html, no_update
+import dash_bootstrap_components as dbc
+
+from . import db
+
+log = logging.getLogger(__name__)
+PREFIX = 'pitum-limites-'
+
+
+def _decimal6(value):
+    """Normaliza límites a la precisión contractual sin pasar por float."""
+    try:
+        return Decimal(str(value)).quantize(Decimal('0.000001'))
+    except (InvalidOperation, ValueError, TypeError):
+        raise ValueError('No fue posible validar el límite vigente revisado.') from None
+
+
+def usuario():
+    value = session.get('user') if has_request_context() else None
+    return value.strip() if isinstance(value,str) and value.strip() else None
+
+
+def numero(value, decimals=2):
+    if value is None or pd.isna(value):
+        return '—'
+    return f'{value:,.{decimals}f}'.translate(str.maketrans(',.','.,'))
+
+
+def fecha(value, hora=False):
+    if value is None or pd.isna(value):
+        return '—'
+    return pd.Timestamp(value).strftime('%d-%m-%Y %H:%M' if hora else '%d-%m-%Y')
+
+
+def tabla(headers, rows):
+    return dbc.Table([html.Thead(html.Tr([html.Th(h) for h in headers])),
+                      html.Tbody([html.Tr([html.Td(c) for c in row]) for row in rows])],
+                     bordered=True, striped=True, size='sm', responsive=True)
+
+
+def layout():
+    return html.Div([
+        html.H5('Límites de carga para ajuste'),
+        html.P('Configuración por fecha. Los resultados históricos conservan los límites utilizados en su último cálculo.', className='text-muted small'),
+        dbc.Label('Fecha de consulta'),
+        dcc.DatePickerSingle(id=PREFIX+'consulta', date=date.today().isoformat(), display_format='DD-MM-YYYY'),
+        html.Div(id=PREFIX+'tarjetas', className='mt-2'),
+        html.Div(id=PREFIX+'proximos'),
+        html.Div(id=PREFIX+'pendientes'),
+        dbc.Button('Administrar límites', id=PREFIX+'abrir', color='secondary', outline=True, className='my-2'),
+        dcc.Store(id=PREFIX+'version', data=0),
+        dcc.Store(id=PREFIX+'pendientes-datos', data=[]),
+        dcc.Store(id=PREFIX+'token'),
+        dbc.Collapse([
+            dbc.Row([
+                dbc.Col([dbc.Label('Flota'), dcc.Dropdown(id=PREFIX+'flota', options=['KOM','CAT'], value='KOM', clearable=False)], md=3),
+                dbc.Col([dbc.Label('Nuevo límite (TMH/viaje)'), dbc.Input(id=PREFIX+'valor', type='number', min=0, step='any')], md=4),
+                dbc.Col([dbc.Label('Vigente desde'), dcc.DatePickerSingle(id=PREFIX+'desde', date=date.today().isoformat(), display_format='DD-MM-YYYY')], md=5),
+            ], className='mb-2'),
+            html.Div(id=PREFIX+'anterior', className='small mb-2'),
+            dbc.Label('Motivo'), dbc.Textarea(id=PREFIX+'motivo', maxLength=1000),
+            html.Div(id=PREFIX+'usuario', className='small my-2'),
+            dbc.Button('Registrar nueva vigencia', id=PREFIX+'revisar', color='primary'),
+            html.H6('Historial de vigencias', className='mt-3'),
+            html.Div(id=PREFIX+'historial'),
+        ], id=PREFIX+'formulario', is_open=False),
+        html.Div(id=PREFIX+'resultado', className='mt-2'),
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle('Confirmar nueva vigencia'), close_button=False),
+            dbc.ModalBody([
+                html.Div(id=PREFIX+'resumen'),
+                dbc.Checkbox(id=PREFIX+'retro-check', value=False,
+                             label='Confirmo que entiendo que el cambio es retroactivo.'),
+            ]),
+            dbc.ModalFooter([
+                dbc.Button('Cancelar',id=PREFIX+'cancelar',color='secondary'),
+                dbc.Button('Confirmar',id=PREFIX+'confirmar',color='primary',disabled=True),
+            ]),
+        ], id=PREFIX+'confirmacion', is_open=False, backdrop='static', keyboard=False),
+    ], className='border-top mt-3 pt-3')
+
+
+def estado_vigencia(row, today):
+    if not row.get('activo',True):
+        return 'INACTIVO'
+    if pd.Timestamp(row['vigencia_desde']).date()>today:
+        return 'FUTURO'
+    end=row.get('vigencia_hasta')
+    return 'HISTÓRICO' if end is not None and not pd.isna(end) and pd.Timestamp(end).date()<=today else 'VIGENTE'
+
+
+def mostrar_historial(df, today):
+    return tabla(['Flota','Límite TMH/viaje','Vigente desde','Vigente hasta','Estado','Motivo','Usuario','Fecha registro'], [
+        [r['flota'],numero(r['valor'],6).rstrip('0').rstrip(','),fecha(r['vigencia_desde']),
+         'Hasta nuevo aviso' if pd.isna(r['vigencia_hasta']) else 'Hasta '+fecha(pd.Timestamp(r['vigencia_hasta'])-timedelta(days=1)),
+         estado_vigencia(r,today),r['motivo'],r['usuario_registro'],fecha(r['fecha_registro'],True)]
+        for r in df.to_dict('records')])
+
+
+@callback(Output(PREFIX+'formulario','is_open'),Input(PREFIX+'abrir','n_clicks'),State(PREFIX+'formulario','is_open'),prevent_initial_call=True)
+def abrir_formulario(_click,opened):
+    return not opened
+
+
+@callback(Output(PREFIX+'tarjetas','children'),Output(PREFIX+'proximos','children'),
+          Output(PREFIX+'historial','children'),Output(PREFIX+'pendientes','children'),
+          Output(PREFIX+'pendientes-datos','data'),
+          Input(PREFIX+'consulta','date'),Input(PREFIX+'version','data'))
+def refrescar_configuracion(day,_version):
+    try:
+        history=db.obtener_historial_limites_factor()
+        current=db.obtener_limites_factor_vigentes(day)
+        pending=db.obtener_pendientes_limites_factor()
+        cards=dbc.Row([dbc.Col(dbc.Card(dbc.CardBody([
+            html.Strong(r['flota']),html.Div(numero(r['valor'])+' TMH/viaje'),
+            html.Small('Vigente desde '+fecha(r['vigencia_desde'])),
+        ])),md=6,className='mb-2') for r in current.to_dict('records')])
+        future=history.loc[(pd.to_datetime(history.vigencia_desde).dt.date>date.today()) & history.activo.astype(bool)]
+        next_changes=html.Div([html.H6('Próximos cambios programados'),html.Ul([
+            html.Li(f"{r['flota']}: {numero(r['valor'])} TMH/viaje desde {fecha(r['vigencia_desde'])}")
+            for r in future.to_dict('records')])]) if not future.empty else html.P('Sin cambios futuros programados.',className='small text-muted')
+        records=json.loads(pending.to_json(orient='records',date_format='iso'))
+        notice=dbc.Alert([
+            html.Strong('PENDIENTE DE REPROCESO'),
+            html.P('La configuración difiere de los límites utilizados en resultados materializados. No se reprocesó el histórico.'),
+            tabla(['Fecha','Flota','Configurado','Utilizado'],[
+                [fecha(r['Fecha']),r['flota'],numero(r['limite_configurado']),numero(r['limite_utilizado'])]
+                for r in records]),
+        ],color='warning') if records else ''
+        return cards,next_changes,mostrar_historial(history,date.today()),notice,records
+    except Exception:
+        log.exception('Error leyendo configuración de límites')
+        return dbc.Alert('No fue posible consultar una configuración única para esa fecha.',color='warning'),'','','',[]
+
+
+@callback(Output(PREFIX+'anterior','children'),Output(PREFIX+'usuario','children'),
+          Input(PREFIX+'desde','date'),Input(PREFIX+'flota','value'),Input(PREFIX+'version','data'))
+def mostrar_anterior(day,fleet,_version):
+    identity='Usuario autenticado: '+usuario() if usuario() else 'Sesión sin usuario autenticado. No se permite registrar.'
+    try:
+        prior=date.fromisoformat(day)-timedelta(days=1)
+        rows=db.obtener_limites_factor_vigentes(prior.isoformat())
+        value=rows.loc[rows.flota==fleet,'valor'].iloc[0]
+        return f'Límite vigente para la fecha anterior ({fecha(prior)}): {numero(value)} TMH/viaje',identity
+    except Exception:
+        return 'Límite para la fecha anterior: —',identity
+
+
+def preparar_confirmacion(fleet,value,day,reason):
+    payload=db.validar_limite_factor(fleet,value,day,reason,usuario())
+    current=db.obtener_limites_factor_vigentes(day)
+    previous=current.loc[current.flota==fleet,'valor'].iloc[0]
+    effective=payload['vigencia_desde']
+    retro=effective<date.today()
+    label='CAMBIO RETROACTIVO' if retro else 'CAMBIO PROGRAMADO' if effective>date.today() else 'CAMBIO VIGENTE DESDE HOY'
+    token=uuid4().hex
+    payload.update(
+        valor=str(payload['valor']),
+        vigencia_desde=effective.isoformat(),
+        valor_anterior=str(_decimal6(previous)),
+        token=token,
+    )
+    session['pitum_limites_confirmacion']=payload
+    description=html.Div([
+        dbc.Alert(label,color='warning' if retro else 'info'),
+        tabla(['Dato','Valor'],[['Flota',fleet],['Límite actual para la fecha efectiva',numero(previous)+' TMH/viaje'],
+              ['Nuevo límite',numero(value)+' TMH/viaje'],['Vigente desde',fecha(day)],['Motivo',reason],['Usuario',usuario()]]),
+        html.P('Este valor permanecerá vigente hasta una nueva modificación o un cambio posterior ya programado.'),
+        html.P('Esta modificación cambia la regla aplicable desde '+fecha(day)+'. Existen resultados históricos que podrían requerir reproceso.') if retro else '',
+        html.P('Registrar la configuración no reprocesará ni publicará resultados.'),
+    ])
+    return token,description,retro
+
+
+def mensaje_error(exc):
+    if isinstance(exc,ValueError):
+        return str(exc)
+    raw=str(exc)
+    for code,message in [('51015','Ya existe una vigencia de esa flota iniciada en la fecha indicada.'),
+                         ('51011','El límite debe ser mayor que cero.'),
+                         ('51016','No existe configuración anterior compatible.'),
+                         ('51017','La historia de vigencias requiere revisión.'),
+                         ('51001','La vigencia generaría un solapamiento.'),
+                         ('51014','Otro registro está en proceso. Revise el historial antes de volver a intentarlo.')]:
+        if code in raw:
+            return message
+    return 'No fue posible registrar la vigencia. Revise la conexión DEV y el historial antes de volver a intentarlo.'
+
+
+def confirmar_registro(token,ack):
+    pending=session.get('pitum_limites_confirmacion')
+    if not pending or pending['token']!=token or pending['usuario']!=usuario():
+        raise ValueError('La confirmación no está vigente. Revise nuevamente la solicitud.')
+    if date.fromisoformat(pending['vigencia_desde'])<date.today() and ack is not True:
+        raise ValueError('Debe confirmar expresamente el cambio retroactivo.')
+
+    # Revalidación optimista: si otro usuario cambió la configuración después
+    # de la revisión, no registrar sobre una confirmación visual obsoleta.
+    current=db.obtener_limites_factor_vigentes(pending['vigencia_desde'])
+    current_value=current.loc[current.flota==pending['flota'],'valor'].iloc[0]
+    if _decimal6(current_value) != _decimal6(pending['valor_anterior']):
+        raise ValueError('La configuración cambió desde la revisión. Actualice y confirme nuevamente.')
+
+    payload={k:v for k,v in pending.items() if k not in ('token','valor_anterior')}
+    result=db.registrar_limite_factor(**payload)
+    # Consumir la confirmación solo después de una escritura exitosa.
+    session.pop('pitum_limites_confirmacion',None)
+    start,end=result['Fecha_Inicio_Afectada'],result['Fecha_Fin_Afectada']
+    affected=end is not None and pd.Timestamp(start)<=pd.Timestamp(end)
+    return dbc.Alert([
+        html.Strong('Vigencia registrada correctamente. '+('PENDIENTE DE REPROCESO' if affected else 'PROGRAMADO')),
+        html.P(f"{pending['flota']} = {numero(float(pending['valor']))} TMH/viaje desde {fecha(pending['vigencia_desde'])}."),
+        html.P('Rango potencialmente afectado: '+fecha(start)+' → '+fecha(end)) if affected else html.P('No existen fechas materializadas afectadas actualmente.'),
+        html.P('El histórico NO fue reprocesado automáticamente.'),
+    ],color='warning' if affected else 'success')
+
+
+@callback(Output(PREFIX+'confirmacion','is_open'),Output(PREFIX+'resumen','children'),
+          Output(PREFIX+'token','data'),Output(PREFIX+'retro-check','value'),
+          Output(PREFIX+'resultado','children'),Output(PREFIX+'version','data'),
+          Input(PREFIX+'revisar','n_clicks'),Input(PREFIX+'cancelar','n_clicks'),Input(PREFIX+'confirmar','n_clicks'),
+          State(PREFIX+'flota','value'),State(PREFIX+'valor','value'),State(PREFIX+'desde','date'),State(PREFIX+'motivo','value'),
+          State(PREFIX+'token','data'),State(PREFIX+'retro-check','value'),State(PREFIX+'version','data'),prevent_initial_call=True)
+def gestionar(_review,_cancel,_confirm,fleet,value,day,reason,token,ack,version):
+    action=ctx.triggered_id
+    try:
+        if action==PREFIX+'cancelar':
+            session.pop('pitum_limites_confirmacion',None)
+            return False,'',None,False,no_update,no_update
+        if action==PREFIX+'revisar':
+            challenge,description,_=preparar_confirmacion(fleet,value,day,reason)
+            return True,description,challenge,False,'',no_update
+        if action==PREFIX+'confirmar':
+            result=confirmar_registro(token,ack)
+            return False,'',None,False,result,(version or 0)+1
+    except Exception as exc:
+        log.exception('No se completó la administración de límites')
+        if has_request_context():
+            session.pop('pitum_limites_confirmacion',None)
+        return False,'',None,False,dbc.Alert(mensaje_error(exc),color='danger'),no_update
+    return (no_update,)*6
+
+
+@callback(Output(PREFIX+'confirmar','disabled'),Output(PREFIX+'retro-check','style'),
+          Input(PREFIX+'token','data'),Input(PREFIX+'retro-check','value'))
+def habilitar_confirmacion(token,ack):
+    pending=session.get('pitum_limites_confirmacion') if has_request_context() else None
+    valid=pending and pending['token']==token and pending['usuario']==usuario()
+    retro=valid and date.fromisoformat(pending['vigencia_desde'])<date.today()
+    return not valid or (retro and ack is not True), {'display':'block' if retro else 'none'}

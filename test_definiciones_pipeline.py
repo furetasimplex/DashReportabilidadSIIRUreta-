@@ -53,7 +53,21 @@ with engine.connect() as conn:
         try:
             result = conn.exec_driver_sql(f"EXEC sp_helptext '{fq_name}'")
             rows = result.fetchall()
-            texto = "\n".join(r[0] for r in rows if r[0] is not None)
+
+            # sp_helptext puede devolver la definición en fragmentos.
+            # Primero reconstruimos el texto original SIN insertar saltos artificiales.
+            texto_raw = "".join(
+                r[0]
+                for r in rows
+                if r[0] is not None
+            )
+
+            # Luego eliminamos únicamente espacios/tabs al final
+            # de cada línea real del procedimiento.
+            texto = "\n".join(
+                linea.rstrip()
+                for linea in texto_raw.splitlines()
+            )
             w(texto if texto else "(vacio / posiblemente encriptado)")
         except Exception as e:
             w(f"ERROR: {e}")

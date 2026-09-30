@@ -1,0 +1,6 @@
+{
+  "standalone_equal": true,
+  "legacy_columns_equal": true,
+  "historical_controls_equal": true,
+  "changed_rows": 1
+}

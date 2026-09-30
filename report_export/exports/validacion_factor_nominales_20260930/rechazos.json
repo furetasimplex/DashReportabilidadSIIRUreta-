@@ -1,0 +1,34 @@
+[
+  {
+    "caso": "categoria",
+    "error_verificado": 51018
+  },
+  {
+    "caso": "valor",
+    "error_verificado": 51011
+  },
+  {
+    "caso": "mismo_inicio",
+    "error_verificado": 51015
+  },
+  {
+    "caso": "sin_cobertura_previa",
+    "error_verificado": 51016
+  },
+  {
+    "caso": "discontinuidad",
+    "error_verificado": 51017
+  },
+  {
+    "caso": "solapamiento",
+    "error_verificado": 51001
+  },
+  {
+    "caso": "falta_configuracion",
+    "error_verificado": 51020
+  },
+  {
+    "caso": "configuracion_duplicada",
+    "error_verificado": 51020
+  }
+]

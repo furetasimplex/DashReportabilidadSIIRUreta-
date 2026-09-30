@@ -1,0 +1,22 @@
+[
+  {
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_base_mina_stock_srr"
+  },
+  {
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_tms_sin_sal_con_srr_reporte_test"
+  },
+  {
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_conciliacion_chancado_v2"
+  },
+  {
+    "referenced_database_name": "DEV_SIIR",
+    "referenced_schema_name": "hidro",
+    "referenced_entity_name": "v_imp_chancado_normalizado"
+  }
+]

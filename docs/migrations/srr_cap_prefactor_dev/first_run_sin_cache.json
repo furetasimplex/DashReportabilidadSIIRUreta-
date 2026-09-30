@@ -1,0 +1,38 @@
+[
+  {
+    "Fecha": "2026-09-16",
+    "Turno": "B",
+    "Fuente_SRR": "SIN_ORIGEN",
+    "Ton_SRR_Oficial": "0E-10",
+    "Ton_SRR_IMP": "0E-10",
+    "Ton_SRR_Origen_Raw": "0E-10",
+    "Ton_SRR_Usado_Actual": "0E-10",
+    "Flag_SRR_Capeado_Por_Apilado": false,
+    "Flag_SRR_Valido": false,
+    "Estado_SRR": "SIN_ORIGEN",
+    "Apilado_TMS_Real": "0E-10",
+    "Ton_Stock_Oficial": "0E-10",
+    "Ton_Mina_Oficial": "0E-10",
+    "Ton_IMP_Total": "0E-10",
+    "Fuente_Dato_Conciliacion": "MINA",
+    "Apilado_TMS_Referencia_Cap": "0E-10"
+  },
+  {
+    "Fecha": "2026-09-16",
+    "Turno": "A",
+    "Fuente_SRR": "OFICIAL",
+    "Ton_SRR_Oficial": "489.2148217630",
+    "Ton_SRR_IMP": "490.7325504214",
+    "Ton_SRR_Origen_Raw": "489.2148217630",
+    "Ton_SRR_Usado_Actual": "489.2148217630",
+    "Flag_SRR_Capeado_Por_Apilado": false,
+    "Flag_SRR_Valido": true,
+    "Estado_SRR": "OK",
+    "Apilado_TMS_Real": "2326.2520000000",
+    "Ton_Stock_Oficial": "348.0750000000",
+    "Ton_Mina_Oficial": "0E-10",
+    "Ton_IMP_Total": "847.7325504214",
+    "Fuente_Dato_Conciliacion": "MINA",
+    "Apilado_TMS_Referencia_Cap": "2326.2520000000"
+  }
+]

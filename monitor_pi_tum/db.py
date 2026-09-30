@@ -502,6 +502,231 @@ def registrar_contingencia(fecha, turno, accion, motivo, comentario, usuario,
                                       accion_vigente_esperada)
 
 
+PARAMETROS_FACTOR_CAMIONES = {
+    'LIMITE_CARGA_AJUSTE': {
+        'nombre': 'Límite máximo',
+        'columnas': ('Limite_KOM_TMH_Viaje', 'Limite_CAT_TMH_Viaje'),
+    },
+    'CARGA_NOMINAL_TMH_VIAJE': {
+        'nombre': 'Carga nominal',
+        'columnas': ('Carga_Nominal_KOM_TMH_Viaje', 'Carga_Nominal_CAT_TMH_Viaje'),
+    },
+}
+
+
+def _categoria_parametro_factor(parametro):
+    if not isinstance(parametro, str) or parametro not in PARAMETROS_FACTOR_CAMIONES:
+        raise ValueError('Seleccione una categoría de parámetro válida.')
+    return PARAMETROS_FACTOR_CAMIONES[parametro]
+
+
+def validar_parametro_factor(parametro, flota, valor, vigencia_desde, motivo, usuario):
+    _categoria_parametro_factor(parametro)
+    from decimal import Decimal, InvalidOperation
+    if flota not in ('KOM', 'CAT'):
+        raise ValueError('Seleccione una flota KOM o CAT.')
+    try:
+        numero = Decimal(str(valor))
+        if not numero.is_finite() or numero <= 0 or numero >= Decimal('1000000000000'):
+            raise ValueError
+        if numero != numero.quantize(Decimal('0.000001')):
+            raise ValueError
+    except (InvalidOperation, ValueError):
+        raise ValueError('El valor debe ser positivo, con hasta seis decimales y doce dígitos enteros.') from None
+    try:
+        fecha = date.fromisoformat(str(vigencia_desde))
+    except (ValueError, TypeError):
+        raise ValueError('Seleccione una fecha válida.') from None
+    if not isinstance(motivo, str) or not motivo.strip() or len(motivo) > 1000:
+        raise ValueError('Ingrese un motivo de hasta 1000 caracteres.')
+    if not isinstance(usuario, str) or not usuario.strip() or len(usuario) > 128:
+        raise ValueError('No fue posible identificar al usuario autenticado.')
+    return dict(parametro=parametro, flota=flota, valor=numero, vigencia_desde=fecha,
+                motivo=motivo.strip(), usuario=usuario.strip())
+
+
+def validar_limite_factor(flota, valor, vigencia_desde, motivo, usuario):
+    valores = validar_parametro_factor('LIMITE_CARGA_AJUSTE', flota, valor,
+                                       vigencia_desde, motivo, usuario)
+    valores.pop('parametro')
+    return valores
+
+
+def obtener_historial_limites_factor():
+    return obtener_historial_parametros_factor('LIMITE_CARGA_AJUSTE')
+
+
+def obtener_historial_parametros_factor(parametro):
+    _categoria_parametro_factor(parametro)
+    with _engine_dev().connect() as conn:
+        return pd.read_sql(text('''SELECT id,parametro,flota,valor,vigencia_desde,vigencia_hasta,
+            motivo,usuario_registro,fecha_registro,activo
+            FROM inventar_SpcHidr.factor_camiones_parametro_vigencia_test
+            WHERE parametro=:parametro
+            ORDER BY vigencia_desde DESC,flota'''), conn, params={'parametro': parametro})
+
+
+def obtener_limites_factor_vigentes(fecha):
+    return obtener_parametros_factor_vigentes('LIMITE_CARGA_AJUSTE', fecha)
+
+
+def obtener_parametros_factor_vigentes(parametro, fecha):
+    _categoria_parametro_factor(parametro)
+    fecha = date.fromisoformat(str(fecha))
+    with _engine_dev().connect() as conn:
+        df = pd.read_sql(text('''SELECT parametro,flota,valor,vigencia_desde,vigencia_hasta
+            FROM inventar_SpcHidr.factor_camiones_parametro_vigencia_test
+            WHERE parametro=:parametro AND activo=1
+              AND vigencia_desde<=:fecha AND (vigencia_hasta IS NULL OR :fecha<vigencia_hasta)
+            ORDER BY flota'''), conn, params={'fecha':fecha, 'parametro':parametro})
+    if len(df) != 2 or set(df.flota) != {'KOM','CAT'}:
+        raise ValueError('No existe una configuración única KOM/CAT para la fecha consultada.')
+    return df
+
+
+def obtener_pendientes_limites_factor():
+    return obtener_pendientes_parametros_factor('LIMITE_CARGA_AJUSTE')
+
+
+def obtener_pendientes_parametros_factor(parametro):
+    """Compara configuración y fotografía materializada; nunca reprocesa.
+
+    Los nombres SQL proceden exclusivamente de la whitelist interna.
+    Conserva aliases limite_* para compatibilidad de los consumidores actuales.
+    """
+    kom, cat = _categoria_parametro_factor(parametro)['columnas']
+    with _engine_dev().connect() as conn:
+        return pd.read_sql(text(f'''SELECT v.Fecha,p.parametro,p.flota,p.valor AS limite_configurado,
+            CASE p.flota WHEN 'KOM' THEN v.{kom} ELSE v.{cat} END AS limite_utilizado
+            FROM inventar_SpcHidr.v_ajuste_camiones_emision_test v
+            JOIN inventar_SpcHidr.factor_camiones_parametro_vigencia_test p
+              ON p.vigencia_desde<=v.Fecha AND (p.vigencia_hasta IS NULL OR v.Fecha<p.vigencia_hasta)
+            WHERE p.activo=1 AND p.parametro=:parametro
+              AND (CASE p.flota WHEN 'KOM' THEN v.{kom} ELSE v.{cat} END IS NULL
+                   OR CAST(CASE p.flota WHEN 'KOM' THEN v.{kom} ELSE v.{cat} END AS decimal(18,6))
+                      <> CAST(p.valor AS decimal(18,6)))
+            ORDER BY v.Fecha,p.flota'''),conn,params={'parametro':parametro})
+
+
+def registrar_parametro_factor(parametro, flota, valor, vigencia_desde, motivo, usuario):
+    valores = validar_parametro_factor(parametro, flota, valor, vigencia_desde, motivo, usuario)
+    with _engine_dev().begin() as conn:
+        _assert_dev_connection(conn)
+        return dict(conn.execute(text('''EXEC inventar_SpcHidr.sp_registrar_parametro_factor_camiones_vigencia_test
+            @Parametro=:parametro, @Flota=:flota, @Valor=:valor, @VigenciaDesde=:vigencia_desde,
+            @Motivo=:motivo, @Usuario=:usuario'''), valores).mappings().one())
+
+
+def registrar_limite_factor(flota, valor, vigencia_desde, motivo, usuario):
+    valores = validar_limite_factor(flota, valor, vigencia_desde, motivo, usuario)
+    with _engine_dev().begin() as conn:
+        _assert_dev_connection(conn)
+        return dict(conn.execute(text('''EXEC inventar_SpcHidr.sp_registrar_limite_factor_camiones_vigencia_test
+            @Flota=:flota, @Valor=:valor, @VigenciaDesde=:vigencia_desde,
+            @Motivo=:motivo, @Usuario=:usuario'''), valores).mappings().one())
+
+
+def validar_override_factor(fecha_desde, fecha_hasta, modo, motivo, usuario):
+    try:
+        inicio = date.fromisoformat(str(fecha_desde))
+        fin = date.fromisoformat(str(fecha_hasta))
+    except (ValueError, TypeError):
+        raise ValueError('Seleccione fechas válidas.') from None
+    if fin < inicio:
+        raise ValueError('Hasta no puede ser anterior a Desde.')
+    if modo not in ('FORZADO_1', 'AUTOMATICO'):
+        raise ValueError('Modo de aplicación inválido.')
+    if not isinstance(motivo, str) or not motivo.strip() or len(motivo) > 1000:
+        raise ValueError('Ingrese un motivo de hasta 1000 caracteres.')
+    if not isinstance(usuario, str) or not usuario.strip() or len(usuario) > 128:
+        raise ValueError('Se requiere un usuario autenticado de hasta 128 caracteres.')
+    return dict(fecha_desde=inicio, fecha_hasta=fin, modo=modo, motivo=motivo.strip(), usuario=usuario.strip())
+
+
+def obtener_historial_override_factor():
+    with _engine_dev().connect() as conn:
+        return pd.read_sql(text('''SELECT id_override,fecha_desde,fecha_hasta,modo,motivo,usuario,fecha_registro
+            FROM inventar_SpcHidr.factor_camiones_override_aplicacion_test
+            ORDER BY fecha_registro DESC,id_override DESC'''), conn)
+
+
+def _version_override_rango(conn, fecha_desde, fecha_hasta, bloquear=False):
+    # HOLDLOCK protege también frente a altas que invoquen el SP sin applock.
+    hint = 'WITH (UPDLOCK,HOLDLOCK)' if bloquear else ''
+    return conn.execute(text(f'''SELECT MAX(id_override)
+        FROM inventar_SpcHidr.factor_camiones_override_aplicacion_test {hint}
+        WHERE fecha_desde<=:hasta AND fecha_hasta>=:desde'''),
+        {'desde':fecha_desde,'hasta':fecha_hasta}).scalar()
+
+
+def obtener_version_override_rango(fecha_desde, fecha_hasta):
+    inicio, fin = date.fromisoformat(str(fecha_desde)), date.fromisoformat(str(fecha_hasta))
+    if fin < inicio:
+        raise ValueError('Hasta no puede ser anterior a Desde.')
+    with _engine_dev().connect() as conn:
+        return _version_override_rango(conn, inicio, fin)
+
+
+def registrar_override_factor(fecha_desde, fecha_hasta, modo, motivo, usuario, version_esperada):
+    payload = validar_override_factor(fecha_desde, fecha_hasta, modo, motivo, usuario)
+    with _engine_dev().begin() as conn:
+        _assert_dev_connection(conn)
+        lock = conn.execute(text('''DECLARE @resultado int;
+            EXEC @resultado=sys.sp_getapplock @Resource='SIIR_FACTOR_CAMIONES_OVERRIDE_2B',
+                @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=15000;
+            SELECT @resultado;''')).scalar()
+        if lock is None or lock < 0:
+            raise ValueError('Otro registro está en proceso. Revise nuevamente la solicitud.')
+        actual = _version_override_rango(conn, payload['fecha_desde'], payload['fecha_hasta'], bloquear=True)
+        if actual != version_esperada:
+            raise ValueError('El historial cambió desde la confirmación. Revise nuevamente la solicitud.')
+        return dict(conn.execute(text('''EXEC inventar_SpcHidr.sp_registrar_override_factor_camiones_test
+            @FechaDesde=:fecha_desde, @FechaHasta=:fecha_hasta, @Modo=:modo,
+            @Motivo=:motivo, @Usuario=:usuario'''), payload).mappings().one())
+
+
+FACTOR_CAMIONES_SQL = """
+SELECT Fecha, Humedad_Pct, Sal_TMH_Dia, Delta_Inventario_Chancado_TMS,
+       Limite_KOM_TMH_Viaje, Limite_CAT_TMH_Viaje,
+       Carga_Nominal_KOM_TMH_Viaje, Carga_Nominal_CAT_TMH_Viaje,
+       Estado_Fuente_MOV_CAM, Estado_Fuente_POWERBI,
+       Apilado_TMH_Bruto_Original, Apilado_TMS_Bruto_Sin_Ajuste,
+       Apilado_TMS_Neto_Sin_Ajuste, Chancado_TMH_Sin_Ajuste, Chancado_TMS_Sin_Ajuste,
+       Chancado_TMS_Reporte,
+       Produccion_KOM_TMH, Produccion_CAT_TMH, KOM_TMH_Corregido, CAT_TMH_Corregido,
+       Vueltas_KOM, Vueltas_CAT,
+       Carga_KOM_TMH_Viaje_Sin_Ajuste, Carga_CAT_TMH_Viaje_Sin_Ajuste,
+       Factor_Ajuste_Calculado, Factor_Aplicacion_Reportes, Flag_Factor_Ajuste_Valido,
+       Estado_Calculo, Regla_Aplicacion, SRR_TMS_Dia, Metodo, Fuente_Camiones, Fecha_Calculo,
+       Factor_Aplicacion_Automatica, Flag_Usa_Ajuste_Automatico, Flag_Usa_Ajuste,
+       Regla_Aplicacion_Automatica, Modo_Aplicacion, Flag_Override_1,
+       Id_Control_Aplicacion, Control_Aplicacion_Motivo, Control_Aplicacion_Usuario,
+       Control_Aplicacion_Fecha_Registro
+FROM inventar_SpcHidr.v_ajuste_camiones_emision_test
+WHERE Fecha >= :fecha_inicio AND Fecha <= :fecha_fin
+ORDER BY Fecha
+"""
+
+
+def obtener_factor_camiones(fecha_inicio, fecha_fin):
+    """Diagnóstico de solo lectura; los factores son autoridad de la vista."""
+    try:
+        inicio = date.fromisoformat(str(fecha_inicio))
+        fin = date.fromisoformat(str(fecha_fin))
+    except (ValueError, TypeError):
+        raise ValueError("Seleccione fechas válidas.") from None
+    if inicio > fin:
+        raise ValueError("La fecha inicial no puede ser posterior a la final.")
+    # Conserva el ámbito DEV del monitor y valida una conexión efectiva al leer.
+    with _engine_dev().connect() as conn:
+        df = pd.read_sql(text(FACTOR_CAMIONES_SQL), conn,
+                         params={"fecha_inicio": inicio, "fecha_fin": fin})
+    fechas = pd.to_datetime(df["Fecha"], errors="raise").dt.normalize()
+    if fechas.isna().any() or fechas.duplicated().any():
+        raise ValueError("La vista de factor contiene fechas nulas o duplicadas.")
+    return df.assign(Fecha=fechas).sort_values("Fecha", kind="stable").reset_index(drop=True)
+
+
 def obtener_tendencia_totalizador(fecha_inicio, fecha_fin, correa):
     """Recibe fechas calendario inclusivas y consulta exclusivamente DEV."""
     inicio = date.fromisoformat(str(fecha_inicio))

@@ -32,7 +32,7 @@ class CambioHorarioTests(unittest.TestCase):
                                   fuente='datos_filtrados', resolucion_segundos=3600, tipo_senal='TOTALIZADOR'))
         with patch.object(panel.db, 'obtener_tendencia_totalizador', return_value=frame):
             result = panel.actualizar_tendencia(1, '2026-09-05', '2026-09-06', 'CV001')
-        self.assertEqual(result[1:4], ('0.00', '0.00', '0.00'))
+        self.assertEqual(result[1:4], ('0,00', '0,00', '0,00'))
         self.assertEqual(result[-1], '')
         self.assertEqual(list(pd.to_datetime(result[0].data[0].x)), list(horas))
         self.assertEqual(len(result[0].data[0].y), 11)

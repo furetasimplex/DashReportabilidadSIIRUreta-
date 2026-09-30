@@ -1,0 +1,31 @@
+--- antes/sp_mantiene_factor_ajuste_camiones_v2_test
++++ despues/sp_mantiene_factor_ajuste_camiones_v2_test
+@@ -1,5 +1,5 @@
+ 
+-CREATE   PROCEDURE [inventar_SpcHidr].[sp_mantiene_factor_ajuste_camiones_v2_test]
++ALTER PROCEDURE [inventar_SpcHidr].[sp_mantiene_factor_ajuste_camiones_v2_test]
+ (
+     @FechaInicio   date,
+     @FechaFin      date,
+@@ -103,7 +103,9 @@
+ 
+         Flag_Continuidad_Diaria bit NULL,
+         Flag_Inventario_Valido bit NULL,
+-        Flag_Humedad_Inventario_Valida bit NULL
++        Flag_Humedad_Inventario_Valida bit NULL,
++        Limite_KOM_TMH_Viaje float NOT NULL,
++        Limite_CAT_TMH_Viaje float NOT NULL
+     );
+ 
+     INSERT INTO #CalculoFactorV2
+@@ -261,8 +263,8 @@
+     SELECT
+         b.Fecha,
+ 
+-        CAST(380.0 AS float) AS Limite_KOM_TMH_Viaje,
+-        CAST(265.0 AS float) AS Limite_CAT_TMH_Viaje,
++        b.Limite_KOM_TMH_Viaje,
++        b.Limite_CAT_TMH_Viaje,
+ 
+         b.Apilado_TMH_Bruto
+             AS Apilado_TMH_Bruto_Original,

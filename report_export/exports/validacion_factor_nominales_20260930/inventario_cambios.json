@@ -1,0 +1,43 @@
+{
+  "python": [
+    "monitor_pi_tum/db.py",
+    "monitor_pi_tum/limites_camiones_panel.py",
+    "monitor_pi_tum/factor_camiones_panel.py",
+    "monitor_pi_tum/test_parametros_camiones.py",
+    "scripts/factor_camiones_nominales_dev.py",
+    "scripts/validate_factor_nominales_dev.py",
+    "scripts/test_factor_nominales_sql.py"
+  ],
+  "sql": [
+    "01_esquema.sql",
+    "01b_trazabilidad_fuentes.sql",
+    "02_administrador_generico.sql",
+    "03_wrapper_limites.sql",
+    "04_resolver_vueltas.sql",
+    "05_vueltas_diarias.sql",
+    "06_sp_factor_ajuste_camiones_test.sql",
+    "07_sp_factor_ajuste_camiones_standalone_test.sql",
+    "08_sp_mantiene_factor_ajuste_camiones_v2_test.sql",
+    "09_sp_mantiene_factor_ajuste_camiones_v2_standalone_test.sql",
+    "10_v_ajuste_camiones_emision_test.sql",
+    "rollback_dev.sql",
+    "rollback_preparacion.sql"
+  ],
+  "diff_python": [
+    {
+      "archivo": "monitor_pi_tum/db.py",
+      "lineas_antes": 694,
+      "lineas_despues": 751
+    },
+    {
+      "archivo": "monitor_pi_tum/limites_camiones_panel.py",
+      "lineas_antes": 259,
+      "lineas_despues": 275
+    },
+    {
+      "archivo": "monitor_pi_tum/factor_camiones_panel.py",
+      "lineas_antes": 266,
+      "lineas_despues": 270
+    }
+  ]
+}

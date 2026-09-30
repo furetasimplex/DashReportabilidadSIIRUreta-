@@ -1,0 +1,482 @@
+{
+  "archivo": "C:\\Users\\nimun\\OneDrive\\Escritorio\\Simplex\\Template Modelo Hidrometalurgia\\Template Área seca\\Movimiento Camiones\\BD_CIO_Spence_CH01_FY27_Septiembre(19).xlsx",
+  "sha256": "0ffefbd449e75e8141aaa708cde0c5918db77264e7caad37ced6f47609928cde",
+  "registros": [
+    {
+      "fila": 4,
+      "Fecha": "2026-09-01",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 267.0,
+      "CuTG00": 0.41533257778004923,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F4,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "01-09-Ripio",
+      "mov_ids_coincidentes": [
+        39156
+      ]
+    },
+    {
+      "fila": 5,
+      "Fecha": "2026-09-01",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 0.0,
+      "CuTG00": 0.41533257778004923,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F5,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "01-09-Ripio",
+      "mov_ids_coincidentes": [
+        39157
+      ]
+    },
+    {
+      "fila": 20,
+      "Fecha": "2026-09-04",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 0.0,
+      "CuTG00": 0.35258095141475515,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F20,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "04_09_CH01_Ripios",
+      "mov_ids_coincidentes": [
+        39172
+      ]
+    },
+    {
+      "fila": 21,
+      "Fecha": "2026-09-04",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 8941.0742192122,
+      "CuTG00": 0.35258095141475515,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F21,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "04_09_CH01_Ripios",
+      "mov_ids_coincidentes": [
+        39173
+      ]
+    },
+    {
+      "fila": 31,
+      "Fecha": "2026-09-05",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 8205.4215074524,
+      "CuTG00": 0.41188485875819975,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F31,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "05_09_CH01_Ripio",
+      "mov_ids_coincidentes": [
+        39183
+      ]
+    },
+    {
+      "fila": 32,
+      "Fecha": "2026-09-05",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 13149.7021782706,
+      "CuTG00": 0.41188485875819975,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F32,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "05_09_CH01_Ripio",
+      "mov_ids_coincidentes": [
+        39184
+      ]
+    },
+    {
+      "fila": 42,
+      "Fecha": "2026-09-06",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 14218.038997306461,
+      "CuTG00": 0.41479646148511756,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F42,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "RIPIOS_06_09",
+      "mov_ids_coincidentes": [
+        39194
+      ]
+    },
+    {
+      "fila": 43,
+      "Fecha": "2026-09-06",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 10035.26622186972,
+      "CuTG00": 0.41479646148511756,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F43,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "RIPIOS_06_09",
+      "mov_ids_coincidentes": [
+        39195
+      ]
+    },
+    {
+      "fila": 52,
+      "Fecha": "2026-09-07",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 1740.6,
+      "CuTG00": 0.4071094384178652,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F52,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "RIPIOS_07_09",
+      "mov_ids_coincidentes": [
+        39204
+      ]
+    },
+    {
+      "fila": 53,
+      "Fecha": "2026-09-07",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 8270.751,
+      "CuTG00": 0.4071094384178652,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F53,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "RIPIOS_07_09",
+      "mov_ids_coincidentes": [
+        39205
+      ]
+    },
+    {
+      "fila": 61,
+      "Fecha": "2026-09-08",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 6446.9890000000005,
+      "CuTG00": 0.510725172104747,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F61,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "RIPIOS_08_09",
+      "mov_ids_coincidentes": [
+        39213
+      ]
+    },
+    {
+      "fila": 62,
+      "Fecha": "2026-09-08",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 9700.944,
+      "CuTG00": 0.510725172104747,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F62,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "RIPIOS_08_09",
+      "mov_ids_coincidentes": [
+        39214
+      ]
+    },
+    {
+      "fila": 71,
+      "Fecha": "2026-09-09",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 11023.8,
+      "CuTG00": 0.41273440493004454,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F71,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "09-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39223
+      ]
+    },
+    {
+      "fila": 72,
+      "Fecha": "2026-09-09",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 12160.025,
+      "CuTG00": 0.41273440493004454,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F72,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "09-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39224
+      ]
+    },
+    {
+      "fila": 130,
+      "Fecha": "2026-09-10",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 10992.856000000002,
+      "CuTG00": 0.35464630240313577,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F130,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "10-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39282
+      ]
+    },
+    {
+      "fila": 131,
+      "Fecha": "2026-09-10",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 15582.238000000001,
+      "CuTG00": 0.35464630240313577,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F131,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "10-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39283
+      ]
+    },
+    {
+      "fila": 132,
+      "Fecha": "2026-09-11",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 19224.147614210604,
+      "CuTG00": 0.44681240688743556,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F132,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "11-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39284
+      ]
+    },
+    {
+      "fila": 133,
+      "Fecha": "2026-09-11",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 15570.454329106455,
+      "CuTG00": 0.44681240688743556,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F133,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "11-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39285
+      ]
+    },
+    {
+      "fila": 134,
+      "Fecha": "2026-09-12",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 17649.517817522996,
+      "CuTG00": 0.4736507821939378,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F134,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "12-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39286
+      ]
+    },
+    {
+      "fila": 135,
+      "Fecha": "2026-09-12",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 14283.546855488208,
+      "CuTG00": 0.4736507821939378,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F135,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "12-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39287
+      ]
+    },
+    {
+      "fila": 136,
+      "Fecha": "2026-09-13",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 10201.45826914653,
+      "CuTG00": 0.4781784654128032,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F136,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "13-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39288
+      ]
+    },
+    {
+      "fila": 137,
+      "Fecha": "2026-09-13",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 10333.90405935103,
+      "CuTG00": 0.4781784654128032,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F137,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "13-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39289
+      ]
+    },
+    {
+      "fila": 138,
+      "Fecha": "2026-09-14",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 2238.2384215213497,
+      "CuTG00": 0.49076354773363945,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F138,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "14-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39290
+      ]
+    },
+    {
+      "fila": 139,
+      "Fecha": "2026-09-14",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 15041.061074327223,
+      "CuTG00": 0.49076354773363945,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F139,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "14-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39291
+      ]
+    },
+    {
+      "fila": 140,
+      "Fecha": "2026-09-15",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 13027.85235247834,
+      "CuTG00": 0.4578055447054271,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F140,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "15-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39292
+      ]
+    },
+    {
+      "fila": 141,
+      "Fecha": "2026-09-15",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 14869.850009080163,
+      "CuTG00": 0.4578055447054271,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F141,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "15-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39293
+      ]
+    },
+    {
+      "fila": 142,
+      "Fecha": "2026-09-16",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 489.2148217629661,
+      "CuTG00": 0.2935807909371006,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F142,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "16-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39294
+      ]
+    },
+    {
+      "fila": 143,
+      "Fecha": "2026-09-16",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 0.0,
+      "CuTG00": 0.2935807909371006,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F143,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "16-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39295
+      ]
+    },
+    {
+      "fila": 148,
+      "Fecha": "2026-09-17",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 12114.237612618548,
+      "CuTG00": 0.38334985134490723,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F148,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "17-18-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39300
+      ]
+    },
+    {
+      "fila": 149,
+      "Fecha": "2026-09-17",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 10510.962328123436,
+      "CuTG00": 0.38334985134490723,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F149,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "17-18-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39301
+      ]
+    },
+    {
+      "fila": 164,
+      "Fecha": "2026-09-18",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 12207.648631531618,
+      "CuTG00": 0.38334985134490723,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F164,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "17-18-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39316
+      ]
+    },
+    {
+      "fila": 165,
+      "Fecha": "2026-09-18",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 11844.018515472615,
+      "CuTG00": 0.38334985134490723,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F165,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "17-18-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39317
+      ]
+    },
+    {
+      "fila": 174,
+      "Fecha": "2026-09-19",
+      "Turno": "TA",
+      "Fase": "SRR",
+      "Ton": 17467.95533095851,
+      "CuTG00": 0.3791409546851635,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F174,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "19-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39326
+      ]
+    },
+    {
+      "fila": 175,
+      "Fecha": "2026-09-19",
+      "Turno": "TB",
+      "Fase": "SRR",
+      "Ton": 15582.528733890636,
+      "CuTG00": 0.3791409546851635,
+      "Formula_CuT": "+IFERROR(VLOOKUP($F175,'BD_Cubicación (no tocar)'!$C$3:$BQ$640,'BD_Cubicación (no tocar)'!D$1+1,FALSE),0)",
+      "Formula_Ton": null,
+      "Solido": "19-09-26-Ripio",
+      "mov_ids_coincidentes": [
+        39327
+      ]
+    }
+  ]
+}

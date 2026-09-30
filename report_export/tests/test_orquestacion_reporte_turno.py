@@ -71,6 +71,8 @@ def motor_simulado(falla=None, lock_rc=0):
 class OrquestacionTurnoTests(unittest.TestCase):
     def test_periodos_y_orden(self):
         casos = [
+            (date(2026, 9, 16), date(2026, 9, 16), date(2026, 9, 16), date(2026, 9, 16)),
+            (date(2026, 9, 25), date(2026, 9, 30), date(2026, 9, 27), date(2026, 9, 25)),
             (date(2026, 9, 1), date(2026, 9, 30), date(2026, 9, 13), date(2026, 9, 7)),
             (date(2026, 8, 1), date(2026, 8, 31), date(2026, 8, 31), date(2026, 8, 25)),
             (date(2026, 9, 5), date(2026, 9, 10), date(2026, 9, 10), date(2026, 9, 5)),
@@ -78,6 +80,7 @@ class OrquestacionTurnoTests(unittest.TestCase):
         ]
         for inicio, fin, corte, ventana in casos:
             with self.subTest(corte=corte, inicio=inicio):
+                corte_global = date(2026, 9, 27) if inicio.day in (16, 25) else corte
                 momento = datetime(2026, 10, 1)
                 engine = MagicMock()
                 conn = engine.begin.return_value.__enter__.return_value
@@ -91,7 +94,7 @@ class OrquestacionTurnoTests(unittest.TestCase):
                 def registrar(nombre):
                     return lambda *a, **kw: llamadas.append((nombre, a, kw))
                 with patch.object(repo, "_get_engine", return_value=engine), \
-                     patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=corte), \
+                     patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=corte_global), \
                      patch.object(repo, "actualizar_apilado_tmh_v2_report", side_effect=registrar("apilado")), \
                      patch.object(repo, "refrescar_historico_apilado_report", side_effect=registrar("historico")), \
                      patch.object(repo, "actualizar_factor_ajuste_camiones_v2_report", side_effect=registrar("factor")), \
@@ -209,6 +212,25 @@ class OrquestacionTurnoTests(unittest.TestCase):
                 date(2026, 9, 1), date(2026, 9, 30)), date(2026, 9, 10))
         engine.connect.assert_called_once_with()
         engine.begin.assert_not_called()
+        llamada = externo.execute.call_args
+        self.assertEqual(len(llamada.args), 1)
+        sql = str(llamada.args[0])
+        self.assertNotIn(':inicio', sql)
+        self.assertNotIn(':fin', sql)
+        self.assertIn('v_contingencia_totalizador_diagnostico_turno', sql)
+        self.assertIn("COUNT(DISTINCT CONCAT(equipo_codigo, '|', turno)) = 4", sql)
+        self.assertIn("('CON_VARIACION', 'CON_VARIACION_COBERTURA_PARCIAL')", sql)
+        self.assertNotIn('SIN_CAMBIO_TURNO_COMPLETO', sql)
+
+    def test_rango_posterior_al_corte_global_no_escribe(self):
+        engine = MagicMock()
+        engine.begin.return_value.__enter__.return_value.execute.return_value.scalar.return_value = 0
+        with patch.object(repo, '_get_engine', return_value=engine), \
+             patch.object(repo, 'fetch_fecha_corte_apilado_tmh_report', return_value=date(2026, 9, 27)), \
+             patch.object(repo, 'actualizar_apilado_tmh_v2_report') as apilado:
+            with self.assertRaisesRegex(RuntimeError, 'fuera del rango solicitado'):
+                repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 28), date(2026, 9, 30))
+            apilado.assert_not_called()
 
     def test_clays_conserva_corte_agosto_y_cache_semiabierto(self):
         for inicio, fin, esperado_clays in [

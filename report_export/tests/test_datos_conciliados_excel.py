@@ -19,7 +19,7 @@ from report_export.export_to_excel import (
 from report_export.report_export import COLUMNAS_DATOS_CONCILIADOS
 
 
-def test_balance_chancado_no_bloquea_diferencia_srr_conocida():
+def test_balance_chancado_bloquea_diferencia_publicada():
     fila = {
         "Fecha": pd.Timestamp("2026-08-05"),
         "Humedad": 2.95,
@@ -48,7 +48,12 @@ def test_balance_chancado_no_bloquea_diferencia_srr_conocida():
     fila.update({f"Nivel_Chancado_{letra}": None for letra in "ABCDE"})
     fila.update({"Nivel_Silo_A": None, "Nivel_Silo_B": None})
 
-    _validar_balance_chancado(pd.DataFrame([fila]))
+    fila.update(Apilado_TMS_Reporte=6000.0, Delta_Inventario_Chancado_TMS=0.0,
+                Sal_TMH_Dia=0.0, SRR_TMS_Dia=0.0, Chancado_TMS_Reporte=6000.0,
+                Chancado_TMS_Real=5999.9371082565, Modo_Aplicacion="AUTOMATICO",
+                Regla_Aplicacion="APLICA_AJUSTE_VALIDADO")
+    with pytest.raises(ValueError, match="Chancado_TMS_Real"):
+        _validar_balance_chancado(pd.DataFrame([fila]))
 
 
 def test_balance_chancado_bloquea_delta_ajuste_inconsistente():
@@ -79,6 +84,10 @@ def test_balance_chancado_bloquea_delta_ajuste_inconsistente():
     fila.update({f"Nivel_Chancado_{letra}": None for letra in "ABCDE"})
     fila.update({"Nivel_Silo_A": None, "Nivel_Silo_B": None})
 
+    fila.update(Apilado_TMS_Reporte=None, Delta_Inventario_Chancado_TMS=None,
+                Sal_TMH_Dia=None, SRR_TMS_Dia=None, Chancado_TMS_Reporte=None,
+                Chancado_TMS_Real=None, Diferencia_vs_Datos_Conciliados=None,
+                Modo_Aplicacion="AUTOMATICO", Regla_Aplicacion="APLICA_AJUSTE_VALIDADO")
     with pytest.raises(ValueError, match="09-08-2026"):
         _validar_balance_chancado(pd.DataFrame([fila]))
 
@@ -254,6 +263,14 @@ def _datos_factor_ajuste():
             "Carga_CAT_TMH_Viaje_Con_Ajuste": None if fallback else 45.0,
             "Factor_Ajuste_Calculado": None if fallback else 1.0,
             "Factor_Aplicacion_Reportes": 1.0,
+            "Factor_Aplicacion_Automatica": 1.0,
+            "Apilado_TMH_Bruto_Ajustado": None if fallback else 1000.0,
+            "Modo_Aplicacion": "AUTOMATICO",
+            "Regla_Aplicacion_Automatica": "FALLBACK_SIN_INVENTARIO" if fallback else "APLICA_AJUSTE_VALIDADO",
+            "Id_Control_Aplicacion": None,
+            "Control_Aplicacion_Motivo": None,
+            "Control_Aplicacion_Usuario": None,
+            "Control_Aplicacion_Fecha_Registro": None,
             "Vueltas_KOM": 20,
             "Vueltas_CAT": 0 if fallback else 10,
             "Flag_Factor_Ajuste_Valido": 0 if fallback else 1,
@@ -291,35 +308,31 @@ def test_export_agrega_hoja_factor_sin_alterar_hoja_principal():
 
     ws = wb_con_factor["Factor ajuste camiones"]
     assert ws.sheet_view.showGridLines is False
-    assert ws.freeze_panes == "A2"
-    assert ws.max_column == 12
-    assert [ws.cell(1, col).value for col in range(1, 13)] == [
-        "Fecha", "TMH Sin ajuste", "TMS Sin ajuste", "TMH Con ajuste",
-        "TMS Con ajuste", "Factor de Carga KOM Sin ajuste",
-        "Factor de Carga CAT Sin ajuste", "Factor de Carga KOM con ajuste",
-        "Factor de Carga CAT con ajuste", "Factor ajuste",
-        "n° vueltas KOM", "n° vueltas CAT",
-    ]
-    assert ws["A6"].value == pd.Timestamp("2026-08-05").to_pydatetime()
-    assert ws["G6"].value is None
-    assert ws["I6"].value is None
-    assert ws["J6"].value is None
-    assert ws["K6"].value == 20
-    assert ws["L6"].value == 0
-    assert ws["A1"].font.name == "Arial"
-    assert ws["A1"].font.bold
-    assert ws["A1"].font.color.rgb == "FF476475"
-    assert ws["B2"].font.name == "Arial"
-    assert ws["B2"].font.sz == 10
-    assert ws["B2"].font.color.rgb == "FF476475"
-    assert ws["B2"].fill.fgColor.rgb == "FFFFFFFF"
-    assert ws["B3"].fill.fgColor.rgb == "FFD7E1E7"
+    assert ws.freeze_panes == "A3"
+    assert ws.max_column == 14
+    assert ws["D2"].value == "Factor calculado"
+    assert ws["G2"].value == "Factor aplicado"
+    assert ws["A7"].value == pd.Timestamp("2026-08-05").to_pydatetime()
+    assert ws["D7"].value is None
+    assert ws["L7"].value is None
+    assert ws["M7"].value is None
+    assert ws["K7"].value == 20
+    assert ws["N7"].value == 0
+    assert ws["G7"].value == 1
+    assert ws["A2"].font.name == "Arial"
+    assert ws["A2"].font.bold
+    assert ws["A2"].font.color.rgb == "FF476475"
+    assert ws["B3"].font.name == "Arial"
+    assert ws["B3"].font.sz == 10
+    assert ws["B3"].font.color.rgb == "FF476475"
+    assert ws["B3"].fill.fgColor.rgb == "FFFFFFFF"
+    assert ws["B4"].fill.fgColor.rgb == "FFD7E1E7"
     valores_visibles = {
         ws.cell(row, col).value
         for row in range(1, ws.max_row + 1)
         for col in range(1, ws.max_column + 1)
     }
-    assert "Factor aplicado" not in valores_visibles
+    assert "Factor aplicado" in valores_visibles
     assert "Factor válido" not in valores_visibles
     assert "Estado cálculo" not in valores_visibles
     assert "Regla aplicación" not in valores_visibles

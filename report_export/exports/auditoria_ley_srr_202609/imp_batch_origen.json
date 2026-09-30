@@ -1,0 +1,13 @@
+[
+  {
+    "id": 30520,
+    "template_code": "imp_csv",
+    "archivo_nombre": "2026_09_01_leaching-2026_09_27_leaching.csv",
+    "source_file_path": "C:\\inetpub\\ProyectosSimplex\\SIIRBackendAPI_CBautista\\hidrometalurgia\\media\\imports\\imp_csv\\batch_30520\\source.csv",
+    "estado": "committed",
+    "periodo_inicio": "2026-09-01 00:00:00+00:00",
+    "periodo_fin": "2026-09-28 00:00:00+00:00",
+    "total_filas": 7020,
+    "created_at": "2026-09-28 13:27:48.830740+00:00"
+  }
+]

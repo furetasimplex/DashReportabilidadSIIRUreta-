@@ -847,23 +847,47 @@ def fetch_datos_conciliados_emision_report(
             "FechaInicio y FechaFin son obligatorias para consultar "
             "Datos Conciliados de emision."
         )
-    if start_date > end_date:
-        raise ValueError("FechaInicio no puede ser posterior a FechaFin.")
 
-    columnas = ", ".join(f"[{columna}]" for columna in COLUMNAS_DATOS_CONCILIADOS)
+    if start_date > end_date:
+        raise ValueError(
+            "FechaInicio no puede ser posterior a FechaFin."
+        )
+
+    columnas = ", ".join(
+        (
+            "srr.[Ley_CuT_SRR_Final] AS [Ley_CuT_Real_srr]"
+            if columna == "Ley_CuT_Real_srr"
+            else f"d.[{columna}]"
+        )
+        for columna in COLUMNAS_DATOS_CONCILIADOS
+    )
+
     sql = _sa_text(f"""
-        SELECT {columnas}
-        FROM {TABLE_DATOS_CONCILIADOS_EMISION}
-        WHERE [Fecha] BETWEEN :start AND :end
-        ORDER BY [Fecha] ASC;
+        SELECT
+            {columnas}
+        FROM {TABLE_DATOS_CONCILIADOS_EMISION} AS d
+        LEFT JOIN
+            [inventar_SpcHidr].[v_ley_cu_srr_resuelta_emision_test] AS srr
+            ON srr.[Fecha] = d.[Fecha]
+        WHERE d.[Fecha] BETWEEN :start AND :end
+        ORDER BY d.[Fecha] ASC;
     """)
+
     try:
-        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+        with (
+            nullcontext(conn)
+            if conn is not None
+            else _get_engine().connect()
+        ) as db_conn:
             df = pd.read_sql(
                 sql,
-                conn,
-                params={"start": start_date, "end": end_date},
+                db_conn,
+                params={
+                    "start": start_date,
+                    "end": end_date,
+                },
             )
+
     except Exception as exc:
         raise RuntimeError(
             "Error al leer Datos Conciliados desde "
@@ -871,9 +895,12 @@ def fetch_datos_conciliados_emision_report(
         ) from exc
 
     return df[
-        [columna for columna in COLUMNAS_DATOS_CONCILIADOS if columna in df.columns]
+        [
+            columna
+            for columna in COLUMNAS_DATOS_CONCILIADOS
+            if columna in df.columns
+        ]
     ]
-
 
 def fetch_factor_ajuste_camiones_report(
     start_date: date,
@@ -914,7 +941,15 @@ def fetch_factor_ajuste_camiones_report(
                 ELSE NULL
             END AS Carga_CAT_TMH_Viaje_Con_Ajuste,
             Factor_Ajuste_Calculado,
+            Factor_Aplicacion_Automatica,
             Factor_Aplicacion_Reportes,
+            Apilado_TMH_Bruto_Ajustado,
+            Modo_Aplicacion,
+            Regla_Aplicacion_Automatica,
+            Id_Control_Aplicacion,
+            Control_Aplicacion_Motivo,
+            Control_Aplicacion_Usuario,
+            Control_Aplicacion_Fecha_Registro,
             Vueltas_KOM,
             Vueltas_CAT,
             Flag_Factor_Ajuste_Valido,
@@ -1034,12 +1069,18 @@ def fetch_balance_chancado_report(
         (
             SELECT
                 i.Fecha,
-                h.Humedad_Inventario AS Humedad,
+                aj.Humedad_Pct AS Humedad,
                 aj.Apilado_TMH_Bruto_Original AS Mineral_Apilado_TMH_Original,
                 aj.Factor_Aplicacion_Reportes AS Factor_Ajuste,
-                aj.Apilado_TMH_Bruto_Ajustado AS Mineral_Apilado_TMH_Ajustado,
-                (aj.Apilado_TMH_Bruto_Ajustado - aj.Apilado_TMH_Bruto_Original)
-                    AS Delta_Ajuste_TMH,
+                -- Los valores Reporte son netos de sal; recuperar el bruto
+                -- no vuelve a resolver la lógica de aplicación/override.
+                aj.Apilado_TMH_Reporte + aj.Sal_TMH_Dia AS Mineral_Apilado_TMH_Ajustado,
+                aj.Apilado_TMS_Reporte + aj.Sal_TMH_Dia AS TMS_Bruto_Aplicado,
+                aj.Apilado_TMS_Reporte,
+                aj.Diferencia_Apilado_TMH_Ajuste AS Delta_Ajuste_TMH,
+                aj.Chancado_TMS_Reporte,
+                aj.Modo_Aplicacion,
+                aj.Regla_Aplicacion,
                 g.Material_Operacion AS Material,
                 i.Nivel_Inventario_Chancado AS Nivel_Promedio_Chancado,
                 i.Nivel_Inventario_Harnero AS Nivel_Promedio_Harneros,
@@ -1074,9 +1115,9 @@ def fetch_balance_chancado_report(
                 n.Nivel_Silo_A, n.Nivel_Silo_B,
                 i.Fecha_Inventario_Anterior,
                 i.Inventario_Chancado_TMS_Anterior,
-                i.Delta_Inventario_Chancado_TMS,
-                TRY_CONVERT(float, a.Sal_promedio_dia) AS Sal_TMH_Dia,
-                dc.SRR_TMS_promedio_dia,
+                aj.Delta_Inventario_Chancado_TMS,
+                aj.Sal_TMH_Dia,
+                aj.SRR_TMS_Dia,
                 dc.Chancado_TMS_Real,
                 i.Flag_Continuidad_Diaria,
                 i.Flag_Inventario_Valido,
@@ -1084,8 +1125,6 @@ def fetch_balance_chancado_report(
             FROM inventar_SpcHidr.v_inventario_chancado_test AS i
             LEFT JOIN inventar_SpcHidr.v_humedad_inventario_test AS h
                 ON h.Fecha = i.Fecha
-            LEFT JOIN inventar_SpcHidr.Historico_Apilado_Diario AS a
-                ON CAST(a.Fecha AS date) = i.Fecha
             LEFT JOIN Niveles08 AS n ON n.Fecha = i.Fecha
             LEFT JOIN Generador AS g ON g.Fecha = i.Fecha
             LEFT JOIN inventar_SpcHidr.v_ajuste_camiones_emision_test AS aj
@@ -1097,17 +1136,10 @@ def fetch_balance_chancado_report(
         )
         SELECT
             Fecha, Humedad,
-            Mineral_Apilado_TMH_Original,
-            Factor_Ajuste,
-            Mineral_Apilado_TMH_Ajustado,
-            Delta_Ajuste_TMH,
-            CASE
-                WHEN Mineral_Apilado_TMH_Ajustado IS NOT NULL
-                 AND Humedad IS NOT NULL
-                 AND Delta_Inventario_Chancado_TMS IS NOT NULL
-                THEN Mineral_Apilado_TMH_Ajustado * (1.0 - Humedad / 100.0)
-                     + Delta_Inventario_Chancado_TMS
-            END AS Mineral_Chancado_Balance,
+            Mineral_Apilado_TMH_Original, Factor_Ajuste,
+            Mineral_Apilado_TMH_Ajustado, Delta_Ajuste_TMH,
+            TMS_Bruto_Aplicado, Apilado_TMS_Reporte,
+            Chancado_TMS_Reporte, Modo_Aplicacion, Regla_Aplicacion,
             Material,
             Nivel_Promedio_Chancado, Nivel_Promedio_Harneros,
             Nivel_Promedio_Silo,
@@ -1120,31 +1152,12 @@ def fetch_balance_chancado_report(
             Nivel_Chancado_D, Nivel_Chancado_E,
             Nivel_Silo_A, Nivel_Silo_B,
             Fecha_Inventario_Anterior, Inventario_Chancado_TMS_Anterior,
-            Delta_Inventario_Chancado_TMS,
-            Sal_TMH_Dia, SRR_TMS_promedio_dia,
-            CASE
-                WHEN Mineral_Apilado_TMH_Ajustado IS NOT NULL
-                 AND Humedad IS NOT NULL
-                 AND Delta_Inventario_Chancado_TMS IS NOT NULL
-                 AND Sal_TMH_Dia IS NOT NULL
-                 AND SRR_TMS_promedio_dia IS NOT NULL
-                THEN Mineral_Apilado_TMH_Ajustado * (1.0 - Humedad / 100.0)
-                     + Delta_Inventario_Chancado_TMS
-                     - Sal_TMH_Dia - SRR_TMS_promedio_dia
-            END AS Chancado_TMS_Reconstruido,
+            Delta_Inventario_Chancado_TMS, Sal_TMH_Dia, SRR_TMS_Dia,
+            -- Apilado_TMS_Reporte ya es neto: NO descontar sal otra vez.
+            Apilado_TMS_Reporte + Delta_Inventario_Chancado_TMS - SRR_TMS_Dia
+                AS Chancado_TMS_Reconstruido,
             Chancado_TMS_Real,
-            CASE
-                WHEN Chancado_TMS_Real IS NOT NULL
-                 AND Mineral_Apilado_TMH_Ajustado IS NOT NULL
-                 AND Humedad IS NOT NULL
-                 AND Delta_Inventario_Chancado_TMS IS NOT NULL
-                 AND Sal_TMH_Dia IS NOT NULL
-                 AND SRR_TMS_promedio_dia IS NOT NULL
-                THEN Mineral_Apilado_TMH_Ajustado * (1.0 - Humedad / 100.0)
-                     + Delta_Inventario_Chancado_TMS
-                     - Sal_TMH_Dia - SRR_TMS_promedio_dia
-                     - Chancado_TMS_Real
-            END AS Diferencia_vs_Datos_Conciliados,
+            Chancado_TMS_Reporte - Chancado_TMS_Real AS Diferencia_vs_Datos_Conciliados,
             Flag_Humedad_Inventario_Valida,
             Flag_Continuidad_Diaria,
             Flag_Inventario_Valido
@@ -2057,7 +2070,9 @@ def actualizar_reporte_turno_cache(start_date: date, end_date: date) -> None:
 
 
 def fetch_fecha_corte_apilado_tmh_report(start_date: date, end_date: date, *, conn=None) -> date | None:
-    """Último día con las cuatro claves CV008/CV108 A/B resolubles.
+    """Corte global con las cuatro claves CV008/CV108 A/B resolubles.
+
+    El rango se valida, pero no limita el horizonte técnico consultado.
 
     Fuente: diagnóstico PI/TUM, anterior al resolver y a Control_Apilado.
     Antes de septiembre de 2026 exige fronteras PI completas (incluido cero).
@@ -2072,8 +2087,7 @@ def fetch_fecha_corte_apilado_tmh_report(start_date: date, end_date: date, *, co
         WITH dias_cerrados AS (
             SELECT fecha_operacional
             FROM inventar_SpcHidr.v_contingencia_totalizador_diagnostico_turno
-            WHERE fecha_operacional >= :inicio AND fecha_operacional <= :fin
-              AND equipo_codigo IN ('PRINCIPAL_CV008', 'PRINCIPAL_CV108')
+            WHERE equipo_codigo IN ('PRINCIPAL_CV008', 'PRINCIPAL_CV108')
               AND turno IN ('A', 'B')
             GROUP BY fecha_operacional
             HAVING COUNT(DISTINCT CONCAT(equipo_codigo, '|', turno)) = 4
@@ -2091,7 +2105,7 @@ def fetch_fecha_corte_apilado_tmh_report(start_date: date, end_date: date, *, co
         SELECT MAX(fecha_operacional) FROM dias_cerrados;
     """)
     with (nullcontext(conn) if conn is not None else _get_engine().connect()) as db_conn:
-        corte = db_conn.execute(sql, {"inicio": start_date, "fin": end_date}).scalar()
+        corte = db_conn.execute(sql).scalar()
     return None if corte is None else pd.Timestamp(corte).date()
 
 
@@ -2585,6 +2599,12 @@ def preparar_paquete_reporte_turno_emision(
                 paquete["df_generador"], start_date, end_date, corte,
             )
             if salida == "excel":
+                # Reconst debe leer DC de la misma fotografía del cache RTO.
+                # Conserva calendario completo y no vuelve a calcular Factor.
+                actualizar_datos_conciliados_emision_report(
+                    start_date=start_date, end_date=end_date,
+                    dias_reproceso=0, refrescar_factor=False, conn=conn,
+                )
                 paquete["df_reconst_srr"] = fetch_reconstitucion_srr_report(
                     start_date=start_date, end_date=fin_auxiliar, conn=conn,
                 )
@@ -5835,25 +5855,29 @@ def _calcular_tmh_reconst_srr(df: pd.DataFrame) -> pd.DataFrame:
     if faltantes:
         raise ValueError(f"Reconst Mod SRR: faltan insumos TMH {faltantes}.")
     insumos = datos[columnas].apply(pd.to_numeric, errors="coerce")
-    if not np.isfinite(insumos.to_numpy(dtype=float)).all():
-        raise ValueError("Reconst Mod SRR: insumos TMH incompletos o no finitos.")
+    evaluables = np.isfinite(insumos.to_numpy(dtype=float, na_value=np.nan)).all(axis=1)
+    insumos = insumos.loc[evaluables]
     bruto = insumos["TMH_CV008"] + insumos["TMH_CV108"]
     sin_bruto = bruto.eq(0)
     if (sin_bruto & (insumos["Sal_Turno"].ne(0) | insumos["TMH_Total_Conciliado"].ne(0))).any():
         raise ValueError("Reconst Mod SRR: total bruto TMH cero con sal o total conciliado distinto de cero.")
     # Sin actividad y sin sal, la asignación TM2 es cero; no divide por cero.
-    sal_tm2 = pd.Series(0.0, index=datos.index)
+    sal_tm2 = pd.Series(0.0, index=insumos.index)
     activos = ~sin_bruto
     sal_tm2.loc[activos] = (
         insumos.loc[activos, "Sal_Turno"] * insumos.loc[activos, "TMH_CV108"]
         / bruto.loc[activos]
     )
-    datos["TMH_TM2_Final"] = insumos["TMH_CV108"] * insumos["Factor_Aplicacion_Reportes"] - sal_tm2
+    tm2 = insumos["TMH_CV108"] * insumos["Factor_Aplicacion_Reportes"] - sal_tm2
     # Metodología validada: TM1 = total AUTORITATIVO de Datos Conciliados - TM2.
-    datos["TMH_TM1_Final"] = insumos["TMH_Total_Conciliado"] - datos["TMH_TM2_Final"]
-    diferencia = datos["TMH_TM1_Final"] + datos["TMH_TM2_Final"] - insumos["TMH_Total_Conciliado"]
+    tm1 = insumos["TMH_Total_Conciliado"] - tm2
+    diferencia = tm1 + tm2 - insumos["TMH_Total_Conciliado"]
     if not np.isfinite(diferencia).all() or diferencia.abs().gt(0.001).any():
         raise ValueError("Reconst Mod SRR: cuadratura TM1 + TM2 difiere del total en más de 0.001 TMH.")
+    datos["TMH_TM1_Final"] = np.nan
+    datos["TMH_TM2_Final"] = np.nan
+    datos.loc[evaluables, "TMH_TM1_Final"] = tm1.to_numpy()
+    datos.loc[evaluables, "TMH_TM2_Final"] = tm2.to_numpy()
     return datos
 
 

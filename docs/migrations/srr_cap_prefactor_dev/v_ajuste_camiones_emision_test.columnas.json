@@ -1,0 +1,458 @@
+[
+  {
+    "name": "Fecha",
+    "column_id": 1,
+    "tipo": "date",
+    "max_length": 3,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Factor_Ajuste_Calculado",
+    "column_id": 2,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Flag_Factor_Ajuste_Valido",
+    "column_id": 3,
+    "tipo": "bit",
+    "max_length": 1,
+    "precision": 1,
+    "scale": 0
+  },
+  {
+    "name": "Estado_Calculo",
+    "column_id": 4,
+    "tipo": "varchar",
+    "max_length": 40,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Flag_Usa_Ajuste",
+    "column_id": 5,
+    "tipo": "bit",
+    "max_length": 1,
+    "precision": 1,
+    "scale": 0
+  },
+  {
+    "name": "Factor_Aplicacion_Reportes",
+    "column_id": 6,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMH_Bruto_Original",
+    "column_id": 7,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMH_Neto_Original",
+    "column_id": 8,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMS_Bruto_Sin_Ajuste",
+    "column_id": 9,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMS_Neto_Sin_Ajuste",
+    "column_id": 10,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Chancado_TMS_Sin_Ajuste",
+    "column_id": 11,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Chancado_TMH_Sin_Ajuste",
+    "column_id": 12,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMH_Bruto_Ajustado",
+    "column_id": 13,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMH_Neto_Ajustado",
+    "column_id": 14,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMS_Bruto_Ajustado",
+    "column_id": 15,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMS_Neto_Ajustado",
+    "column_id": 16,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Chancado_TMS_Ajustado",
+    "column_id": 17,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMH_Reporte",
+    "column_id": 18,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMS_Reporte",
+    "column_id": 19,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Chancado_TMS_Reporte",
+    "column_id": 20,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Diferencia_Apilado_TMH_Ajuste",
+    "column_id": 21,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Diferencia_Apilado_TMS_Ajuste",
+    "column_id": 22,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Diferencia_Chancado_TMS_Ajuste",
+    "column_id": 23,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Regla_Aplicacion",
+    "column_id": 24,
+    "tipo": "varchar",
+    "max_length": 80,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Sal_TMH_Dia",
+    "column_id": 25,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Humedad_Pct",
+    "column_id": 26,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Inventario_Chancado_TMS_Actual",
+    "column_id": 27,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Inventario_Chancado_TMS_Anterior",
+    "column_id": 28,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Delta_Inventario_Chancado_TMS",
+    "column_id": 29,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "SRR_TMS_Turno_A",
+    "column_id": 30,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "SRR_TMS_Turno_B",
+    "column_id": 31,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "SRR_TMS_Dia",
+    "column_id": 32,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Produccion_KOM_TMH",
+    "column_id": 33,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Produccion_CAT_TMH",
+    "column_id": 34,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Vueltas_KOM",
+    "column_id": 35,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Vueltas_CAT",
+    "column_id": 36,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+    "column_id": 37,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Carga_CAT_TMH_Viaje_Sin_Ajuste",
+    "column_id": 38,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "KOM_TMH_Corregido",
+    "column_id": 39,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "CAT_TMH_Corregido",
+    "column_id": 40,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Cantidad_Registros_Originales",
+    "column_id": 41,
+    "tipo": "int",
+    "max_length": 4,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Cantidad_Registros_Validos",
+    "column_id": 42,
+    "tipo": "int",
+    "max_length": 4,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Cantidad_Duplicados_Eliminados",
+    "column_id": 43,
+    "tipo": "int",
+    "max_length": 4,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Metodo",
+    "column_id": 44,
+    "tipo": "varchar",
+    "max_length": 100,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Fuente_Camiones",
+    "column_id": 45,
+    "tipo": "varchar",
+    "max_length": 100,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Fecha_Calculo",
+    "column_id": 46,
+    "tipo": "datetime2",
+    "max_length": 8,
+    "precision": 27,
+    "scale": 7
+  },
+  {
+    "name": "Limite_KOM_TMH_Viaje",
+    "column_id": 47,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Limite_CAT_TMH_Viaje",
+    "column_id": 48,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Factor_Aplicacion_Automatica",
+    "column_id": 49,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Flag_Usa_Ajuste_Automatico",
+    "column_id": 50,
+    "tipo": "bit",
+    "max_length": 1,
+    "precision": 1,
+    "scale": 0
+  },
+  {
+    "name": "Regla_Aplicacion_Automatica",
+    "column_id": 51,
+    "tipo": "varchar",
+    "max_length": 80,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Modo_Aplicacion",
+    "column_id": 52,
+    "tipo": "varchar",
+    "max_length": 20,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Flag_Override_1",
+    "column_id": 53,
+    "tipo": "bit",
+    "max_length": 1,
+    "precision": 1,
+    "scale": 0
+  },
+  {
+    "name": "Id_Control_Aplicacion",
+    "column_id": 54,
+    "tipo": "bigint",
+    "max_length": 8,
+    "precision": 19,
+    "scale": 0
+  },
+  {
+    "name": "Control_Aplicacion_Motivo",
+    "column_id": 55,
+    "tipo": "nvarchar",
+    "max_length": 2000,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Control_Aplicacion_Usuario",
+    "column_id": 56,
+    "tipo": "nvarchar",
+    "max_length": 256,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Control_Aplicacion_Fecha_Registro",
+    "column_id": 57,
+    "tipo": "datetime2",
+    "max_length": 8,
+    "precision": 27,
+    "scale": 7
+  }
+]

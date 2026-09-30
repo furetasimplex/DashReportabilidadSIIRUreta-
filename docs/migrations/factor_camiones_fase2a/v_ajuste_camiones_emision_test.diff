@@ -1,0 +1,20 @@
+--- antes/v_ajuste_camiones_emision_test
++++ despues/v_ajuste_camiones_emision_test
+@@ -1,5 +1,5 @@
+ 
+-CREATE   VIEW
++ALTER VIEW
+     [inventar_SpcHidr].[v_ajuste_camiones_emision_test]
+ AS
+ SELECT
+@@ -183,7 +183,9 @@
+ 
+     f.Metodo,
+     f.Fuente_Camiones,
+-    f.Fecha_Calculo
++    f.Fecha_Calculo,
++    f.Limite_KOM_TMH_Viaje,
++    f.Limite_CAT_TMH_Viaje
+ 
+ FROM
+     [inventar_SpcHidr].[Control_Factor_Ajuste_Camiones_v2_test] AS f;

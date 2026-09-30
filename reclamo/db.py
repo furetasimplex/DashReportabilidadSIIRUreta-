@@ -551,11 +551,11 @@ def insertar_disponible_rotopala(
 
 
 def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
-    """Encadena el congelamiento automatico, la sincronizacion desde el ETL
-    y el calculo de reclamo diario.
+    """Encadena dos pasadas de mantencion y sincronizacion desde el ETL,
+    seguidas de CV25/horas y el calculo de reclamo diario.
 
-    Paso 0: reclamo.sp_auto_mantener_secuencia congela los modulos nuevos
-    que ya aparecen en topografia o camiones. Bug detectado 2026-08-05:
+    Paso 1: reclamo.sp_auto_mantener_secuencia congela los modulos nuevos
+    con base valida que ya aparecen en topografia o camiones. Bug detectado 2026-08-05:
     modulo 39 (PAD Oxido) tenia datos de origen en
     inventar_SpcHidr.control_reclamo_diario para el 02 y 03-ago, pero el
     sync los omitio (log_sincronizacion: "Modulo no congelado. No se
@@ -565,7 +565,8 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
     botones. Encadenarlo aqui, primero, elimina esa dependencia: un modulo
     recien aparecido queda congelado y disponible para sincronizar en el
     mismo click.
-    Paso 1: reclamo.sp_sincronizar_desde_etl trae lo publicado en
+    Paso 2: reclamo.sp_sincronizar_desde_etl incorpora la topografia de los
+    modulos recien congelados y trae lo publicado en
     inventar_SpcHidr (control_reclamo_diario, control_reclamo_sulfuro_
     camiones_thm_diario) hacia reclamo.topografia_avance / reclamo.
     camiones_reclamo. Sin este paso, reclamo.calculo_diario podia quedar
@@ -573,13 +574,18 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
     datos mas recientes (bug detectado 2026-08-02: corte silencioso en
     2026-07-26 con data ya publicada en inventar_SpcHidr hasta el 31,
     porque nadie habia vuelto a correr el sync a mano).
-    Paso 2: reclamo.sp_cargar_cv25_horas alimenta reclamo.cv25_diario y
+    Paso 3: reclamo.sp_auto_mantener_secuencia reevalua apertura/cierre
+    de secuencia con la topografia incorporada en la primera pasada.
+    Paso 4: reclamo.sp_sincronizar_desde_etl repite el mismo rango como
+    pasada idempotente de seguridad por si la segunda mantencion habilito
+    modulos adicionales.
+    Paso 5: reclamo.sp_cargar_cv25_horas alimenta reclamo.cv25_diario y
     reclamo.rotopala_horas_turno (base de reclamo.v_cv25_diario y del
     grafico "Rendimiento de rotopala"). Bug detectado 2026-08-05: este
     SP nunca estuvo encadenado a ningun boton del Dash, solo se corria
     a mano -- el grafico quedaba en "Sin datos" para fechas recientes
     aunque topografia y camiones ya estuvieran sincronizados.
-    Paso 3: reclamo.sp_calcular_reclamo_diario materializa reclamo.
+    Paso 6: reclamo.sp_calcular_reclamo_diario materializa reclamo.
     calculo_diario a partir de reclamo.v_reclamo_diario, ya con la
     sincronizacion al dia.
     Decision 2026-08-02: se encadenan estos pasos en un solo boton
@@ -630,9 +636,13 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
         """
     )
     with get_engine().begin() as conn:
-        conn.execute(sql_mantener)
-        conn.execute(sql_sync, {"desde": desde, "hasta": hasta})
-        filas_sync = conn.execute(sql_resumen_sync).scalar()
+        filas_sync = 0
+        # La segunda mantencion evalua la topografia incorporada en la primera pasada.
+        # El segundo sync incorpora modulos adicionales que esa mantencion habilite.
+        for _ in range(2):
+            conn.execute(sql_mantener)
+            conn.execute(sql_sync, {"desde": desde, "hasta": hasta})
+            filas_sync += conn.execute(sql_resumen_sync).scalar() or 0
         conn.execute(sql_cv25, {"desde": desde, "hasta": hasta})
         conn.execute(sql_calc, {"desde": desde, "hasta": hasta, "dias": dias_reproceso})
     resumen_sync = f" ({filas_sync} filas sincronizadas desde el ETL)" if filas_sync else ""

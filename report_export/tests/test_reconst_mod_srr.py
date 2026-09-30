@@ -161,9 +161,37 @@ def test_tmh_without_activity_is_zero_and_inconsistent_zero_gross_is_rejected():
         reports._calcular_tmh_reconst_srr(srr)
 
 
-@pytest.mark.parametrize("value", [None, float("inf")])
-def test_tmh_rejects_missing_or_nonfinite_inputs(value):
+@pytest.mark.parametrize("column", ["TMH_Total_Conciliado", "Sal_Turno", "Factor_Aplicacion_Reportes", "TMH_CV008", "TMH_CV108"])
+@pytest.mark.parametrize("value", [None, float("inf"), float("-inf")])
+def test_tmh_preserves_incomplete_rows_and_calculates_complete_rows(column, value):
     srr, _ = sources()
-    srr.loc[0, "Factor_Aplicacion_Reportes"] = value
-    with pytest.raises(ValueError, match="insumos TMH incompletos o no finitos"):
+    srr.loc[0, column] = value
+    before = srr.copy(deep=True)
+    result = reports._calcular_tmh_reconst_srr(srr)
+    assert result.loc[0, ["TMH_TM1_Final", "TMH_TM2_Final"]].isna().all()
+    assert result.loc[1:, "TMH_TM1_Final"].eq(660).all()
+    assert result.loc[1:, "TMH_TM2_Final"].eq(440).all()
+    pd.testing.assert_frame_equal(srr, before)
+    assert len(result) == len(srr)
+
+
+def test_incomplete_tmh_is_blank_in_excel():
+    srr, turno = sources()
+    srr.loc[:1, ["TMH_Total_Conciliado", "Sal_Turno"]] = None
+    ws = export(srr, turno)["Reconst Mod SRR"]
+    assert all(ws.cell(9, c).value is None for c in range(6, 10))
+    assert [ws.cell(10, c).value for c in range(6, 10)] == [660, 660, 440, 440]
+
+
+def test_evaluable_zero_gross_with_salt_is_rejected():
+    srr, _ = sources()
+    srr.loc[0, ["TMH_CV008", "TMH_CV108", "TMH_Total_Conciliado"]] = 0
+    with pytest.raises(ValueError, match="total bruto TMH cero"):
+        reports._calcular_tmh_reconst_srr(srr)
+
+
+def test_evaluable_quadrature_loss_is_rejected():
+    srr, _ = sources()
+    srr.loc[0, "Factor_Aplicacion_Reportes"] = 1e20
+    with pytest.raises(ValueError, match="cuadratura"):
         reports._calcular_tmh_reconst_srr(srr)

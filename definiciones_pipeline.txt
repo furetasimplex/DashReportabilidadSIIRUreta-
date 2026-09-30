@@ -26,8 +26,7 @@ BEGIN
     WHERE caso_id = @caso_id;
 
     ;WITH base AS (
-        
-SELECT
+        SELECT
             Flujo,
             COALESCE(Masa_recon, 0) AS Masa_recon,
             COALESCE(FCu, 0)        AS FCu
@@ -36,16 +35,14 @@ SELECT
     ),
     srr AS (
         SELECT
-            COALESCE
-(SUM(Masa_recon), 0) AS masa_srr,
+            COALESCE(SUM(Masa_recon), 0) AS masa_srr,
             COALESCE(SUM(FCu), 0)        AS fcu_srr
         FROM base
         WHERE Flujo IN ('Flujo 08','Flujo 09')
     )
     INSERT INTO inventar_SpcHidr.rep_prod_targets (caso_id, target_code, target_value, fuente)
 
-  
-  -- =========================
+    -- =========================
     -- Chancado (Flujo 03)
     -- =========================
     SELECT
@@ -56,8 +53,7 @@ SELECT
     FROM base
     WHERE Flujo IN ('Flujo 03')
 
-    UNION
- ALL
+    UNION ALL
 
     -- =========================
     -- Sal (Flujos 10 + 11)
@@ -68,8 +64,7 @@ SELECT
         COALESCE(SUM(Masa_recon), 0),
         'Data_balance_rec'
     FROM base
-    WHERE Flujo IN ('Flu
-jo 10','Flujo 11')
+    WHERE Flujo IN ('Flujo 10','Flujo 11')
 
     UNION ALL
 
@@ -81,8 +76,7 @@ jo 10','Flujo 11')
         'F14F15_FCU',
         COALESCE(SUM(FCu), 0),
         'Data_balance_rec'
-    
-FROM base
+    FROM base
     WHERE Flujo IN ('Flujo 14','Flujo 15')
 
     UNION ALL
@@ -93,8 +87,7 @@ FROM base
     SELECT
         @caso_id,
         'F14F15_MASA',
-        COALESCE(SUM(Masa_recon
-), 0),
+        COALESCE(SUM(Masa_recon), 0),
         'Data_balance_rec'
     FROM base
     WHERE Flujo IN ('Flujo 14','Flujo 15')
@@ -106,8 +99,7 @@ FROM base
     -- =========================
     SELECT
         @caso_id,
-        'F19__M
-ASA',
+        'F19__MASA',
         COALESCE(SUM(Masa_recon), 0),
         'Data_balance_rec'
     FROM base
@@ -119,8 +111,7 @@ ASA',
     -- Reclamo: Rotopala 2 (Flujo 18)
     -- =========================
     SELECT
-       
- @caso_id,
+        @caso_id,
         'F18__MASA',
         COALESCE(SUM(Masa_recon), 0),
         'Data_balance_rec'
@@ -131,8 +122,7 @@ ASA',
 
     -- =========================
     -- Reclamo: Camiones Sulfuros (Flujo 21)
-    -- ===========
-==============
+    -- =========================
     SELECT
         @caso_id,
         'F21__MASA',
@@ -144,8 +134,7 @@ ASA',
     UNION ALL
 
     -- =========================
-    -- Reclamo: Camiones Oxido
-s (Flujo 22)
+    -- Reclamo: Camiones Oxidos (Flujo 22)
     -- =========================
     SELECT
         @caso_id,
@@ -158,7 +147,6 @@ s (Flujo 22)
     UNION ALL
 
     -- =========================
-
     -- SRR: Masa (Flujos 08 + 09)
     -- =========================
     SELECT
@@ -171,8 +159,7 @@ s (Flujo 22)
     UNION ALL
 
     -- =========================
-    -- SRR: Finos Cu (Flujos
- 08 + 09)
+    -- SRR: Finos Cu (Flujos 08 + 09)
     -- =========================
     SELECT
         @caso_id,
@@ -185,8 +172,7 @@ s (Flujo 22)
 
     -- =========================
     -- SRR: Ley Cu (%) = FCu/Masa*100
-    -- ==========
-===============
+    -- =========================
     SELECT
         @caso_id,
         'F08F09_LEY_CU',
@@ -202,8 +188,7 @@ END
 -- ============================================================
 -- CONDUCTOR 2: todo lo posterior al staging (Python ya escribió rep_prod_ajustado_stg)
 -- ============================================================
-CREATE   PROCEDURE inventar_SpcHidr.sp_
-rep_conductor_post_ajuste
+CREATE   PROCEDURE inventar_SpcHidr.sp_rep_conductor_post_ajuste
     @run_id UNIQUEIDENTIFIER,
     @ok BIT,
     @mensaje NVARCHAR(2000) = NULL,
@@ -215,8 +200,7 @@ BEGIN
 
     IF @ok = 1
     BEGIN
-        EXEC inventar_SpcHidr.sp_
-rep_merge_ajustado_dyn @run_id = @run_id;
+        EXEC inventar_SpcHidr.sp_rep_merge_ajustado_dyn @run_id = @run_id;
     END
 
     EXEC inventar_SpcHidr.sp_rep_log_end
@@ -230,8 +214,7 @@ END
 -- CONDUCTOR 1: todo lo previo al motor de reglas (Python)
 -- ============================================================
 CREATE   PROCEDURE inventar_SpcHidr.sp_rep_conductor_pre_ajuste
-    
-@caso_id INT
+    @caso_id INT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -241,34 +224,29 @@ BEGIN
     DECLARE @fecha_ini DATE, @fecha_fin DATE;
 
     -- (opcional) mantiene rep_prod_ajustado / _stg alineadas con Datos_conciliados_of
-    EXE
-C inventar_SpcHidr.sp_rep_prod_sync_schema;
+    EXEC inventar_SpcHidr.sp_rep_prod_sync_schema;
 
     DECLARE @periodo TABLE (caso_id INT, fecha_inicio DATE, fecha_fin DATE);
     INSERT INTO @periodo (caso_id, fecha_inicio, fecha_fin)
     EXEC inventar_SpcHidr.sp_rep_get_periodo_caso @caso_id = @caso_id;
 
- 
-   SELECT TOP 1 @fecha_ini = fecha_inicio, @fecha_fin = fecha_fin FROM @periodo;
+    SELECT TOP 1 @fecha_ini = fecha_inicio, @fecha_fin = fecha_fin FROM @periodo;
 
     IF @fecha_ini IS NULL OR @fecha_fin IS NULL
         THROW 50020, 'No se pudo obtener el período del caso (sp_rep_get_periodo_caso vacío).', 1;
 
-    EXEC inventar_SpcHidr
-.sp_rep_log_start
+    EXEC inventar_SpcHidr.sp_rep_log_start
         @run_id = @run_id, @caso_id = @caso_id, @fecha_ini = @fecha_ini, @fecha_fin = @fecha_fin;
 
     -- Targets SIEMPRE desde el control oficial vigente en DEV_SIIR (ver SP anterior)
-    EXEC inventar_SpcHidr.sp_rep_build_targets_caso 
-@caso_id = @caso_id;
+    EXEC inventar_SpcHidr.sp_rep_build_targets_caso @caso_id = @caso_id;
 
     -- Resultset 1: metadata del run
     SELECT @run_id AS run_id, @caso_id AS caso_id, @fecha_ini AS fecha_inicio, @fecha_fin AS fecha_fin;
 
     -- Resultset 2: targets ya construidos
     SELECT target_code, target_value
-    FROM in
-ventar_SpcHidr.rep_prod_targets
+    FROM inventar_SpcHidr.rep_prod_targets
     WHERE caso_id = @caso_id;
 END
 
@@ -287,8 +265,7 @@ USING
 (
     SELECT *
     FROM inventar_SpcHidr.rep_prod_ajustado_stg
-    WHERE run_id = @run_
-id
+    WHERE run_id = @run_id
 ) AS src
 
 ON tgt.Fecha = src.Fecha
@@ -298,40 +275,33 @@ UPDATE SET
 
     tgt.Chancado_TMS_Real                    = src.Chancado_TMS_Real,
     tgt.Humedad_Turno_A                      = src.Humedad_Turno_A,
-    tgt.Humedad_Turno_B                      = s
-rc.Humedad_Turno_B,
+    tgt.Humedad_Turno_B                      = src.Humedad_Turno_B,
     tgt.Humedad_promedio_dia                 = src.Humedad_promedio_dia,
     tgt.Sal_turno_A                          = src.Sal_turno_A,
     tgt.Sal_Turno_B                          = src.Sal_Turno_B,
-    tgt.Sal_promedio_dia          
-           = src.Sal_promedio_dia,
+    tgt.Sal_promedio_dia                     = src.Sal_promedio_dia,
     tgt.Apilado_TMH_turno_A                  = src.Apilado_TMH_turno_A,
     tgt.Apilado_TMH_turno_B                  = src.Apilado_TMH_turno_B,
     tgt.Apilado_TMH_promedio_dia             = src.Apilado_TMH_promedio_dia,
-
     tgt.Apilado_TMS_Real                     = src.Apilado_TMS_Real,
     tgt.Apilado_TMS_Plan                     = src.Apilado_TMS_Plan,
     tgt.Ley_CuT_Real                         = src.Ley_CuT_Real,
-    tgt.Cobre_fino_Apilado_Real              = src.
-Cobre_fino_Apilado_Real,
+    tgt.Cobre_fino_Apilado_Real              = src.Cobre_fino_Apilado_Real,
 
     tgt.TMS_Rotopala_1_Real                  = src.TMS_Rotopala_1_Real,
     tgt.TMS_Rotopala_2_Real                  = src.TMS_Rotopala_2_Real,
     tgt.Camiones_TMS_Reclamo_Oxidos          = src.Camiones_TMS_Reclamo_Oxidos,
-    t
-gt.Camiones_TMS_Reclamo_Sulfuros        = src.Camiones_TMS_Reclamo_Sulfuros,
+    tgt.Camiones_TMS_Reclamo_Sulfuros        = src.Camiones_TMS_Reclamo_Sulfuros,
 
     tgt.Total_Ripios_Incluye_Camiones_Real   = src.Total_Ripios_Incluye_Camiones_Real,
 
     tgt.estado                               = 1,
 
-    tgt.run_id                        
-       = src.run_id,
+    tgt.run_id                               = src.run_id,
     tgt.caso_id                              = src.caso_id,
     tgt.version_reglas                       = src.version_reglas,
     tgt.ts_ajuste                            = src.ts_ajuste,
-    tgt.factor_chancado                      
-= src.factor_chancado,
+    tgt.factor_chancado                      = src.factor_chancado,
     tgt.factor_sal                           = src.factor_sal,
     tgt.factor_finos                         = src.factor_finos
 
@@ -343,8 +313,7 @@ INSERT
 
     Chancado_TMS_Real,
     Humedad_Turno_A,
-    Humedad_Turn
-o_B,
+    Humedad_Turno_B,
     Humedad_promedio_dia,
     Sal_turno_A,
     Sal_Turno_B,
@@ -355,8 +324,7 @@ o_B,
     Apilado_TMS_Real,
     Apilado_TMS_Plan,
     Ley_CuT_Real,
-    Cobre_fino_Apilado_Rea
-l,
+    Cobre_fino_Apilado_Real,
 
     TMS_Rotopala_1_Real,
     TMS_Rotopala_2_Real,
@@ -370,8 +338,7 @@ l,
     caso_id,
     version_reglas,
     ts_ajuste,
-    factor_chancado
-,
+    factor_chancado,
     factor_sal,
     factor_finos
 )
@@ -387,8 +354,7 @@ VALUES
     src.Sal_turno_A,
     src.Sal_Turno_B,
     src.Sal_promedio_dia,
-    src.Apilado_T
-MH_turno_A,
+    src.Apilado_TMH_turno_A,
     src.Apilado_TMH_turno_B,
     src.Apilado_TMH_promedio_dia,
     src.Apilado_TMS_Real,
@@ -398,8 +364,7 @@ MH_turno_A,
 
     src.TMS_Rotopala_1_Real,
     src.TMS_Rotopala_2_Real,
-    src.Camion
-es_TMS_Reclamo_Oxidos,
+    src.Camiones_TMS_Reclamo_Oxidos,
     src.Camiones_TMS_Reclamo_Sulfuros,
 
     src.Total_Ripios_Incluye_Camiones_Real,
@@ -411,8 +376,7 @@ es_TMS_Reclamo_Oxidos,
     src.ts_ajuste,
     src.factor_chancado,
     src.factor_sal,
-    src.factor_fino
-s
+    src.factor_finos
 );
 
 END
@@ -420,7 +384,8 @@ END
 ====================================================================================================
 >>> inventar_SpcHidr.sp_rep_merge_ajustado_dyn <<<
 ====================================================================================================
-CREATE   PROCEDURE inventar_SpcHidr.sp_rep_merge_ajustado_dyn
+
+CREATE PROCEDURE inventar_SpcHidr.sp_rep_merge_ajustado_dyn
     @run_id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -428,8 +393,7 @@ BEGIN
 
     DECLARE @schema SYSNAME = 'inventar_SpcHidr';
     DECLARE @tgt SYSNAME = 'rep_prod_ajustado';
-    DECLARE @stg SYSNAME = 'rep_prod
-_ajustado_stg';
+    DECLARE @stg SYSNAME = 'rep_prod_ajustado_stg';
 
     -- columnas a excluir del UPDATE/INSERT dinámico (metadata/control)
     DECLARE @exclude TABLE (col SYSNAME);
@@ -437,8 +401,7 @@ _ajustado_stg';
         ('run_id'),
         ('ts_ajuste'),
         ('factor_chancado'),
-        ('facto
-r_sal'),
+        ('factor_sal'),
         ('factor_finos'),
         ('estado');  -- <- CLAVE: excluir estado del dinámico
 
@@ -447,15 +410,13 @@ r_sal'),
     DECLARE @ins_vals NVARCHAR(MAX) = N'';
 
     ;WITH common_cols AS (
-     
-   SELECT c1.name AS col_name
+        SELECT c1.name AS col_name
         FROM sys.columns c1
         INNER JOIN sys.objects o1 ON o1.object_id = c1.object_id
         INNER JOIN sys.schemas s1 ON s1.schema_id = o1.schema_id
         WHERE s1.name = @schema AND o1.name = @tgt
 
-        INTERSE
-CT
+        INTERSECT
 
         SELECT c2.name
         FROM sys.columns c2
@@ -464,33 +425,36 @@ CT
         WHERE s2.name = @schema AND o2.name = @stg
     )
     SELECT
-  
-      @set = @set + CASE WHEN @set = N'' THEN N'' ELSE N',' + CHAR(10) END
+        @set = @set + CASE WHEN @set = N'' THEN N'' ELSE N',' + CHAR(10) END
              + N'    tgt.' + QUOTENAME(col_name) + N' = src.' + QUOTENAME(col_name),
         @ins_cols = @ins_cols + CASE WHEN @ins_cols = N'' THEN N'' ELSE N',' END
-             +
- QUOTENAME(col_name),
+             + QUOTENAME(col_name),
         @ins_vals = @ins_vals + CASE WHEN @ins_vals = N'' THEN N'' ELSE N',' END
              + N'src.' + QUOTENAME(col_name)
     FROM common_cols
     WHERE col_name NOT IN (SELECT col FROM @exclude)
-      AND col_name <> 'Fecha';   
--- Fecha es clave, no se actualiza
+      AND col_name <> 'Fecha';   -- Fecha es clave, no se actualiza en el UPDATE
 
     -- Forzar estado=1 (una sola vez)
-    IF @set = N'' 
+    IF @set = N''
         SET @set = N'    tgt.[estado] = 1';
     ELSE
         SET @set = @set + N',' + CHAR(10) + N'    tgt.[estado] = 1';
 
-    -- En INSERT, agregamos estado expl
-ícito (una sola vez)
+    -- FIX 2026-09-09: Fecha SI debe ir en el INSERT (es NOT NULL y es la
+    -- clave del MERGE) - antes se excluia tambien del INSERT por el mismo
+    -- filtro "col_name <> 'Fecha'" de arriba, lo que rompia el INSERT para
+    -- cualquier fecha nunca antes insertada (siempre, en un caso/periodo
+    -- nuevo) con "Cannot insert the value NULL into column 'Fecha'".
+    SET @ins_cols = N'[Fecha],' + @ins_cols;
+    SET @ins_vals = N'src.[Fecha],' + @ins_vals;
+
+    -- En INSERT, agregamos estado explícito (una sola vez)
     SET @ins_cols = @ins_cols + CASE WHEN @ins_cols = N'' THEN N'' ELSE N',' END + N'[estado]';
     SET @ins_vals = @ins_vals + CASE WHEN @ins_vals = N'' THEN N'' ELSE N',' END + N'1';
 
     DECLARE @sql NVARCHAR(MAX) = N'
-MERGE ' + QU
-OTENAME(@schema) + N'.' + QUOTENAME(@tgt) + N' AS tgt
+MERGE ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@tgt) + N' AS tgt
 USING (
     SELECT *
     FROM ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@stg) + N'
@@ -500,8 +464,7 @@ ON tgt.[Fecha] = src.[Fecha]
 WHEN MATCHED THEN
     UPDATE SET
 ' + @set + N'
-WHEN N
-OT MATCHED THEN
+WHEN NOT MATCHED THEN
     INSERT (' + @ins_cols + N')
     VALUES (' + @ins_vals + N');
 ';
