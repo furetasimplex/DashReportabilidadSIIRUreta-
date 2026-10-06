@@ -1,0 +1,52 @@
+--- LIVE before: reclamo.sp_auto_congelar_modulos_nuevos
++++ DEV v2: reclamo.sp_auto_congelar_modulos_nuevos
+@@ -27,11 +27,12 @@
+    movimiento MAS RECIENTE: son los que la rotopala esta trabajando ahora,
+    no los mas antiguos del bloque que recien se esta poniendo al dia.
+    ============================================================================ */
+-CREATE PROCEDURE [reclamo].[sp_auto_congelar_modulos_nuevos]
++ALTER PROCEDURE [reclamo].[sp_auto_congelar_modulos_nuevos]
+ (
+     @VentanaDias int = 90,
+     @Siguientes  int = 5,
+-    @EjecucionId int = NULL
++    @EjecucionId int = NULL,
++    @SoloPreparar bit = 0
+ )
+ AS
+ BEGIN
+@@ -505,6 +506,8 @@
+             DROP TABLE #CandidatosLineaBase;
+         END;
+ 
++        IF @SoloPreparar = 0
++        BEGIN
+         /* -------------------------------------------------------------
+            Abrir los que tienen movimiento real, con cupo (maximo dos
+            ABIERTO por rotopala y campana, regla R5). Por cada rotopala y
+@@ -637,13 +640,13 @@
+                     FROM (
+                         SELECT CAST(ta.fecha_medicion AS date) AS fecha_operacional
+                         FROM [reclamo].[topografia_avance] ta
+-                        WHERE ta.[campaña_id] = @Camp AND ta.pad_id = @Pad
+-                          AND ta.modulo_id = @Mod AND ta.estado = 'VIGENTE'
++                        WHERE ta.[campaña_id] = @CampAbrir AND ta.pad_id = @PadAbrir
++                          AND ta.modulo_id = @ModAbrir AND ta.estado = 'VIGENTE'
+                         UNION ALL
+                         SELECT CAST(cr.fecha AS date)
+                         FROM [inventar_SpcHidr].[control_reclamo_diario] cr
+-                        WHERE cr.[campaña_id] = @Camp AND cr.pad_id = @Pad
+-                          AND cr.modulo_id = @Mod AND COALESCE(cr.volumen_diario_m3,0) > 0
++                        WHERE cr.[campaña_id] = @CampAbrir AND cr.pad_id = @PadAbrir
++                          AND cr.modulo_id = @ModAbrir AND COALESCE(cr.volumen_diario_m3,0) > 0
+                     ) x)
+                 WHERE secuencia_id = @SecuenciaId;
+ 
+@@ -663,6 +666,7 @@
+         END;
+         CLOSE grupos;
+         DEALLOCATE grupos;
++        END; -- @SoloPreparar: no abrir antes del primer sync
+ 
+         DROP TABLE IF EXISTS #Alcance;
+ 

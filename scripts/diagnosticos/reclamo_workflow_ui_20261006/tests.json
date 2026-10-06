@@ -1,0 +1,67 @@
+{
+  "checks": {
+    "no_global_pad_id": true,
+    "no_orphan_global_pad_callback": true,
+    "no_duplicate_ids": true,
+    "main_buttons_registered": true,
+    "adjustment_options_include_both_pads": true,
+    "advanced_section_collapsed": true,
+    "history_info_group": true,
+    "history_visible_info": true,
+    "history_not_in_blockers": true,
+    "scope_shown_on_cards": true,
+    "base_save_no_recalculate": true,
+    "reprocess_calls_recalculate": true,
+    "sequence_calls_maintain_only": true,
+    "publication_calls_publish_only": true,
+    "no_global_pad_reference": true
+  },
+  "pass": true,
+  "callback_count": 94,
+  "duplicate_ids": {},
+  "adjustment_options": [
+    {
+      "label": "Módulo 15 · Campaña 11 · PAD 1 — Óxidos",
+      "value": "11|1|15"
+    },
+    {
+      "label": "Módulo 16 · Campaña 11 · PAD 2 — Sulfuros",
+      "value": "11|2|16"
+    }
+  ],
+  "semaforo_groups": [
+    "BLOQUEOS",
+    "ADVERTENCIAS",
+    "INFORMACIÓN / TRAZABILIDAD"
+  ],
+  "buttons": {
+    "btn-actualizar": [
+      "alertas-automatizacion.children",
+      "semaforo.children",
+      "resumen-general.children",
+      "matriz-mensual.children",
+      "tabla-remanente.children",
+      "tabla-preview-conciliados.children",
+      "..g-cv25.figure...g-brecha.figure..",
+      "..g-rendimiento.figure...g-horas.figure..",
+      "..g-cuadratura.figure...tabla-cuadratura.children..",
+      "..cuadratura-modulo-select.options...cuadratura-modulo-select.value..",
+      "..g-avance.figure...tabla-avance.children..",
+      "..aj-modulo.options...aj-destino.options..",
+      "tabla-ajustes.children",
+      "..dr-filtro-campana.options...dr-ins-campana.options..",
+      "..tabla-disponible-rotopalas.children...dr-upd-id.options...store-disponible-rotopalas.data.."
+    ],
+    "btn-recalcular": [
+      "mensaje-accion.children"
+    ],
+    "btn-automatizacion": [
+      "..resultado-automatizacion.children...mensaje-accion.children@b927e39933571ea1457cd4acd0eecdfa16580207e8c955c1c9d99eeab5ea0ea8.."
+    ],
+    "btn-publicar": [
+      "confirmar-publicar.displayed"
+    ]
+  },
+  "write_callbacks_invoked": false,
+  "sql_sp_invoked": false
+}

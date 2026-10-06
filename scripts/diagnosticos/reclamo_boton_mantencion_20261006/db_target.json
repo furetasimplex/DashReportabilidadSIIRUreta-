@@ -1,0 +1,11 @@
+{
+  "live_engine_target": "NO DETERMINADO",
+  "connection_attempt": "Falló antes de ejecutar consulta: ODBC Driver 17, SQLSTATE 08001, error TLS/SChannel (cliente no admite cifrado/no hay credenciales de seguridad).",
+  "historical_catalog_artifact": {
+    "database": "inventar_SpcHidr",
+    "server": "VPS-5347319-X",
+    "login": "sa",
+    "date_scope": "Auditoría previa; no es comprobación del engine del runtime el 2026-10-06"
+  },
+  "credentials": "No incluidas"
+}

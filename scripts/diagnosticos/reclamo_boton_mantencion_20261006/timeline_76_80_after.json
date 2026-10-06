@@ -1,0 +1,51 @@
+{
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "login_name": "sa"
+  },
+  "captured_utc": "2026-10-06T15:04:43.524643+00:00",
+  "rows": [
+    {
+      "secuencia_id": 1199,
+      "modulo_id": 76,
+      "modulo_numero": 12,
+      "estado": "CERRADO",
+      "apertura": "2026-09-14",
+      "cierre": "2026-09-17"
+    },
+    {
+      "secuencia_id": 1200,
+      "modulo_id": 77,
+      "modulo_numero": 13,
+      "estado": "CERRADO",
+      "apertura": "2026-09-17",
+      "cierre": "2026-09-26"
+    },
+    {
+      "secuencia_id": 1259,
+      "modulo_id": 78,
+      "modulo_numero": 14,
+      "estado": "CERRADO",
+      "apertura": "2026-09-26",
+      "cierre": "2026-09-29"
+    },
+    {
+      "secuencia_id": 1260,
+      "modulo_id": 79,
+      "modulo_numero": 15,
+      "estado": "ABIERTO",
+      "apertura": "2026-09-29",
+      "cierre": null
+    },
+    {
+      "secuencia_id": 1261,
+      "modulo_id": 80,
+      "modulo_numero": 16,
+      "estado": "PENDIENTE",
+      "apertura": null,
+      "cierre": null
+    }
+  ],
+  "dates_match_expected": true
+}

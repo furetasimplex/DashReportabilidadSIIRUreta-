@@ -1,0 +1,24 @@
+[
+  {
+    "fecha": "2026-10-06",
+    "pi_diario_original": "0E-12",
+    "pi_alternativo": "0E-12",
+    "tum_diario": null,
+    "tum_completo": false,
+    "estado_pi_dia": "PI_PLANO",
+    "episodio_id": null,
+    "fecha_inicio_episodio": null,
+    "fecha_recuperacion": null,
+    "masa_pi_episodio": null,
+    "masa_tum_episodio": null,
+    "residual_masa": null,
+    "estado_episodio": "SIN_TUM_NO_RESOLUBLE",
+    "fuente_resuelta_dia": "SIN_RESOLVER",
+    "tmh_resuelto": null,
+    "motivo_resolucion": "FALTA_TUM_DIRECTO",
+    "tum_batch_id_a": null,
+    "tum_batch_id_b": null,
+    "archivo_batch_a": null,
+    "archivo_batch_b": null
+  }
+]

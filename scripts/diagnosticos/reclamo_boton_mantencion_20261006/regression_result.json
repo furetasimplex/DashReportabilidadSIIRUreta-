@@ -1,0 +1,16 @@
+{
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "login_name": "sa"
+  },
+  "result": {
+    "resultado": "PASS",
+    "modulo_a_topografia_d1": "2026-09-26",
+    "modulo_a_cierre": "2026-09-29",
+    "modulo_b_apertura": "2026-09-29",
+    "modulo_b_cierre": null,
+    "fecha_ejecucion_d5": "2026-10-06"
+  },
+  "persistent_writes": false
+}

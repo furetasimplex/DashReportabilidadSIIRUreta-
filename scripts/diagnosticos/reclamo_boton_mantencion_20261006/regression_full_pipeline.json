@@ -1,0 +1,36 @@
+{
+  "result": "PASS",
+  "scenario": "source contains B; topografia_avance initially lacks B",
+  "execution_date": "2026-10-06",
+  "runs": [
+    {
+      "calls": [
+        "PREPARAR",
+        "SYNC",
+        "RESUMEN_SYNC",
+        "MANTENER",
+        "SYNC",
+        "RESUMEN_SYNC",
+        "CV25",
+        "CALCULO"
+      ],
+      "a_cierre": "2026-09-29",
+      "b_apertura": "2026-09-29"
+    },
+    {
+      "calls": [
+        "PREPARAR",
+        "SYNC",
+        "RESUMEN_SYNC",
+        "MANTENER",
+        "SYNC",
+        "RESUMEN_SYNC",
+        "CV25",
+        "CALCULO"
+      ],
+      "a_cierre": "2026-09-29",
+      "b_apertura": "2026-09-29"
+    }
+  ],
+  "limitation": "Stateful fake verifies Python order; DEV integration remains required."
+}

@@ -72,8 +72,14 @@ def rendimiento(desde, hasta) -> pd.DataFrame:
         SELECT fecha, rotopala_id, rotopala, material,
                horas_operacion, tms_cv25_asignado, tms_topografia,
                rendimiento_pesometro_tms_hr, rendimiento_topografia_tms_hr,
-               diferencia_tms, diferencia_pct, flag_cv25
-        FROM reclamo.v_rendimiento_rotopala
+               diferencia_tms, diferencia_pct, flag_cv25,
+               CASE WHEN EXISTS (
+                   SELECT 1 FROM reclamo.v_reclamo_diario rd
+                   WHERE rd.fecha_operacion = r.fecha
+                     AND rd.rotopala_id = r.rotopala_id
+                     AND rd.fuente_reclamo = 'TOPOGRAFIA'
+               ) THEN 1 ELSE 0 END AS tiene_topografia_real
+        FROM reclamo.v_rendimiento_rotopala r
         WHERE fecha BETWEEN :desde AND :hasta
         ORDER BY fecha, rotopala_id
         """,
@@ -91,7 +97,7 @@ def cuadratura() -> pd.DataFrame:
     """
     return _read(
         """
-        SELECT [campaña_id] AS campana_id, pad_id, modulo_id, modulo_numero,
+        SELECT q.[campaña_id] AS campana_id, c.campana, q.pad_id, q.modulo_id, q.modulo_numero,
                rotopala_id, orden_secuencia, estado_secuencia,
                densidad_oficial, tms_conformado,
                m3_totales, m3_camiones_total, m3_rotopala_total, m3_ajustes,
@@ -99,8 +105,45 @@ def cuadratura() -> pd.DataFrame:
                tms_camiones_total, tms_rotopala_total, tms_extraido_total,
                tms_saldo_disponible,
                m3_excedente, tms_excedente,
-               modulo_siguiente_propuesto, flag_cuadratura
-        FROM reclamo.v_cuadratura_modulo
+               modulo_siguiente_propuesto, flag_cuadratura,
+               movimiento.fecha_inicio_movimiento, movimiento.fecha_fin_movimiento
+        FROM reclamo.v_cuadratura_modulo q
+        OUTER APPLY (SELECT MAX(dr.[campaña]) AS campana
+                     FROM inventar_SpcHidr.disponible_rotopalas dr
+                     WHERE dr.[campaña_id] = q.[campaña_id]) c
+        OUTER APPLY (
+            SELECT MIN(f.fecha) AS fecha_inicio_movimiento,
+                   MAX(f.fecha) AS fecha_fin_movimiento
+            FROM (
+                SELECT t.fecha_medicion AS fecha
+                FROM reclamo.v_topografia_resuelta t
+                WHERE t.[campaña_id] = q.[campaña_id]
+                  AND t.modulo_id = q.modulo_id
+                  AND t.m3_incremento > 0
+                UNION ALL
+                SELECT cr.fecha
+                FROM reclamo.v_camiones_acumulado cr
+                WHERE cr.[campaña_id] = q.[campaña_id]
+                  AND cr.modulo_id = q.modulo_id
+                  AND cr.m3_camiones_dia > 0
+                UNION ALL
+                SELECT CAST(cr.fecha AS date)
+                FROM inventar_SpcHidr.control_reclamo_diario cr
+                WHERE cr.[campaña_id] = q.[campaña_id]
+                  AND cr.modulo_id = q.modulo_id
+                  AND CAST(cr.fecha AS date) < reclamo.fn_fecha_corte()
+                  AND cr.volumen_diario_m3 > 0
+                  AND q.m3_rotopala_previo > 0
+                UNION ALL
+                SELECT CAST(crc.fecha AS date)
+                FROM inventar_SpcHidr.control_reclamo_sulfuro_camiones_thm_diario crc
+                WHERE crc.[campaña_id] = q.[campaña_id]
+                  AND crc.modulo_id = q.modulo_id
+                  AND CAST(crc.fecha AS date) < reclamo.fn_fecha_corte()
+                  AND crc.volumen_diario_m3 > 0
+                  AND q.m3_camiones_previo > 0
+            ) f
+        ) movimiento
         ORDER BY porcentaje_extraido DESC
         """
     )
@@ -115,7 +158,7 @@ def avance_diario(desde, hasta) -> pd.DataFrame:
     """
     return _read(
         """
-        SELECT fecha_operacion, [campaña_id] AS campana_id, pad_id,
+        SELECT q.fecha_operacion, q.[campaña_id] AS campana_id, c.campana, q.pad_id,
                modulo_id, modulo_numero, rotopala_id,
                tms_conformado, m3_totales, densidad_oficial,
                m3_camiones_dia, tms_camiones_dia,
@@ -125,8 +168,11 @@ def avance_diario(desde, hasta) -> pd.DataFrame:
                avance_total_pct, avance_roto_pct, avance_camiones_pct,
                ajuste_m3, ajuste_tms, ajustes_aplicados,
                fuente_reclamo, metodo_calculo, flag_calculo, flag_cuadratura
-        FROM reclamo.calculo_diario
-        WHERE fecha_operacion BETWEEN :desde AND :hasta
+        FROM reclamo.calculo_diario q
+        OUTER APPLY (SELECT MAX(dr.[campaña]) AS campana
+                     FROM inventar_SpcHidr.disponible_rotopalas dr
+                     WHERE dr.[campaña_id] = q.[campaña_id]) c
+        WHERE q.fecha_operacion BETWEEN :desde AND :hasta
         ORDER BY fecha_operacion, pad_id, modulo_numero
         """,
         {"desde": desde, "hasta": hasta},
@@ -143,14 +189,17 @@ def vista_previa_conciliados(desde, hasta) -> pd.DataFrame:
     """
     return _read(
         """
-        SELECT fecha_operacion, pad_id, [campaña_id] AS campana_id,
+        SELECT q.fecha_operacion, q.pad_id, q.[campaña_id] AS campana_id, c.campana,
                modulo_id, modulo_numero, rotopala_id,
                avance_porcentaje, avance_total_porcentaje, avance_camiones_porcentaje,
                tonelaje_reclamado_diario, volumen_diario_m3, tonelaje_camiones_diario,
                tms_disponible_roto, tms_conformado, densidad_oficial,
                fuente_reclamo, metodo_calculo, flag_calculo, ajustes_aplicados
-        FROM reclamo.v_reclamo_para_conciliados
-        WHERE fecha_operacion BETWEEN :desde AND :hasta
+        FROM reclamo.v_reclamo_para_conciliados q
+        OUTER APPLY (SELECT MAX(dr.[campaña]) AS campana
+                     FROM inventar_SpcHidr.disponible_rotopalas dr
+                     WHERE dr.[campaña_id] = q.[campaña_id]) c
+        WHERE q.fecha_operacion BETWEEN :desde AND :hasta
         ORDER BY fecha_operacion, pad_id, modulo_numero
         """,
         {"desde": desde, "hasta": hasta},
@@ -181,14 +230,19 @@ def ajustes(desde, hasta) -> pd.DataFrame:
     """Ajustes manuales del periodo, en cualquier estado."""
     return _read(
         """
-        SELECT ajuste_id, fecha_operacion, [campaña_id] AS campana_id, pad_id,
+        SELECT q.ajuste_id, q.fecha_operacion, q.[campaña_id] AS campana_id, c.campana,
+               c.modulo_numero, q.pad_id,
                modulo_id, modulo_destino_id, tipo_ajuste,
                delta_m3, delta_tms, motivo,
                antecedente_tipo, antecedente_ref, estado,
                usuario_solicita, fecha_solicitud,
                usuario_aprueba, fecha_aprobacion, observacion
-        FROM reclamo.ajuste_manual
-        WHERE fecha_operacion BETWEEN :desde AND :hasta
+        FROM reclamo.ajuste_manual q
+        OUTER APPLY (SELECT MAX(dr.[campaña]) AS campana, MAX(dr.modulo) AS modulo_numero
+                     FROM inventar_SpcHidr.disponible_rotopalas dr
+                     WHERE dr.[campaña_id] = q.[campaña_id]
+                       AND dr.modulo_id = q.modulo_id) c
+        WHERE q.fecha_operacion BETWEEN :desde AND :hasta
         ORDER BY fecha_operacion DESC, ajuste_id DESC
         """,
         {"desde": desde, "hasta": hasta},
@@ -199,10 +253,13 @@ def modulos_disponibles() -> pd.DataFrame:
     """Modulos congelados, para poblar los desplegables del formulario."""
     return _read(
         """
-        SELECT [campaña_id] AS campana_id, pad_id, modulo_id, modulo_numero,
+        SELECT q.[campaña_id] AS campana_id, c.campana, q.pad_id, q.modulo_id, q.modulo_numero,
                tms_conformado, m3_totales, densidad_oficial,
                rotopala_id, orden_secuencia, estado_secuencia
-        FROM reclamo.v_modulo_base
+        FROM reclamo.v_modulo_base q
+        OUTER APPLY (SELECT MAX(dr.[campaña]) AS campana
+                     FROM inventar_SpcHidr.disponible_rotopalas dr
+                     WHERE dr.[campaña_id] = q.[campaña_id]) c
         ORDER BY pad_id, modulo_numero
         """
     )
@@ -551,51 +608,25 @@ def insertar_disponible_rotopala(
 
 
 def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
-    """Encadena dos pasadas de mantencion y sincronizacion desde el ETL,
-    seguidas de CV25/horas y el calculo de reclamo diario.
+    """Prepara modulos, sincroniza evidencia y luego mantiene la secuencia.
 
-    Paso 1: reclamo.sp_auto_mantener_secuencia congela los modulos nuevos
-    con base valida que ya aparecen en topografia o camiones. Bug detectado 2026-08-05:
-    modulo 39 (PAD Oxido) tenia datos de origen en
-    inventar_SpcHidr.control_reclamo_diario para el 02 y 03-ago, pero el
-    sync los omitio (log_sincronizacion: "Modulo no congelado. No se
-    sincroniza: violaria la regla R1") porque el usuario habia corrido
-    "Recalcular" ANTES de que el boton separado "Mantener secuencia"
-    congelara el modulo -- dependia del orden en que se apretaran los dos
-    botones. Encadenarlo aqui, primero, elimina esa dependencia: un modulo
-    recien aparecido queda congelado y disponible para sincronizar en el
-    mismo click.
-    Paso 2: reclamo.sp_sincronizar_desde_etl incorpora la topografia de los
-    modulos recien congelados y trae lo publicado en
-    inventar_SpcHidr (control_reclamo_diario, control_reclamo_sulfuro_
-    camiones_thm_diario) hacia reclamo.topografia_avance / reclamo.
-    camiones_reclamo. Sin este paso, reclamo.calculo_diario podia quedar
-    congelado en la ultima fecha sincronizada aunque el ETL ya tuviera
-    datos mas recientes (bug detectado 2026-08-02: corte silencioso en
-    2026-07-26 con data ya publicada en inventar_SpcHidr hasta el 31,
-    porque nadie habia vuelto a correr el sync a mano).
-    Paso 3: reclamo.sp_auto_mantener_secuencia reevalua apertura/cierre
-    de secuencia con la topografia incorporada en la primera pasada.
-    Paso 4: reclamo.sp_sincronizar_desde_etl repite el mismo rango como
-    pasada idempotente de seguridad por si la segunda mantencion habilito
-    modulos adicionales.
-    Paso 5: reclamo.sp_cargar_cv25_horas alimenta reclamo.cv25_diario y
-    reclamo.rotopala_horas_turno (base de reclamo.v_cv25_diario y del
-    grafico "Rendimiento de rotopala"). Bug detectado 2026-08-05: este
-    SP nunca estuvo encadenado a ningun boton del Dash, solo se corria
-    a mano -- el grafico quedaba en "Sin datos" para fechas recientes
-    aunque topografia y camiones ya estuvieran sincronizados.
-    Paso 6: reclamo.sp_calcular_reclamo_diario materializa reclamo.
-    calculo_diario a partir de reclamo.v_reclamo_diario, ya con la
-    sincronizacion al dia.
-    Decision 2026-08-02: se encadenan estos pasos en un solo boton
-    ("Recalcular"), sin paso intermedio de revision -- el sync es
-    idempotente y solo toca modulos ya congelados (los que no lo estan
-    quedan OMITIDO y se pueden ver despues en reclamo.log_sincronizacion
-    si hace falta auditar). El boton "Mantener secuencia" sigue existiendo
-    aparte para que el usuario revise ALERTA_FIN_DE_PAD / ALERTA_FIN_DE_
-    CAMPANA con calma, pero ya no es un prerrequisito manual de Recalcular.
+    A: sp_auto_congelar_modulos_nuevos solo prepara modulos, secuencia y
+       linea base; no abre ni cierra.
+    B: sp_sincronizar_desde_etl incorpora topografia del rango.
+    C: sp_auto_mantener_secuencia cierra y abre con evidencia sincronizada.
+    D: segundo sync incorpora cualquier modulo habilitado en C.
+    E/F: CV25/horas y calculo diario.
+
+    El mantenimiento completo nunca precede al primer sync del rango.
     """
+    sql_preparar = text(
+        """
+        EXEC reclamo.sp_auto_congelar_modulos_nuevos
+             @VentanaDias = 90,
+             @Siguientes  = 5,
+             @SoloPreparar = 1
+        """
+    )
     sql_mantener = text(
         """
         EXEC reclamo.sp_auto_mantener_secuencia
@@ -637,12 +668,16 @@ def recalcular(desde, hasta, dias_reproceso: int = 7) -> str:
     )
     with get_engine().begin() as conn:
         filas_sync = 0
-        # La segunda mantencion evalua la topografia incorporada en la primera pasada.
-        # El segundo sync incorpora modulos adicionales que esa mantencion habilite.
-        for _ in range(2):
-            conn.execute(sql_mantener)
-            conn.execute(sql_sync, {"desde": desde, "hasta": hasta})
-            filas_sync += conn.execute(sql_resumen_sync).scalar() or 0
+        # Fase A: congelar, secuenciar y fijar linea base sin abrir/cerrar.
+        conn.execute(sql_preparar)
+        # Fase B: incorporar la evidencia del rango a topografia_avance.
+        conn.execute(sql_sync, {"desde": desde, "hasta": hasta})
+        filas_sync += conn.execute(sql_resumen_sync).scalar() or 0
+        # Fase C: cerrar/abrir solo con la evidencia ya sincronizada.
+        conn.execute(sql_mantener)
+        # Fase D: incorporar cualquier modulo habilitado en la fase C.
+        conn.execute(sql_sync, {"desde": desde, "hasta": hasta})
+        filas_sync += conn.execute(sql_resumen_sync).scalar() or 0
         conn.execute(sql_cv25, {"desde": desde, "hasta": hasta})
         conn.execute(sql_calc, {"desde": desde, "hasta": hasta, "dias": dias_reproceso})
     resumen_sync = f" ({filas_sync} filas sincronizadas desde el ETL)" if filas_sync else ""
@@ -700,6 +735,7 @@ def mantener_secuencia(ventana_dias: int = 90, siguientes: int = 5) -> pd.DataFr
     cosas. Devuelve la bitacora de la corrida (reclamo.log_automatizacion),
     con las alertas primero.
     """
+    log.warning("DEBUG_RECLAMO_MANTENER ventana_dias=%s siguientes=%s", ventana_dias, siguientes)
     sql = text(
         """
         EXEC reclamo.sp_auto_mantener_secuencia
@@ -707,10 +743,41 @@ def mantener_secuencia(ventana_dias: int = 90, siguientes: int = 5) -> pd.DataFr
              @Siguientes  = :siguientes
         """
     )
-    with get_engine().begin() as conn:
-        result = conn.execute(sql, {"ventana": ventana_dias, "siguientes": siguientes})
-        rows = result.fetchall()
-        cols = result.keys()
+    phase = "GET_ENGINE"
+    try:
+        engine = get_engine()
+        with engine.begin() as conn:
+            phase = "DB_IDENTITY"
+            identity = conn.exec_driver_sql(
+                "SELECT @@SERVERNAME AS server_name, DB_NAME() AS database_name, "
+                "SUSER_SNAME() AS login_name"
+            ).mappings().one()
+            log.warning(
+                "DEBUG_RECLAMO_DB server=%s database=%s login=%s",
+                identity.get("server_name"), identity.get("database_name"),
+                identity.get("login_name"),
+            )
+
+            phase = "BEFORE_EXEC"
+            log.warning("DEBUG_RECLAMO_BEFORE_EXEC procedure=reclamo.sp_auto_mantener_secuencia")
+            result = conn.execute(sql, {"ventana": ventana_dias, "siguientes": siguientes})
+            phase = "AFTER_EXEC"
+            returns_rows = result.returns_rows
+            try:
+                result_keys = list(result.keys())
+            except Exception as exc:
+                result_keys = None
+                log.warning("DEBUG_RECLAMO_KEYS_ERROR %s: %s", type(exc).__name__, exc)
+            log.warning("DEBUG_RECLAMO_AFTER_EXEC returns_rows=%s keys=%r", returns_rows, result_keys)
+
+            phase = "AFTER_FETCH"
+            rows = result.fetchall()
+            cols = result.keys()
+            log.warning("DEBUG_RECLAMO_AFTER_FETCH rows=%s keys=%r", len(rows), list(cols))
+        log.warning("DEBUG_RECLAMO_AFTER_COMMIT procedure=reclamo.sp_auto_mantener_secuencia")
+    except Exception:
+        log.exception("DEBUG_RECLAMO_EXCEPTION phase=%s traceback follows", phase)
+        raise
     df = pd.DataFrame(rows, columns=cols)
     return df.rename(columns={"campaña_id": "campana_id"})
 
@@ -725,11 +792,14 @@ def alertas_automatizacion(dias: int = 30) -> pd.DataFrame:
     """
     return _read(
         """
-        SELECT log_id, accion, pad_id, [campaña_id] AS campana_id, modulo_id,
+        SELECT q.log_id, q.accion, q.pad_id, q.[campaña_id] AS campana_id, c.campana, q.modulo_id,
                modulo_numero, detalle, fecha_evento
-        FROM reclamo.log_automatizacion
-        WHERE accion LIKE 'ALERTA%'
-          AND fecha_evento >= DATEADD(DAY, -:dias, SYSDATETIME())
+        FROM reclamo.log_automatizacion q
+        OUTER APPLY (SELECT MAX(dr.[campaña]) AS campana
+                     FROM inventar_SpcHidr.disponible_rotopalas dr
+                     WHERE dr.[campaña_id] = q.[campaña_id]) c
+        WHERE q.accion LIKE 'ALERTA%'
+          AND q.fecha_evento >= DATEADD(DAY, -:dias, SYSDATETIME())
         ORDER BY fecha_evento DESC
         """,
         {"dias": dias},

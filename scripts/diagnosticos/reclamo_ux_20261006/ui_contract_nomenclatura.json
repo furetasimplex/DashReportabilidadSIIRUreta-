@@ -1,0 +1,345 @@
+{
+  "phase": "nomenclatura",
+  "layout_ids": [
+    "aj-ant-ref",
+    "aj-ant-tipo",
+    "aj-destino",
+    "aj-fecha",
+    "aj-m3",
+    "aj-modulo",
+    "aj-motivo",
+    "aj-tipo",
+    "aj-tms",
+    "alertas-automatizacion",
+    "avance-pad-tabs",
+    "btn-actualizar",
+    "btn-ajuste",
+    "btn-automatizacion",
+    "btn-buscar-dr",
+    "btn-dr-actualizar",
+    "btn-dr-insertar",
+    "btn-publicar",
+    "btn-recalcular",
+    "confirmar-publicar",
+    "cuadratura-modulo-select",
+    "cuadratura-pad-tabs",
+    "detalle-cuadratura-modulo",
+    "dr-filtro-campana",
+    "dr-filtro-fecha-desde",
+    "dr-filtro-fecha-hasta",
+    "dr-filtro-modulo",
+    "dr-filtro-pad",
+    "dr-ins-campana",
+    "dr-ins-densidad",
+    "dr-ins-m3_apilado",
+    "dr-ins-m3_totales",
+    "dr-ins-modulo",
+    "dr-ins-pad",
+    "dr-ins-remanente_m3",
+    "dr-ins-remanente_tms",
+    "dr-ins-tmh_apilado",
+    "dr-ins-tms",
+    "dr-upd-densidad-info",
+    "dr-upd-id",
+    "dr-upd-m3_apilado",
+    "dr-upd-m3_totales",
+    "dr-upd-remanente_m3",
+    "dr-upd-remanente_tms",
+    "dr-upd-tmh_apilado",
+    "dr-upd-tms",
+    "filtro-pad",
+    "g-avance",
+    "g-brecha",
+    "g-cuadratura",
+    "g-cv25",
+    "g-horas",
+    "g-rendimiento",
+    "matriz-mensual",
+    "matriz-metrica",
+    "matriz-pad-tabs",
+    "mensaje-accion",
+    "mensaje-ajuste",
+    "mensaje-dr-actualizar",
+    "mensaje-dr-insertar",
+    "preview-pad-tabs",
+    "rango",
+    "reclamo-main-tabs",
+    "remanente-pad-tabs",
+    "rendimiento-rotopala-tabs",
+    "resultado-automatizacion",
+    "resumen-general",
+    "semaforo",
+    "store-disponible-rotopalas",
+    "tabla-ajustes",
+    "tabla-avance",
+    "tabla-cuadratura",
+    "tabla-disponible-rotopalas",
+    "tabla-preview-conciliados",
+    "tabla-remanente"
+  ],
+  "duplicate_layout_ids": [],
+  "callbacks": [
+    {
+      "function": "cb_recalcular",
+      "decorators": [
+        "callback(Output('mensaje-accion', 'children'), Input('btn-recalcular', 'n_clicks'), State('rango', 'start_date'), State('rango', 'end_date'), prevent_initial_call=True)"
+      ]
+    },
+    {
+      "function": "cb_pedir_confirmacion_publicar",
+      "decorators": [
+        "callback(Output('confirmar-publicar', 'displayed'), Input('btn-publicar', 'n_clicks'), prevent_initial_call=True)"
+      ]
+    },
+    {
+      "function": "cb_publicar",
+      "decorators": [
+        "callback(Output('mensaje-accion', 'children', allow_duplicate=True), Input('confirmar-publicar', 'submit_n_clicks'), State('rango', 'start_date'), State('rango', 'end_date'), prevent_initial_call=True)"
+      ]
+    },
+    {
+      "function": "cb_automatizacion",
+      "decorators": [
+        "callback(Output('resultado-automatizacion', 'children'), Output('mensaje-accion', 'children', allow_duplicate=True), Input('btn-automatizacion', 'n_clicks'), prevent_initial_call=True)"
+      ]
+    },
+    {
+      "function": "cb_alertas_automatizacion",
+      "decorators": [
+        "callback(Output('alertas-automatizacion', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'))"
+      ]
+    },
+    {
+      "function": "cb_semaforo",
+      "decorators": [
+        "callback(Output('semaforo', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), State('rango', 'start_date'), State('rango', 'end_date'))"
+      ]
+    },
+    {
+      "function": "cb_resumen_general",
+      "decorators": [
+        "callback(Output('resumen-general', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), State('rango', 'start_date'), State('rango', 'end_date'))"
+      ]
+    },
+    {
+      "function": "cb_matriz_mensual",
+      "decorators": [
+        "callback(Output('matriz-mensual', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), Input('matriz-metrica', 'value'), Input('matriz-pad-tabs', 'value'), State('rango', 'start_date'), State('rango', 'end_date'))"
+      ]
+    },
+    {
+      "function": "cb_remanente",
+      "decorators": [
+        "callback(Output('tabla-remanente', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), Input('remanente-pad-tabs', 'value'))"
+      ]
+    },
+    {
+      "function": "cb_preview_conciliados",
+      "decorators": [
+        "callback(Output('tabla-preview-conciliados', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), Input('preview-pad-tabs', 'value'), State('rango', 'start_date'), State('rango', 'end_date'))"
+      ]
+    },
+    {
+      "function": "cb_cv25",
+      "decorators": [
+        "callback(Output('g-cv25', 'figure'), Output('g-brecha', 'figure'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), State('rango', 'start_date'), State('rango', 'end_date'))"
+      ]
+    },
+    {
+      "function": "cb_rendimiento",
+      "decorators": [
+        "callback(Output('g-rendimiento', 'figure'), Output('g-horas', 'figure'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), Input('rendimiento-rotopala-tabs', 'value'), State('rango', 'start_date'), State('rango', 'end_date'))"
+      ]
+    },
+    {
+      "function": "cb_cuadratura",
+      "decorators": [
+        "callback(Output('g-cuadratura', 'figure'), Output('tabla-cuadratura', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), Input('cuadratura-pad-tabs', 'value'))"
+      ]
+    },
+    {
+      "function": "cb_opciones_cuadratura_modulo",
+      "decorators": [
+        "callback(Output('cuadratura-modulo-select', 'options'), Output('cuadratura-modulo-select', 'value'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), Input('cuadratura-pad-tabs', 'value'))"
+      ]
+    },
+    {
+      "function": "cb_detalle_cuadratura_modulo",
+      "decorators": [
+        "callback(Output('detalle-cuadratura-modulo', 'children'), Input('cuadratura-modulo-select', 'value'))"
+      ]
+    },
+    {
+      "function": "cb_avance",
+      "decorators": [
+        "callback(Output('g-avance', 'figure'), Output('tabla-avance', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-accion', 'children'), Input('avance-pad-tabs', 'value'), State('rango', 'start_date'), State('rango', 'end_date'))"
+      ]
+    },
+    {
+      "function": "cb_opciones_modulo",
+      "decorators": [
+        "callback(Output('aj-modulo', 'options'), Output('aj-destino', 'options'), Input('btn-actualizar', 'n_clicks'), State('filtro-pad', 'value'))"
+      ]
+    },
+    {
+      "function": "cb_registrar_ajuste",
+      "decorators": [
+        "callback(Output('mensaje-ajuste', 'children'), Input('btn-ajuste', 'n_clicks'), State('aj-fecha', 'date'), State('aj-modulo', 'value'), State('aj-tipo', 'value'), State('aj-destino', 'value'), State('aj-m3', 'value'), State('aj-tms', 'value'), State('aj-motivo', 'value'), State('aj-ant-tipo', 'value'), State('aj-ant-ref', 'value'), prevent_initial_call=True)"
+      ]
+    },
+    {
+      "function": "cb_tabla_ajustes",
+      "decorators": [
+        "callback(Output('tabla-ajustes', 'children'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-ajuste', 'children'), State('rango', 'start_date'), State('rango', 'end_date'))"
+      ]
+    },
+    {
+      "function": "cb_opciones_dr_campana",
+      "decorators": [
+        "callback(Output('dr-filtro-campana', 'options'), Output('dr-ins-campana', 'options'), Input('btn-actualizar', 'n_clicks'))"
+      ]
+    },
+    {
+      "function": "cb_opciones_dr_modulo",
+      "decorators": [
+        "callback(Output('dr-ins-modulo', 'options'), Input('dr-ins-pad', 'value'))"
+      ]
+    },
+    {
+      "function": "cb_tabla_disponible_rotopalas",
+      "decorators": [
+        "callback(Output('tabla-disponible-rotopalas', 'children'), Output('dr-upd-id', 'options'), Output('store-disponible-rotopalas', 'data'), Input('btn-buscar-dr', 'n_clicks'), Input('btn-actualizar', 'n_clicks'), Input('mensaje-dr-actualizar', 'children'), Input('mensaje-dr-insertar', 'children'), State('dr-filtro-campana', 'value'), State('dr-filtro-pad', 'value'), State('dr-filtro-modulo', 'value'), State('dr-filtro-fecha-desde', 'date'), State('dr-filtro-fecha-hasta', 'date'))"
+      ]
+    },
+    {
+      "function": "cb_dr_prefill",
+      "decorators": [
+        "callback(Output('dr-upd-tms', 'value'), Output('dr-upd-m3_totales', 'value'), Output('dr-upd-m3_apilado', 'value'), Output('dr-upd-tmh_apilado', 'value'), Output('dr-upd-remanente_m3', 'value'), Output('dr-upd-remanente_tms', 'value'), Input('dr-upd-id', 'value'), State('store-disponible-rotopalas', 'data'))"
+      ]
+    },
+    {
+      "function": "cb_dr_densidad_preview",
+      "decorators": [
+        "callback(Output('dr-upd-densidad-info', 'children'), Input('dr-upd-tms', 'value'), Input('dr-upd-m3_totales', 'value'), Input('dr-upd-id', 'value'), State('store-disponible-rotopalas', 'data'))"
+      ]
+    },
+    {
+      "function": "cb_dr_actualizar",
+      "decorators": [
+        "callback(Output('mensaje-dr-actualizar', 'children'), Input('btn-dr-actualizar', 'n_clicks'), State('dr-upd-id', 'value'), State('dr-upd-tms', 'value'), State('dr-upd-m3_totales', 'value'), State('dr-upd-m3_apilado', 'value'), State('dr-upd-tmh_apilado', 'value'), State('dr-upd-remanente_m3', 'value'), State('dr-upd-remanente_tms', 'value'), prevent_initial_call=True)"
+      ]
+    },
+    {
+      "function": "cb_dr_insertar",
+      "decorators": [
+        "callback(Output('mensaje-dr-insertar', 'children'), Input('btn-dr-insertar', 'n_clicks'), State('dr-ins-pad', 'value'), State('dr-ins-modulo', 'value'), State('dr-ins-campana', 'value'), State('dr-ins-tms', 'value'), State('dr-ins-m3_totales', 'value'), State('dr-ins-densidad', 'value'), State('dr-ins-m3_apilado', 'value'), State('dr-ins-tmh_apilado', 'value'), State('dr-ins-remanente_m3', 'value'), State('dr-ins-remanente_tms', 'value'), prevent_initial_call=True)"
+      ]
+    }
+  ],
+  "db_calls": [
+    {
+      "function": "cb_recalcular",
+      "db_call": "recalcular"
+    },
+    {
+      "function": "cb_publicar",
+      "db_call": "publicar"
+    },
+    {
+      "function": "cb_automatizacion",
+      "db_call": "mantener_secuencia"
+    },
+    {
+      "function": "cb_automatizacion",
+      "db_call": "campanas_disponible_rotopalas"
+    },
+    {
+      "function": "cb_alertas_automatizacion",
+      "db_call": "alertas_automatizacion"
+    },
+    {
+      "function": "cb_semaforo",
+      "db_call": "semaforo"
+    },
+    {
+      "function": "cb_resumen_general",
+      "db_call": "avance_diario"
+    },
+    {
+      "function": "cb_resumen_general",
+      "db_call": "diferencia_cv25"
+    },
+    {
+      "function": "cb_matriz_mensual",
+      "db_call": "avance_diario"
+    },
+    {
+      "function": "cb_remanente",
+      "db_call": "cuadratura"
+    },
+    {
+      "function": "cb_preview_conciliados",
+      "db_call": "avance_diario"
+    },
+    {
+      "function": "cb_cv25",
+      "db_call": "diferencia_cv25"
+    },
+    {
+      "function": "cb_rendimiento",
+      "db_call": "rendimiento"
+    },
+    {
+      "function": "cb_cuadratura",
+      "db_call": "cuadratura"
+    },
+    {
+      "function": "cb_opciones_cuadratura_modulo",
+      "db_call": "cuadratura"
+    },
+    {
+      "function": "cb_detalle_cuadratura_modulo",
+      "db_call": "cuadratura"
+    },
+    {
+      "function": "cb_detalle_cuadratura_modulo",
+      "db_call": "historial_modulo"
+    },
+    {
+      "function": "cb_avance",
+      "db_call": "avance_diario"
+    },
+    {
+      "function": "cb_opciones_modulo",
+      "db_call": "modulos_disponibles"
+    },
+    {
+      "function": "cb_registrar_ajuste",
+      "db_call": "registrar_ajuste"
+    },
+    {
+      "function": "cb_tabla_ajustes",
+      "db_call": "ajustes"
+    },
+    {
+      "function": "cb_opciones_dr_campana",
+      "db_call": "campanas_disponible_rotopalas"
+    },
+    {
+      "function": "cb_opciones_dr_modulo",
+      "db_call": "catalogo_modulos"
+    },
+    {
+      "function": "cb_tabla_disponible_rotopalas",
+      "db_call": "disponible_rotopalas"
+    },
+    {
+      "function": "cb_dr_actualizar",
+      "db_call": "actualizar_disponible_rotopala"
+    },
+    {
+      "function": "cb_dr_insertar",
+      "db_call": "insertar_disponible_rotopala"
+    }
+  ]
+}

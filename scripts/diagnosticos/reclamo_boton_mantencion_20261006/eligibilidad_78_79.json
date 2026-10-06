@@ -1,0 +1,9 @@
+{
+  "status": "NO DETERMINADO EN ESTA AUDITORÍA",
+  "modules": [
+    {"pad_id": 2, "campana_id": 10, "modulo_id": 78, "modulo_numero": 14, "reason": "Los datos detallados aportados por el usuario sugieren actividad y base válida; falta reevaluar filtros live y estado de congelación."},
+    {"pad_id": 2, "campana_id": 10, "modulo_id": 79, "modulo_numero": 15, "reason": "Los datos detallados aportados por el usuario sugieren actividad y base válida; falta reevaluar filtros live y estado de congelación."}
+  ],
+  "required_live_fields": ["con_actividad", "con_topografia", "con_camiones", "ultima_actividad", "ultima_topografia", "TMS", "m3_totales", "densidad", "ya_congelado", "entra_en_alcance", "motivo_si_no_entra"],
+  "why_missing": "No se estableció conexión DEV en modo read-only; no inferir elegibilidad completa de la descripción funcional."
+}

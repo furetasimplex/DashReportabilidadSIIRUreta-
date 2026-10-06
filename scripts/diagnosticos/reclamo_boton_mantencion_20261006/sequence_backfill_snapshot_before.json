@@ -1,0 +1,112 @@
+{
+  "captured_utc": "2026-10-06T14:27:21.836020+00:00",
+  "database_identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "login_name": "sa"
+  },
+  "scope": {
+    "pad_id": 2,
+    "campana_id": 10,
+    "module_ids": [
+      76,
+      77,
+      78,
+      79,
+      80
+    ]
+  },
+  "rows": [
+    {
+      "campana_id": 10,
+      "secuencia_id": 1199,
+      "rotopala_id": 2,
+      "pad_id": 2,
+      "modulo_id": 76,
+      "modulo_numero": 12,
+      "orden_secuencia": 12,
+      "estado": "CERRADO",
+      "fecha_apertura": "2026-09-23",
+      "fecha_cierre": "2026-09-23",
+      "primera_topografia": "2026-09-14",
+      "ultima_topografia": "2026-09-25",
+      "primera_topografia_siguiente": "2026-09-17",
+      "fecha_apertura_propuesta": "2026-09-14",
+      "fecha_cierre_propuesta": "2026-09-17",
+      "regla_aplicada": "APERTURA=primera topo vigente propia; CIERRE=primera topo vigente siguiente"
+    },
+    {
+      "campana_id": 10,
+      "secuencia_id": 1200,
+      "rotopala_id": 2,
+      "pad_id": 2,
+      "modulo_id": 77,
+      "modulo_numero": 13,
+      "orden_secuencia": 13,
+      "estado": "CERRADO",
+      "fecha_apertura": "2026-09-23",
+      "fecha_cierre": "2026-10-06",
+      "primera_topografia": "2026-09-17",
+      "ultima_topografia": "2026-09-28",
+      "primera_topografia_siguiente": "2026-09-26",
+      "fecha_apertura_propuesta": "2026-09-17",
+      "fecha_cierre_propuesta": "2026-09-26",
+      "regla_aplicada": "APERTURA=primera topo vigente propia; CIERRE=primera topo vigente siguiente"
+    },
+    {
+      "campana_id": 10,
+      "secuencia_id": 1259,
+      "rotopala_id": 2,
+      "pad_id": 2,
+      "modulo_id": 78,
+      "modulo_numero": 14,
+      "orden_secuencia": 14,
+      "estado": "CERRADO",
+      "fecha_apertura": "2026-10-06",
+      "fecha_cierre": "2026-10-06",
+      "primera_topografia": "2026-09-26",
+      "ultima_topografia": "2026-10-03",
+      "primera_topografia_siguiente": "2026-09-29",
+      "fecha_apertura_propuesta": "2026-09-26",
+      "fecha_cierre_propuesta": "2026-09-29",
+      "regla_aplicada": "APERTURA=primera topo vigente propia; CIERRE=primera topo vigente siguiente"
+    },
+    {
+      "campana_id": 10,
+      "secuencia_id": 1260,
+      "rotopala_id": 2,
+      "pad_id": 2,
+      "modulo_id": 79,
+      "modulo_numero": 15,
+      "orden_secuencia": 15,
+      "estado": "ABIERTO",
+      "fecha_apertura": "2026-10-06",
+      "fecha_cierre": null,
+      "primera_topografia": "2026-09-29",
+      "ultima_topografia": "2026-10-03",
+      "primera_topografia_siguiente": null,
+      "fecha_apertura_propuesta": "2026-09-29",
+      "fecha_cierre_propuesta": null,
+      "regla_aplicada": "APERTURA=primera topo vigente propia; CIERRE sin evidencia siguiente: conservar actual"
+    },
+    {
+      "campana_id": 10,
+      "secuencia_id": 1261,
+      "rotopala_id": 2,
+      "pad_id": 2,
+      "modulo_id": 80,
+      "modulo_numero": 16,
+      "orden_secuencia": 16,
+      "estado": "PENDIENTE",
+      "fecha_apertura": null,
+      "fecha_cierre": null,
+      "primera_topografia": null,
+      "ultima_topografia": null,
+      "primera_topografia_siguiente": null,
+      "fecha_apertura_propuesta": null,
+      "fecha_cierre_propuesta": null,
+      "regla_aplicada": "SIN_TOPOGRAFIA: conservar fecha actual; no inferir"
+    }
+  ],
+  "read_only": true
+}
