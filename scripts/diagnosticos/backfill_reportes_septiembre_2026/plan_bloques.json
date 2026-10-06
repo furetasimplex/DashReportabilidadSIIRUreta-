@@ -1,0 +1,62 @@
+{
+  "periodo": [
+    "2026-09-01",
+    "2026-09-30"
+  ],
+  "representatividad": [
+    {
+      "desde": "2026-09-01",
+      "hasta": "2026-09-07"
+    },
+    {
+      "desde": "2026-09-08",
+      "hasta": "2026-09-14"
+    },
+    {
+      "desde": "2026-09-15",
+      "hasta": "2026-09-21"
+    },
+    {
+      "desde": "2026-09-22",
+      "hasta": "2026-09-28"
+    },
+    {
+      "desde": "2026-09-29",
+      "hasta": "2026-09-30"
+    }
+  ],
+  "analisis_tm": [
+    {
+      "desde": "2026-09-01",
+      "hasta": "2026-09-07"
+    },
+    {
+      "desde": "2026-09-08",
+      "hasta": "2026-09-14"
+    },
+    {
+      "desde": "2026-09-15",
+      "hasta": "2026-09-21"
+    },
+    {
+      "desde": "2026-09-22",
+      "hasta": "2026-09-28"
+    },
+    {
+      "desde": "2026-09-29",
+      "hasta": "2026-09-30"
+    }
+  ],
+  "datos_conciliados": [
+    {
+      "desde": "2026-09-01",
+      "hasta": "2026-09-15"
+    },
+    {
+      "desde": "2026-09-16",
+      "hasta": "2026-09-30"
+    }
+  ],
+  "ejecuciones_planeadas": 12,
+  "criterio": "Ventanas runtime de recálculo 7/7/15; no son máximos generales de rango."
+}

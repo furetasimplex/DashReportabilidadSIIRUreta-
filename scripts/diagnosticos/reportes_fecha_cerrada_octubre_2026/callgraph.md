@@ -1,0 +1,5 @@
+# Cadena exacta
+
+Botón Editar comentarios, tipo `representatividad_torres` → `report_export/callbacks/reportabilidad_cb.py:7342 generar_reporte` → `_periodo_store_desde_fechas` (:803) → `_cargar_detalle_representatividad_periodo` (:817) → `report_export/report_export.py:3294 preparar_paquete_editor_representatividad` → `_transaccion_representatividad` (lock mensual Session) → `refrescar_representatividad_para_exportacion` (:1561; inicio = primer día del mes de fin) → `_adquirir_lock_refresco_turno` → `fetch_fecha_corte_operacional_representatividad` (:1414) → SELECT guardado en consulta_fecha_cerrada.sql → resultado SQL NULL → helper retorna None → RuntimeError (:1600–1603) → except de generar_reporte (:7425) → dbc.Alert «Error al cargar editor de comentarios: ...».
+
+La condición falla ANTES de refrescar dependencias RTO y los tres SP de Torres. El flujo normal sí es escritor; se aislaron solo SELECT para no ejecutarlo. No se abrió el editor ni se exportó realmente durante esta auditoría.

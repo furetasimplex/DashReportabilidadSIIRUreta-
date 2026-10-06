@@ -1,0 +1,14 @@
+{
+  "options": [
+    [
+      {
+        "actual_state_desc": "OFF",
+        "desired_state_desc": "OFF",
+        "readonly_reason": 0
+      }
+    ]
+  ],
+  "matching_cache": [
+    []
+  ]
+}

@@ -1,0 +1,1706 @@
+[
+  {
+    "referencing_id": 7059161,
+    "referenced_id": 362536425,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "fn_fecha_corte"
+  },
+  {
+    "referencing_id": 7059161,
+    "referenced_id": 2138542752,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_ajustes_aplicables"
+  },
+  {
+    "referencing_id": 7059161,
+    "referenced_id": 2074542524,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_camiones_acumulado"
+  },
+  {
+    "referencing_id": 7059161,
+    "referenced_id": 2058542467,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_modulo_base"
+  },
+  {
+    "referencing_id": 7059161,
+    "referenced_id": 2035590390,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_preliminar_cv25_con_acumulado"
+  },
+  {
+    "referencing_id": 7059161,
+    "referenced_id": 2090542581,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_topografia_resuelta"
+  },
+  {
+    "referencing_id": 71059389,
+    "referenced_id": 7059161,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_reclamo_diario"
+  },
+  {
+    "referencing_id": 128771566,
+    "referenced_id": 80771395,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "representatividad_torres_resultado"
+  },
+  {
+    "referencing_id": 128771566,
+    "referenced_id": 1428252193,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_representatividad_diaria_calculada"
+  },
+  {
+    "referencing_id": 148963657,
+    "referenced_id": 416772592,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_datos_apilado_tmh_v2"
+  },
+  {
+    "referencing_id": 154535684,
+    "referenced_id": 1632776924,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_tms_con_sal_srr_reporte_test"
+  },
+  {
+    "referencing_id": 154535684,
+    "referenced_id": 704773618,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_sal_ajustada"
+  },
+  {
+    "referencing_id": 183671702,
+    "referenced_id": 903674267,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_bitacora_rangos"
+  },
+  {
+    "referencing_id": 183671702,
+    "referenced_id": 423672557,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_he_10s_por_intervalo_excel"
+  },
+  {
+    "referencing_id": 183671702,
+    "referenced_id": 1963154039,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_informe_tm_lab_norm"
+  },
+  {
+    "referencing_id": 183671702,
+    "referenced_id": 407672500,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_ton_por_intervalo_excel"
+  },
+  {
+    "referencing_id": 222727946,
+    "referenced_id": 206727889,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "fn_resolver_vueltas_camiones_test"
+  },
+  {
+    "referencing_id": 222727946,
+    "referenced_id": 2002106173,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam"
+  },
+  {
+    "referencing_id": 222727946,
+    "referenced_id": 999062695,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi"
+  },
+  {
+    "referencing_id": 257488046,
+    "referenced_id": 148963657,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_estado_apilado_turno_representatividad"
+  },
+  {
+    "referencing_id": 257488046,
+    "referenced_id": 1828253618,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_peso_real_torre_turno_excel"
+  },
+  {
+    "referencing_id": 257488046,
+    "referenced_id": 1796253504,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_peso_teorico_turno_torre_excel"
+  },
+  {
+    "referencing_id": 257488046,
+    "referenced_id": 183671702,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_diario_emulado_excel"
+  },
+  {
+    "referencing_id": 275584120,
+    "referenced_id": 1088774986,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_base_mina_stock_srr"
+  },
+  {
+    "referencing_id": 275584120,
+    "referenced_id": 1648776981,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_tms_sin_sal_con_srr_reporte_test"
+  },
+  {
+    "referencing_id": 275584120,
+    "referenced_id": 368772421,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_conciliacion_chancado_v2"
+  },
+  {
+    "referencing_id": 275584120,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": "DEV_SIIR",
+    "referenced_schema_name": "hidro",
+    "referenced_entity_name": "v_imp_chancado_normalizado"
+  },
+  {
+    "referencing_id": 285296126,
+    "referenced_id": 1776777437,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_leyes_resueltas_data_tm_reporte_test"
+  },
+  {
+    "referencing_id": 300632214,
+    "referenced_id": 316632271,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "contingencia_pi_accion_test"
+  },
+  {
+    "referencing_id": 300632214,
+    "referenced_id": 444632727,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_pi_estado_turno_test"
+  },
+  {
+    "referencing_id": 300632214,
+    "referenced_id": 1008110732,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_totalizador_resuelto_turno"
+  },
+  {
+    "referencing_id": 320108281,
+    "referenced_id": 1024110789,
+    "referenced_server_name": null,
+    "referenced_database_name": "inventar_SpcHidr",
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "informe_tum_totalizadores_turno"
+  },
+  {
+    "referencing_id": 359060415,
+    "referenced_id": 891918299,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_diario_humedad_test"
+  },
+  {
+    "referencing_id": 362536425,
+    "referenced_id": 282536140,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "configuracion"
+  },
+  {
+    "referencing_id": 368772421,
+    "referenced_id": 1106102981,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "resumen_mina"
+  },
+  {
+    "referencing_id": 368772421,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": "DEV_SIIR",
+    "referenced_schema_name": "hidro",
+    "referenced_entity_name": "v_imp_conciliacion_chancado"
+  },
+  {
+    "referencing_id": 375060472,
+    "referenced_id": 695061612,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_inventario_chancado_archive_test"
+  },
+  {
+    "referencing_id": 384772478,
+    "referenced_id": 1605580758,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Clays_CuFe"
+  },
+  {
+    "referencing_id": 384772478,
+    "referenced_id": 1355151873,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Informe_TM_lab"
+  },
+  {
+    "referencing_id": 384772478,
+    "referenced_id": 80771395,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "representatividad_torres_resultado"
+  },
+  {
+    "referencing_id": 384772478,
+    "referenced_id": 368772421,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_conciliacion_chancado_v2"
+  },
+  {
+    "referencing_id": 400772535,
+    "referenced_id": 1605580758,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Clays_CuFe"
+  },
+  {
+    "referencing_id": 400772535,
+    "referenced_id": 1355151873,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Informe_TM_lab"
+  },
+  {
+    "referencing_id": 400772535,
+    "referenced_id": 80771395,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "representatividad_torres_resultado"
+  },
+  {
+    "referencing_id": 400772535,
+    "referenced_id": 368772421,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_conciliacion_chancado_v2"
+  },
+  {
+    "referencing_id": 407060586,
+    "referenced_id": 1042206863,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "factor_camiones_parametro_vigencia_test"
+  },
+  {
+    "referencing_id": 407060586,
+    "referenced_id": 1684969129,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Historico_Apilado_Diario"
+  },
+  {
+    "referencing_id": 407060586,
+    "referenced_id": 359060415,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_humedad_inventario_test"
+  },
+  {
+    "referencing_id": 407060586,
+    "referenced_id": 375060472,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_inventario_chancado_test"
+  },
+  {
+    "referencing_id": 407060586,
+    "referenced_id": 275584120,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_srr_tms_origen_turno_emision_test"
+  },
+  {
+    "referencing_id": 407060586,
+    "referenced_id": 222727946,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_vueltas_camiones_diarias_test"
+  },
+  {
+    "referencing_id": 407672500,
+    "referenced_id": 945490497,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Resumen_Intervalo_TotTM"
+  },
+  {
+    "referencing_id": 416772592,
+    "referenced_id": 1127063151,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Control_Apilado_TMH_v2_test"
+  },
+  {
+    "referencing_id": 423672557,
+    "referenced_id": 945490497,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Resumen_Intervalo_TotTM"
+  },
+  {
+    "referencing_id": 444632727,
+    "referenced_id": 316632271,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "contingencia_pi_accion_test"
+  },
+  {
+    "referencing_id": 444632727,
+    "referenced_id": 1008110732,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_totalizador_resuelto_turno"
+  },
+  {
+    "referencing_id": 535061042,
+    "referenced_id": 423060643,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Control_Factor_Ajuste_Camiones_v2_test"
+  },
+  {
+    "referencing_id": 535061042,
+    "referenced_id": 407060586,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "sp_factor_ajuste_camiones_test"
+  },
+  {
+    "referencing_id": 535061042,
+    "referenced_id": 275584120,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_srr_tms_origen_turno_emision_test"
+  },
+  {
+    "referencing_id": 551061099,
+    "referenced_id": 423060643,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Control_Factor_Ajuste_Camiones_v2_test"
+  },
+  {
+    "referencing_id": 551061099,
+    "referenced_id": 1458208345,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "factor_camiones_override_aplicacion_test"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 1605580758,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Clays_CuFe"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 1568776696,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "humedad_inicial_tm_periodo"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 1355151873,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Informe_TM_lab"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": null,
+    "referenced_entity_name": "l"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 1424776183,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "plan_mensual_reporte_turno"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 1472776354,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "plan_semanal_reporte_turno"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 80771395,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "representatividad_torres_resultado"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": null,
+    "referenced_entity_name": "t"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": null,
+    "referenced_entity_name": "tm1"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": null,
+    "referenced_entity_name": "tr"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 755585830,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "trazabilidad_analitos_tm_emision_test"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 551061099,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_ajuste_camiones_emision_test"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 1088774986,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_base_mina_stock_srr"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 919062410,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_clays_cufe_calculado_v2_test"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 368772421,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_conciliacion_chancado_v2"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 416772592,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_datos_apilado_tmh_v2"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": "DEV_SIIR",
+    "referenced_schema_name": "hidro",
+    "referenced_entity_name": "v_imp_chancado_normalizado"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 1776777437,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_leyes_resueltas_data_tm_reporte_test"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 1968778121,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_turno_campania_modulo_test"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 603917273,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_turno_fuentes_info_test"
+  },
+  {
+    "referencing_id": 599061270,
+    "referenced_id": 704773618,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_sal_ajustada"
+  },
+  {
+    "referencing_id": 603917273,
+    "referenced_id": 1776777437,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_leyes_resueltas_data_tm_reporte_test"
+  },
+  {
+    "referencing_id": 615061327,
+    "referenced_id": 567061156,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "reporte_turno_cache_emision_test"
+  },
+  {
+    "referencing_id": 615061327,
+    "referenced_id": 599061270,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "sp_reporte_turno_emision_test"
+  },
+  {
+    "referencing_id": 631061384,
+    "referenced_id": 1424776183,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "plan_mensual_reporte_turno"
+  },
+  {
+    "referencing_id": 631061384,
+    "referenced_id": 1472776354,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "plan_semanal_reporte_turno"
+  },
+  {
+    "referencing_id": 631061384,
+    "referenced_id": 567061156,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "reporte_turno_cache_emision_test"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 2021582240,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "campaña"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 1409492150,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "configuracion_reclamo_rotopala_periodo"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 465488787,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "control_reclamo_sulfuro_camiones_thm_diario"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 1701581100,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 631061384,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "fn_generador_reporte_diario_emision_test"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 1684969129,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Historico_Apilado_Diario"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": "DEV_SIIR",
+    "referenced_schema_name": "hidro",
+    "referenced_entity_name": "imp_csv"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 2002106173,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 567061156,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "reporte_turno_cache_emision_test"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 535061042,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "sp_mantiene_factor_ajuste_camiones_v2_test"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 551061099,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_ajuste_camiones_emision_test"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 1099919040,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_planes_mensuales_diarios_test"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 1019918755,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_produccion_catodica_diaria_test"
+  },
+  {
+    "referencing_id": 679061555,
+    "referenced_id": 71059389,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_reclamo_para_conciliados"
+  },
+  {
+    "referencing_id": 695061612,
+    "referenced_id": 2133582639,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "datos_filtrados"
+  },
+  {
+    "referencing_id": 695061612,
+    "referenced_id": 711061669,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "semilla_inventario_chancado"
+  },
+  {
+    "referencing_id": 695061612,
+    "referenced_id": 359060415,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_humedad_inventario_test"
+  },
+  {
+    "referencing_id": 704773618,
+    "referenced_id": 2133582639,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "datos_filtrados"
+  },
+  {
+    "referencing_id": 704773618,
+    "referenced_id": 576773162,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "topografia_sal"
+  },
+  {
+    "referencing_id": 891918299,
+    "referenced_id": 1568776696,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "humedad_inicial_tm_periodo"
+  },
+  {
+    "referencing_id": 891918299,
+    "referenced_id": 1355151873,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Informe_TM_lab"
+  },
+  {
+    "referencing_id": 891918299,
+    "referenced_id": 80771395,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "representatividad_torres_resultado"
+  },
+  {
+    "referencing_id": 891918299,
+    "referenced_id": 1632776924,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_tms_con_sal_srr_reporte_test"
+  },
+  {
+    "referencing_id": 903674267,
+    "referenced_id": 791673868,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "bitacora_turnos_consolidada"
+  },
+  {
+    "referencing_id": 912110390,
+    "referenced_id": 2133582639,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "datos_filtrados"
+  },
+  {
+    "referencing_id": 912110390,
+    "referenced_id": 199671759,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "tot_TM"
+  },
+  {
+    "referencing_id": 919062410,
+    "referenced_id": 1355151873,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Informe_TM_lab"
+  },
+  {
+    "referencing_id": 919062410,
+    "referenced_id": 1403152044,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "NIR"
+  },
+  {
+    "referencing_id": 919062410,
+    "referenced_id": 80771395,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "representatividad_torres_resultado"
+  },
+  {
+    "referencing_id": 919062410,
+    "referenced_id": 368772421,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_conciliacion_chancado_v2"
+  },
+  {
+    "referencing_id": 919674324,
+    "referenced_id": 903674267,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_bitacora_rangos"
+  },
+  {
+    "referencing_id": 923918413,
+    "referenced_id": 1648776981,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_tms_sin_sal_con_srr_reporte_test"
+  },
+  {
+    "referencing_id": 923918413,
+    "referenced_id": 891918299,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_diario_humedad_test"
+  },
+  {
+    "referencing_id": 928110447,
+    "referenced_id": 912110390,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_pi_serie"
+  },
+  {
+    "referencing_id": 944110504,
+    "referenced_id": 368772421,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_conciliacion_chancado_v2"
+  },
+  {
+    "referencing_id": 967062581,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": null,
+    "referenced_entity_name": "c"
+  },
+  {
+    "referencing_id": 967062581,
+    "referenced_id": 1605580758,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Clays_CuFe"
+  },
+  {
+    "referencing_id": 967062581,
+    "referenced_id": 935062467,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Clays_CuFe_trazabilidad"
+  },
+  {
+    "referencing_id": 967062581,
+    "referenced_id": 919062410,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_clays_cufe_calculado_v2_test"
+  },
+  {
+    "referencing_id": 976110618,
+    "referenced_id": 912110390,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_pi_serie"
+  },
+  {
+    "referencing_id": 976110618,
+    "referenced_id": 928110447,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_pi_totalizador_turno"
+  },
+  {
+    "referencing_id": 992110675,
+    "referenced_id": 944110504,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_apoyo_operacional_turno"
+  },
+  {
+    "referencing_id": 992110675,
+    "referenced_id": 976110618,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_pi_frontera_turno"
+  },
+  {
+    "referencing_id": 992110675,
+    "referenced_id": 928110447,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_pi_totalizador_turno"
+  },
+  {
+    "referencing_id": 992110675,
+    "referenced_id": 320108281,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_totalizador_turno"
+  },
+  {
+    "referencing_id": 993490668,
+    "referenced_id": 945490497,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Resumen_Intervalo_TotTM"
+  },
+  {
+    "referencing_id": 993490668,
+    "referenced_id": 199671759,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "tot_TM"
+  },
+  {
+    "referencing_id": 993490668,
+    "referenced_id": 919674324,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_bitacora_rangos_norm"
+  },
+  {
+    "referencing_id": 1008110732,
+    "referenced_id": 976110618,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_pi_frontera_turno"
+  },
+  {
+    "referencing_id": 1008110732,
+    "referenced_id": 992110675,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_totalizador_diagnostico_turno"
+  },
+  {
+    "referencing_id": 1019918755,
+    "referenced_id": 1888061812,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "produccion_catodica"
+  },
+  {
+    "referencing_id": 1040774815,
+    "referenced_id": 384772478,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_validacion_leyes_tm1_v2"
+  },
+  {
+    "referencing_id": 1040774815,
+    "referenced_id": 400772535,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_validacion_leyes_tm2_v2"
+  },
+  {
+    "referencing_id": 1088774986,
+    "referenced_id": 2002106173,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam"
+  },
+  {
+    "referencing_id": 1092967020,
+    "referenced_id": 1028966792,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "BD_Ton"
+  },
+  {
+    "referencing_id": 1092967020,
+    "referenced_id": null,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": null,
+    "referenced_entity_name": "destino"
+  },
+  {
+    "referencing_id": 1092967020,
+    "referenced_id": 1416444170,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_bd_ton_oficial"
+  },
+  {
+    "referencing_id": 1092967020,
+    "referenced_id": 1968114152,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_bd_ton_t12_contingencia_test"
+  },
+  {
+    "referencing_id": 1092967020,
+    "referenced_id": 416772592,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_datos_apilado_tmh_v2"
+  },
+  {
+    "referencing_id": 1092967020,
+    "referenced_id": 148963657,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_estado_apilado_turno_representatividad"
+  },
+  {
+    "referencing_id": 1099919040,
+    "referenced_id": 939150391,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "planes_mensuales"
+  },
+  {
+    "referencing_id": 1106102981,
+    "referenced_id": 2002106173,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": null,
+    "referenced_entity_name": "mov_cam"
+  },
+  {
+    "referencing_id": 1175063322,
+    "referenced_id": 1127063151,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Control_Apilado_TMH_v2_test"
+  },
+  {
+    "referencing_id": 1175063322,
+    "referenced_id": 199671759,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "tot_TM"
+  },
+  {
+    "referencing_id": 1175063322,
+    "referenced_id": 300632214,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_totalizador_resuelto_operacional_test"
+  },
+  {
+    "referencing_id": 1416444170,
+    "referenced_id": 80771395,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "representatividad_torres_resultado"
+  },
+  {
+    "referencing_id": 1416444170,
+    "referenced_id": 183671702,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_diario_emulado_excel"
+  },
+  {
+    "referencing_id": 1428252193,
+    "referenced_id": 1828253618,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_peso_real_torre_turno_excel"
+  },
+  {
+    "referencing_id": 1428252193,
+    "referenced_id": 1952114095,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_peso_teorico_turno_torre_representatividad_resuelto"
+  },
+  {
+    "referencing_id": 1428252193,
+    "referenced_id": 183671702,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_diario_emulado_excel"
+  },
+  {
+    "referencing_id": 1428252193,
+    "referenced_id": 257488046,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_representatividad_srr_turno_calculada"
+  },
+  {
+    "referencing_id": 1632776924,
+    "referenced_id": 640773390,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "factor_ajuste_camiones"
+  },
+  {
+    "referencing_id": 1632776924,
+    "referenced_id": 1568776696,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "humedad_inicial_tm_periodo"
+  },
+  {
+    "referencing_id": 1632776924,
+    "referenced_id": 1355151873,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Informe_TM_lab"
+  },
+  {
+    "referencing_id": 1632776924,
+    "referenced_id": 80771395,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "representatividad_torres_resultado"
+  },
+  {
+    "referencing_id": 1632776924,
+    "referenced_id": 416772592,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_datos_apilado_tmh_v2"
+  },
+  {
+    "referencing_id": 1648776981,
+    "referenced_id": 1632776924,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_tms_con_sal_srr_reporte_test"
+  },
+  {
+    "referencing_id": 1648776981,
+    "referenced_id": 154535684,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_sal_ajustada_operacional_test"
+  },
+  {
+    "referencing_id": 1732969300,
+    "referenced_id": 1684969129,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Historico_Apilado_Diario"
+  },
+  {
+    "referencing_id": 1732969300,
+    "referenced_id": 923918413,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_diario_apilado_test"
+  },
+  {
+    "referencing_id": 1776777437,
+    "referenced_id": 1728777266,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "analitos_semilla_reporte_turno"
+  },
+  {
+    "referencing_id": 1776777437,
+    "referenced_id": 1040774815,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_leyes_validadas_tm_turno"
+  },
+  {
+    "referencing_id": 1792777494,
+    "referenced_id": 1648776981,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_apilado_tms_sin_sal_con_srr_reporte_test"
+  },
+  {
+    "referencing_id": 1792777494,
+    "referenced_id": 285296126,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_leyes_resueltas_data_tm_reporte_test_v2"
+  },
+  {
+    "referencing_id": 1796253504,
+    "referenced_id": 1348251908,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "param_peso_teorico_base"
+  },
+  {
+    "referencing_id": 1796253504,
+    "referenced_id": 183671702,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_diario_emulado_excel"
+  },
+  {
+    "referencing_id": 1828253618,
+    "referenced_id": 1460252307,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "peso_real_torre_turno"
+  },
+  {
+    "referencing_id": 1952114095,
+    "referenced_id": 1008110732,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_totalizador_resuelto_turno"
+  },
+  {
+    "referencing_id": 1952114095,
+    "referenced_id": 1796253504,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_peso_teorico_turno_torre_excel"
+  },
+  {
+    "referencing_id": 1963154039,
+    "referenced_id": 1355151873,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "informe_tm_lab"
+  },
+  {
+    "referencing_id": 1968114152,
+    "referenced_id": 300632214,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_totalizador_resuelto_operacional_test"
+  },
+  {
+    "referencing_id": 1968114152,
+    "referenced_id": 1008110732,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_contingencia_totalizador_resuelto_turno"
+  },
+  {
+    "referencing_id": 1968114152,
+    "referenced_id": 416772592,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_datos_apilado_tmh_v2"
+  },
+  {
+    "referencing_id": 1968114152,
+    "referenced_id": 183671702,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_diario_emulado_excel"
+  },
+  {
+    "referencing_id": 1968778121,
+    "referenced_id": 1586104691,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "control_apilado_diario"
+  },
+  {
+    "referencing_id": 1968778121,
+    "referenced_id": 1792777494,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "v_reporte_turno_reales_test"
+  },
+  {
+    "referencing_id": 2035590390,
+    "referenced_id": 2058542467,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_modulo_base"
+  },
+  {
+    "referencing_id": 2035590390,
+    "referenced_id": 2122542695,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_preliminar_cv25"
+  },
+  {
+    "referencing_id": 2035590390,
+    "referenced_id": 2090542581,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_topografia_resuelta"
+  },
+  {
+    "referencing_id": 2058542467,
+    "referenced_id": 146099561,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "modulo"
+  },
+  {
+    "referencing_id": 2058542467,
+    "referenced_id": 474536824,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "modulo_congelado"
+  },
+  {
+    "referencing_id": 2058542467,
+    "referenced_id": 698537622,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "secuencia_rotopala"
+  },
+  {
+    "referencing_id": 2058542467,
+    "referenced_id": 378536482,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "topologia_pad"
+  },
+  {
+    "referencing_id": 2074542524,
+    "referenced_id": 1066538933,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "camiones_reclamo"
+  },
+  {
+    "referencing_id": 2090542581,
+    "referenced_id": 474536824,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "modulo_congelado"
+  },
+  {
+    "referencing_id": 2090542581,
+    "referenced_id": 858538192,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "topografia_avance"
+  },
+  {
+    "referencing_id": 2106542638,
+    "referenced_id": 1226539503,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "cv25_diario"
+  },
+  {
+    "referencing_id": 2106542638,
+    "referenced_id": 1402540130,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "rotopala_horas_turno"
+  },
+  {
+    "referencing_id": 2122542695,
+    "referenced_id": 858538192,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "topografia_avance"
+  },
+  {
+    "referencing_id": 2122542695,
+    "referenced_id": 2106542638,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_cv25_diario"
+  },
+  {
+    "referencing_id": 2122542695,
+    "referenced_id": 2058542467,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_modulo_base"
+  },
+  {
+    "referencing_id": 2138542752,
+    "referenced_id": 1578540757,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "ajuste_manual"
+  },
+  {
+    "referencing_id": 199671759,
+    "referenced_id": 199671759,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "tot_TM"
+  },
+  {
+    "referencing_id": 199671759,
+    "referenced_id": 199671759,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "tot_TM"
+  },
+  {
+    "referencing_id": 378536482,
+    "referenced_id": 378536482,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "topologia_pad"
+  },
+  {
+    "referencing_id": 378536482,
+    "referenced_id": 378536482,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "topologia_pad"
+  },
+  {
+    "referencing_id": 791673868,
+    "referenced_id": 791673868,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "bitacora_turnos_consolidada"
+  },
+  {
+    "referencing_id": 1042206863,
+    "referenced_id": 1042206863,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "factor_camiones_parametro_vigencia_test"
+  },
+  {
+    "referencing_id": 1042206863,
+    "referenced_id": 1042206863,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "factor_camiones_parametro_vigencia_test"
+  },
+  {
+    "referencing_id": 1066538933,
+    "referenced_id": 1066538933,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "camiones_reclamo"
+  },
+  {
+    "referencing_id": 1066538933,
+    "referenced_id": 1066538933,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "camiones_reclamo"
+  },
+  {
+    "referencing_id": 1066538933,
+    "referenced_id": 1066538933,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "camiones_reclamo"
+  },
+  {
+    "referencing_id": 1066538933,
+    "referenced_id": 1066538933,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "camiones_reclamo"
+  },
+  {
+    "referencing_id": 1066538933,
+    "referenced_id": 1066538933,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "camiones_reclamo"
+  },
+  {
+    "referencing_id": 1066538933,
+    "referenced_id": 1066538933,
+    "referenced_server_name": null,
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "camiones_reclamo"
+  }
+]

@@ -1,0 +1,1044 @@
+[
+  {
+    "baseline_count": 1,
+    "candidate_count": 1,
+    "baseline_hash": "d6fe234e85c831d1edf24cb202200fbfd9776b260e63cff8830995cb3a65eb23",
+    "candidate_hash": "d6fe234e85c831d1edf24cb202200fbfd9776b260e63cff8830995cb3a65eb23",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_1_1d",
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 7,
+    "candidate_count": 7,
+    "baseline_hash": "a6ccbd1c98aaf62d35d00d1a7ef4660211f00e6d2517f848e34d8b1309eead60",
+    "candidate_hash": "a6ccbd1c98aaf62d35d00d1a7ef4660211f00e6d2517f848e34d8b1309eead60",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_1_7d",
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 31,
+    "candidate_count": 31,
+    "baseline_hash": "acef90739317d5fc6484059733be51d5c8ea35591518bdbdb3a9e4bfbe8c046b",
+    "candidate_hash": "acef90739317d5fc6484059733be51d5c8ea35591518bdbdb3a9e4bfbe8c046b",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_1_31d",
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 62,
+    "candidate_count": 62,
+    "baseline_hash": "ef770dec6f392755f6eb2f7c528fab7b715b8e5350a72e538696c59b36798337",
+    "candidate_hash": "ef770dec6f392755f6eb2f7c528fab7b715b8e5350a72e538696c59b36798337",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_1_62d",
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 102,
+    "candidate_count": 102,
+    "baseline_hash": "a41d32c49088a08e51c332ddcd7e44934f1791895c1d16d1e1c4b6c70c65ce86",
+    "candidate_hash": "a41d32c49088a08e51c332ddcd7e44934f1791895c1d16d1e1c4b6c70c65ce86",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_1_102d",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 1,
+    "candidate_count": 1,
+    "baseline_hash": "272a1c5c6d47edd502e8837b6a10e688b6cb4b4d557bde8459a267b8831a44e7",
+    "candidate_hash": "272a1c5c6d47edd502e8837b6a10e688b6cb4b4d557bde8459a267b8831a44e7",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_17_1d",
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 17
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 7,
+    "candidate_count": 7,
+    "baseline_hash": "36f106b1a800c2a6248e3a162f8cd478dc49379769f8a4fbc273f383d72fe8ab",
+    "candidate_hash": "36f106b1a800c2a6248e3a162f8cd478dc49379769f8a4fbc273f383d72fe8ab",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_17_7d",
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 17
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 31,
+    "candidate_count": 31,
+    "baseline_hash": "ff88e5c4055ffe218641e71f94242b31d4164389777de16eb088151dc4ce5727",
+    "candidate_hash": "ff88e5c4055ffe218641e71f94242b31d4164389777de16eb088151dc4ce5727",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_17_31d",
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 17
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 62,
+    "candidate_count": 62,
+    "baseline_hash": "d84c657ada8b4a6597fcc0057a0c27a0937ca7cf40448e42e15f0cb98ee6a22d",
+    "candidate_hash": "d84c657ada8b4a6597fcc0057a0c27a0937ca7cf40448e42e15f0cb98ee6a22d",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_17_62d",
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 17
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      4,
+      11
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 102,
+    "candidate_count": 102,
+    "baseline_hash": "783f50e7cd6485be4b1d57b070dcae7dab3a53a3b6620876777eabcabae7ea1f",
+    "candidate_hash": "783f50e7cd6485be4b1d57b070dcae7dab3a53a3b6620876777eabcabae7ea1f",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_17_102d",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 17
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      4,
+      11
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 1,
+    "candidate_count": 1,
+    "baseline_hash": "51b2ebb1ac71719707d49fdbc44dee4946b4d1ef7bf75d319444649630b07541",
+    "candidate_hash": "51b2ebb1ac71719707d49fdbc44dee4946b4d1ef7bf75d319444649630b07541",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_29_1d",
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 29
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      4
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 7,
+    "candidate_count": 7,
+    "baseline_hash": "e72a875d2c8f026c9dd78bf126d3acc3caafd4092617b2a4d6eefadb3d71be8e",
+    "candidate_hash": "e72a875d2c8f026c9dd78bf126d3acc3caafd4092617b2a4d6eefadb3d71be8e",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_29_7d",
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 29
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      4
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 31,
+    "candidate_count": 31,
+    "baseline_hash": "4e2583760d75c8e12764428e4b6949e5cfaca1f62983a586e4f6b853643b37b7",
+    "candidate_hash": "4e2583760d75c8e12764428e4b6949e5cfaca1f62983a586e4f6b853643b37b7",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_29_31d",
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 29
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      4
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 62,
+    "candidate_count": 62,
+    "baseline_hash": "1937697bfa25ddc18ba6e9d99b0905f40bac8c36d678f435952e11944530498f",
+    "candidate_hash": "1937697bfa25ddc18ba6e9d99b0905f40bac8c36d678f435952e11944530498f",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_29_62d",
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 29
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      4
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 102,
+    "candidate_count": 102,
+    "baseline_hash": "ff7e44a332ee43abc71dbe94414dcc6914a4583ddb5137cef5b0f986419ea807",
+    "candidate_hash": "ff7e44a332ee43abc71dbe94414dcc6914a4583ddb5137cef5b0f986419ea807",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_29_102d",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 29
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      4
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 1,
+    "candidate_count": 1,
+    "baseline_hash": "d929c363bba33dab09aa1df4adde62e2cd300a52664d332f1170e6398923f481",
+    "candidate_hash": "d929c363bba33dab09aa1df4adde62e2cd300a52664d332f1170e6398923f481",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_1_1d",
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 33
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 7,
+    "candidate_count": 7,
+    "baseline_hash": "78b3f6db765723dea9cfd49f90db6d937d27e4b464da1f7a24652ff2395b1b25",
+    "candidate_hash": "78b3f6db765723dea9cfd49f90db6d937d27e4b464da1f7a24652ff2395b1b25",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_1_7d",
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 33
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 31,
+    "candidate_count": 31,
+    "baseline_hash": "f3d524ec8e1cb6e363ebb2086d8c10dd38737fe93651500249b3b25744ff3a4f",
+    "candidate_hash": "f3d524ec8e1cb6e363ebb2086d8c10dd38737fe93651500249b3b25744ff3a4f",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_1_31d",
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 33
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 62,
+    "candidate_count": 62,
+    "baseline_hash": "70b0768ff960577cf9f6f6973422e10499ebb8782e96942018b6b4ff5cbccd8f",
+    "candidate_hash": "70b0768ff960577cf9f6f6973422e10499ebb8782e96942018b6b4ff5cbccd8f",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_1_62d",
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 33
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 102,
+    "candidate_count": 102,
+    "baseline_hash": "f810dd9170bf9f23e0e31474f3b6307b8cd0e2d1db14a2d1b07d172df400e1c6",
+    "candidate_hash": "f810dd9170bf9f23e0e31474f3b6307b8cd0e2d1db14a2d1b07d172df400e1c6",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_1_102d",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 33
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "MIXTO",
+    "expected_state": "MIXTO"
+  },
+  {
+    "baseline_count": 1,
+    "candidate_count": 1,
+    "baseline_hash": "f41d054ac2611805fd7bb89e3cc5d4fa878e984f5bd84e419bf36d0a3a0ff2f5",
+    "candidate_hash": "f41d054ac2611805fd7bb89e3cc5d4fa878e984f5bd84e419bf36d0a3a0ff2f5",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_7_1d",
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 7,
+    "candidate_count": 7,
+    "baseline_hash": "a2e6c1e639748fb21ae695e955eff2b7835039e29971c050133b475d4259528e",
+    "candidate_hash": "a2e6c1e639748fb21ae695e955eff2b7835039e29971c050133b475d4259528e",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_7_7d",
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 31,
+    "candidate_count": 31,
+    "baseline_hash": "f107f2edacabc655792ae4646a2f8c21725759e7325516527c677d8b5e45e3ef",
+    "candidate_hash": "f107f2edacabc655792ae4646a2f8c21725759e7325516527c677d8b5e45e3ef",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_7_31d",
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 62,
+    "candidate_count": 62,
+    "baseline_hash": "2fbef3804c120a7434dcd9eabfb59e92fb1ebab683cb81dd18e5ec6dc3fe6e92",
+    "candidate_hash": "2fbef3804c120a7434dcd9eabfb59e92fb1ebab683cb81dd18e5ec6dc3fe6e92",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_7_62d",
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 102,
+    "candidate_count": 102,
+    "baseline_hash": "cac4e4bef8dadfe7b632ef59c2efa8c24f9204d7ad8cc576235e74c79c1ce41d",
+    "candidate_hash": "cac4e4bef8dadfe7b632ef59c2efa8c24f9204d7ad8cc576235e74c79c1ce41d",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_7_102d",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 1,
+    "candidate_count": 1,
+    "baseline_hash": "5d609867342f324e329e7a6e25146870150acbd4d0661484fa8c5a83d7e7ef52",
+    "candidate_hash": "5d609867342f324e329e7a6e25146870150acbd4d0661484fa8c5a83d7e7ef52",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_9_1d",
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 41
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 7,
+    "candidate_count": 7,
+    "baseline_hash": "858c8bd16ae792e897b866671f24e9c0df774590d6abadcc60a713f33c94f895",
+    "candidate_hash": "858c8bd16ae792e897b866671f24e9c0df774590d6abadcc60a713f33c94f895",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_9_7d",
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 41
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 31,
+    "candidate_count": 31,
+    "baseline_hash": "85ccbb4bfeecff4fd982c52cfc8980d8613807c551486bbe552ef00a089e9b6e",
+    "candidate_hash": "85ccbb4bfeecff4fd982c52cfc8980d8613807c551486bbe552ef00a089e9b6e",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_9_31d",
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 41
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 62,
+    "candidate_count": 62,
+    "baseline_hash": "e72168c2f504556d9563e72add648e91f85a7c6875dda7d19375f697ebc4f264",
+    "candidate_hash": "e72168c2f504556d9563e72add648e91f85a7c6875dda7d19375f697ebc4f264",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_9_62d",
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 41
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 102,
+    "candidate_count": 102,
+    "baseline_hash": "f55643ce45a4564f6df51400c2f4d499c837f66da944c4c9afbd612c573deba0",
+    "candidate_hash": "f55643ce45a4564f6df51400c2f4d499c837f66da944c4c9afbd612c573deba0",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_9_102d",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 41
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "REPOSO_PRE_RECLAMO",
+    "expected_state": "REPOSO_PRE_RECLAMO"
+  },
+  {
+    "baseline_count": 1,
+    "candidate_count": 1,
+    "baseline_hash": "07dfbcdf95b0a925ad058dbd163d48e827c17b64c5cc4c8c803f85a42762d96a",
+    "candidate_hash": "07dfbcdf95b0a925ad058dbd163d48e827c17b64c5cc4c8c803f85a42762d96a",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_28_1d",
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 60
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "APILADO",
+    "expected_state": "APILADO"
+  },
+  {
+    "baseline_count": 7,
+    "candidate_count": 7,
+    "baseline_hash": "ecb7e31625d2621804e0c4f76e2fb3fe23211f63ed6801a983c7e8b78f7a507b",
+    "candidate_hash": "ecb7e31625d2621804e0c4f76e2fb3fe23211f63ed6801a983c7e8b78f7a507b",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_28_7d",
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 60
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      8,
+      10
+    ],
+    "canonical_state": "APILADO",
+    "expected_state": "APILADO"
+  },
+  {
+    "baseline_count": 31,
+    "candidate_count": 31,
+    "baseline_hash": "420e5bc010d71a055a2f561344ba72351a7c31fca637c4ad49139f0c3d544d94",
+    "candidate_hash": "420e5bc010d71a055a2f561344ba72351a7c31fca637c4ad49139f0c3d544d94",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_28_31d",
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 60
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      8,
+      10
+    ],
+    "canonical_state": "APILADO",
+    "expected_state": "APILADO"
+  },
+  {
+    "baseline_count": 62,
+    "candidate_count": 62,
+    "baseline_hash": "f709cc00e0cda817f9ee902ed7a3f276b9844518dd1c058782df6541afb1c38f",
+    "candidate_hash": "f709cc00e0cda817f9ee902ed7a3f276b9844518dd1c058782df6541afb1c38f",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_28_62d",
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 60
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      8,
+      10
+    ],
+    "canonical_state": "APILADO",
+    "expected_state": "APILADO"
+  },
+  {
+    "baseline_count": 102,
+    "candidate_count": 102,
+    "baseline_hash": "140829a2281ab3f37de0ba034c1fb53e763507446d91eb25f04946f77ecbd3d9",
+    "candidate_hash": "140829a2281ab3f37de0ba034c1fb53e763507446d91eb25f04946f77ecbd3d9",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_28_102d",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 60
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      8,
+      10
+    ],
+    "canonical_state": "APILADO",
+    "expected_state": "APILADO"
+  },
+  {
+    "baseline_count": 253,
+    "candidate_count": 253,
+    "baseline_hash": "94e3220151d406a6a73cb203089af53d1edd4d91a248eb131d3bd8c52a54ac8f",
+    "candidate_hash": "94e3220151d406a6a73cb203089af53d1edd4d91a248eb131d3bd8c52a54ac8f",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p1_1_253d",
+    "params": {
+      "desde": "2026-01-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      11
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  },
+  {
+    "baseline_count": 253,
+    "candidate_count": 253,
+    "baseline_hash": "c9fce5a868fff9c30fa208c22d4e4ec49ce6d52d9c6932719de17d047e03243f",
+    "candidate_hash": "c9fce5a868fff9c30fa208c22d4e4ec49ce6d52d9c6932719de17d047e03243f",
+    "DIFERENCIAS_COLUMNAS": 0,
+    "duplicate_baseline_keys": 0,
+    "duplicate_candidate_keys": 0,
+    "columns_equal": true,
+    "differences": [],
+    "pass": true,
+    "SOLO_ANTERIOR": 0,
+    "SOLO_NUEVO": 0,
+    "case": "p2_7_253d",
+    "params": {
+      "desde": "2026-01-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "baseline_reversals": [],
+    "new_reversals": [],
+    "campaigns": [
+      10
+    ],
+    "canonical_state": "RIEGO_DRENAJE",
+    "expected_state": "RIEGO_DRENAJE"
+  }
+]

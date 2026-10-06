@@ -1,0 +1,135 @@
+{
+  "estado": "PASS",
+  "checks": {
+    "Datos_conciliados_of": {
+      "por_fecha": [
+        {
+          "fecha": "2026-09-01",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-02",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-03",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-04",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-05",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-06",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-07",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-08",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-09",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-10",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-11",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-12",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-13",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-14",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-15",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-16",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-17",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-18",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-19",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-20",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-21",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-22",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-23",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-24",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-25",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-26",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-27",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-28",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-29",
+          "filas": 1
+        },
+        {
+          "fecha": "2026-09-30",
+          "filas": 1
+        }
+      ],
+      "pass": true
+    },
+    "balance_con_validacion_runtime": {
+      "filas": 30,
+      "pass": true
+    }
+  },
+  "alcance": "Cobertura/grano y validadores runtime; UI/export se informa por separado."
+}

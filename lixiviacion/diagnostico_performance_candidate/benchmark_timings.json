@@ -1,0 +1,4690 @@
+[
+  {
+    "label": "candidate_generic_p1_1_1d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 1,
+    "client_seconds": 0.09233050001785159,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 15,
+        "logical_reads": 43,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 198,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 5,
+        "logical_reads": 6945,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 4,
+        "logical_reads": 1096,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 16,
+        "elapsed_ms": 15
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_1d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 1,
+    "client_seconds": 0.06292410008609295,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 15,
+        "logical_reads": 43,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 198,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 5,
+        "logical_reads": 6945,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 4,
+        "logical_reads": 1096,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 16,
+        "elapsed_ms": 19
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_1d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 1,
+    "client_seconds": 0.06216359999962151,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 15,
+        "logical_reads": 43,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 198,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 5,
+        "logical_reads": 6945,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 4,
+        "logical_reads": 1096,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 15,
+        "elapsed_ms": 15
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_1d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 1,
+    "client_seconds": 0.06668230006471276,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 15,
+        "logical_reads": 43,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 198,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 5,
+        "logical_reads": 6945,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 4,
+        "logical_reads": 1096,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 16,
+        "elapsed_ms": 18
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_1d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 1,
+    "client_seconds": 0.07325930008664727,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 15,
+        "logical_reads": 43,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 198,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 5,
+        "logical_reads": 6945,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 4,
+        "logical_reads": 1096,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 15,
+        "elapsed_ms": 18
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_1d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 1,
+    "client_seconds": 0.06825890019536018,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 15,
+        "logical_reads": 43,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 198,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 38,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 5,
+        "logical_reads": 6945,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 4,
+        "logical_reads": 1096,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 16,
+        "elapsed_ms": 17
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_7d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 7,
+    "client_seconds": 0.12478479999117553,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 81,
+        "logical_reads": 883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 990,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 29,
+        "logical_reads": 40281,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 22,
+        "logical_reads": 6028,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 63,
+        "elapsed_ms": 75
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_7d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 7,
+    "client_seconds": 0.11681420006789267,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 81,
+        "logical_reads": 883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 990,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 29,
+        "logical_reads": 40281,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 22,
+        "logical_reads": 6028,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 78,
+        "elapsed_ms": 74
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_7d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 7,
+    "client_seconds": 0.11468790005892515,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 81,
+        "logical_reads": 883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 990,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 29,
+        "logical_reads": 40281,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 22,
+        "logical_reads": 6028,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 78,
+        "elapsed_ms": 68
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_7d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 7,
+    "client_seconds": 0.1245363000780344,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 81,
+        "logical_reads": 883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 990,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 29,
+        "logical_reads": 40281,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 22,
+        "logical_reads": 6028,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 78,
+        "elapsed_ms": 81
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_7d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 7,
+    "client_seconds": 0.1136647998355329,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 81,
+        "logical_reads": 883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 990,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 29,
+        "logical_reads": 40281,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 22,
+        "logical_reads": 6028,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 78,
+        "elapsed_ms": 71
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_7d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 7,
+    "client_seconds": 0.12453349982388318,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 81,
+        "logical_reads": 883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 990,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 194,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 29,
+        "logical_reads": 40281,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 22,
+        "logical_reads": 6028,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 78,
+        "elapsed_ms": 78
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_31d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 31,
+    "client_seconds": 0.3045716001652181,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 345,
+        "logical_reads": 12883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 4158,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 125,
+        "logical_reads": 173625,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 94,
+        "logical_reads": 25756,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 250,
+        "elapsed_ms": 260
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_31d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 31,
+    "client_seconds": 0.332485499791801,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 345,
+        "logical_reads": 12883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 4158,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 125,
+        "logical_reads": 173625,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 94,
+        "logical_reads": 25756,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 297,
+        "elapsed_ms": 290
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_31d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 31,
+    "client_seconds": 0.32308040000498295,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 345,
+        "logical_reads": 12883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 4158,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 125,
+        "logical_reads": 173625,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 94,
+        "logical_reads": 25756,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 281,
+        "elapsed_ms": 279
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_31d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 31,
+    "client_seconds": 0.3650293000973761,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 345,
+        "logical_reads": 12883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 4158,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 125,
+        "logical_reads": 173625,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 94,
+        "logical_reads": 25756,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 313,
+        "elapsed_ms": 317
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_31d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 31,
+    "client_seconds": 0.3623414998874068,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 345,
+        "logical_reads": 12883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 4158,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 125,
+        "logical_reads": 173625,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 94,
+        "logical_reads": 25756,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 312,
+        "elapsed_ms": 318
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_31d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 31,
+    "client_seconds": 0.36713439994491637,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 345,
+        "logical_reads": 12883,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 4158,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 818,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 125,
+        "logical_reads": 173625,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 94,
+        "logical_reads": 25756,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 313,
+        "elapsed_ms": 312
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_62d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 62,
+    "client_seconds": 0.6283748000860214,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 686,
+        "logical_reads": 48843,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 8250,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 249,
+        "logical_reads": 345861,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 187,
+        "logical_reads": 51238,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 578,
+        "elapsed_ms": 575
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_62d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 62,
+    "client_seconds": 0.6112387999892235,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 686,
+        "logical_reads": 48843,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 8250,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 249,
+        "logical_reads": 345861,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 187,
+        "logical_reads": 51238,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 578,
+        "elapsed_ms": 567
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_62d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 62,
+    "client_seconds": 0.6078819998074323,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 686,
+        "logical_reads": 48843,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 8250,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 249,
+        "logical_reads": 345861,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 187,
+        "logical_reads": 51238,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 563,
+        "elapsed_ms": 566
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_62d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 62,
+    "client_seconds": 0.686255200067535,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 686,
+        "logical_reads": 48843,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 8250,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 249,
+        "logical_reads": 345861,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 187,
+        "logical_reads": 51238,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 625,
+        "elapsed_ms": 642
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_62d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 62,
+    "client_seconds": 0.6810777999926358,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 686,
+        "logical_reads": 48843,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 8250,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 249,
+        "logical_reads": 345861,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 187,
+        "logical_reads": 51238,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 609,
+        "elapsed_ms": 625
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_62d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 62,
+    "client_seconds": 0.685709600104019,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 686,
+        "logical_reads": 48843,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 8250,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1624,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 249,
+        "logical_reads": 345861,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 187,
+        "logical_reads": 51238,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 641,
+        "elapsed_ms": 638
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_102d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "client_seconds": 1.003351799910888,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1126,
+        "logical_reads": 129323,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 13530,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 409,
+        "logical_reads": 568101,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 307,
+        "logical_reads": 84118,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 953,
+        "elapsed_ms": 961
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_102d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "client_seconds": 0.9950637000147253,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1126,
+        "logical_reads": 129323,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 13530,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 409,
+        "logical_reads": 568101,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 307,
+        "logical_reads": 84118,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 953,
+        "elapsed_ms": 953
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_102d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "client_seconds": 1.011257299920544,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1126,
+        "logical_reads": 129323,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 13530,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 409,
+        "logical_reads": 568101,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 307,
+        "logical_reads": 84118,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 906,
+        "elapsed_ms": 969
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_102d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "client_seconds": 1.1370897002052516,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1126,
+        "logical_reads": 129323,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 13530,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 409,
+        "logical_reads": 568101,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 307,
+        "logical_reads": 84118,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1078,
+        "elapsed_ms": 1094
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_102d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "client_seconds": 1.1218384001404047,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1126,
+        "logical_reads": 129323,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 13530,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 409,
+        "logical_reads": 568101,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 307,
+        "logical_reads": 84118,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1063,
+        "elapsed_ms": 1074
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_ox_p1_1_102d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "client_seconds": 1.1241127999965101,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1126,
+        "logical_reads": 129323,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 13530,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 409,
+        "logical_reads": 568101,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 307,
+        "logical_reads": 84118,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1062,
+        "elapsed_ms": 1083
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p1_1_102d",
+    "rep": 4,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "client_seconds": 1.6843032999895513,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1126,
+        "logical_reads": 129323,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 13530,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 409,
+        "logical_reads": 568101,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 307,
+        "logical_reads": 84118,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1313,
+        "elapsed_ms": 1615
+      }
+    ],
+    "actual_plans": 1,
+    "with_statistics_xml": true
+  },
+  {
+    "label": "candidate_ox_p1_1_102d",
+    "rep": 4,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "client_seconds": 1.5754325001034886,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1126,
+        "logical_reads": 129323,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 13530,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 2664,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_oxido",
+        "scan_count": 409,
+        "logical_reads": 568101,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_oxido",
+        "scan_count": 307,
+        "logical_reads": 84118,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1406,
+        "elapsed_ms": 1416
+      }
+    ],
+    "actual_plans": 1,
+    "with_statistics_xml": true
+  },
+  {
+    "label": "candidate_generic_p2_7_1d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 1,
+    "client_seconds": 0.06558749987743795,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 18,
+        "logical_reads": 49,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 468,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 8,
+        "logical_reads": 11520,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 4,
+        "logical_reads": 960,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 31,
+        "elapsed_ms": 20
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_1d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 1,
+    "client_seconds": 0.074828099925071,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 18,
+        "logical_reads": 49,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 468,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 8,
+        "logical_reads": 11520,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 4,
+        "logical_reads": 960,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 31,
+        "elapsed_ms": 24
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_1d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 1,
+    "client_seconds": 0.06830239994451404,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 18,
+        "logical_reads": 49,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 9,
+        "logical_reads": 468,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 8,
+        "logical_reads": 11520,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 4,
+        "logical_reads": 960,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 32,
+        "elapsed_ms": 23
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_1d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 1,
+    "client_seconds": 0.06772390007972717,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 18,
+        "logical_reads": 49,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 15,
+        "logical_reads": 206,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 8,
+        "logical_reads": 11520,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 4,
+        "logical_reads": 960,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 31,
+        "elapsed_ms": 25
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_1d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 1,
+    "client_seconds": 0.06800209986977279,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 18,
+        "logical_reads": 49,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 15,
+        "logical_reads": 206,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 8,
+        "logical_reads": 11520,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 4,
+        "logical_reads": 960,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 16,
+        "elapsed_ms": 24
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_1d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-09-10",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 1,
+    "client_seconds": 0.07113820011727512,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 18,
+        "logical_reads": 49,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 15,
+        "logical_reads": 206,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 44,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 8,
+        "logical_reads": 11520,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 4,
+        "logical_reads": 960,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 31,
+        "elapsed_ms": 25
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_7d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 7,
+    "client_seconds": 0.13633339991793036,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 102,
+        "logical_reads": 925,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 2340,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 50,
+        "logical_reads": 72000,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 22,
+        "logical_reads": 5280,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 94,
+        "elapsed_ms": 93
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_7d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 7,
+    "client_seconds": 0.1459410998504609,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 102,
+        "logical_reads": 925,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 2340,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 50,
+        "logical_reads": 72000,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 22,
+        "logical_reads": 5280,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 93,
+        "elapsed_ms": 91
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_7d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 7,
+    "client_seconds": 0.13688970007933676,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 102,
+        "logical_reads": 925,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 45,
+        "logical_reads": 2340,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 50,
+        "logical_reads": 72000,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 22,
+        "logical_reads": 5280,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 94,
+        "elapsed_ms": 91
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_7d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 7,
+    "client_seconds": 0.16356400004588068,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 102,
+        "logical_reads": 925,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 75,
+        "logical_reads": 1022,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 50,
+        "logical_reads": 72000,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 22,
+        "logical_reads": 5280,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 109,
+        "elapsed_ms": 110
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_7d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 7,
+    "client_seconds": 0.18367260019294918,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 102,
+        "logical_reads": 925,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 75,
+        "logical_reads": 1022,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 50,
+        "logical_reads": 72000,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 22,
+        "logical_reads": 5280,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 110,
+        "elapsed_ms": 107
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_7d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-09-04",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 7,
+    "client_seconds": 0.1612658000085503,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 102,
+        "logical_reads": 925,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 75,
+        "logical_reads": 1022,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 236,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 50,
+        "logical_reads": 72000,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 22,
+        "logical_reads": 5280,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 109,
+        "elapsed_ms": 107
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_31d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 31,
+    "client_seconds": 0.44290639995597303,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 438,
+        "logical_reads": 13069,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 9828,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 218,
+        "logical_reads": 313920,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 94,
+        "logical_reads": 22560,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 406,
+        "elapsed_ms": 398
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_31d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 31,
+    "client_seconds": 0.43632239988073707,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 438,
+        "logical_reads": 13069,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 9828,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 218,
+        "logical_reads": 313920,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 94,
+        "logical_reads": 22560,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 391,
+        "elapsed_ms": 383
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_31d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 31,
+    "client_seconds": 0.43587790010496974,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 438,
+        "logical_reads": 13069,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 189,
+        "logical_reads": 9828,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 218,
+        "logical_reads": 313920,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 94,
+        "logical_reads": 22560,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 375,
+        "elapsed_ms": 378
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_31d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 31,
+    "client_seconds": 0.8562598000280559,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 438,
+        "logical_reads": 13069,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 315,
+        "logical_reads": 4286,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 218,
+        "logical_reads": 313920,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 94,
+        "logical_reads": 22560,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 469,
+        "elapsed_ms": 465
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_31d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 31,
+    "client_seconds": 0.6476975998375565,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 438,
+        "logical_reads": 13069,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 315,
+        "logical_reads": 4286,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 218,
+        "logical_reads": 313920,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 94,
+        "logical_reads": 22560,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 437,
+        "elapsed_ms": 428
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_31d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-08-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 31,
+    "client_seconds": 0.5042298000771552,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 438,
+        "logical_reads": 13069,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 315,
+        "logical_reads": 4286,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1004,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 218,
+        "logical_reads": 313920,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 94,
+        "logical_reads": 22560,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 438,
+        "elapsed_ms": 450
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_62d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 62,
+    "client_seconds": 0.8196878000162542,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 872,
+        "logical_reads": 49215,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 19500,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 435,
+        "logical_reads": 626400,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 187,
+        "logical_reads": 44880,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 781,
+        "elapsed_ms": 771
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_62d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 62,
+    "client_seconds": 0.8227488999255002,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 872,
+        "logical_reads": 49215,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 19500,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 435,
+        "logical_reads": 626400,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 187,
+        "logical_reads": 44880,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 750,
+        "elapsed_ms": 763
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_62d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 62,
+    "client_seconds": 0.9113656999543309,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 872,
+        "logical_reads": 49215,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 375,
+        "logical_reads": 19500,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 435,
+        "logical_reads": 626400,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 187,
+        "logical_reads": 44880,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 750,
+        "elapsed_ms": 768
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_62d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 62,
+    "client_seconds": 0.9553274000063539,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 872,
+        "logical_reads": 49215,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 625,
+        "logical_reads": 8502,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 435,
+        "logical_reads": 626400,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 187,
+        "logical_reads": 44880,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 891,
+        "elapsed_ms": 894
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_62d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 62,
+    "client_seconds": 1.0186284000519663,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 872,
+        "logical_reads": 49215,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 625,
+        "logical_reads": 8502,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 435,
+        "logical_reads": 626400,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 187,
+        "logical_reads": 44880,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 953,
+        "elapsed_ms": 954
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_62d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-07-11",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 62,
+    "client_seconds": 1.004771800013259,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 872,
+        "logical_reads": 49215,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 625,
+        "logical_reads": 8502,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 1996,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 435,
+        "logical_reads": 626400,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 187,
+        "logical_reads": 44880,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 906,
+        "elapsed_ms": 948
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_102d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "client_seconds": 1.3762010000646114,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1432,
+        "logical_reads": 129935,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 31980,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 715,
+        "logical_reads": 1029600,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 307,
+        "logical_reads": 73680,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1250,
+        "elapsed_ms": 1313
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_102d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "client_seconds": 1.3897716000210494,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1432,
+        "logical_reads": 129935,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 31980,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 715,
+        "logical_reads": 1029600,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 307,
+        "logical_reads": 73680,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1344,
+        "elapsed_ms": 1335
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_102d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "client_seconds": 1.350329700158909,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1432,
+        "logical_reads": 129935,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 31980,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 715,
+        "logical_reads": 1029600,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 307,
+        "logical_reads": 73680,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1297,
+        "elapsed_ms": 1305
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_102d",
+    "rep": 1,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "client_seconds": 1.6280207000672817,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1432,
+        "logical_reads": 129935,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 1025,
+        "logical_reads": 13942,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 715,
+        "logical_reads": 1029600,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 307,
+        "logical_reads": 73680,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1515,
+        "elapsed_ms": 1524
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_102d",
+    "rep": 2,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "client_seconds": 1.587761600036174,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1432,
+        "logical_reads": 129935,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 1025,
+        "logical_reads": 13942,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 715,
+        "logical_reads": 1029600,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 307,
+        "logical_reads": 73680,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1485,
+        "elapsed_ms": 1493
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_sulf_p2_7_102d",
+    "rep": 3,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "client_seconds": 1.659462400013581,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1432,
+        "logical_reads": 129935,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 1025,
+        "logical_reads": 13942,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 715,
+        "logical_reads": 1029600,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 307,
+        "logical_reads": 73680,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1500,
+        "elapsed_ms": 1516
+      }
+    ],
+    "actual_plans": 0,
+    "with_statistics_xml": false
+  },
+  {
+    "label": "candidate_generic_p2_7_102d",
+    "rep": 4,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "client_seconds": 2.4800462001003325,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1432,
+        "logical_reads": 129935,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 615,
+        "logical_reads": 31980,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 715,
+        "logical_reads": 1029600,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Worktable",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 307,
+        "logical_reads": 73680,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1812,
+        "elapsed_ms": 2103
+      }
+    ],
+    "actual_plans": 1,
+    "with_statistics_xml": true
+  },
+  {
+    "label": "candidate_sulf_p2_7_102d",
+    "rep": 4,
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "client_seconds": 2.1812964000273496,
+    "io": [
+      {
+        "object": "Worktable",
+        "scan_count": 1432,
+        "logical_reads": 129935,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "campana_parcela_control",
+        "scan_count": 1025,
+        "logical_reads": 13942,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "Workfile",
+        "scan_count": 0,
+        "logical_reads": 0,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "parcela",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "pad",
+        "scan_count": 0,
+        "logical_reads": 3276,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "drena_concentrados_sulfuro",
+        "scan_count": 715,
+        "logical_reads": 1029600,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      },
+      {
+        "object": "flujos_reales_sulfuro",
+        "scan_count": 307,
+        "logical_reads": 73680,
+        "physical_reads": 0,
+        "read_ahead_reads": 0
+      }
+    ],
+    "time_messages": [
+      {
+        "cpu_ms": 0,
+        "elapsed_ms": 0
+      },
+      {
+        "cpu_ms": 1906,
+        "elapsed_ms": 1928
+      }
+    ],
+    "actual_plans": 1,
+    "with_statistics_xml": true
+  }
+]

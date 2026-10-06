@@ -1,0 +1,3 @@
+TEST V2 normalizado (solo sustitucion de nombre): be51091d5606698ed449c63bb1fbaa3c022edba2673d21b6eece87316068e716
+Oficial instalado: NO EXISTE. Hash oficial: NO DISPONIBLE. Comparacion: PENDIENTE.
+No se ejecuto DDL.

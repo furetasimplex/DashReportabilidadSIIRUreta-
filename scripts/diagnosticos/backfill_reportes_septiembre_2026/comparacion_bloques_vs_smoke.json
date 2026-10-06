@@ -1,0 +1,29 @@
+{
+  "diferencias_firmas_numericas": {
+    "Resumen_Intervalo_TotTM": {
+      "toneladas_intervalo": {
+        "despues_bloques": "2474724.7056666665366667",
+        "despues_smoke_mensual": "2474724.7056666665466667"
+      }
+    },
+    "Datos_conciliados_of": {
+      "Modulo_reclamo_oxidos": {
+        "despues_bloques": "783",
+        "despues_smoke_mensual": "1207"
+      },
+      "Avance_reclamo_oxidos": {
+        "despues_bloques": "8.153473",
+        "despues_smoke_mensual": "10.259449"
+      },
+      "Camiones_TMS_Reclamo_Sulfuros": {
+        "despues_bloques": "254111.8127729999975",
+        "despues_smoke_mensual": "254111.8127729999965"
+      },
+      "Camiones_TMS_total": {
+        "despues_bloques": "254111.8127729999975",
+        "despues_smoke_mensual": "254111.8127729999965"
+      }
+    }
+  },
+  "nota": "Firmas numéricas para detectar cambios, no KPIs: sumar IDs/módulos no tiene interpretación operacional. El SP DC reinicia @PisoOx/@CampanaPisoOx por llamada; el contexto de reclamo puede diferir al dividir un mes. El estado final corresponde al flujo mensual oficial probado, sin modificar su lógica. Las otras diferencias aquí observadas son residuos float."
+}

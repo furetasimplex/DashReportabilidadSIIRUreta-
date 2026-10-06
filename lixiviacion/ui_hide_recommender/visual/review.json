@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "page_errors": [],
+  "callback_errors": [],
+  "cases": [
+    {
+      "mode": "desktop",
+      "tabs": [
+        "Mapa operacional de pilas",
+        "Diagnóstico"
+      ],
+      "map_count": 60,
+      "diagnostic_rows": 6120,
+      "return_to_map": true,
+      "document_overflow": false
+    },
+    {
+      "mode": "mobile",
+      "tabs": [
+        "Mapa operacional de pilas",
+        "Diagnóstico"
+      ],
+      "map_count": 60,
+      "diagnostic_rows": 6120,
+      "return_to_map": true,
+      "document_overflow": false
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+.lix-operational { padding: 14px 0; min-width: 0; max-width: 100%; }
+.lix-operational h3 { color: #1f4e78; font-size: 22px; font-weight: 600; margin-bottom: 5px; }
+.lix-operational > div > p { font-size: 13px; margin-bottom: 14px; }
+.lix-map-block { background: #494f52; color: #fff; border: 1px solid #606a6f; border-radius: 10px; padding: 18px 22px; margin-bottom: 16px; min-width: 0; box-shadow: 0 3px 10px #1c30351a; }
+.lix-map-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.lix-map-heading h4 { font-size: 20px; color: #fff; margin: 0; }
+.lix-map-heading > span { color: #d7dcdf; font-size: 12px; }
+.lix-map-scroll { overflow-x: auto; max-width: 100%; min-width: 0; padding: 6px 5px 10px; scrollbar-color: #aab3b7 #383e42; scrollbar-width: thin; }
+.lix-lane { display: grid; gap: 9px; min-width: max-content; }
+.lix-lane.bottom { margin-top: 20px; }
+.lix-operational button.lix-parcel { appearance: none; background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; margin: 0; color: #fff; display: flex; flex-direction: column; gap: 7px; min-width: 34px; cursor: pointer; text-transform: none; }
+.lix-parcel-label { font-size: 12px; font-weight: 600; width: 100%; text-align: center; border-bottom: 1px solid #969c9f; padding-bottom: 5px; }
+.lix-operational .lix-parcel-cell { display: block; flex-shrink: 0; height: 78px; width: 100%; border: 1px solid #b8c0c5; border-top: 3px solid #ffffff65; border-radius: 2px; background-color: var(--lix-state); box-shadow: inset 0 -5px 0 #00000012; transition: outline-color .15s, transform .15s; }
+.lix-operational .lix-lane.bottom button.lix-parcel { flex-direction: column-reverse; }
+.lix-lane.bottom .lix-parcel-label { border-bottom: 0; border-top: 1px solid #969c9f; padding: 5px 0 0; }
+.lix-parcel:hover .lix-parcel-cell, .lix-parcel:focus-visible .lix-parcel-cell { outline: 3px solid #fff; outline-offset: 2px; }
+.lix-operational .lix-parcel.selected .lix-parcel-cell { outline: 3px solid #ffd08a; outline-offset: 3px; }
+.lix-parcel.selected .lix-parcel-label { color: #ffd08a; font-weight: 800; }
+.lix-operational .hydraulic { --lix-state: #5485a1; }
+.lix-operational .stacked { --lix-state: #c78542; }
+.lix-operational .formed { --lix-state: #bda663; }
+.lix-operational .waiting { --lix-state: #638d72; }
+.lix-operational .reclaiming { --lix-state: #b65c55; }
+.lix-operational .reclaimed { --lix-state: #929da4; }
+.lix-operational .mixed { --lix-state: #9173ad; }
+.lix-operational .missing { --lix-state: #303638; }
+.lix-map-legend { background: #494f52; color: #fff; border-radius: 10px; padding: 14px 22px; display: flex; gap: 28px; flex-wrap: wrap; }
+.lix-map-legend > div { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.lix-legend-swatch { display: inline-block; width: 20px; height: 30px; border: 1px solid #b8c0c5; background: var(--lix-state); }
+.lix-detail-drawer { box-shadow: -8px 0 28px #14273326; background: #fafbfd; }
+.lix-detail-drawer .offcanvas-header { border-bottom: 1px solid #dce2e7; padding: 18px 22px; }
+.lix-detail-drawer .offcanvas-title { font-size: 19px; color: #1f4e78; }
+.lix-detail-drawer .offcanvas-body { padding: 6px 22px 20px; }
+.lix-detail-section { padding: 15px 0; border-bottom: 1px solid #e0e5e9; }
+.lix-detail-section:last-child { border: 0; }
+.lix-detail-section h6 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; color: #617684; margin-bottom: 12px; }
+.lix-detail-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 20px; margin-bottom: 0; }
+.lix-detail-grid dt { color: #64717c; font-size: 12px; }
+.lix-detail-grid dd { margin: 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 600; color: #263e4b; }
+.lix-composition-table { font-size: 13px; }
+.lix-composition-table th { font-size: 12px; color: #64717c; }
+.lix-composition-table th:last-child, .lix-composition-table td:last-child { text-align: right; width: 65px; }
+@media (max-width: 767px) { .lix-map-block { padding: 16px 12px; } .lix-detail-grid { grid-template-columns: 1fr; } }

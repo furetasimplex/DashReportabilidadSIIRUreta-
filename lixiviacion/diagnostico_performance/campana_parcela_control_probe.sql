@@ -1,0 +1,1 @@
+SELECT COUNT_BIG(*) AS rows FROM inventar_SpcHidr.campana_parcela_control

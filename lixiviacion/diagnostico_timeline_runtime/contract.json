@@ -1,0 +1,52 @@
+{
+  "db_before_sha256": "6042681c0e2d11432fa3408153f2b8322488c25050b76745eb55199bbb301e87",
+  "before_projection": [
+    "e.fecha",
+    "e.pad_id",
+    "e.parcela_id",
+    "e.numero_parcela",
+    "e.campana_id",
+    "e.numero_campana",
+    "e.estado_operacional",
+    "e.calidad_estado",
+    "e.tiene_dato_riego",
+    "e.riego_activo",
+    "e.tiene_dato_drenaje",
+    "e.drenaje_activo"
+  ],
+  "fields": [
+    "fecha",
+    "pad_id",
+    "parcela_id",
+    "numero_parcela",
+    "campana_id",
+    "numero_campana",
+    "estado_operacional",
+    "calidad_estado",
+    "tiene_dato_riego",
+    "riego_activo",
+    "tiene_dato_drenaje",
+    "drenaje_activo"
+  ],
+  "candidate_projection": [
+    "d.fecha",
+    "d.pad_id",
+    "d.parcela_id",
+    "d.numero_parcela",
+    "d.campana_id",
+    "d.numero_campana",
+    "COALESCE(r.estado_operacional,'SIN_INFORMACION') AS estado_operacional",
+    "CASE\n            WHEN r.estado_operacional IS NULL\n                THEN 'SIN_INFORMACION'\n\n            WHEN r.estado_operacional =\n                 'SIN_COBERTURA_HIDRAULICA'\n                THEN 'NO_EVALUABLE'\n\n            WHEN r.estado_operacional = 'MIXTO'\n             AND r.composicion_modulos\n                 LIKE '%SIN_COBERTURA_HIDRAULICA%'\n                THEN 'PARCIAL'\n\n            ELSE 'EVALUABLE'\n        END AS calidad_estado",
+    "d.tiene_dato_riego",
+    "d.riego_activo",
+    "d.tiene_dato_drenaje",
+    "d.drenaje_activo"
+  ],
+  "parameters": [
+    "desde",
+    "hasta",
+    "pad_id",
+    "parcela_id"
+  ],
+  "candidate_sha256": "814116d7d5c609515cb18fdfd2dd5ccb4149fcea14042771e8c4bc13bb04002d"
+}

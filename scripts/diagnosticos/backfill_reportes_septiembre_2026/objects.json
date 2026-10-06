@@ -1,0 +1,795 @@
+[
+  {
+    "object_id": 7059161,
+    "schema_name": "reclamo",
+    "name": "v_reclamo_diario",
+    "type_desc": "VIEW",
+    "sha256": "4e5e58b4c4fa74da5bc054333e0b16185e9c29184a5a44a975fea4c58d6bea56"
+  },
+  {
+    "object_id": 71059389,
+    "schema_name": "reclamo",
+    "name": "v_reclamo_para_conciliados",
+    "type_desc": "VIEW",
+    "sha256": "72ce4439b593a1a9cb12d13df10f6ffae741ea7072bc3504e9220297aeb495b1"
+  },
+  {
+    "object_id": 80771395,
+    "schema_name": "inventar_SpcHidr",
+    "name": "representatividad_torres_resultado",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 128771566,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_refrescar_representatividad_torres",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "92f63ae4801399a0fd7d023fcac5b6857f7019165a8606ec42257d63325bb92c"
+  },
+  {
+    "object_id": 146099561,
+    "schema_name": "inventar_SpcHidr",
+    "name": "modulo",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 148963657,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_estado_apilado_turno_representatividad",
+    "type_desc": "VIEW",
+    "sha256": "68dfec46da0ae399fc5f17595d2860c5a5f97eab662ff63087e263ec1d21483b"
+  },
+  {
+    "object_id": 154535684,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_sal_ajustada_operacional_test",
+    "type_desc": "VIEW",
+    "sha256": "c489e0c8b2364e877674b494e157b882d7d6f2afa69034df4775e2dfb6942569"
+  },
+  {
+    "object_id": 183671702,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_reporte_diario_emulado_excel",
+    "type_desc": "VIEW",
+    "sha256": "0cbef85d7b77a8bc7db9806aea6d4b1ee07b3b413db8d715c36e940138249bdd"
+  },
+  {
+    "object_id": 199671759,
+    "schema_name": "inventar_SpcHidr",
+    "name": "tot_TM",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 206727889,
+    "schema_name": "inventar_SpcHidr",
+    "name": "fn_resolver_vueltas_camiones_test",
+    "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION",
+    "sha256": "014aadac8f3d95cb3e44720b3e95502fa7c57ff981e1f7c747e40bd897861bbb"
+  },
+  {
+    "object_id": 222727946,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_vueltas_camiones_diarias_test",
+    "type_desc": "VIEW",
+    "sha256": "d449bfc89288485c1663cf092892b1317f2d113a6b04906ade990c020fb91473"
+  },
+  {
+    "object_id": 257488046,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_representatividad_srr_turno_calculada",
+    "type_desc": "VIEW",
+    "sha256": "7bbb6e2fa939769e675f3dde30506cb5ed967afd5d587ebd1d6528308cbf12a0"
+  },
+  {
+    "object_id": 275584120,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_srr_tms_origen_turno_emision_test",
+    "type_desc": "VIEW",
+    "sha256": "63024d97cebb7ded3d94aeb336b0066656526880b31e7ed26c5c1ed6a2fd1d1b"
+  },
+  {
+    "object_id": 282536140,
+    "schema_name": "reclamo",
+    "name": "configuracion",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 285296126,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_leyes_resueltas_data_tm_reporte_test_v2",
+    "type_desc": "VIEW",
+    "sha256": "03ea1d594de3afc56c7d90ec687ed1c495efd974abb2b1c071e097b406fecba8"
+  },
+  {
+    "object_id": 300632214,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_totalizador_resuelto_operacional_test",
+    "type_desc": "VIEW",
+    "sha256": "67f72bcea58c0071c5dcea4a9fd24ec19cc0e226b031193082804057f609af50"
+  },
+  {
+    "object_id": 316632271,
+    "schema_name": "inventar_SpcHidr",
+    "name": "contingencia_pi_accion_test",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 320108281,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_totalizador_turno",
+    "type_desc": "VIEW",
+    "sha256": "70e157f8b05497acc77dbf279b99fc6e70b1441d3615fb7b5f2aa651761c1c6c"
+  },
+  {
+    "object_id": 359060415,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_humedad_inventario_test",
+    "type_desc": "VIEW",
+    "sha256": "7e8a1ac8e6e9fdb8922ed58f5a5cdaa873f4e408c188f892dac907f8e4d8ea64"
+  },
+  {
+    "object_id": 362536425,
+    "schema_name": "reclamo",
+    "name": "fn_fecha_corte",
+    "type_desc": "SQL_SCALAR_FUNCTION",
+    "sha256": "563192213bb39045412caf511d7c64027da06e666b91d486f3099a412851e6fd"
+  },
+  {
+    "object_id": 368772421,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_conciliacion_chancado_v2",
+    "type_desc": "VIEW",
+    "sha256": "e773213d1d96d0c2fdf9473fe7e53e0ea1906fc542a6643910fe8b4718030618"
+  },
+  {
+    "object_id": 375060472,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_inventario_chancado_test",
+    "type_desc": "VIEW",
+    "sha256": "a25333e10a799f21e236a003bee2d3bc31ad633b214e52cbd055f492d913b261"
+  },
+  {
+    "object_id": 378536482,
+    "schema_name": "reclamo",
+    "name": "topologia_pad",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 384772478,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_validacion_leyes_tm1_v2",
+    "type_desc": "VIEW",
+    "sha256": "7ef16a920569b29f75e5507592dfbdee30b501d7382fdac62125d8c17aa0516c"
+  },
+  {
+    "object_id": 400772535,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_validacion_leyes_tm2_v2",
+    "type_desc": "VIEW",
+    "sha256": "900e42eda49055751bc68c43a6c65f42d9bf7deeb637e9546def212eddecbf1b"
+  },
+  {
+    "object_id": 407060586,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_factor_ajuste_camiones_test",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "815289c0be7b255d88e48b4c6b825669ad37ff7bd0b33eadd07718f51e7c883d"
+  },
+  {
+    "object_id": 407672500,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_ton_por_intervalo_excel",
+    "type_desc": "VIEW",
+    "sha256": "7e06bc4d2ca04e213d8b3661c544df30b176ffe088217ed95a09fa6858f0f403"
+  },
+  {
+    "object_id": 416772592,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_datos_apilado_tmh_v2",
+    "type_desc": "VIEW",
+    "sha256": "802ec1a824c2aa9ac0e785be705e910dfdd13fe6654f96b0181925e64b425bfb"
+  },
+  {
+    "object_id": 423060643,
+    "schema_name": "inventar_SpcHidr",
+    "name": "Control_Factor_Ajuste_Camiones_v2_test",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 423672557,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_he_10s_por_intervalo_excel",
+    "type_desc": "VIEW",
+    "sha256": "7cab1c5aafab1f1ac8f57ccc8ebdd6b5de627d5f428f3ce9a0701f658f7f7e49"
+  },
+  {
+    "object_id": 444632727,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_pi_estado_turno_test",
+    "type_desc": "VIEW",
+    "sha256": "768ee025d6a2def8c4be9fb96f6849b2cae5fc290717e01b1fea42b09ada7fcf"
+  },
+  {
+    "object_id": 465488787,
+    "schema_name": "inventar_SpcHidr",
+    "name": "control_reclamo_sulfuro_camiones_thm_diario",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 474536824,
+    "schema_name": "reclamo",
+    "name": "modulo_congelado",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 535061042,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_mantiene_factor_ajuste_camiones_v2_test",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "d763b4505d6fd96e3d11360ce39da719faa69fe1c3acd3a7a02372df3ac25b8f"
+  },
+  {
+    "object_id": 551061099,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_ajuste_camiones_emision_test",
+    "type_desc": "VIEW",
+    "sha256": "dc68758abeae3b5d816c5631178ac4f29ae0f70968affe91f116a17311150b5e"
+  },
+  {
+    "object_id": 567061156,
+    "schema_name": "inventar_SpcHidr",
+    "name": "reporte_turno_cache_emision_test",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 576773162,
+    "schema_name": "inventar_SpcHidr",
+    "name": "topografia_sal",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 599061270,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_reporte_turno_emision_test",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "cd934445b1fb88a9b4d6cc1c9f02c39a0af0954d5b9b39fde0a51f23d054781b"
+  },
+  {
+    "object_id": 603917273,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_reporte_turno_fuentes_info_test",
+    "type_desc": "VIEW",
+    "sha256": "bb5fed901b1781feb5c37541b3d78ffb09a4539c19b9b4ea6d7cc778cffefc8d"
+  },
+  {
+    "object_id": 615061327,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_actualizar_reporte_turno_cache_emision_test",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "9249113870459c2285a2e49275e1c467ce8fc23cb5b79f5d5089faee5fe13a98"
+  },
+  {
+    "object_id": 631061384,
+    "schema_name": "inventar_SpcHidr",
+    "name": "fn_generador_reporte_diario_emision_test",
+    "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION",
+    "sha256": "6b60ae4b9177fc70bf62b9a3d6e24ae06ddf45c389c0e95a57b195b436d567ae"
+  },
+  {
+    "object_id": 640773390,
+    "schema_name": "inventar_SpcHidr",
+    "name": "factor_ajuste_camiones",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 679061555,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_mantiene_datos_conciliados_emision_test",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "0314c957ad8ad3da1a33186aa7d1935f27081a9f150811cfc8d25f647440a906"
+  },
+  {
+    "object_id": 695061612,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_inventario_chancado_archive_test",
+    "type_desc": "VIEW",
+    "sha256": "8b0116e33c9280fc7aea03aaf89002bfc2a2a3b471b152139ad3aadeba0e5eae"
+  },
+  {
+    "object_id": 698537622,
+    "schema_name": "reclamo",
+    "name": "secuencia_rotopala",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 704773618,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_sal_ajustada",
+    "type_desc": "VIEW",
+    "sha256": "2c7f3e0374a03162a4b78363b26759aa084585f503c6c72e598f2c3e2dec3100"
+  },
+  {
+    "object_id": 711061669,
+    "schema_name": "inventar_SpcHidr",
+    "name": "semilla_inventario_chancado",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 755585830,
+    "schema_name": "inventar_SpcHidr",
+    "name": "trazabilidad_analitos_tm_emision_test",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 791673868,
+    "schema_name": "inventar_SpcHidr",
+    "name": "bitacora_turnos_consolidada",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 858538192,
+    "schema_name": "reclamo",
+    "name": "topografia_avance",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 891918299,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_reporte_diario_humedad_test",
+    "type_desc": "VIEW",
+    "sha256": "c1104e9b65d46dfce262cee6c2270e2188fb746e1f075cffcb597188c4421162"
+  },
+  {
+    "object_id": 903674267,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_bitacora_rangos",
+    "type_desc": "VIEW",
+    "sha256": "6aa11163e3a9e1cc1326ca7b7c47184ecd204371005ab5d0a3dc5d3c9d8e59e9"
+  },
+  {
+    "object_id": 912110390,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_pi_serie",
+    "type_desc": "VIEW",
+    "sha256": "e5406793983de1b69a74abc001a7294d5481696e24eab82bfba71dad85ff0991"
+  },
+  {
+    "object_id": 919062410,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_clays_cufe_calculado_v2_test",
+    "type_desc": "VIEW",
+    "sha256": "a2ea67ca74f786e690b813bef725baa0fd9627f1cf481ef523c78bab859b85fa"
+  },
+  {
+    "object_id": 919674324,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_bitacora_rangos_norm",
+    "type_desc": "VIEW",
+    "sha256": "1f2c05c3c4a72d82e9a79222170cf83e3f5b58640a1c6aab5d3ad9444bda6e06"
+  },
+  {
+    "object_id": 923918413,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_reporte_diario_apilado_test",
+    "type_desc": "VIEW",
+    "sha256": "078084b6e05e4a539b76705ac3a795189005a9f7abfecbfedbdb1dfda6992716"
+  },
+  {
+    "object_id": 928110447,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_pi_totalizador_turno",
+    "type_desc": "VIEW",
+    "sha256": "78aa4b812cf48a210141f8475f18a35399433ca73f899d67fbc1b4f7a71c71b7"
+  },
+  {
+    "object_id": 935062467,
+    "schema_name": "inventar_SpcHidr",
+    "name": "Clays_CuFe_trazabilidad",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 939150391,
+    "schema_name": "inventar_SpcHidr",
+    "name": "planes_mensuales",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 944110504,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_apoyo_operacional_turno",
+    "type_desc": "VIEW",
+    "sha256": "8259f96d3af763516ce3be5b76f241dfd3b342c8084f9a6207789b2e44eebad0"
+  },
+  {
+    "object_id": 945490497,
+    "schema_name": "inventar_SpcHidr",
+    "name": "Resumen_Intervalo_TotTM",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 967062581,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_refrescar_clays_cufe",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "b80b1f12b97cd03954fe627ac537a3de8dec044663bd4a3d089a657bdddb2ef6"
+  },
+  {
+    "object_id": 976110618,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_pi_frontera_turno",
+    "type_desc": "VIEW",
+    "sha256": "264ed686d490c25b12b0dc5c720a9084b61c5e8ca7bf5130ea4ac6945ec73e9c"
+  },
+  {
+    "object_id": 992110675,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_totalizador_diagnostico_turno",
+    "type_desc": "VIEW",
+    "sha256": "8158c9e547b7698fc917cd22f9047a9f8ee580f412be2d6090321fb3d59fe6a5"
+  },
+  {
+    "object_id": 993490668,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_calcular_resumen_intervalo_totTM",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "f1e481a8f75132062cff25ad3da0b58da1ae8ea8a7b6b790f2358d8b44499a1d"
+  },
+  {
+    "object_id": 999062695,
+    "schema_name": "inventar_SpcHidr",
+    "name": "mov_cam_powerbi",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1008110732,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_contingencia_totalizador_resuelto_turno",
+    "type_desc": "VIEW",
+    "sha256": "d2dead4f16a60d5981d0d22abe4c28bb3bcb249ba4ccc7673a72f89fa533aad2"
+  },
+  {
+    "object_id": 1019918755,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_produccion_catodica_diaria_test",
+    "type_desc": "VIEW",
+    "sha256": "c1c65d26e82bf2f2b69d4d94e2720ce69879c186d4a2f4663dfb04247c6fb2a4"
+  },
+  {
+    "object_id": 1024110789,
+    "schema_name": "inventar_SpcHidr",
+    "name": "informe_tum_totalizadores_turno",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1028966792,
+    "schema_name": "inventar_SpcHidr",
+    "name": "BD_Ton",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1040774815,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_leyes_validadas_tm_turno",
+    "type_desc": "VIEW",
+    "sha256": "ac2cd8c39aeb72f568472c7314c23ed74e42460791609b1d0bc35bbde33f45b1"
+  },
+  {
+    "object_id": 1042206863,
+    "schema_name": "inventar_SpcHidr",
+    "name": "factor_camiones_parametro_vigencia_test",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1066538933,
+    "schema_name": "reclamo",
+    "name": "camiones_reclamo",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1088774986,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_apilado_base_mina_stock_srr",
+    "type_desc": "VIEW",
+    "sha256": "21e44ddbd3bb0a2d8be64d068c9a7123458e3b0832cf199e5aa389626a0fe06f"
+  },
+  {
+    "object_id": 1092967020,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_sincronizar_bd_ton",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "e24c7cabb59a058cf28e5eaf095ff8ff1670bcf5a5bd1431c8bcf35c0b79b865"
+  },
+  {
+    "object_id": 1099919040,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_planes_mensuales_diarios_test",
+    "type_desc": "VIEW",
+    "sha256": "f3ea5b0bc0c02f534328cc7e45a9a5d6533fad6ce52e686d98b38067ae64c2d8"
+  },
+  {
+    "object_id": 1106102981,
+    "schema_name": "inventar_SpcHidr",
+    "name": "resumen_mina",
+    "type_desc": "VIEW",
+    "sha256": "0b6b3d53eb8e9ddbf81bbfb6b02dc72a1bd3b1521bb33ad86fef911bf65307f6"
+  },
+  {
+    "object_id": 1127063151,
+    "schema_name": "inventar_SpcHidr",
+    "name": "Control_Apilado_TMH_v2_test",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1175063322,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_mantiene_apilado_tmh_v2_test",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "f9287f41768ce79c0e4c07399fe8123a143f6d0b5dffe71a912fb072f3ada3e9"
+  },
+  {
+    "object_id": 1226539503,
+    "schema_name": "reclamo",
+    "name": "cv25_diario",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1348251908,
+    "schema_name": "inventar_SpcHidr",
+    "name": "param_peso_teorico_base",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1355151873,
+    "schema_name": "inventar_SpcHidr",
+    "name": "Informe_TM_lab",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1402540130,
+    "schema_name": "reclamo",
+    "name": "rotopala_horas_turno",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1403152044,
+    "schema_name": "inventar_SpcHidr",
+    "name": "NIR",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1409492150,
+    "schema_name": "inventar_SpcHidr",
+    "name": "configuracion_reclamo_rotopala_periodo",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1416444170,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_bd_ton_oficial",
+    "type_desc": "VIEW",
+    "sha256": "e1e4c601e08a94e4c91af3c922f72aa7126de8a36dce18e86353fec50ee1fe06"
+  },
+  {
+    "object_id": 1424776183,
+    "schema_name": "inventar_SpcHidr",
+    "name": "plan_mensual_reporte_turno",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1428252193,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_representatividad_diaria_calculada",
+    "type_desc": "VIEW",
+    "sha256": "94d3edac9203ebd557fa3b6046ddf54cfa6d4fb65b3104266c11c5dca86d0f2e"
+  },
+  {
+    "object_id": 1458208345,
+    "schema_name": "inventar_SpcHidr",
+    "name": "factor_camiones_override_aplicacion_test",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1460252307,
+    "schema_name": "inventar_SpcHidr",
+    "name": "peso_real_torre_turno",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1472776354,
+    "schema_name": "inventar_SpcHidr",
+    "name": "plan_semanal_reporte_turno",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1568776696,
+    "schema_name": "inventar_SpcHidr",
+    "name": "humedad_inicial_tm_periodo",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1578540757,
+    "schema_name": "reclamo",
+    "name": "ajuste_manual",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1586104691,
+    "schema_name": "inventar_SpcHidr",
+    "name": "control_apilado_diario",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1605580758,
+    "schema_name": "inventar_SpcHidr",
+    "name": "Clays_CuFe",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1632776924,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_apilado_tms_con_sal_srr_reporte_test",
+    "type_desc": "VIEW",
+    "sha256": "a00b8eeadaa1deb8d1f5ae842f10cf231e12e5308c3e18b9e2b44407d74ae497"
+  },
+  {
+    "object_id": 1648776981,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_apilado_tms_sin_sal_con_srr_reporte_test",
+    "type_desc": "VIEW",
+    "sha256": "1bbc477534767d0898a5a01d3fbfd852b38d34073be36f19ff8ae7e2cda18404"
+  },
+  {
+    "object_id": 1684969129,
+    "schema_name": "inventar_SpcHidr",
+    "name": "Historico_Apilado_Diario",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1701581100,
+    "schema_name": "inventar_SpcHidr",
+    "name": "Datos_conciliados_of",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1728777266,
+    "schema_name": "inventar_SpcHidr",
+    "name": "analitos_semilla_reporte_turno",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1732969300,
+    "schema_name": "inventar_SpcHidr",
+    "name": "sp_refrescar_historico_apilado_test",
+    "type_desc": "SQL_STORED_PROCEDURE",
+    "sha256": "02a8bf3bb2f72ab7f53db9d1e8691afb8c4816d2c803e2f1ce9561ed21bd6a30"
+  },
+  {
+    "object_id": 1776777437,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_leyes_resueltas_data_tm_reporte_test",
+    "type_desc": "VIEW",
+    "sha256": "2d935d63656c825edb45b3904f7a889d13ebe41dfc7dbd351d70b0c5b4a4d61f"
+  },
+  {
+    "object_id": 1792777494,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_reporte_turno_reales_test",
+    "type_desc": "VIEW",
+    "sha256": "c607a59b553cf38af6833856ec4ae4a3decb6e40d52e978180aa077ad9a1ffdd"
+  },
+  {
+    "object_id": 1796253504,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_peso_teorico_turno_torre_excel",
+    "type_desc": "VIEW",
+    "sha256": "8fa0b985ae8c196218c3c812bbdafc396fcb7a12f9d7c9a4b63f44b546f2d99d"
+  },
+  {
+    "object_id": 1828253618,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_peso_real_torre_turno_excel",
+    "type_desc": "VIEW",
+    "sha256": "6bb179620c74a4457b7f42dcc37ab734dcd57042a227fa94ed19c5bbfb73f581"
+  },
+  {
+    "object_id": 1888061812,
+    "schema_name": "inventar_SpcHidr",
+    "name": "produccion_catodica",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 1952114095,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_peso_teorico_turno_torre_representatividad_resuelto",
+    "type_desc": "VIEW",
+    "sha256": "68b0bb5775be54f9da9ad5439efa79459e82ece5f5dedfc21d70402d913a074b"
+  },
+  {
+    "object_id": 1963154039,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_informe_tm_lab_norm",
+    "type_desc": "VIEW",
+    "sha256": "261e556b74dd2f50c9de68b89fd1157770970a8f5f30475bc9db6db4865f1723"
+  },
+  {
+    "object_id": 1968114152,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_bd_ton_t12_contingencia_test",
+    "type_desc": "VIEW",
+    "sha256": "6319daa84af9a449463e0ed1c6eb69be47fdb91d783cbe093ca9bf0bfacfb3da"
+  },
+  {
+    "object_id": 1968778121,
+    "schema_name": "inventar_SpcHidr",
+    "name": "v_reporte_turno_campania_modulo_test",
+    "type_desc": "VIEW",
+    "sha256": "129b0069cf8002972f27e2ffecf6932d3bd8978a8eaa6b04efab6dce1d1393dc"
+  },
+  {
+    "object_id": 2002106173,
+    "schema_name": "inventar_SpcHidr",
+    "name": "mov_cam",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 2021582240,
+    "schema_name": "inventar_SpcHidr",
+    "name": "campaña",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 2035590390,
+    "schema_name": "reclamo",
+    "name": "v_preliminar_cv25_con_acumulado",
+    "type_desc": "VIEW",
+    "sha256": "5b8d3086a792abbc67f9faa05cf4eb01721dc7e6e8c8b8c1effe411d30ecc53e"
+  },
+  {
+    "object_id": 2058542467,
+    "schema_name": "reclamo",
+    "name": "v_modulo_base",
+    "type_desc": "VIEW",
+    "sha256": "527e0fa3a96a8d77ced37d7e2a7fa4a8b30302fac2d86161df04f5ccaf1325cd"
+  },
+  {
+    "object_id": 2074542524,
+    "schema_name": "reclamo",
+    "name": "v_camiones_acumulado",
+    "type_desc": "VIEW",
+    "sha256": "729da0ca9020b9ee67d32dbc3cd4940935529b3f40aa3ad38ac14d0cc5fcbb20"
+  },
+  {
+    "object_id": 2090542581,
+    "schema_name": "reclamo",
+    "name": "v_topografia_resuelta",
+    "type_desc": "VIEW",
+    "sha256": "c80cfd2165462549729a6f52236536e9404501eac1232d7bb961185a5db84806"
+  },
+  {
+    "object_id": 2106542638,
+    "schema_name": "reclamo",
+    "name": "v_cv25_diario",
+    "type_desc": "VIEW",
+    "sha256": "f1d9befa1514708eb8cbfe6f4ce88702572af73996ed441972e60c15c3c79cc1"
+  },
+  {
+    "object_id": 2122542695,
+    "schema_name": "reclamo",
+    "name": "v_preliminar_cv25",
+    "type_desc": "VIEW",
+    "sha256": "7187d11c0da212a4ade1835707fbf6d1ad881f9f90d25864a0c0364a08dad3d6"
+  },
+  {
+    "object_id": 2133582639,
+    "schema_name": "inventar_SpcHidr",
+    "name": "datos_filtrados",
+    "type_desc": "USER_TABLE"
+  },
+  {
+    "object_id": 2138542752,
+    "schema_name": "reclamo",
+    "name": "v_ajustes_aplicables",
+    "type_desc": "VIEW",
+    "sha256": "19845fa3b07a1941b2acca88207221b20e65946a2c767ee30d4362243667572d"
+  }
+]

@@ -1,0 +1,75 @@
+{
+  "trazabilidad_analitos_tm_emision_test": {
+    "Fuente_Tecnica": {
+      "MB_NO_REPRESENTATIVO": 73,
+      "MINA": 474,
+      "ARRASTRE_ULTIMO_VALIDO": 266,
+      "SIN_DATO": 84,
+      "TORRE_COMPARTIDA_TM2_A_TM1": 30,
+      "TORRE_REP_QUIMICA_COMPARTIDA_TM2_A_TM1": 15,
+      "LAB_TM2_COMPARTIDO": 8,
+      "MB_SIN_RESULTADO_NIR": 4,
+      "TORRE": 88,
+      "TORRE_MISMO_TURNO": 19,
+      "LAB_PROPIO_REPRESENTATIVO": 19,
+      "TORRE_REP_QUIMICA": 19,
+      "TORRE_REP_QUIMICA_COMPARTIDA_TM2_A_TM1_OTRO_TURNO": 3,
+      "TORRE_OTRO_TURNO_MISMO_DIA": 6,
+      "TORRE_REP_QUIMICA_OTRO_TURNO": 4,
+      "NIR_TM2_COMPARTIDO": 7,
+      "NIR_PROPIO_REPRESENTATIVO": 16,
+      "MB_SIN_REPRESENTATIVIDAD": 4,
+      "TORRE_REP_FISICA": 12,
+      "IMP": 4,
+      "TORRE_REP_FISICA_OTRO_TURNO": 2,
+      "TORRE_REP_FISICA_COMPARTIDA": 2,
+      "MB_SIN_RESULTADO_CUFE": 1
+    },
+    "Analito": {
+      "CaolBeta": 116,
+      "CO3": 116,
+      "ConsH": 116,
+      "CuFe": 116,
+      "CuS": 116,
+      "CuT": 116,
+      "FeS": 116,
+      "FeT": 116,
+      "Malla_Menos_1_2": 116,
+      "Malla_Menos_100": 116
+    },
+    "TM_Destino": {
+      "TM1": 580,
+      "TM2": 580
+    }
+  },
+  "reporte_turno_cache_emision_test": {
+    "Fuente_Info_Quimica": {
+      "MB": 29,
+      "-": 8,
+      "T1; MB": 8,
+      "T1; T2; MB": 4,
+      "T2; MB": 8,
+      "T1; T2": 2,
+      "IMP": 1
+    },
+    "Fuente_Info_Fisica": {
+      "MB": 33,
+      "-": 8,
+      "T1; MB": 16,
+      "T2; MB": 2,
+      "IMP": 1
+    }
+  },
+  "Control_Factor_Ajuste_Camiones_v2_test": {
+    "Fuente_Camiones": {
+      "MOV_CAM": 23,
+      "SIN_DATOS_CAMIONES": 2,
+      "MOV_CAM_POWERBI": 5
+    },
+    "Estado_Calculo": {
+      "OK_SIN_AJUSTE": 11,
+      "SIN_DATOS_CAMIONES": 2,
+      "OK_AJUSTE_KOM": 17
+    }
+  }
+}
