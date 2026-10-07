@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import os
 import logging
+import re
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -483,7 +484,7 @@ def panel_disponible_rotopalas():
                 html.Summary("Ver detalle técnico", style={"cursor": "pointer", "color": AZUL}),
                 html.P("Fuente: inventar_SpcHidr.disponible_rotopalas. La usan "
                        "sp_congelar_modulo y sp_auto_congelar_modulos_nuevos. "
-                       "Sin m³ totales o densidad válidos, el módulo queda con ALERTA_SIN_BASE. "
+                       "Sin m³ totales o densidad válidos, la base del módulo queda pendiente de revisión. "
                        "Las modificaciones de datos base se escriben en la tabla fuente.",
                        style={**SUBTITULO, "marginTop": "8px"}),
             ], style={"marginBottom": "16px", "fontSize": "12px"}),
@@ -870,16 +871,68 @@ def _estado(valor):
             "APROBADO": "Aprobado"}.get(valor, valor)
 
 
+ESTADO_CLIENTE = {
+    "SIN_COBERTURA": "Sin información de corriente",
+    "SIN_COBERTURA_CORRIENTES": "Sin información de corrientes",
+    "SIN_RESOLVER_CV25": "CV25 sin información suficiente",
+    "SIN_CV025": "Sin información de CV25",
+    "SIN_CV25": "Sin información de CV25",
+    "DIA_NO_CERRADO": "Día en curso",
+    "CERO_OPERACION_CONFIRMADO": "Sin operación registrada",
+    "PRELIMINAR_CV25": "Estimación CV25",
+    "TOPOGRAFIA": "Topografía real",
+    "SIN_DATO": "Sin información",
+    "AJUSTE_MANUAL": "Ajuste aprobado",
+    "SIN_HORAS_NO_REPARTIBLE": "Sin información suficiente de horas para distribuir CV25",
+    "SIN_MODULO_ELEGIBLE": "Sin módulo disponible para proyección",
+}
+
+
+def traducir_estado_cliente(codigo):
+    """Traduce solo para presentación; conserva intactos los datos de origen."""
+    if pd.isna(codigo) or not str(codigo).strip():
+        return "Sin información"
+    texto = str(codigo).strip()
+    if " / " in texto:
+        return " / ".join(traducir_estado_cliente(parte) for parte in texto.split(" / "))
+    if texto in ESTADO_CLIENTE:
+        return ESTADO_CLIENTE[texto]
+    if texto.upper() in {"NULL", "NONE", "NAN"} or texto.startswith("SIN_"):
+        return "Sin información"
+    return texto.replace("_", " ").capitalize() if "_" in texto else texto
+
+
+def _texto_cliente(texto):
+    """Traduce también estados incrustados en notas y tooltips de presentación."""
+    if not isinstance(texto, str):
+        return texto
+    patron = r"\b(?:" + "|".join(sorted(ESTADO_CLIENTE, key=len, reverse=True)) + r"|SIN_[A-Z0-9_]+|NULL)\b"
+    return re.sub(patron, lambda match: traducir_estado_cliente(match.group()), texto)
+
+
+def _mensaje_sin_proyeccion(codigo):
+    """Redacción operacional del motivo técnico, sin cambiar su clasificación."""
+    motivos = set(str(codigo).split(" / "))
+    if "DIA_NO_CERRADO" in motivos:
+        return "Día en curso; proyección aún no disponible."
+    faltantes = []
+    if motivos.intersection({"SIN_RESOLVER_CV25", "SIN_CV025", "SIN_CV25"}):
+        faltantes.append("CV25")
+    if "SIN_COBERTURA_CORRIENTES" in motivos:
+        faltantes.append("corrientes")
+    elif "SIN_COBERTURA" in motivos:
+        faltantes.append("corriente")
+    if faltantes:
+        return "Sin proyección por falta de información de " + " y ".join(faltantes) + "."
+    return "Sin proyección · " + traducir_estado_cliente(codigo) + "."
+
+
 def _origen(valor):
-    return {"PRELIMINAR_CV25": "Estimación CV25", "TOPOGRAFIA": "Topografía real",
-            "SIN_DATO": "Sin información", "AJUSTE_MANUAL": "Ajuste aprobado"}.get(valor, valor)
+    return traducir_estado_cliente(valor)
 
 
 def _codigo_visible(valor):
-    if pd.isna(valor):
-        return "Sin información"
-    visible = _origen(str(valor))
-    return visible if visible != str(valor) else visible.replace("_", " ").capitalize()
+    return traducir_estado_cliente(valor)
 
 
 def _campana_numero(valor):
@@ -945,6 +998,16 @@ def _tabla(df: pd.DataFrame, id_: str, condicionales=None, page_size=None,
             visible[col] = visible[col].map(_origen)
         elif col.startswith("flag_") or col in {"metodo_calculo", "tipo_ajuste", "antecedente_tipo"}:
             visible[col] = visible[col].map(_codigo_visible)
+
+    for col in visible.select_dtypes(include=["object", "string"]).columns:
+        visible[col] = visible[col].map(_texto_cliente)
+    if tooltip_data is not None:
+        tooltip_data = [
+            {col: {**tip, "value": _texto_cliente(tip.get("value"))}
+             if isinstance(tip, dict) else _texto_cliente(tip)
+             for col, tip in fila.items()}
+            for fila in tooltip_data
+        ]
 
     def formato_columna(col):
         precision = 4 if "Densidad" in col else 1 if "%" in col else 2
@@ -1680,10 +1743,11 @@ def cb_rendimiento(n, _, rotopala_tab, desde, hasta):
     if not sin_corriente.empty:
         fechas = pd.to_datetime(sin_corriente["fecha"])
         rango = (_fecha(fechas.min()) if len(fechas) == 1 else
-                 f"{_fecha(fechas.min())} a {_fecha(fechas.max())}")
+                 f"{_fecha(fechas.min())} y {_fecha(fechas.max())}")
         f2.add_annotation(
             x=0, y=1.08, xref="paper", yref="paper", showarrow=False,
-            xanchor="left", text=f"Sin cobertura de corriente: {rango}",
+            xanchor="left", text=(f"Sin información de corriente el {rango}." if len(fechas) == 1 else
+                                f"Sin información de corriente entre {rango}."),
             font=dict(size=11, color=GRIS),
         )
     f2.update_xaxes(showgrid=False)
@@ -1925,7 +1989,7 @@ def cb_avance(n, _, pad_tab, desde, hasta):
         ultima_topografia = topografias.min() if not topografias.empty else pd.NaT
         if pd.notna(ultima_topografia):
             mensajes.append(html.Div(
-                f"Topografía disponible hasta {_fecha(ultima_topografia)}.",
+                f"Última topografía disponible: {_fecha(ultima_topografia)}.",
                 style={"color": GRIS, "fontSize": "13px", "padding": "10px 0 6px"},
             ))
         prelim_vigente = estado[estado["fecha_preliminar"].notna()]
@@ -1954,7 +2018,7 @@ def cb_avance(n, _, pad_tab, desde, hasta):
                     continue
                 motivo = _motivo_sin_proyeccion(fecha, cv_por_fecha.get(fecha), pad)
                 mensajes.append(html.Div(
-                    f"{_fecha(fecha)} · Sin proyección: {motivo}.",
+                    f"{_fecha(fecha)} · {_mensaje_sin_proyeccion(motivo)}",
                     style={"color": AMBAR, "fontSize": "13px", "padding": "4px 0"},
                 ))
 
@@ -1971,8 +2035,7 @@ def cb_avance(n, _, pad_tab, desde, hasta):
     for fuente in ["TOPOGRAFIA", "PRELIMINAR_CV25", "AJUSTE_MANUAL", "SIN_DATO"]:
         sub = agg[agg["fuente_reclamo"] == fuente]
         if not sub.empty:
-            visible_name = {"TOPOGRAFIA": "Topografía real", "PRELIMINAR_CV25": "Estimación CV25",
-                            "AJUSTE_MANUAL": "Ajuste", "SIN_DATO": "Sin información"}[fuente]
+            visible_name = traducir_estado_cliente(fuente)
             f.add_trace(go.Bar(x=sub["fecha_operacion"], y=sub["tms"], name=visible_name,
                                marker_color=colores[fuente],
                                hovertemplate=f"%{{x|%d-%m-%Y}}<br>Origen: {visible_name}"
@@ -1999,7 +2062,8 @@ def cb_avance(n, _, pad_tab, desde, hasta):
     ajustes = int((fuentes == "AJUSTE_MANUAL").sum())
     if not prelim.empty:
         mensajes.append(html.Div(
-            f"{len(prelim)} combinaciones módulo/día con estimación CV25. "
+            f"{len(prelim)} {'combinación' if len(prelim) == 1 else 'combinaciones'} "
+            "módulo/día con estimación CV25. "
             "Se actualizan al incorporar topografía y reprocesar el período.",
             style={"color": AMBAR, "fontSize": "13px", "fontWeight": 600,
                    "padding": "10px 0 6px"},
