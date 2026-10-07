@@ -1493,9 +1493,12 @@ def cb_preview_conciliados(n, _, pad_tab, desde, hasta):
                         & (grupo["fuente_reclamo"] != "SIN_DATO")
                         & grupo["avance_roto_pct"].notna()].copy()
         if activos.empty:
-            activos = grupo[(grupo["fuente_reclamo"] == "PRELIMINAR_CV25")
-                            & (grupo["tms_rotopala_dia"] == 0)
-                            & grupo["avance_roto_pct"].notna()].copy()
+            for fuente_cero in ("TOPOGRAFIA", "PRELIMINAR_CV25"):
+                activos = grupo[(grupo["fuente_reclamo"] == fuente_cero)
+                                & (grupo["tms_rotopala_dia"] == 0)
+                                & grupo["avance_roto_pct"].notna()].copy()
+                if not activos.empty:
+                    break
         if piso_campana is not None:
             misma_campana = activos["campana_id"] == piso_campana
             activos = activos[~misma_campana | (activos["modulo_numero"] >= piso_modulo)]
@@ -1523,9 +1526,12 @@ def cb_preview_conciliados(n, _, pad_tab, desde, hasta):
             # sigue sumando arriba, esto solo afecta la columna informativa.
             modulo_activo, avance_pct = ultimo_modulo_activo, ultimo_avance_pct
             campana_visible = ultima_campana_activa
-            fuente = "TOPOGRAFIA"
+            fuente = next((valor for valor in ("TOPOGRAFIA", "PRELIMINAR_CV25", "AJUSTE_MANUAL")
+                           if valor in set(grupo["fuente_reclamo"])), None)
         else:
-            modulo_activo, avance_pct, fuente = None, None, None
+            modulo_activo, avance_pct = None, None
+            fuente = next((valor for valor in ("TOPOGRAFIA", "PRELIMINAR_CV25", "AJUSTE_MANUAL")
+                           if valor in set(grupo["fuente_reclamo"])), None)
             campana_visible = ""
 
         # Se proyecta por CV25 UNICAMENTE los dias sin medicion real de
@@ -1534,8 +1540,6 @@ def cb_preview_conciliados(n, _, pad_tab, desde, hasta):
             origen = "Estimación CV25"
         elif fuente == "TOPOGRAFIA":
             origen = "Topografía real"
-        elif tms_rotopala == 0 and tms_camiones == 0:
-            origen = "Sin información"
         else:
             origen = {"AJUSTE_MANUAL": "Ajuste aprobado"}.get(fuente, fuente) if fuente else "Sin información"
 
@@ -1641,7 +1645,11 @@ def cb_rendimiento(n, _, rotopala_tab, desde, hasta):
                 _sin_datos(""))
 
     f1 = go.Figure()
-    f1.add_trace(go.Scatter(x=df["fecha"], y=df["rendimiento_pesometro_tms_hr"],
+    con_corriente = df["corriente_no_null"].fillna(0) > 0
+    sin_corriente = df[~con_corriente]
+    cero_confirmado = df[con_corriente & (df["horas_operacion"] == 0)]
+    f1.add_trace(go.Scatter(x=df["fecha"],
+                            y=df["rendimiento_pesometro_tms_hr"].where(con_corriente),
                             name="CV25", mode="lines+markers",
                             line=dict(color=color, width=2)))
     topo_visible = df["rendimiento_topografia_tms_hr"].where(df["tiene_topografia_real"] == 1)
@@ -1657,10 +1665,27 @@ def cb_rendimiento(n, _, rotopala_tab, desde, hasta):
     f1.update_yaxes(gridcolor="#EEE")
 
     f2 = go.Figure()
-    f2.add_trace(go.Bar(x=df["fecha"], y=df["horas_operacion"],
-                        name=f"Rotopala {rid}", marker_color=color))
+    f2.add_trace(go.Bar(x=df["fecha"], y=df["horas_operacion"].where(con_corriente),
+                        name=f"Rotopala {rid}", marker_color=color,
+                        hovertemplate="%{x|%d-%m-%Y}<br>Horas: %{y:.1f}<extra></extra>"))
+    if not cero_confirmado.empty:
+        f2.add_trace(go.Scatter(
+            x=cero_confirmado["fecha"], y=[0] * len(cero_confirmado), mode="markers",
+            name="0 horas con corriente disponible",
+            marker=dict(symbol="circle-open", size=9, color=color),
+            hovertemplate="%{x|%d-%m-%Y}<br>0 horas · corriente disponible<extra></extra>",
+        ))
     f2.update_layout(**_layout_base(f"Rotopala {rid} — horas de operación por día", 250),
-                     yaxis_title="horas", showlegend=False)
+                     yaxis_title="horas", showlegend=not cero_confirmado.empty)
+    if not sin_corriente.empty:
+        fechas = pd.to_datetime(sin_corriente["fecha"])
+        rango = (_fecha(fechas.min()) if len(fechas) == 1 else
+                 f"{_fecha(fechas.min())} a {_fecha(fechas.max())}")
+        f2.add_annotation(
+            x=0, y=1.08, xref="paper", yref="paper", showarrow=False,
+            xanchor="left", text=f"Sin cobertura de corriente: {rango}",
+            font=dict(size=11, color=GRIS),
+        )
     f2.update_xaxes(showgrid=False)
     f2.update_yaxes(gridcolor="#EEE")
 
@@ -1853,6 +1878,25 @@ def _sin_dato_aplicable(filas: pd.DataFrame, ventanas: pd.DataFrame) -> int:
     return len(cruces.loc[aplicable, ["campana_id", "modulo_id", "fecha_operacion"]].drop_duplicates())
 
 
+def _motivo_sin_proyeccion(fecha, cv, rotopala_id):
+    """Explica la ausencia sin inferir operacion a partir de un cero SQL."""
+    if fecha.date() >= _hoy_chile():
+        return "DIA_NO_CERRADO"
+    if cv is None or cv["flag_preliminar"] == "SIN_CV25":
+        return "SIN_CV025"
+    cobertura = cv[f"horas_con_dato_r{rotopala_id}"]
+    motivos = []
+    if pd.isna(cv["tms_dia"]):
+        motivos.append("SIN_RESOLVER_CV25")
+    if pd.isna(cobertura) or cobertura == 0:
+        motivos.append("SIN_COBERTURA")
+    if motivos:
+        return " / ".join(motivos)
+    if pd.isna(cv[f"tms_estimado_r{rotopala_id}"]):
+        return "SIN_HORAS_NO_REPARTIBLE"
+    return "SIN_MODULO_ELEGIBLE"
+
+
 @callback(
     Output("g-avance", "figure"),
     Output("tabla-avance", "children"),
@@ -1867,6 +1911,7 @@ def cb_avance(n, _, pad_tab, desde, hasta):
     try:
         df = db.avance_diario(desde, hasta)
         estado = db.estado_proyeccion(pad, hasta)
+        cv_dias = db.estado_cv25(desde, hasta)
         df = df[df["pad_id"] == pad]
         sin_dato_filas = df[df["fuente_reclamo"] == "SIN_DATO"]
         ventanas = db.ventanas_secuencia(pad) if not sin_dato_filas.empty else pd.DataFrame()
@@ -1875,12 +1920,14 @@ def cb_avance(n, _, pad_tab, desde, hasta):
 
     mensajes = []
     fecha_hasta = pd.to_datetime(hasta, errors="coerce")
-    if not estado.empty and estado["ultima_topografia"].notna().all():
-        ultima_topografia = pd.to_datetime(estado["ultima_topografia"]).min()
-        mensajes.append(html.Div(
-            f"Topografía disponible hasta {_fecha(ultima_topografia)}.",
-            style={"color": GRIS, "fontSize": "13px", "padding": "10px 0 6px"},
-        ))
+    if not estado.empty:
+        topografias = pd.to_datetime(estado["ultima_topografia"].dropna())
+        ultima_topografia = topografias.min() if not topografias.empty else pd.NaT
+        if pd.notna(ultima_topografia):
+            mensajes.append(html.Div(
+                f"Topografía disponible hasta {_fecha(ultima_topografia)}.",
+                style={"color": GRIS, "fontSize": "13px", "padding": "10px 0 6px"},
+            ))
         prelim_vigente = estado[estado["fecha_preliminar"].notna()]
         if not prelim_vigente.empty:
             fechas_prelim = pd.to_datetime(prelim_vigente["fecha_preliminar"])
@@ -1893,11 +1940,23 @@ def cb_avance(n, _, pad_tab, desde, hasta):
                     "Proyección CV25: 0 TMS — sin operación detectada.",
                     style={"color": AMBAR, "fontSize": "13px", "padding": "4px 0"},
                 ))
-        if pd.notna(fecha_hasta) and fecha_hasta.normalize() > ultima_topografia.normalize() + pd.Timedelta(days=1):
-            mensajes.append(html.Div(
-                "Sin proyección: pendiente topografía del día anterior.",
-                style={"color": AMBAR, "fontSize": "13px", "padding": "4px 0"},
-            ))
+        if pd.notna(fecha_hasta):
+            inicio = pd.to_datetime(desde).normalize()
+            if pd.notna(ultima_topografia):
+                inicio = max(inicio, ultima_topografia.normalize() + pd.Timedelta(days=1))
+            cv_por_fecha = {pd.Timestamp(r["fecha"]).normalize(): r
+                            for _, r in cv_dias.iterrows()}
+            dias_con_fuente = set(pd.to_datetime(
+                df.loc[df["fuente_reclamo"].isin(["TOPOGRAFIA", "PRELIMINAR_CV25"]),
+                       "fecha_operacion"]).dt.normalize())
+            for fecha in pd.date_range(inicio, fecha_hasta.normalize()):
+                if fecha in dias_con_fuente:
+                    continue
+                motivo = _motivo_sin_proyeccion(fecha, cv_por_fecha.get(fecha), pad)
+                mensajes.append(html.Div(
+                    f"{_fecha(fecha)} · Sin proyección: {motivo}.",
+                    style={"color": AMBAR, "fontSize": "13px", "padding": "4px 0"},
+                ))
 
     if df.empty:
         return _sin_datos("Sin datos para este PAD en el período"), html.Div(mensajes)
@@ -1915,7 +1974,19 @@ def cb_avance(n, _, pad_tab, desde, hasta):
             visible_name = {"TOPOGRAFIA": "Topografía real", "PRELIMINAR_CV25": "Estimación CV25",
                             "AJUSTE_MANUAL": "Ajuste", "SIN_DATO": "Sin información"}[fuente]
             f.add_trace(go.Bar(x=sub["fecha_operacion"], y=sub["tms"], name=visible_name,
-                               marker_color=colores[fuente]))
+                               marker_color=colores[fuente],
+                               hovertemplate=f"%{{x|%d-%m-%Y}}<br>Origen: {visible_name}"
+                                             "<br>Tonelaje: %{y:.2f} TMS<extra></extra>"))
+            if fuente == "TOPOGRAFIA":
+                ceros = sub[sub["tms"] == 0]
+                if not ceros.empty:
+                    f.add_trace(go.Scatter(
+                        x=ceros["fecha_operacion"], y=ceros["tms"], mode="markers",
+                        name="Topografía real (0 TMS)", showlegend=False,
+                        marker=dict(symbol="circle-open", size=9, color=AZUL),
+                        hovertemplate="%{x|%d-%m-%Y}<br>Origen: Topografía real"
+                                      "<br>Tonelaje: 0,00 TMS<extra></extra>",
+                    ))
     f.update_layout(**_layout_base(f"PAD {pad} — tonelaje reclamado por rotopala, "
                                    "segun fuente del dato", 330),
                     barmode="stack", yaxis_title="TMS")

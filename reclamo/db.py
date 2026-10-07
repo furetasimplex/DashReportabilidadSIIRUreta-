@@ -69,10 +69,12 @@ def rendimiento(desde, hasta) -> pd.DataFrame:
     """Tasa horaria de tonelaje por rotopala, pesometro contra topografia."""
     return _read(
         """
-        SELECT fecha, rotopala_id, rotopala, material,
+        SELECT r.fecha, r.rotopala_id, rotopala, material,
                horas_operacion, tms_cv25_asignado, tms_topografia,
                rendimiento_pesometro_tms_hr, rendimiento_topografia_tms_hr,
                diferencia_tms, diferencia_pct, flag_cv25,
+               CASE WHEN r.rotopala_id = 1 THEN cv.horas_con_dato_r1
+                    ELSE cv.horas_con_dato_r2 END AS corriente_no_null,
                CASE WHEN EXISTS (
                    SELECT 1 FROM reclamo.v_reclamo_diario rd
                    WHERE rd.fecha_operacion = r.fecha
@@ -80,8 +82,9 @@ def rendimiento(desde, hasta) -> pd.DataFrame:
                      AND rd.fuente_reclamo = 'TOPOGRAFIA'
                ) THEN 1 ELSE 0 END AS tiene_topografia_real
         FROM reclamo.v_rendimiento_rotopala r
-        WHERE fecha BETWEEN :desde AND :hasta
-        ORDER BY fecha, rotopala_id
+        LEFT JOIN reclamo.cv25_diario cv ON cv.fecha = r.fecha
+        WHERE r.fecha BETWEEN :desde AND :hasta
+        ORDER BY r.fecha, r.rotopala_id
         """,
         {"desde": desde, "hasta": hasta},
     )
@@ -174,6 +177,21 @@ def estado_proyeccion(pad, hasta) -> pd.DataFrame:
         WHERE mb.estado_secuencia = 'ABIERTO' AND mb.pad_id = :pad
         """,
         {"pad": pad, "hasta": hasta},
+    )
+
+
+def estado_cv25(desde, hasta) -> pd.DataFrame:
+    """Cobertura y resolucion diaria para explicar ausencias en el panel."""
+    return _read(
+        """
+        SELECT v.fecha, v.tms_dia, v.tms_estimado_r1, v.tms_estimado_r2,
+               v.flag_preliminar, cv.horas_con_dato_r1, cv.horas_con_dato_r2
+        FROM reclamo.v_cv25_diario v
+        LEFT JOIN reclamo.cv25_diario cv ON cv.fecha = v.fecha
+        WHERE v.fecha BETWEEN :desde AND :hasta
+        ORDER BY v.fecha
+        """,
+        {"desde": desde, "hasta": hasta},
     )
 
 
