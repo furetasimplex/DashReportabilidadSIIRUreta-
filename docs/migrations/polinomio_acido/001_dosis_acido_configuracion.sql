@@ -3,6 +3,17 @@ GO
 SET XACT_ABORT ON;
 GO
 
+/*
+    Configuración centralizada del polinomio de ácido.
+
+    Consumidores integrados:
+      - [inventar_SpcHidr].[sp_reporte_turno_emision_test]
+      - [inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]
+
+    La documentación de integración y el mapeo de argumentos se encuentran
+    en docs/migrations/polinomio_acido/README.md.
+*/
+
 IF OBJECT_ID(N'[inventar_SpcHidr].[dosis_acido_configuracion]', N'U') IS NULL
 BEGIN
     CREATE TABLE [inventar_SpcHidr].[dosis_acido_configuracion]
