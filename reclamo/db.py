@@ -409,7 +409,32 @@ def semaforo(desde, hasta) -> pd.DataFrame:
                     WHERE mc.estado = 'CONGELADO'
                       AND NOT EXISTS (SELECT 1 FROM reclamo.secuencia_rotopala s
                                       WHERE s.[campaña_id] = mc.[campaña_id]
-                                        AND s.modulo_id = mc.modulo_id))
+                                        AND s.modulo_id = mc.modulo_id)
+                      -- Mismo criterio A/B de los SP de secuencia (@Siguientes = 5).
+                      AND (EXISTS (
+                          SELECT 1 FROM inventar_SpcHidr.control_reclamo_diario cr
+                          WHERE cr.pad_id = mc.pad_id
+                            AND cr.[campaña_id] = mc.[campaña_id]
+                            AND cr.modulo_id = mc.modulo_id
+                            AND COALESCE(cr.volumen_diario_m3, 0) > 0
+                      ) OR (
+                          mc.modulo_numero > (
+                              SELECT MAX(md.numero)
+                              FROM inventar_SpcHidr.control_reclamo_diario cr
+                              JOIN inventar_SpcHidr.modulo md ON md.id_modulo = cr.modulo_id
+                              WHERE cr.pad_id = mc.pad_id
+                                AND cr.[campaña_id] = mc.[campaña_id]
+                                AND COALESCE(cr.volumen_diario_m3, 0) > 0
+                          )
+                          AND mc.modulo_numero <= (
+                              SELECT MAX(md.numero) + 5
+                              FROM inventar_SpcHidr.control_reclamo_diario cr
+                              JOIN inventar_SpcHidr.modulo md ON md.id_modulo = cr.modulo_id
+                              WHERE cr.pad_id = mc.pad_id
+                                AND cr.[campaña_id] = mc.[campaña_id]
+                                AND COALESCE(cr.volumen_diario_m3, 0) > 0
+                          )
+                      )))
             UNION ALL
             SELECT 3, 'Mas de dos modulos abiertos por rotopala', 'BLOQUEANTE',
                    (SELECT COUNT(*) FROM
@@ -418,7 +443,7 @@ def semaforo(desde, hasta) -> pd.DataFrame:
                      GROUP BY s.rotopala_id, s.[campaña_id]
                      HAVING COUNT(*) > 2) x)
             UNION ALL
-            SELECT 4, 'Cuadratura sobre 100 sin traspaso', 'BLOQUEANTE',
+            SELECT 4, 'Cuadratura sobre 100 sin traspaso', 'ADVERTENCIA',
                    (SELECT COUNT(*) FROM reclamo.v_cuadratura_modulo cm
                     WHERE cm.flag_cuadratura = 'SOBRE_100_PROPONER_TRASPASO'
                       AND NOT EXISTS (SELECT 1 FROM reclamo.ajuste_manual a
