@@ -1,6 +1,8 @@
 # Auditoría integral de Reclamo
 
-Fecha de extracción: 2026-09-02. Base observada: `inventar_SpcHidr` en `VPS-5347319-X`. La auditoría fue estrictamente read-only; no se ejecutó ningún procedimiento ni callback.
+Fecha de extracción original: 2026-09-02. Base observada entonces: `inventar_SpcHidr` en `VPS-5347319-X`. La auditoría fue estrictamente read-only; no se ejecutó ningún procedimiento ni callback.
+
+Las definiciones de vistas `reclamo.*` se refrescaron el 2026-10-07 desde PROD `inventar_SpcHidr_PROD` @ `VPS-6191873-X`. Catálogo y cadena actual: `analisis/vistas.md`.
 
 ## A. Arquitectura general
 
@@ -31,7 +33,7 @@ CÁLCULO
   v_modulo_base
   v_topografia_resuelta
   v_camiones_acumulado
-  v_cv25_diario → v_preliminar_cv25
+  v_cv25_diario → v_preliminar_cv25 → v_preliminar_cv25_con_acumulado
   v_ajustes_aplicables
   v_reclamo_diario
   sp_calcular_reclamo_diario → calculo_diario
@@ -55,7 +57,8 @@ PUBLICACIÓN
 | `sp_establecer_linea_base` | SP | historia anterior al corte | previos de camiones y rotopala |
 | `v_topografia_resuelta` | vista | acumulado topográfico | incremento diario no negativo |
 | `v_camiones_acumulado` | vista | campos oficiales de camiones | diario y acumulado por campaña/módulo |
-| `v_preliminar_cv25` | vista | CV025, horas y módulos abiertos | estimación diaria y acumulada |
+| `v_preliminar_cv25` | vista | CV025, horas y módulos abiertos | estimación diaria por módulo abierto |
+| `v_preliminar_cv25_con_acumulado` | vista | preliminar + última topografía | acumulado que no retrocede; la usa `v_reclamo_diario` |
 | `v_reclamo_diario` | vista | todos los anteriores | cálculo diario lógico |
 | `sp_calcular_reclamo_diario` | SP | `v_reclamo_diario` | materializa `calculo_diario` |
 | `v_cuadratura_modulo` | vista | base, historia, ajustes | saldo, porcentaje, excedente |

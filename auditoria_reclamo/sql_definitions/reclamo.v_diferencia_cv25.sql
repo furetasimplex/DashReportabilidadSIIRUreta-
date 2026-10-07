@@ -8,7 +8,7 @@
    camiones. Por eso la comparacion se hace contra el reclamo de rotopala
    solamente, sin sumar camiones.
    ============================================================================ */
-CREATE   VIEW [reclamo].[v_diferencia_cv25]
+CREATE VIEW [reclamo].[v_diferencia_cv25]
 AS
 WITH topo AS
 (
@@ -51,6 +51,7 @@ SELECT
     CASE
         WHEN cv.fecha IS NULL
             THEN 'SIN_CV25'
+        WHEN cv.tms_dia IS NULL THEN 'SIN_RESOLVER_CV25'
         WHEN COALESCE(t.modulos_topografia,0) = 0
             THEN 'SIN_TOPOGRAFIA_SOLO_PRELIMINAR'
         WHEN COALESCE(cv.tms_dia,0) = 0

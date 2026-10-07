@@ -14,7 +14,7 @@
    con sp_establecer_linea_base) mas lo registrado desde el corte. Sin eso, un
    modulo que venia reclamandose desde antes apareceria como intacto.
    ============================================================================ */
-CREATE   VIEW [reclamo].[v_cuadratura_modulo]
+CREATE VIEW [reclamo].[v_cuadratura_modulo]
 AS
 WITH ult AS
 (
@@ -32,9 +32,10 @@ WITH ult AS
         mb.m3_camiones_previo,
         mb.m3_rotopala_previo,
         (
-            SELECT MAX(c.m3_camiones_acum)
+            SELECT TOP (1) c.m3_camiones_acum
             FROM [reclamo].[v_camiones_acumulado] c
             WHERE c.[campaña_id] = mb.[campaña_id] AND c.modulo_id = mb.modulo_id
+            ORDER BY c.fecha DESC
         ) AS m3_camiones_sistema,
         (
             SELECT MAX(t.m3_reclamado_acum)

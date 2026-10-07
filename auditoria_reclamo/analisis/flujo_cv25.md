@@ -10,5 +10,7 @@ Cuando Dash recalcula no pasa `@HumedadPct`. Para filas nuevas, `humedad_pct=NUL
 
 Los negativos se conservan en tags crudos, pero `tmh_dia/tms_dia` quedan `NULL`. Si faltan horas totales, no se reparte. CV025 se compara solo con topografía de rotopalas porque la regla de proceso declara que la correa no recibe camiones.
 
-La vista activa `v_preliminar_cv25`, modificada el 2026-09-02, limita el preliminar a fechas posteriores a la última topografía de cada módulo abierto. Si hay dos abiertos, divide en partes iguales; no pondera por saldo ni evidencia física del módulo. Calcula además acumulado preliminar y avance preliminar.
+La vista activa `v_preliminar_cv25` limita el preliminar a fechas posteriores a la última topografía de cada módulo abierto. Si hay dos abiertos, divide en partes iguales; no pondera por saldo ni evidencia física del módulo.
+
+En PROD (definición 2026-09-07, catálogo `analisis/vistas.md`) el acumulado ya no vive solo ahí: `v_preliminar_cv25_con_acumulado` suma `m3_acum_ultima_topografia + SUM(m3_preliminar_dia)` y es esa vista la que consume `v_reclamo_diario`.
 

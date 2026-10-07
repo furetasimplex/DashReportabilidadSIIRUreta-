@@ -1,0 +1,18 @@
+﻿esquema,vista,uso,create_date,modify_date,sha256_16,vs_sql_definitions_previo,archivo
+reclamo,v_ajustes_aplicables,cadena_calculo,2026-07-29 16:37:38.130,2026-07-30 10:03:49.203,19845fa3b07a1941,igual,sql_definitions/reclamo.v_ajustes_aplicables.sql
+reclamo,v_camiones_acumulado,pantalla,2026-07-29 16:37:37.727,2026-07-30 10:03:48.773,729da0ca9020b9ee,igual,sql_definitions/reclamo.v_camiones_acumulado.sql
+reclamo,v_cuadratura_modulo,pantalla,2026-07-29 16:37:38.473,2026-10-06 18:59:24.923,d42fcbac86ab8a18,actualizada,sql_definitions/reclamo.v_cuadratura_modulo.sql
+reclamo,v_cv25_diario,cadena_calculo,2026-07-29 16:37:37.937,2026-10-06 13:51:57.510,fee87909c6b7010f,actualizada,sql_definitions/reclamo.v_cv25_diario.sql
+reclamo,v_cv25_diario_contingencia_test,contingencia_test,2026-09-17 12:07:02.717,2026-09-19 12:54:36.810,58b8cbf08fe0b57c,nueva,sql_definitions/reclamo.v_cv25_diario_contingencia_test.sql
+reclamo,v_diferencia_cv25,pantalla,2026-07-29 16:37:38.653,2026-10-06 13:51:57.547,69dead91938b61d9,actualizada,sql_definitions/reclamo.v_diferencia_cv25.sql
+reclamo,v_diferencia_cv25_contingencia_test,contingencia_test,2026-09-17 12:07:03.213,2026-09-19 12:54:37.770,04e03f89b7bc4386,nueva,sql_definitions/reclamo.v_diferencia_cv25_contingencia_test.sql
+reclamo,v_modulo_base,pantalla,2026-07-29 16:37:37.477,2026-07-30 10:03:48.680,527e0fa3a96a8d77,igual,sql_definitions/reclamo.v_modulo_base.sql
+reclamo,v_preliminar_cv25,cadena_calculo,2026-07-29 16:37:38.033,2026-09-07 14:07:51.303,7187d11c0da212a4,actualizada,sql_definitions/reclamo.v_preliminar_cv25.sql
+reclamo,v_preliminar_cv25_con_acumulado,cadena_calculo,2026-09-04 15:01:32.180,2026-09-04 15:32:35.723,5b8d3086a792abbc,nueva,sql_definitions/reclamo.v_preliminar_cv25_con_acumulado.sql
+reclamo,v_preliminar_cv25_con_acumulado_contingencia_test,contingencia_test,2026-09-17 12:07:03.023,2026-09-19 12:54:37.293,2733727689021067,nueva,sql_definitions/reclamo.v_preliminar_cv25_con_acumulado_contingencia_test.sql
+reclamo,v_preliminar_cv25_contingencia_test,contingencia_test,2026-09-17 12:07:02.927,2026-09-19 12:54:37.047,417101b13614cd9f,nueva,sql_definitions/reclamo.v_preliminar_cv25_contingencia_test.sql
+reclamo,v_reclamo_diario,pantalla,2026-07-29 16:37:38.270,2026-09-04 15:06:24.313,4e5e58b4c4fa74da,actualizada,sql_definitions/reclamo.v_reclamo_diario.sql
+reclamo,v_reclamo_diario_contingencia_test,contingencia_test,2026-09-17 12:07:03.107,2026-09-19 12:54:37.530,525d54a317083495,nueva,sql_definitions/reclamo.v_reclamo_diario_contingencia_test.sql
+reclamo,v_reclamo_para_conciliados,pantalla,2026-07-29 16:37:38.737,2026-08-01 19:38:04.040,72ce4439b593a1a9,igual,sql_definitions/reclamo.v_reclamo_para_conciliados.sql
+reclamo,v_rendimiento_rotopala,pantalla,2026-07-29 16:37:38.557,2026-07-30 10:03:49.477,fd04034b78db47de,igual,sql_definitions/reclamo.v_rendimiento_rotopala.sql
+reclamo,v_topografia_resuelta,pantalla,2026-07-29 16:37:37.820,2026-07-30 10:03:48.890,c80cfd2165462549,igual,sql_definitions/reclamo.v_topografia_resuelta.sql

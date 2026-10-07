@@ -12,6 +12,7 @@ from reclamo import panel as reclamo_panel  # registra sus @callback al importar
 from powerbi_camiones import panel as powerbi_panel  # registra sus @callback al importarse
 from monitor_pi_tum import panel as monitor_pitum_panel
 from lixiviacion import panel as lixiviacion_panel
+from polinomio_acido import panel as polinomio_acido_panel
 
 # === Utilidades ===
 project_folder = os.path.dirname(os.path.realpath(__file__))
@@ -76,6 +77,10 @@ def render_sidebar():
                     html.I(className="bi bi-droplet me-2"),
                     "Lixiviación",
                 ], href="#", id="nav-lixiviacion", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-calculator me-2"),
+                    "Polinomio Ácido",
+                ], href="#", id="nav-polinomio-acido", className="siir-nav-link", n_clicks=0),
             ], vertical=True, pills=False),
         ]
     )
@@ -161,6 +166,8 @@ subtabs = html.Div(
         ),
         html.Div(id="subtabs-lixiviacion", style={"display": "none"},
                  children=lixiviacion_panel.layout()),
+        html.Div(id="subtabs-polinomio-acido", style={"display": "none"},
+                 children=polinomio_acido_panel.layout()),
     ]
 )
 
@@ -183,19 +190,22 @@ def register_callbacks(app):
         Output("subtabs-powerbi", "style"),
         Output("subtabs-monitor-pitum", "style"),
         Output("subtabs-lixiviacion", "style"),
+        Output("subtabs-polinomio-acido", "style"),
         Output("nav-reportabilidad", "className"),
         Output("nav-reclamo", "className"),
         Output("nav-powerbi", "className"),
         Output("nav-monitor-pitum", "className"),
         Output("nav-lixiviacion", "className"),
+        Output("nav-polinomio-acido", "className"),
         Input("nav-reportabilidad", "n_clicks"),
         Input("nav-reclamo", "n_clicks"),
         Input("nav-powerbi", "n_clicks"),
         Input("nav-monitor-pitum", "n_clicks"),
         Input("nav-lixiviacion", "n_clicks"),
+        Input("nav-polinomio-acido", "n_clicks"),
         prevent_initial_call=False,
     )
-    def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum, n_lix):
+    def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum, n_lix, n_polinomio):
         # dash.ctx.triggered_id es None en la carga inicial -> por defecto
         # se muestra Reportabilidad, igual que antes.
         triggered = dash.ctx.triggered_id
@@ -206,6 +216,7 @@ def register_callbacks(app):
             "nav-powerbi": "powerbi",
             "nav-monitor-pitum": "monitor-pitum",
             "nav-lixiviacion": "lixiviacion",
+            "nav-polinomio-acido": "polinomio-acido",
         }
         activa = secciones.get(triggered, "reportabilidad")
 
@@ -221,11 +232,13 @@ def register_callbacks(app):
             estilo("powerbi"),
             estilo("monitor-pitum"),
             estilo("lixiviacion"),
+            estilo("polinomio-acido"),
             clase("reportabilidad"),
             clase("reclamo"),
             clase("powerbi"),
             clase("monitor-pitum"),
             clase("lixiviacion"),
+            clase("polinomio-acido"),
         )
 
     @app.callback(
