@@ -1922,7 +1922,11 @@ def _validar_balance_chancado(df_balance: pd.DataFrame) -> None:
     comprobar("Chancado_TMS_Reporte",
               numero("Apilado_TMS_Reporte") + numero("Delta_Inventario_Chancado_TMS") - numero("SRR_TMS_Dia"),
               ["Apilado_TMS_Reporte", "Delta_Inventario_Chancado_TMS", "SRR_TMS_Dia"], 0.01)
-    comprobar("Chancado_TMS_Real", numero("Chancado_TMS_Reporte"),
+    sin_flujos = (numero("Apilado_TMS_Reporte").eq(0)
+                  & numero("Sal_TMH_Dia").eq(0)
+                  & numero("SRR_TMS_Dia").eq(0))
+    chancado_reportable = numero("Chancado_TMS_Reporte").where(~sin_flujos, 0)
+    comprobar("Chancado_TMS_Real", chancado_reportable,
               ["Chancado_TMS_Reporte"], 0.000001)
     comprobar("Diferencia_vs_Datos_Conciliados",
               numero("Chancado_TMS_Reporte") - numero("Chancado_TMS_Real"),
@@ -1990,7 +1994,9 @@ def _agregar_hoja_balance_chancado(wb, df_balance: pd.DataFrame) -> None:
     ws["A1"].font = Font(name="Arial", size=14, bold=True, color=color_texto)
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
     ws.merge_cells("A2:AL2")
-    ws["A2"] = "Ruta aplicada. Apilado TMS ya neto de sal: Chancado = Apilado neto + variación inventario − SRR físico. Celdas vacías: no evaluable."
+    ws["A2"] = ("Apilado TMS neto + variación inventario − SRR físico; "
+                 "Chancado real = 0 si apilado, sal y SRR son cero. "
+                 "Celdas vacías: no evaluable.")
     ws["A2"].font = Font(name="Arial", size=9, italic=True, color=color_texto)
     ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
 

@@ -1,0 +1,631 @@
+{
+  "identity": [
+    {
+      "server_name": "VPS-5347319-X",
+      "database_name": "inventar_SpcHidr",
+      "observed_at": "2026-10-06 19:08:54.070949"
+    }
+  ],
+  "latest_vs_max": [
+    {
+      "campaña_id": 8,
+      "modulo_id": 189,
+      "fecha": "2026-07-04",
+      "m3_camiones_acum": "48.118000000000",
+      "max_historico": "48.118000000000",
+      "rn": 1,
+      "modulo_numero": 125,
+      "m3_camiones_sistema": "48.118000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "48.118000000000",
+      "m3_extraido_total": "97292.824000000006",
+      "porcentaje_extraido": "99.434036",
+      "m3_saldo_disponible": "553.775999999994",
+      "m3_totales": "97846.600000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 190,
+      "fecha": "2026-07-12",
+      "m3_camiones_acum": "4786.749000000001",
+      "max_historico": "4786.749000000001",
+      "rn": 1,
+      "modulo_numero": 126,
+      "m3_camiones_sistema": "4786.749000000001",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "4786.749000000001",
+      "m3_extraido_total": "83228.790999999988",
+      "porcentaje_extraido": "100.491284",
+      "m3_saldo_disponible": "-406.890999999988",
+      "m3_totales": "82821.900000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 191,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "7871.614999999999",
+      "max_historico": "7871.614999999999",
+      "rn": 1,
+      "modulo_numero": 127,
+      "m3_camiones_sistema": "7871.614999999999",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "7871.614999999999",
+      "m3_extraido_total": "71347.333999999996",
+      "porcentaje_extraido": "99.897416",
+      "m3_saldo_disponible": "73.266000000004",
+      "m3_totales": "71420.600000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 192,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "9021.880000000000",
+      "max_historico": "9021.880000000000",
+      "rn": 1,
+      "modulo_numero": 128,
+      "m3_camiones_sistema": "9021.880000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "9021.880000000000",
+      "m3_extraido_total": "55958.280000000001",
+      "porcentaje_extraido": "99.234579",
+      "m3_saldo_disponible": "431.619999999999",
+      "m3_totales": "56389.900000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 193,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "9504.337000000000",
+      "max_historico": "9504.337000000000",
+      "rn": 1,
+      "modulo_numero": 129,
+      "m3_camiones_sistema": "9504.337000000000",
+      "m3_camiones_previo": "4.587000000000",
+      "m3_camiones_total": "9508.924000000000",
+      "m3_extraido_total": "59196.669000000003",
+      "porcentaje_extraido": "100.197645",
+      "m3_saldo_disponible": "-116.769000000003",
+      "m3_totales": "59079.900000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 194,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "8221.853000000000",
+      "max_historico": "8221.853000000000",
+      "rn": 1,
+      "modulo_numero": 130,
+      "m3_camiones_sistema": "8221.853000000000",
+      "m3_camiones_previo": "1177.104000000000",
+      "m3_camiones_total": "9398.957000000000",
+      "m3_extraido_total": "59476.199000000013",
+      "porcentaje_extraido": "98.948561",
+      "m3_saldo_disponible": "632.000999999987",
+      "m3_totales": "60108.200000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 195,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "9954.019000000000",
+      "max_historico": "9954.019000000000",
+      "rn": 1,
+      "modulo_numero": 131,
+      "m3_camiones_sistema": "9954.019000000000",
+      "m3_camiones_previo": "1444.270000000000",
+      "m3_camiones_total": "11398.289000000000",
+      "m3_extraido_total": "59836.570999999999",
+      "porcentaje_extraido": "98.757001",
+      "m3_saldo_disponible": "753.129000000001",
+      "m3_totales": "60589.700000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 196,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "10010.994000000000",
+      "max_historico": "10010.994000000000",
+      "rn": 1,
+      "modulo_numero": 132,
+      "m3_camiones_sistema": "10010.994000000000",
+      "m3_camiones_previo": "1240.878000000000",
+      "m3_camiones_total": "11251.872000000000",
+      "m3_extraido_total": "55413.234999999998",
+      "porcentaje_extraido": "98.447486",
+      "m3_saldo_disponible": "873.865000000002",
+      "m3_totales": "56287.100000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 197,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "10549.600000000000",
+      "max_historico": "10549.600000000000",
+      "rn": 1,
+      "modulo_numero": 133,
+      "m3_camiones_sistema": "10549.600000000000",
+      "m3_camiones_previo": "1089.547000000000",
+      "m3_camiones_total": "11639.147000000000",
+      "m3_extraido_total": "55571.986000000000",
+      "porcentaje_extraido": "99.804575",
+      "m3_saldo_disponible": "108.814000000000",
+      "m3_totales": "55680.800000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 198,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "19227.976000000000",
+      "max_historico": "19227.976000000000",
+      "rn": 1,
+      "modulo_numero": 134,
+      "m3_camiones_sistema": "19227.976000000000",
+      "m3_camiones_previo": "1010.082000000000",
+      "m3_camiones_total": "20238.058000000000",
+      "m3_extraido_total": "56800.725000000001",
+      "porcentaje_extraido": "101.641134",
+      "m3_saldo_disponible": "-917.125000000001",
+      "m3_totales": "55883.600000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 199,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "57773.123000000000",
+      "max_historico": "57773.123000000000",
+      "rn": 1,
+      "modulo_numero": 135,
+      "m3_camiones_sistema": "57773.123000000000",
+      "m3_camiones_previo": "1074.477000000000",
+      "m3_camiones_total": "58847.600000000000",
+      "m3_extraido_total": "59383.587000000000",
+      "porcentaje_extraido": "103.186614",
+      "m3_saldo_disponible": "-1833.887000000000",
+      "m3_totales": "57549.700000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 200,
+      "fecha": "2026-07-27",
+      "m3_camiones_acum": "26456.851999999997",
+      "max_historico": "26456.851999999997",
+      "rn": 1,
+      "modulo_numero": 136,
+      "m3_camiones_sistema": "26456.851999999997",
+      "m3_camiones_previo": "30385.889999999998",
+      "m3_camiones_total": "56842.741999999995",
+      "m3_extraido_total": "56842.741999999995",
+      "porcentaje_extraido": "100.419292",
+      "m3_saldo_disponible": "-237.341999999995",
+      "m3_totales": "56605.400000000000"
+    },
+    {
+      "campaña_id": 8,
+      "modulo_id": 201,
+      "fecha": "2026-07-01",
+      "m3_camiones_acum": "38.713000000000",
+      "max_historico": "38.713000000000",
+      "rn": 1,
+      "modulo_numero": 137,
+      "m3_camiones_sistema": "38.713000000000",
+      "m3_camiones_previo": "55491.670999999995",
+      "m3_camiones_total": "55530.383999999995",
+      "m3_extraido_total": "55530.383999999995",
+      "porcentaje_extraido": "103.154204",
+      "m3_saldo_disponible": "-1697.983999999995",
+      "m3_totales": "53832.400000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 69,
+      "fecha": "2026-09-07",
+      "m3_camiones_acum": "6554.065000000000",
+      "max_historico": "6554.065000000000",
+      "rn": 1,
+      "modulo_numero": 5,
+      "m3_camiones_sistema": "6554.065000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "6554.065000000000",
+      "m3_extraido_total": "61671.270000000002",
+      "porcentaje_extraido": "99.851318",
+      "m3_saldo_disponible": "91.829999999998",
+      "m3_totales": "61763.100000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 70,
+      "fecha": "2026-09-07",
+      "m3_camiones_acum": "10140.706000000000",
+      "max_historico": "10140.706000000000",
+      "rn": 1,
+      "modulo_numero": 6,
+      "m3_camiones_sistema": "10140.706000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "10140.706000000000",
+      "m3_extraido_total": "59781.671999999993",
+      "porcentaje_extraido": "100.017018",
+      "m3_saldo_disponible": "-10.171999999993",
+      "m3_totales": "59771.500000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 71,
+      "fecha": "2026-09-07",
+      "m3_camiones_acum": "50345.805999999995",
+      "max_historico": "50345.805999999995",
+      "rn": 1,
+      "modulo_numero": 7,
+      "m3_camiones_sistema": "50345.805999999995",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "50345.805999999995",
+      "m3_extraido_total": "62146.079999999994",
+      "porcentaje_extraido": "103.971002",
+      "m3_saldo_disponible": "-2373.567999999992",
+      "m3_totales": "59772.512000000002"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 72,
+      "fecha": "2026-09-07",
+      "m3_camiones_acum": "59854.920333333334",
+      "max_historico": "59854.920333333334",
+      "rn": 1,
+      "modulo_numero": 8,
+      "m3_camiones_sistema": "59854.920333333334",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "59854.920333333334",
+      "m3_extraido_total": "59854.920333333334",
+      "porcentaje_extraido": "96.872372",
+      "m3_saldo_disponible": "1932.479666666667",
+      "m3_totales": "61787.400000000001"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 73,
+      "fecha": "2026-09-07",
+      "m3_camiones_acum": "62150.738000000000",
+      "max_historico": "62150.738000000000",
+      "rn": 1,
+      "modulo_numero": 9,
+      "m3_camiones_sistema": "62150.738000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "62150.738000000000",
+      "m3_extraido_total": "62150.738000000000",
+      "porcentaje_extraido": "103.975316",
+      "m3_saldo_disponible": "-2376.225999999998",
+      "m3_totales": "59774.512000000002"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 74,
+      "fecha": "2026-09-07",
+      "m3_camiones_acum": "57457.698666666667",
+      "max_historico": "57457.698666666667",
+      "rn": 1,
+      "modulo_numero": 10,
+      "m3_camiones_sistema": "57457.698666666667",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "57457.698666666667",
+      "m3_extraido_total": "62794.494666666667",
+      "porcentaje_extraido": "103.926981",
+      "m3_saldo_disponible": "-2372.750666666668",
+      "m3_totales": "60421.743999999999"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 75,
+      "fecha": "2026-09-07",
+      "m3_camiones_acum": "274.484000000000",
+      "max_historico": "274.484000000000",
+      "rn": 1,
+      "modulo_numero": 11,
+      "m3_camiones_sistema": "274.484000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "274.484000000000",
+      "m3_extraido_total": "61252.810999999997",
+      "porcentaje_extraido": "101.860458",
+      "m3_saldo_disponible": "-1118.768999999996",
+      "m3_totales": "60134.042000000001"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 80,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "0.387000000000",
+      "max_historico": "0.387000000000",
+      "rn": 1,
+      "modulo_numero": 16,
+      "m3_camiones_sistema": "0.387000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "0.387000000000",
+      "m3_extraido_total": "0.387000000000",
+      "porcentaje_extraido": "0.000385",
+      "m3_saldo_disponible": "100435.491000000000",
+      "m3_totales": "100435.878000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 81,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "1469.773000000000",
+      "max_historico": "1469.773000000000",
+      "rn": 1,
+      "modulo_numero": 17,
+      "m3_camiones_sistema": "1469.773000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "1469.773000000000",
+      "m3_extraido_total": "1469.773000000000",
+      "porcentaje_extraido": "1.449807",
+      "m3_saldo_disponible": "99907.322000000000",
+      "m3_totales": "101377.095000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 82,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "9254.498000000000",
+      "max_historico": "9254.498000000000",
+      "rn": 1,
+      "modulo_numero": 18,
+      "m3_camiones_sistema": "9254.498000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "9254.498000000000",
+      "m3_extraido_total": "9254.498000000000",
+      "porcentaje_extraido": "9.296014",
+      "m3_saldo_disponible": "90298.898000000000",
+      "m3_totales": "99553.396000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 83,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "7510.166000000000",
+      "max_historico": "7510.166000000000",
+      "rn": 1,
+      "modulo_numero": 19,
+      "m3_camiones_sistema": "7510.166000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "7510.166000000000",
+      "m3_extraido_total": "7510.166000000000",
+      "porcentaje_extraido": "7.514327",
+      "m3_saldo_disponible": "92434.455000000000",
+      "m3_totales": "99944.621000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 84,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "6073.991000000000",
+      "max_historico": "6073.991000000000",
+      "rn": 1,
+      "modulo_numero": 20,
+      "m3_camiones_sistema": "6073.991000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "6073.991000000000",
+      "m3_extraido_total": "6073.991000000000",
+      "porcentaje_extraido": "6.037484",
+      "m3_saldo_disponible": "94530.681000000000",
+      "m3_totales": "100604.672000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 85,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "6580.469000000000",
+      "max_historico": "6580.469000000000",
+      "rn": 1,
+      "modulo_numero": 21,
+      "m3_camiones_sistema": "6580.469000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "6580.469000000000",
+      "m3_extraido_total": "6580.469000000000",
+      "porcentaje_extraido": "6.436090",
+      "m3_saldo_disponible": "95662.795000000000",
+      "m3_totales": "102243.264000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 86,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "21432.370000000000",
+      "max_historico": "21432.370000000000",
+      "rn": 1,
+      "modulo_numero": 22,
+      "m3_camiones_sistema": "21432.370000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "21432.370000000000",
+      "m3_extraido_total": "21432.370000000000",
+      "porcentaje_extraido": "20.347305",
+      "m3_saldo_disponible": "83900.346000000000",
+      "m3_totales": "105332.716000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 87,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "31361.928000000000",
+      "max_historico": "31361.928000000000",
+      "rn": 1,
+      "modulo_numero": 23,
+      "m3_camiones_sistema": "31361.928000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "31361.928000000000",
+      "m3_extraido_total": "31361.928000000000",
+      "porcentaje_extraido": "30.429211",
+      "m3_saldo_disponible": "71703.272000000000",
+      "m3_totales": "103065.200000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 88,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "34954.344000000000",
+      "max_historico": "34954.344000000000",
+      "rn": 1,
+      "modulo_numero": 24,
+      "m3_camiones_sistema": "34954.344000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "34954.344000000000",
+      "m3_extraido_total": "34954.344000000000",
+      "porcentaje_extraido": "34.097574",
+      "m3_saldo_disponible": "67558.356000000000",
+      "m3_totales": "102512.700000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 89,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "34604.143000000000",
+      "max_historico": "34604.143000000000",
+      "rn": 1,
+      "modulo_numero": 25,
+      "m3_camiones_sistema": "34604.143000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "34604.143000000000",
+      "m3_extraido_total": "34604.143000000000",
+      "porcentaje_extraido": "34.459893",
+      "m3_saldo_disponible": "65814.457000000000",
+      "m3_totales": "100418.600000000000"
+    },
+    {
+      "campaña_id": 10,
+      "modulo_id": 90,
+      "fecha": "2026-10-03",
+      "m3_camiones_acum": "10995.041000000000",
+      "max_historico": "10995.041000000000",
+      "rn": 1,
+      "modulo_numero": 26,
+      "m3_camiones_sistema": "10995.041000000000",
+      "m3_camiones_previo": "0E-12",
+      "m3_camiones_total": "10995.041000000000",
+      "m3_extraido_total": "10995.041000000000",
+      "porcentaje_extraido": "10.276766",
+      "m3_saldo_disponible": "95994.259000000000",
+      "m3_totales": "106989.300000000000"
+    }
+  ],
+  "duplicate_keys": [],
+  "definition": [
+    {
+      "definition": "/* ============================================================================\n   V8. reclamo.v_cuadratura_modulo\n\n   Regla R9. Es el control que detecta los casos que el Excel mostraba a mano:\n   modulos 115 y 118 al 104 % y 107 % de extraccion.\n\n   Cuando el porcentaje supera 100 mas la tolerancia configurada, la vista\n   calcula el excedente y propone el modulo siguiente de la secuencia como\n   destino del traspaso. La propuesta NO se aplica sola: hay que registrarla\n   como ajuste manual APROBADO.\n\n   INCLUYE LA LINEA BASE. El acumulado suma lo extraido antes de la fecha de\n   corte del sistema (m3_camiones_previo y m3_rotopala_previo, fijados una vez\n   con sp_establecer_linea_base) mas lo registrado desde el corte. Sin eso, un\n   modulo que venia reclamandose desde antes apareceria como intacto.\n   ============================================================================ */\nCREATE VIEW [reclamo].[v_cuadratura_modulo]\nAS\nWITH ult AS\n(\n    SELECT\n        mb.[campaña_id],\n        mb.pad_id,\n        mb.modulo_id,\n        mb.modulo_numero,\n        mb.rotopala_id,\n        mb.orden_secuencia,\n        mb.estado_secuencia,\n        mb.m3_totales,\n        mb.tms_conformado,\n        mb.densidad_oficial,\n        mb.m3_camiones_previo,\n        mb.m3_rotopala_previo,\n        (\n            SELECT TOP (1) c.m3_camiones_acum\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = mb.[campaña_id] AND c.modulo_id = mb.modulo_id\n            ORDER BY c.fecha DESC\n        ) AS m3_camiones_sistema,\n        (\n            SELECT MAX(t.m3_reclamado_acum)\n            FROM [reclamo].[v_topografia_resuelta] t\n            WHERE t.[campaña_id] = mb.[campaña_id] AND t.modulo_id = mb.modulo_id\n        ) AS m3_rotopala_sistema,\n        (\n            SELECT SUM(COALESCE(a.delta_m3,0))\n            FROM [reclamo].[v_ajustes_aplicables] a\n            WHERE a.[campaña_id] = mb.[campaña_id] AND a.modulo_id = mb.modulo_id\n        ) AS m3_ajustes\n    FROM [reclamo].[v_modulo_base] mb\n)\nSELECT\n    u.[campaña_id],\n    u.pad_id,\n    u.modulo_id,\n    u.modulo_numero,\n    u.rotopala_id,\n    u.orden_secuencia,\n    u.estado_secuencia,\n\n    u.m3_totales,\n\n    /* Extraido antes de la fecha de corte del sistema. No se recalcula. */\n    u.m3_camiones_previo,\n    u.m3_rotopala_previo,\n\n    /* Extraido registrado por el sistema, desde la fecha de corte. */\n    COALESCE(u.m3_camiones_sistema, 0)      AS m3_camiones_sistema,\n    COALESCE(u.m3_rotopala_sistema, 0)      AS m3_rotopala_sistema,\n\n    /* Totales del modulo.\n       Camiones: la linea base SI se suma al acumulado propio del sistema,\n       porque camiones_reclamo solo tiene filas desde el corte y su\n       acumulado se recalcula desde cero dentro del esquema (no duplica).\n       Rotopala/topografia: la linea base NO se suma cuando ya existe una\n       lectura de topografia, porque m3_reclamado_acum llega desde la fuente\n       como acumulado corrido desde el inicio real del modulo (nunca se\n       reinicia en el corte) y ya incluye lo previo. Sumar previo encima\n       duplicaba el tonelaje (bug confirmado en modulo_id 187, campaña 8:\n       90.113,502 + 101.363,707 = 191.477 m3 contra 102.709,9 m3 de\n       capacidad, 186% del modulo). La linea base solo se usa como\n       reemplazo cuando el modulo aun no tiene ninguna lectura de\n       topografia sincronizada. */\n    u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema, 0)\n                                            AS m3_camiones_total,\n    COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n                                            AS m3_rotopala_total,\n    COALESCE(u.m3_ajustes, 0)               AS m3_ajustes,\n    u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n        + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n        + COALESCE(u.m3_ajustes,0)          AS m3_extraido_total,\n\n    CASE\n        WHEN u.m3_totales = 0 THEN NULL\n        ELSE (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales\n    END                                     AS porcentaje_extraido,\n\n    /* Excedente por sobre el volumen del modulo. */\n    CASE\n        WHEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n             + COALESCE(u.m3_ajustes,0) > u.m3_totales\n        THEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n             + COALESCE(u.m3_ajustes,0) - u.m3_totales\n        ELSE 0\n    END                                     AS m3_excedente,\n\n    CASE\n        WHEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n             + COALESCE(u.m3_ajustes,0) > u.m3_totales\n        THEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n              + COALESCE(u.m3_ajustes,0) - u.m3_totales) * u.densidad_oficial\n        ELSE 0\n    END                                     AS tms_excedente,\n\n    /* Modulo siguiente de la secuencia, propuesto como destino del traspaso. */\n    (\n        SELECT TOP (1) s.modulo_id\n        FROM [reclamo].[secuencia_rotopala] s\n        WHERE s.rotopala_id     = u.rotopala_id\n          AND s.[campaña_id]    = u.[campaña_id]\n          AND s.orden_secuencia > u.orden_secuencia\n        ORDER BY s.orden_secuencia\n    )                                       AS modulo_siguiente_propuesto,\n\n    CASE\n        WHEN u.m3_totales = 0\n            THEN 'SIN_VOLUMEN_TOTAL'\n        WHEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales\n             > 100 + (SELECT TRY_CONVERT(decimal(9,4), valor)\n                      FROM [reclamo].[configuracion]\n                      WHERE clave = 'TOLERANCIA_CUADRATURA_PCT')\n            THEN 'SOBRE_100_PROPONER_TRASPASO'\n        WHEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales > 99\n            THEN 'MODULO_PRACTICAMENTE_AGOTADO'\n        ELSE 'OK'\n    END                                     AS flag_cuadratura,\n\n    /* Saldo disponible para seguir reclamando. */\n    u.m3_totales\n        - (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n           + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n           + COALESCE(u.m3_ajustes,0))      AS m3_saldo_disponible,\n\n    /* Los mismos totales en TMS, para el resumen por modulo del dashboard.\n       La densidad es la oficial del modulo, constante desde el congelamiento\n       (supuesto S8), por lo que convertir m3 a TMS aca es directo. */\n    u.densidad_oficial,\n    u.tms_conformado,\n\n    (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)) * u.densidad_oficial\n                                            AS tms_camiones_total,\n    (COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)) * u.densidad_oficial\n                                            AS tms_rotopala_total,\n    (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n        + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n        + COALESCE(u.m3_ajustes,0)) * u.densidad_oficial\n                                            AS tms_extraido_total,\n\n    (u.m3_totales\n        - (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n           + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n           + COALESCE(u.m3_ajustes,0))) * u.densidad_oficial\n                                            AS tms_saldo_disponible\nFROM ult u;\n"
+    }
+  ],
+  "negative_rows": [],
+  "accum_references": [
+    {
+      "name": "sp_calcular_reclamo_diario",
+      "definition": "/* ============================================================================\n   SP 6. reclamo.sp_calcular_reclamo_diario\n\n   Materializa reclamo.calculo_diario a partir de reclamo.v_reclamo_diario, y\n   deja constancia de la corrida en reclamo.log_ejecucion.\n\n   El calculo es idempotente: reprocesar el mismo rango produce el mismo\n   resultado, y una fila PRELIMINAR_CV25 se convierte sola en TOPOGRAFIA en\n   cuanto llega la medicion.\n   ============================================================================ */\nCREATE   PROCEDURE [reclamo].[sp_calcular_reclamo_diario]\n(\n    @FechaInicio    date,\n    @FechaFin       date,\n    @DiasReproceso  int = 7\n)\nAS\nBEGIN\n    SET NOCOUNT ON;\n    SET XACT_ABORT ON;\n\n    DECLARE @EjecucionId int;\n    DECLARE @Desde date;\n\n    BEGIN TRY\n        IF @FechaInicio IS NULL OR @FechaFin IS NULL\n            THROW 60501, 'Debe informar el rango de fechas.', 1;\n        IF @FechaInicio > @FechaFin\n            THROW 60502, 'La fecha inicial no puede ser mayor que la final.', 1;\n\n        SET @Desde =\n            CASE\n                WHEN DATEADD(DAY, -@DiasReproceso, @FechaFin) < @FechaInicio\n                    THEN DATEADD(DAY, -@DiasReproceso, @FechaFin)\n                ELSE @FechaInicio\n            END;\n\n        /* El sistema no calcula hacia atras de la fecha de corte. Lo anterior\n           vive como linea base en modulo_congelado y no se recalcula. */\n        DECLARE @Corte date = [reclamo].[fn_fecha_corte]();\n\n        IF @Corte IS NULL\n            THROW 60503,\n                  'No hay FECHA_CORTE_SISTEMA en reclamo.configuracion.', 1;\n\n        IF @Desde < @Corte\n        BEGIN\n            PRINT '-- El rango solicitado comienza antes de la fecha de corte ('\n                + CONVERT(varchar(10), @Corte, 120) + ').';\n            PRINT '-- Se recorta al corte. Lo anterior es linea base y no se recalcula.';\n            SET @Desde = @Corte;\n        END;\n\n        IF @FechaFin < @Corte\n            THROW 60504,\n                  'Todo el rango solicitado es anterior a la fecha de corte del sistema.', 1;\n\n        INSERT INTO [reclamo].[log_ejecucion]\n            (procedimiento, rango_desde, rango_hasta, estado)\n        VALUES\n            ('reclamo.sp_calcular_reclamo_diario', @Desde, @FechaFin, 'EN_CURSO');\n\n        SET @EjecucionId = SCOPE_IDENTITY();\n\n        PRINT '-- Rango efectivo: ' + CONVERT(varchar(10), @Desde, 120)\n            + ' a ' + CONVERT(varchar(10), @FechaFin, 120);\n\n        /* Se borra y recarga el rango completo: mas simple y seguro que un\n           MERGE con muchas columnas, y el volumen diario es pequeno. */\n        DELETE FROM [reclamo].[calculo_diario]\n        WHERE fecha_operacion >= @Desde\n          AND fecha_operacion <= @FechaFin;\n\n        INSERT INTO [reclamo].[calculo_diario]\n        (\n            fecha_operacion, [campaña_id], pad_id, modulo_id, modulo_numero, rotopala_id,\n            tms_conformado, m3_totales, densidad_oficial,\n            m3_camiones_dia, tms_camiones_dia,\n            m3_camiones_acum, tms_camiones_acum,\n            m3_disponible_roto, tms_disponible_roto,\n            m3_rotopala_dia, tms_rotopala_dia,\n            m3_rotopala_acum, tms_rotopala_acum,\n            avance_total_pct, avance_roto_pct, avance_camiones_pct,\n            ajuste_m3, ajuste_tms, ajustes_aplicados,\n            fuente_reclamo, metodo_calculo, flag_calculo, flag_cuadratura,\n            ejecucion_id\n        )\n        SELECT\n            rd.fecha_operacion,\n            rd.[campaña_id],\n            rd.pad_id,\n            rd.modulo_id,\n            rd.modulo_numero,\n            rd.rotopala_id,\n\n            rd.tms_conformado,\n            rd.m3_totales,\n            rd.densidad_oficial,\n\n            rd.m3_camiones_dia,\n            rd.tms_camiones_dia,\n\n            rd.m3_camiones_acum,\n            rd.tms_camiones_acum,\n\n            rd.m3_disponible_roto,\n            rd.tms_disponible_roto,\n\n            rd.m3_rotopala_dia,\n            rd.tms_rotopala_dia,\n            rd.m3_rotopala_acum_topografia,\n            rd.m3_rotopala_acum_topografia * rd.densidad_oficial,\n\n            rd.avance_total_pct_calculado,\n            rd.avance_roto_pct,\n            rd.avance_camiones_pct,\n\n            rd.ajuste_m3,\n            rd.ajuste_tms,\n            rd.ajustes_aplicados,\n\n            rd.fuente_reclamo,\n            rd.metodo_calculo,\n            rd.flag_calculo,\n            cm.flag_cuadratura,\n\n            @EjecucionId\n        FROM [reclamo].[v_reclamo_diario] rd\n        LEFT JOIN [reclamo].[v_cuadratura_modulo] cm\n            ON  cm.[campaña_id] = rd.[campaña_id]\n            AND cm.modulo_id    = rd.modulo_id\n        WHERE rd.fecha_operacion >= @Desde\n          AND rd.fecha_operacion <= @FechaFin;\n\n        DECLARE @Filas int = @@ROWCOUNT;\n\n        DECLARE @Topo  int = (SELECT COUNT(*) FROM [reclamo].[calculo_diario]\n                              WHERE ejecucion_id = @EjecucionId AND fuente_reclamo = 'TOPOGRAFIA');\n        DECLARE @Prel  int = (SELECT COUNT(*) FROM [reclamo].[calculo_diario]\n                              WHERE ejecucion_id = @EjecucionId AND fuente_reclamo = 'PRELIMINAR_CV25');\n        DECLARE @Sin   int = (SELECT COUNT(*) FROM [reclamo].[calculo_diario]\n                              WHERE ejecucion_id = @EjecucionId AND fuente_reclamo = 'SIN_DATO');\n\n        UPDATE [reclamo].[log_ejecucion]\n        SET fecha_fin        = SYSDATETIME(),\n            filas_afectadas  = @Filas,\n            filas_topografia = @Topo,\n            filas_preliminar = @Prel,\n            filas_sin_dato   = @Sin,\n            estado           = 'OK'\n        WHERE ejecucion_id = @EjecucionId;\n\n        PRINT 'Filas calculadas      : ' + CAST(@Filas AS varchar);\n        PRINT '  Fuente TOPOGRAFIA   : ' + CAST(@Topo AS varchar) + ' (OFICIAL)';\n        PRINT '  Fuente PRELIMINAR   : ' + CAST(@Prel AS varchar) + ' (se reemplaza al llegar topografia)';\n        PRINT '  Sin dato            : ' + CAST(@Sin  AS varchar);\n\n        IF @Prel > 0\n        BEGIN\n            PRINT '';\n            PRINT 'ATENCION: hay reclamo publicado con fuente PRELIMINAR_CV25.';\n            PRINT 'Estas fechas y modulos se corregiran solos al reprocesar el rango';\n            PRINT 'una vez cargada la medicion topografica:';\n\n            SELECT DISTINCT\n                cd.fecha_operacion,\n                cd.pad_id,\n                cd.modulo_numero,\n                cd.tms_rotopala_dia,\n                cd.flag_calculo\n            FROM [reclamo].[calculo_diario] cd\n            WHERE cd.ejecucion_id = @EjecucionId\n              AND cd.fuente_reclamo = 'PRELIMINAR_CV25'\n            ORDER BY cd.fecha_operacion, cd.pad_id, cd.modulo_numero;\n        END;\n\n        /* Modulos que superaron el 100 por ciento. */\n        IF EXISTS (SELECT 1 FROM [reclamo].[v_cuadratura_modulo]\n                   WHERE flag_cuadratura = 'SOBRE_100_PROPONER_TRASPASO')\n        BEGIN\n            PRINT '';\n            PRINT 'ATENCION: modulos con extraccion sobre 100 por ciento.';\n            PRINT 'Requieren un ajuste TRASPASO_MODULO documentado.';\n\n            SELECT\n                cm.[campaña_id],\n                cm.modulo_numero,\n                cm.porcentaje_extraido,\n                cm.m3_excedente,\n                cm.tms_excedente,\n                cm.modulo_siguiente_propuesto\n            FROM [reclamo].[v_cuadratura_modulo] cm\n            WHERE cm.flag_cuadratura = 'SOBRE_100_PROPONER_TRASPASO'\n            ORDER BY cm.porcentaje_extraido DESC;\n        END;\n    END TRY\n    BEGIN CATCH\n        IF @EjecucionId IS NOT NULL\n            UPDATE [reclamo].[log_ejecucion]\n            SET fecha_fin = SYSDATETIME(),\n                estado    = 'ERROR',\n                mensaje   = ERROR_MESSAGE()\n            WHERE ejecucion_id = @EjecucionId;\n        THROW;\n    END CATCH\nEND;"
+    },
+    {
+      "name": "v_camiones_acumulado",
+      "definition": "/* ============================================================================\n   V2. reclamo.v_camiones_acumulado\n\n   Regla R4. El acumulado NO se limita al mes: parte del inicio de la campana,\n   porque un modulo puede haber sido reclamado por camiones mucho antes.\n\n   El contraste geomensura contra THM es el control que el Excel hacia a mano\n   y que aca queda permanente.\n   ============================================================================ */\nCREATE   VIEW [reclamo].[v_camiones_acumulado]\nAS\nSELECT\n    cr.fecha,\n    cr.[campaña_id],\n    cr.pad_id,\n    cr.modulo_id,\n\n    cr.m3_oficial                           AS m3_camiones_dia,\n    cr.tms_oficial                          AS tms_camiones_dia,\n\n    SUM(cr.m3_oficial) OVER\n    (\n        PARTITION BY cr.[campaña_id], cr.modulo_id\n        ORDER BY cr.fecha\n        ROWS UNBOUNDED PRECEDING\n    )                                       AS m3_camiones_acum,\n\n    SUM(cr.tms_oficial) OVER\n    (\n        PARTITION BY cr.[campaña_id], cr.modulo_id\n        ORDER BY cr.fecha\n        ROWS UNBOUNDED PRECEDING\n    )                                       AS tms_camiones_acum,\n\n    cr.m3_geomensura,\n    cr.m3_thm,\n    cr.vueltas,\n    cr.capacidad_camion_m3,\n    cr.fuente_oficial,\n\n    /* Brecha relativa entre las dos mediciones, solo cuando ambas existen. */\n    CASE\n        WHEN cr.m3_geomensura IS NULL OR cr.m3_thm IS NULL THEN NULL\n        WHEN cr.m3_thm = 0 THEN NULL\n        ELSE (cr.m3_geomensura - cr.m3_thm) * 100.0 / cr.m3_thm\n    END                                     AS brecha_geomensura_thm_pct,\n\n    CASE\n        WHEN cr.m3_geomensura IS NULL OR cr.m3_thm IS NULL\n            THEN 'SIN_CONTRASTE'\n        WHEN cr.m3_thm = 0\n            THEN 'THM_CERO'\n        WHEN ABS((cr.m3_geomensura - cr.m3_thm) * 100.0 / cr.m3_thm) > 10\n            THEN 'BRECHA_SOBRE_10_PCT'\n        ELSE 'OK'\n    END                                     AS flag_contraste_camiones\nFROM [reclamo].[camiones_reclamo] cr\nWHERE cr.estado = 'VIGENTE';"
+    },
+    {
+      "name": "v_cuadratura_modulo",
+      "definition": "/* ============================================================================\n   V8. reclamo.v_cuadratura_modulo\n\n   Regla R9. Es el control que detecta los casos que el Excel mostraba a mano:\n   modulos 115 y 118 al 104 % y 107 % de extraccion.\n\n   Cuando el porcentaje supera 100 mas la tolerancia configurada, la vista\n   calcula el excedente y propone el modulo siguiente de la secuencia como\n   destino del traspaso. La propuesta NO se aplica sola: hay que registrarla\n   como ajuste manual APROBADO.\n\n   INCLUYE LA LINEA BASE. El acumulado suma lo extraido antes de la fecha de\n   corte del sistema (m3_camiones_previo y m3_rotopala_previo, fijados una vez\n   con sp_establecer_linea_base) mas lo registrado desde el corte. Sin eso, un\n   modulo que venia reclamandose desde antes apareceria como intacto.\n   ============================================================================ */\nCREATE VIEW [reclamo].[v_cuadratura_modulo]\nAS\nWITH ult AS\n(\n    SELECT\n        mb.[campaña_id],\n        mb.pad_id,\n        mb.modulo_id,\n        mb.modulo_numero,\n        mb.rotopala_id,\n        mb.orden_secuencia,\n        mb.estado_secuencia,\n        mb.m3_totales,\n        mb.tms_conformado,\n        mb.densidad_oficial,\n        mb.m3_camiones_previo,\n        mb.m3_rotopala_previo,\n        (\n            SELECT TOP (1) c.m3_camiones_acum\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = mb.[campaña_id] AND c.modulo_id = mb.modulo_id\n            ORDER BY c.fecha DESC\n        ) AS m3_camiones_sistema,\n        (\n            SELECT MAX(t.m3_reclamado_acum)\n            FROM [reclamo].[v_topografia_resuelta] t\n            WHERE t.[campaña_id] = mb.[campaña_id] AND t.modulo_id = mb.modulo_id\n        ) AS m3_rotopala_sistema,\n        (\n            SELECT SUM(COALESCE(a.delta_m3,0))\n            FROM [reclamo].[v_ajustes_aplicables] a\n            WHERE a.[campaña_id] = mb.[campaña_id] AND a.modulo_id = mb.modulo_id\n        ) AS m3_ajustes\n    FROM [reclamo].[v_modulo_base] mb\n)\nSELECT\n    u.[campaña_id],\n    u.pad_id,\n    u.modulo_id,\n    u.modulo_numero,\n    u.rotopala_id,\n    u.orden_secuencia,\n    u.estado_secuencia,\n\n    u.m3_totales,\n\n    /* Extraido antes de la fecha de corte del sistema. No se recalcula. */\n    u.m3_camiones_previo,\n    u.m3_rotopala_previo,\n\n    /* Extraido registrado por el sistema, desde la fecha de corte. */\n    COALESCE(u.m3_camiones_sistema, 0)      AS m3_camiones_sistema,\n    COALESCE(u.m3_rotopala_sistema, 0)      AS m3_rotopala_sistema,\n\n    /* Totales del modulo.\n       Camiones: la linea base SI se suma al acumulado propio del sistema,\n       porque camiones_reclamo solo tiene filas desde el corte y su\n       acumulado se recalcula desde cero dentro del esquema (no duplica).\n       Rotopala/topografia: la linea base NO se suma cuando ya existe una\n       lectura de topografia, porque m3_reclamado_acum llega desde la fuente\n       como acumulado corrido desde el inicio real del modulo (nunca se\n       reinicia en el corte) y ya incluye lo previo. Sumar previo encima\n       duplicaba el tonelaje (bug confirmado en modulo_id 187, campaña 8:\n       90.113,502 + 101.363,707 = 191.477 m3 contra 102.709,9 m3 de\n       capacidad, 186% del modulo). La linea base solo se usa como\n       reemplazo cuando el modulo aun no tiene ninguna lectura de\n       topografia sincronizada. */\n    u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema, 0)\n                                            AS m3_camiones_total,\n    COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n                                            AS m3_rotopala_total,\n    COALESCE(u.m3_ajustes, 0)               AS m3_ajustes,\n    u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n        + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n        + COALESCE(u.m3_ajustes,0)          AS m3_extraido_total,\n\n    CASE\n        WHEN u.m3_totales = 0 THEN NULL\n        ELSE (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales\n    END                                     AS porcentaje_extraido,\n\n    /* Excedente por sobre el volumen del modulo. */\n    CASE\n        WHEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n             + COALESCE(u.m3_ajustes,0) > u.m3_totales\n        THEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n             + COALESCE(u.m3_ajustes,0) - u.m3_totales\n        ELSE 0\n    END                                     AS m3_excedente,\n\n    CASE\n        WHEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n             + COALESCE(u.m3_ajustes,0) > u.m3_totales\n        THEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n              + COALESCE(u.m3_ajustes,0) - u.m3_totales) * u.densidad_oficial\n        ELSE 0\n    END                                     AS tms_excedente,\n\n    /* Modulo siguiente de la secuencia, propuesto como destino del traspaso. */\n    (\n        SELECT TOP (1) s.modulo_id\n        FROM [reclamo].[secuencia_rotopala] s\n        WHERE s.rotopala_id     = u.rotopala_id\n          AND s.[campaña_id]    = u.[campaña_id]\n          AND s.orden_secuencia > u.orden_secuencia\n        ORDER BY s.orden_secuencia\n    )                                       AS modulo_siguiente_propuesto,\n\n    CASE\n        WHEN u.m3_totales = 0\n            THEN 'SIN_VOLUMEN_TOTAL'\n        WHEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales\n             > 100 + (SELECT TRY_CONVERT(decimal(9,4), valor)\n                      FROM [reclamo].[configuracion]\n                      WHERE clave = 'TOLERANCIA_CUADRATURA_PCT')\n            THEN 'SOBRE_100_PROPONER_TRASPASO'\n        WHEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales > 99\n            THEN 'MODULO_PRACTICAMENTE_AGOTADO'\n        ELSE 'OK'\n    END                                     AS flag_cuadratura,\n\n    /* Saldo disponible para seguir reclamando. */\n    u.m3_totales\n        - (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n           + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n           + COALESCE(u.m3_ajustes,0))      AS m3_saldo_disponible,\n\n    /* Los mismos totales en TMS, para el resumen por modulo del dashboard.\n       La densidad es la oficial del modulo, constante desde el congelamiento\n       (supuesto S8), por lo que convertir m3 a TMS aca es directo. */\n    u.densidad_oficial,\n    u.tms_conformado,\n\n    (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)) * u.densidad_oficial\n                                            AS tms_camiones_total,\n    (COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)) * u.densidad_oficial\n                                            AS tms_rotopala_total,\n    (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n        + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n        + COALESCE(u.m3_ajustes,0)) * u.densidad_oficial\n                                            AS tms_extraido_total,\n\n    (u.m3_totales\n        - (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)\n           + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)\n           + COALESCE(u.m3_ajustes,0))) * u.densidad_oficial\n                                            AS tms_saldo_disponible\nFROM ult u;\n"
+    },
+    {
+      "name": "v_reclamo_diario",
+      "definition": "/* ============================================================================\n   V2. ALTER VIEW v_reclamo_diario para usar acumulado combinado\n   \n   Cambios clave:\n   - LEFT JOIN con v_preliminar_cv25_con_acumulado (en lugar de v_preliminar_cv25)\n   - Calcular: m3_acum_total = topografia_acum + preliminar_acum (nunca retrocede)\n   - Usar m3_acum_total para calcular avance_roto_pct\n   ============================================================================ */\n\nCREATE   VIEW [reclamo].[v_reclamo_diario]\nAS\nWITH universo AS\n(\n    SELECT fecha_medicion AS fecha_operacion, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_topografia_resuelta]\n    UNION\n    SELECT fecha_operacion, [campaña_id], \n           (SELECT pad_id FROM [reclamo].[v_modulo_base] mb WHERE mb.[campaña_id]=pca.[campaña_id] AND mb.modulo_id=pca.modulo_id),\n           modulo_id\n    FROM [reclamo].[v_preliminar_cv25_con_acumulado] pca\n    UNION\n    SELECT fecha, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_camiones_acumulado]\n    UNION\n    SELECT fecha_operacion, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_ajustes_aplicables]\n),\ncorte AS\n(\n    SELECT [reclamo].[fn_fecha_corte]() AS fecha_corte\n),\ncam AS\n(\n    SELECT\n        u.fecha_operacion,\n        u.[campaña_id],\n        u.modulo_id,\n        (\n            SELECT TOP (1) c.m3_camiones_acum\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha       <= u.fecha_operacion\n            ORDER BY c.fecha DESC\n        ) AS m3_camiones_acum,\n        (\n            SELECT TOP (1) c.tms_camiones_acum\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha       <= u.fecha_operacion\n            ORDER BY c.fecha DESC\n        ) AS tms_camiones_acum,\n        (\n            SELECT TOP (1) c.m3_camiones_dia\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha        = u.fecha_operacion\n        ) AS m3_camiones_dia,\n        (\n            SELECT TOP (1) c.tms_camiones_dia\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha        = u.fecha_operacion\n        ) AS tms_camiones_dia\n    FROM universo u\n),\naju AS\n(\n    SELECT\n        a.fecha_operacion,\n        a.[campaña_id],\n        a.modulo_id,\n        SUM(COALESCE(a.delta_m3, 0))  AS ajuste_m3,\n        SUM(COALESCE(a.delta_tms, 0)) AS ajuste_tms,\n        COUNT(*)                      AS ajustes_aplicados\n    FROM [reclamo].[v_ajustes_aplicables] a\n    GROUP BY a.fecha_operacion, a.[campaña_id], a.modulo_id\n)\nSELECT\n    u.fecha_operacion,\n    u.[campaña_id],\n    u.pad_id,\n    u.modulo_id,\n    mb.modulo_numero,\n    mb.rotopala_id,\n    mb.orden_secuencia,\n\n    /* base congelada */\n    mb.tms_conformado,\n    mb.m3_totales,\n    mb.densidad_oficial,\n\n    /* camiones */\n    COALESCE(cam.m3_camiones_dia, 0)        AS m3_camiones_dia,\n    COALESCE(cam.tms_camiones_dia, 0)       AS tms_camiones_dia,\n    COALESCE(cam.m3_camiones_acum, 0)       AS m3_camiones_acum,\n    COALESCE(cam.tms_camiones_acum, 0)      AS tms_camiones_acum,\n\n    /* base disponible para la rotopala, neta de camiones. Piso en cero. */\n    CASE\n        WHEN mb.m3_totales - COALESCE(cam.m3_camiones_acum,0) < 0 THEN 0\n        ELSE mb.m3_totales - COALESCE(cam.m3_camiones_acum,0)\n    END                                     AS m3_disponible_roto,\n    CASE\n        WHEN mb.tms_conformado - COALESCE(cam.tms_camiones_acum,0) < 0 THEN 0\n        ELSE mb.tms_conformado - COALESCE(cam.tms_camiones_acum,0)\n    END                                     AS tms_disponible_roto,\n\n    /* reclamo de rotopala del dia: topografia manda, preliminar rellena */\n    COALESCE(tr.m3_incremento, pc_acum.m3_preliminar_dia, 0)\n        + COALESCE(aju.ajuste_m3, 0)        AS m3_rotopala_dia,\n\n    CASE\n        WHEN tr.m3_incremento IS NOT NULL\n            THEN tr.m3_incremento * mb.densidad_oficial\n        ELSE COALESCE(pc_acum.tms_preliminar_dia, 0)\n    END + COALESCE(aju.ajuste_tms, 0)       AS tms_rotopala_dia,\n\n    tr.m3_reclamado_acum                    AS m3_rotopala_acum_topografia,\n    tr.avance_total_pct,\n\n    /* ajustes */\n    COALESCE(aju.ajuste_m3, 0)              AS ajuste_m3,\n    COALESCE(aju.ajuste_tms, 0)             AS ajuste_tms,\n    COALESCE(aju.ajustes_aplicados, 0)      AS ajustes_aplicados,\n\n    /* porcentajes */\n    CASE\n        WHEN COALESCE(mb.m3_totales,0) = 0 THEN NULL\n        ELSE COALESCE(cam.m3_camiones_acum,0) / mb.m3_totales\n    END                                     AS avance_camiones_pct,\n\n    CASE\n        WHEN COALESCE(mb.m3_totales,0) = 0 THEN NULL\n        ELSE (COALESCE(cam.m3_camiones_acum,0) + COALESCE(tr.m3_reclamado_acum,0) + COALESCE(pc_acum.m3_preliminar_acum,0))\n             / mb.m3_totales\n    END                                     AS avance_total_pct_calculado,\n\n    /* EL PORCENTAJE QUE VA AL REPORTE: referido al remanente post camiones\n       CAMBIO CLAVE: usar acumulado combinado (topografia + preliminar)\n       que NUNCA RETROCEDE */\n    CASE\n        WHEN mb.m3_totales - COALESCE(cam.m3_camiones_acum,0) <= 0 THEN NULL\n        ELSE (COALESCE(tr.m3_reclamado_acum,0) + COALESCE(pc_acum.m3_preliminar_acum,0))\n             / (mb.m3_totales - COALESCE(cam.m3_camiones_acum,0))\n    END                                     AS avance_roto_pct,\n\n    /* trazabilidad */\n    CASE\n        WHEN tr.m3_incremento IS NOT NULL AND COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'TOPOGRAFIA'\n        WHEN tr.m3_incremento IS NOT NULL\n            THEN 'TOPOGRAFIA'\n        WHEN pc_acum.tms_preliminar_dia IS NOT NULL\n            THEN 'PRELIMINAR_CV25'\n        WHEN COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'AJUSTE_MANUAL'\n        ELSE 'SIN_DATO'\n    END                                     AS fuente_reclamo,\n\n    COALESCE(tr.metodo, pc_acum.metodo_calculo, 'SIN_METODO')\n                                            AS metodo_calculo,\n\n    CASE\n        WHEN mb.modulo_id IS NULL\n            THEN 'MODULO_NO_CONGELADO'\n        WHEN tr.flag_topografia IS NOT NULL\n            THEN tr.flag_topografia\n        WHEN pc_acum.fuente_reclamo IS NOT NULL\n            THEN 'PRELIMINAR_CV25'\n        WHEN COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'SOLO_AJUSTE_MANUAL'\n        ELSE 'SIN_DATO'\n    END                                     AS flag_calculo,\n\n    COALESCE(aju.ajustes_aplicados,0)       AS n_ajustes\nFROM universo u\nCROSS JOIN corte\nLEFT JOIN [reclamo].[v_modulo_base] mb\n    ON  mb.[campaña_id] = u.[campaña_id]\n    AND mb.modulo_id    = u.modulo_id\nLEFT JOIN [reclamo].[v_topografia_resuelta] tr\n    ON  tr.[campaña_id]    = u.[campaña_id]\n    AND tr.modulo_id       = u.modulo_id\n    AND tr.fecha_medicion  = u.fecha_operacion\nLEFT JOIN [reclamo].[v_preliminar_cv25_con_acumulado] pc_acum\n    ON  pc_acum.[campaña_id]     = u.[campaña_id]\n    AND pc_acum.modulo_id        = u.modulo_id\n    AND pc_acum.fecha_operacion  = u.fecha_operacion\nLEFT JOIN cam\n    ON  cam.[campaña_id]     = u.[campaña_id]\n    AND cam.modulo_id        = u.modulo_id\n    AND cam.fecha_operacion  = u.fecha_operacion\nLEFT JOIN aju\n    ON  aju.[campaña_id]     = u.[campaña_id]\n    AND aju.modulo_id        = u.modulo_id\n    AND aju.fecha_operacion  = u.fecha_operacion\nWHERE u.fecha_operacion >= corte.fecha_corte;"
+    },
+    {
+      "name": "v_reclamo_diario_contingencia_test",
+      "definition": "/* ============================================================================\n   V2. ALTER VIEW v_reclamo_diario para usar acumulado combinado\n   \n   Cambios clave:\n   - LEFT JOIN con v_preliminar_cv25_con_acumulado (en lugar de v_preliminar_cv25)\n   - Calcular: m3_acum_total = topografia_acum + preliminar_acum (nunca retrocede)\n   - Usar m3_acum_total para calcular avance_roto_pct\n   ============================================================================ */\n\nCREATE VIEW [reclamo].[v_reclamo_diario_contingencia_test]\nAS\nWITH universo AS\n(\n    SELECT fecha_medicion AS fecha_operacion, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_topografia_resuelta]\n    UNION\n    SELECT fecha_operacion, [campaña_id], \n           (SELECT pad_id FROM [reclamo].[v_modulo_base] mb WHERE mb.[campaña_id]=pca.[campaña_id] AND mb.modulo_id=pca.modulo_id),\n           modulo_id\n    FROM [reclamo].[v_preliminar_cv25_con_acumulado_contingencia_test] pca\n    UNION\n    SELECT fecha, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_camiones_acumulado]\n    UNION\n    SELECT fecha_operacion, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_ajustes_aplicables]\n),\ncorte AS\n(\n    SELECT [reclamo].[fn_fecha_corte]() AS fecha_corte\n),\ncam AS\n(\n    SELECT\n        u.fecha_operacion,\n        u.[campaña_id],\n        u.modulo_id,\n        (\n            SELECT TOP (1) c.m3_camiones_acum\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha       <= u.fecha_operacion\n            ORDER BY c.fecha DESC\n        ) AS m3_camiones_acum,\n        (\n            SELECT TOP (1) c.tms_camiones_acum\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha       <= u.fecha_operacion\n            ORDER BY c.fecha DESC\n        ) AS tms_camiones_acum,\n        (\n            SELECT TOP (1) c.m3_camiones_dia\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha        = u.fecha_operacion\n        ) AS m3_camiones_dia,\n        (\n            SELECT TOP (1) c.tms_camiones_dia\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha        = u.fecha_operacion\n        ) AS tms_camiones_dia\n    FROM universo u\n),\naju AS\n(\n    SELECT\n        a.fecha_operacion,\n        a.[campaña_id],\n        a.modulo_id,\n        SUM(COALESCE(a.delta_m3, 0))  AS ajuste_m3,\n        SUM(COALESCE(a.delta_tms, 0)) AS ajuste_tms,\n        COUNT(*)                      AS ajustes_aplicados\n    FROM [reclamo].[v_ajustes_aplicables] a\n    GROUP BY a.fecha_operacion, a.[campaña_id], a.modulo_id\n)\nSELECT\n    u.fecha_operacion,\n    u.[campaña_id],\n    u.pad_id,\n    u.modulo_id,\n    mb.modulo_numero,\n    mb.rotopala_id,\n    mb.orden_secuencia,\n\n    /* base congelada */\n    mb.tms_conformado,\n    mb.m3_totales,\n    mb.densidad_oficial,\n\n    /* camiones */\n    COALESCE(cam.m3_camiones_dia, 0)        AS m3_camiones_dia,\n    COALESCE(cam.tms_camiones_dia, 0)       AS tms_camiones_dia,\n    COALESCE(cam.m3_camiones_acum, 0)       AS m3_camiones_acum,\n    COALESCE(cam.tms_camiones_acum, 0)      AS tms_camiones_acum,\n\n    /* base disponible para la rotopala, neta de camiones. Piso en cero. */\n    CASE\n        WHEN mb.m3_totales - COALESCE(cam.m3_camiones_acum,0) < 0 THEN 0\n        ELSE mb.m3_totales - COALESCE(cam.m3_camiones_acum,0)\n    END                                     AS m3_disponible_roto,\n    CASE\n        WHEN mb.tms_conformado - COALESCE(cam.tms_camiones_acum,0) < 0 THEN 0\n        ELSE mb.tms_conformado - COALESCE(cam.tms_camiones_acum,0)\n    END                                     AS tms_disponible_roto,\n\n    /* reclamo de rotopala del dia: topografia manda, preliminar rellena */\n    COALESCE(tr.m3_incremento, pc_acum.m3_preliminar_dia, 0)\n        + COALESCE(aju.ajuste_m3, 0)        AS m3_rotopala_dia,\n\n    CASE\n        WHEN tr.m3_incremento IS NOT NULL\n            THEN tr.m3_incremento * mb.densidad_oficial\n        ELSE COALESCE(pc_acum.tms_preliminar_dia, 0)\n    END + COALESCE(aju.ajuste_tms, 0)       AS tms_rotopala_dia,\n\n    tr.m3_reclamado_acum                    AS m3_rotopala_acum_topografia,\n    tr.avance_total_pct,\n\n    /* ajustes */\n    COALESCE(aju.ajuste_m3, 0)              AS ajuste_m3,\n    COALESCE(aju.ajuste_tms, 0)             AS ajuste_tms,\n    COALESCE(aju.ajustes_aplicados, 0)      AS ajustes_aplicados,\n\n    /* porcentajes */\n    CASE\n        WHEN COALESCE(mb.m3_totales,0) = 0 THEN NULL\n        ELSE COALESCE(cam.m3_camiones_acum,0) / mb.m3_totales\n    END                                     AS avance_camiones_pct,\n\n    CASE\n        WHEN COALESCE(mb.m3_totales,0) = 0 THEN NULL\n        ELSE (COALESCE(cam.m3_camiones_acum,0) + COALESCE(tr.m3_reclamado_acum,0) + COALESCE(pc_acum.m3_preliminar_acum,0))\n             / mb.m3_totales\n    END                                     AS avance_total_pct_calculado,\n\n    /* EL PORCENTAJE QUE VA AL REPORTE: referido al remanente post camiones\n       CAMBIO CLAVE: usar acumulado combinado (topografia + preliminar)\n       que NUNCA RETROCEDE */\n    CASE\n        WHEN mb.m3_totales - COALESCE(cam.m3_camiones_acum,0) <= 0 THEN NULL\n        ELSE (COALESCE(tr.m3_reclamado_acum,0) + COALESCE(pc_acum.m3_preliminar_acum,0))\n             / (mb.m3_totales - COALESCE(cam.m3_camiones_acum,0))\n    END                                     AS avance_roto_pct,\n\n    /* trazabilidad */\n    CASE\n        WHEN tr.m3_incremento IS NOT NULL AND COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'TOPOGRAFIA'\n        WHEN tr.m3_incremento IS NOT NULL\n            THEN 'TOPOGRAFIA'\n        WHEN pc_acum.tms_preliminar_dia IS NOT NULL\n            THEN 'PRELIMINAR_CV25'\n        WHEN COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'AJUSTE_MANUAL'\n        ELSE 'SIN_DATO'\n    END                                     AS fuente_reclamo,\n\n    COALESCE(tr.metodo, pc_acum.metodo_calculo, 'SIN_METODO')\n                                            AS metodo_calculo,\n\n    CASE\n        WHEN mb.modulo_id IS NULL\n            THEN 'MODULO_NO_CONGELADO'\n        WHEN tr.flag_topografia IS NOT NULL\n            THEN tr.flag_topografia\n        WHEN pc_acum.fuente_reclamo IS NOT NULL\n            THEN 'PRELIMINAR_CV25'\n        WHEN COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'SOLO_AJUSTE_MANUAL'\n        ELSE 'SIN_DATO'\n    END                                     AS flag_calculo,\n\n    COALESCE(aju.ajustes_aplicados,0)       AS n_ajustes\nFROM universo u\nCROSS JOIN corte\nLEFT JOIN [reclamo].[v_modulo_base] mb\n    ON  mb.[campaña_id] = u.[campaña_id]\n    AND mb.modulo_id    = u.modulo_id\nLEFT JOIN [reclamo].[v_topografia_resuelta] tr\n    ON  tr.[campaña_id]    = u.[campaña_id]\n    AND tr.modulo_id       = u.modulo_id\n    AND tr.fecha_medicion  = u.fecha_operacion\nLEFT JOIN [reclamo].[v_preliminar_cv25_con_acumulado_contingencia_test] pc_acum\n    ON  pc_acum.[campaña_id]     = u.[campaña_id]\n    AND pc_acum.modulo_id        = u.modulo_id\n    AND pc_acum.fecha_operacion  = u.fecha_operacion\nLEFT JOIN cam\n    ON  cam.[campaña_id]     = u.[campaña_id]\n    AND cam.modulo_id        = u.modulo_id\n    AND cam.fecha_operacion  = u.fecha_operacion\nLEFT JOIN aju\n    ON  aju.[campaña_id]     = u.[campaña_id]\n    AND aju.modulo_id        = u.modulo_id\n    AND aju.fecha_operacion  = u.fecha_operacion\nWHERE u.fecha_operacion >= corte.fecha_corte;"
+    }
+  ],
+  "etl_source_columns": [
+    {
+      "name": "id_control_reclamo_sulfuro_camiones_thm_diario"
+    },
+    {
+      "name": "campaña"
+    },
+    {
+      "name": "modulo"
+    },
+    {
+      "name": "volumen_total_estimado_m3"
+    },
+    {
+      "name": "volumen_diario_m3"
+    },
+    {
+      "name": "volumen_final_reclamado"
+    },
+    {
+      "name": "avance_porcentaje"
+    },
+    {
+      "name": "alerta"
+    },
+    {
+      "name": "fecha"
+    },
+    {
+      "name": "pad_id"
+    },
+    {
+      "name": "modulo_id"
+    },
+    {
+      "name": "campaña_id"
+    }
+  ],
+  "etl_source_case": [
+    {
+      "fecha": "2026-10-01",
+      "campaña_id": 10,
+      "modulo_id": 81,
+      "campaña": 11,
+      "modulo": 17,
+      "volumen_diario_m3": "754.322000000000002728",
+      "volumen_final_reclamado": "2172.478000000000065484"
+    },
+    {
+      "fecha": "2026-10-01",
+      "campaña_id": 10,
+      "modulo_id": 87,
+      "campaña": 11,
+      "modulo": 23,
+      "volumen_diario_m3": "-49.595999999999996533",
+      "volumen_final_reclamado": "33861.989000000001396984"
+    },
+    {
+      "fecha": "2026-10-02",
+      "campaña_id": 10,
+      "modulo_id": 81,
+      "campaña": 11,
+      "modulo": 17,
+      "volumen_diario_m3": "-36.689999999999997726",
+      "volumen_final_reclamado": "2135.788000000000010914"
+    },
+    {
+      "fecha": "2026-10-02",
+      "campaña_id": 10,
+      "modulo_id": 87,
+      "campaña": 11,
+      "modulo": 23,
+      "volumen_diario_m3": "-49.454000000000000625",
+      "volumen_final_reclamado": "33812.535000000003492460"
+    },
+    {
+      "fecha": "2026-10-03",
+      "campaña_id": 10,
+      "modulo_id": 81,
+      "campaña": 11,
+      "modulo": 17,
+      "volumen_diario_m3": "579.828000000000088221",
+      "volumen_final_reclamado": "2715.615999999999985448"
+    },
+    {
+      "fecha": "2026-10-03",
+      "campaña_id": 10,
+      "modulo_id": 87,
+      "campaña": 11,
+      "modulo": 23,
+      "volumen_diario_m3": "0E-18",
+      "volumen_final_reclamado": "33812.535000000003492460"
+    }
+  ],
+  "historical_max_findings": []
+}

@@ -1,0 +1,17 @@
+--- rollback.sql
++++ alter_sp_mantiene_datos_conciliados_emision_test.sql
+@@ -584,7 +584,13 @@
+     (
+         SELECT
+             f.Fecha,
+-            aj.Chancado_TMS_Reporte AS Chancado_TMS_Real,
++            CASE
++                WHEN aj.Apilado_TMS_Reporte = 0
++                 AND aj.Sal_TMH_Dia = 0
++                 AND aj.SRR_TMS_Dia = 0
++                    THEN 0
++                ELSE aj.Chancado_TMS_Reporte
++            END AS Chancado_TMS_Real,
+             a.Humedad_Turno_A, a.Humedad_Turno_B, a.Humedad_promedio_dia,
+             a.Sal_turno_A, a.Sal_Turno_B, a.Sal_promedio_dia,
+             CASE
