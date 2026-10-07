@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import os
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import dash
 from dash import dcc, html, dash_table, Input, Output, State, callback_context, callback
@@ -101,9 +102,16 @@ TABLA_ESTILO = dict(
 # report_export/callbacks/reportabilidad_cb.py.
 # ---------------------------------------------------------------------------
 
-HOY = date.today()
-DESDE_DEF = HOY.replace(day=1)
-HASTA_DEF = HOY
+def _hoy_chile() -> date:
+    return datetime.now(ZoneInfo("America/Santiago")).date()
+
+
+def _rango_inicial(hoy: date | None = None) -> tuple[date, date]:
+    """Mes en curso hasta D-1, o mes anterior completo si hoy es día 1."""
+    hoy = hoy or _hoy_chile()
+    hasta = hoy - timedelta(days=1)
+    desde = hasta.replace(day=1) if hoy.day == 1 else hoy.replace(day=1)
+    return desde, hasta
 
 
 def encabezado():
@@ -127,6 +135,7 @@ def encabezado():
 
 
 def barra_filtros():
+    desde_def, hasta_def = _rango_inicial()
     return html.Div(
         style={**CARD, "display": "flex", "alignItems": "flex-end", "gap": "18px",
                "flexWrap": "wrap"},
@@ -136,8 +145,8 @@ def barra_filtros():
                                              "display": "block", "marginBottom": "4px"}),
                 dcc.DatePickerRange(
                     id="rango",
-                    start_date=DESDE_DEF,
-                    end_date=HASTA_DEF,
+                    start_date=desde_def,
+                    end_date=hasta_def,
                     display_format="DD-MM-YYYY",
                     start_date_placeholder_text="DD-MM-AAAA",
                     end_date_placeholder_text="DD-MM-AAAA",
@@ -637,7 +646,7 @@ def panel_ajustes():
                     html.Div([
                         html.Label("Fecha de operación", style={"fontSize": "12px", "color": GRIS,
                                                                "display": "block", "marginBottom": "4px"}),
-                        dcc.DatePickerSingle(id="aj-fecha", date=HOY,
+                        dcc.DatePickerSingle(id="aj-fecha", date=_hoy_chile(),
                                              display_format="DD-MM-YYYY", placeholder="DD-MM-AAAA"),
                         html.Div("La fecha del ajuste es independiente del período consultado.",
                                  style={"fontSize": "11px", "color": GRIS, "marginTop": "4px"}),
@@ -885,11 +894,14 @@ def _matriz_por_campana(sub: pd.DataFrame, campo: str) -> pd.DataFrame:
     piv = piv.sort_values(["campana", "modulo_numero", "modulo_id"])
     piv = piv.drop(columns=["campana_id", "modulo_id"])
     piv = piv.rename(columns={"campana": "Campaña", "modulo_numero": "Módulo"})
-    dias = [col for col in piv.columns if col not in {"Campaña", "Módulo"}]
+    dias = sorted(col for col in piv.columns if col not in {"Campaña", "Módulo"})
+    piv = piv[["Campaña", "Módulo", *dias]]
     piv.insert(2, "Total periodo", piv[dias].sum(axis=1))
     fila_total = {"Campaña": "TOTAL", "Módulo": ""}
     fila_total.update({col: piv[col].sum() for col in ["Total periodo", *dias]})
-    return pd.concat([piv, pd.DataFrame([fila_total])[piv.columns]], ignore_index=True)
+    piv = pd.concat([piv, pd.DataFrame([fila_total])[piv.columns]], ignore_index=True)
+    formato = "%d" if len({(dia.year, dia.month) for dia in dias}) == 1 else "%d-%m"
+    return piv.rename(columns={dia: dia.strftime(formato) for dia in dias})
 
 ETIQUETAS_ACCION = {
     "CONGELADO_AUTOMATICO": "Módulo incorporado",
@@ -1213,6 +1225,11 @@ def cb_resumen_general(n, _, desde, hasta):
     try:
         df = db.avance_diario(desde, hasta)
         cv = db.diferencia_cv25(desde, hasta)
+        ventanas = {
+            pad: db.ventanas_secuencia(pad)
+            for pad in (1, 2)
+            if not df[(df["pad_id"] == pad) & (df["fuente_reclamo"] == "SIN_DATO")].empty
+        }
     except Exception as exc:
         return html.Div(_error_ui(exc), style={"color": ROJO, "fontSize": "13px"})
 
@@ -1231,7 +1248,10 @@ def cb_resumen_general(n, _, desde, hasta):
         topo = sub.loc[sub["fuente_reclamo"] == "TOPOGRAFIA", "tms_rotopala_dia"].sum()
         prelim = sub.loc[sub["fuente_reclamo"] == "PRELIMINAR_CV25", "tms_rotopala_dia"].sum()
         ajuste = sub.loc[sub["fuente_reclamo"] == "AJUSTE_MANUAL", "tms_rotopala_dia"].sum()
-        sin_dato = int((sub["fuente_reclamo"] == "SIN_DATO").sum())
+        sin_dato = _sin_dato_aplicable(
+            sub[sub["fuente_reclamo"] == "SIN_DATO"],
+            ventanas.get(pad_id, pd.DataFrame()),
+        )
         rotopala = topo + prelim + ajuste
         return rotopala, camiones, topo, prelim, ajuste, sin_dato
 
@@ -1261,7 +1281,7 @@ def cb_resumen_general(n, _, desde, hasta):
         detalle.append(fila("Camiones", camiones, color, True))
         if sin_dato:
             detalle.append(html.Div(
-                f"{sin_dato} combinaciones módulo/día sin información disponible.",
+                f"{sin_dato} combinaciones módulo/día aplicables sin información disponible.",
                 style={"fontSize": "11px", "color": GRIS, "marginTop": "8px"}))
         return html.Div(
             style={"backgroundColor": "white", "borderTop": f"3px solid {color}",
@@ -1289,9 +1309,10 @@ def cb_resumen_general(n, _, desde, hasta):
     )
 
     nota_cv25 = None
-    if not cv.empty:
-        cv25_periodo = cv["tms_cv25"].fillna(0).sum()
-        topo_periodo = cv["tms_topografia"].fillna(0).sum()
+    comparables = cv[cv["tms_topografia"].notna() & cv["tms_cv25"].notna()]
+    if not comparables.empty:
+        cv25_periodo = comparables["tms_cv25"].sum()
+        topo_periodo = comparables["tms_topografia"].sum()
         if cv25_periodo:
             dif_pct = (topo_periodo - cv25_periodo) * 100.0 / cv25_periodo
             color = AMBAR if abs(dif_pct) > 10 else VERDE
@@ -1330,8 +1351,7 @@ def cb_matriz_mensual(n, _, metrica, pad_tab, desde, hasta):
         return html.Div("Sin datos calculados para este PAD en el período.",
                         style={"color": GRIS, "fontSize": "13px", "padding": "10px 0"})
 
-    fechas = pd.to_datetime(sub["fecha_operacion"])
-    sub["dia"] = fechas.dt.strftime("%d" if fechas.dt.to_period("M").nunique() == 1 else "%d-%m")
+    sub["dia"] = pd.to_datetime(sub["fecha_operacion"]).dt.normalize()
     sub["tms_camiones_dia"] = sub["tms_camiones_dia"].fillna(0)
     sub["tms_rotopala_dia"] = sub["tms_rotopala_dia"].fillna(0)
     sub["tms_total_dia"] = sub["tms_camiones_dia"] + sub["tms_rotopala_dia"]
@@ -1469,7 +1489,13 @@ def cb_preview_conciliados(n, _, pad_tab, desde, hasta):
         # que TODAVIA se esta llenando -- el de MENOR avance acumulado, no
         # el de mayor TMS (evita que un arrastre de linea base recien
         # establecida, con avance ya alto, tape al modulo realmente activo).
-        activos = grupo[(grupo["tms_rotopala_dia"] > 0) & grupo["avance_roto_pct"].notna()].copy()
+        activos = grupo[(grupo["tms_rotopala_dia"] > 0)
+                        & (grupo["fuente_reclamo"] != "SIN_DATO")
+                        & grupo["avance_roto_pct"].notna()].copy()
+        if activos.empty:
+            activos = grupo[(grupo["fuente_reclamo"] == "PRELIMINAR_CV25")
+                            & (grupo["tms_rotopala_dia"] == 0)
+                            & grupo["avance_roto_pct"].notna()].copy()
         if piso_campana is not None:
             misma_campana = activos["campana_id"] == piso_campana
             activos = activos[~misma_campana | (activos["modulo_numero"] >= piso_modulo)]
@@ -1666,26 +1692,40 @@ def cb_cuadratura(n, _, pad_tab):
     top = df.head(40)
     etiquetas = [f"C{int(c)} · M{int(m)}" if pd.notna(c) and pd.notna(m) else "?"
                  for c, m in zip(top["campana"], top["modulo_numero"])]
-    fechas = [
-        ("—" if pd.isna(inicio) else _fecha(inicio),
-         "—" if pd.isna(fin) else _fecha(fin))
-        for inicio, fin in zip(top["fecha_inicio_movimiento"], top["fecha_fin_movimiento"])
+    hover_data = [
+        (etiqueta, _numero(total, 2),
+         "sin dato" if pd.isna(inicio) else _fecha(inicio),
+         "sin dato" if pd.isna(fin) else _fecha(fin),
+         _numero(roto, 3), _numero(camiones, 3))
+        for etiqueta, total, inicio, fin, roto, camiones in zip(
+            etiquetas, top["m3_totales"], top["fecha_inicio_movimiento"],
+            top["fecha_fin_movimiento"], top["m3_rotopala_total"],
+            top["m3_camiones_total"])
     ]
+    hover = ("%{customdata[0]}<br>"
+             "Volumen congelado: %{customdata[1]} m³<br>"
+             "Fecha inicio: %{customdata[2]}<br>"
+             "Fecha fin: %{customdata[3]}<br>"
+             "Rotopala: %{customdata[4]} m³<br>"
+             "Camiones: %{customdata[5]} m³<extra></extra>")
 
     f = go.Figure()
     f.add_trace(go.Bar(
         x=etiquetas,
-        y=top["m3_camiones_total"], name="Camiones", marker_color="#E07B39"))
+        y=top["m3_camiones_total"], name="Camiones", marker_color="#E07B39",
+        customdata=hover_data, hovertemplate=hover))
     f.add_trace(go.Bar(
         x=etiquetas,
-        y=top["m3_rotopala_total"], name="Rotopala", marker_color=AZUL))
+        y=top["m3_rotopala_total"], name="Rotopala", marker_color=AZUL,
+        customdata=hover_data, hovertemplate=hover))
     f.add_trace(go.Scatter(
         x=etiquetas,
         y=top["m3_totales"], name="Volumen congelado", mode="lines+markers",
-        line=dict(color=ROJO, width=2, dash="dash"), customdata=fechas,
-        hovertemplate="Volumen congelado: %{y:,.2f} m³<br>Fecha inicio: %{customdata[0]}<br>Fecha fin: %{customdata[1]}<extra></extra>"))
-    f.update_layout(**_layout_base("Extracción acumulada y volumen base por módulo", 360),
-                    barmode="stack", yaxis_title="m3")
+        line=dict(color=ROJO, width=2, dash="dash"),
+        customdata=hover_data, hovertemplate=hover))
+    layout = _layout_base("Extracción acumulada y volumen base por módulo", 360)
+    layout["hovermode"] = "closest"
+    f.update_layout(**layout, barmode="stack", yaxis_title="m3")
     f.update_xaxes(showgrid=False)
     f.update_yaxes(gridcolor="#EEE")
 
@@ -1793,6 +1833,26 @@ def cb_detalle_cuadratura_modulo(seleccion):
     return html.Div([resumen, tabla] if resumen is not None else [tabla])
 
 
+def _sin_dato_aplicable(filas: pd.DataFrame, ventanas: pd.DataFrame) -> int:
+    """Cuenta solo módulo/día SIN_DATO dentro de una secuencia operacional."""
+    if filas.empty or ventanas.empty:
+        return 0
+    cruces = filas.merge(
+        ventanas.rename(columns={"rotopala_id": "rotopala_secuencia"}),
+        on=["campana_id", "modulo_id"], how="left", validate="many_to_one",
+    )
+    fecha = pd.to_datetime(cruces["fecha_operacion"])
+    apertura = pd.to_datetime(cruces["fecha_apertura"])
+    cierre = pd.to_datetime(cruces["fecha_cierre"])
+    aplicable = (
+        cruces["rotopala_secuencia"].notna()
+        & ((cruces["estado_secuencia"] == "ABIERTO") | apertura.notna())
+        & (apertura.isna() | (fecha >= apertura))
+        & (cierre.isna() | (fecha <= cierre))
+    )
+    return len(cruces.loc[aplicable, ["campana_id", "modulo_id", "fecha_operacion"]].drop_duplicates())
+
+
 @callback(
     Output("g-avance", "figure"),
     Output("tabla-avance", "children"),
@@ -1803,18 +1863,44 @@ def cb_detalle_cuadratura_modulo(seleccion):
     State("rango", "end_date"),
 )
 def cb_avance(n, _, pad_tab, desde, hasta):
+    pad = int(pad_tab)
     try:
         df = db.avance_diario(desde, hasta)
+        estado = db.estado_proyeccion(pad, hasta)
+        df = df[df["pad_id"] == pad]
+        sin_dato_filas = df[df["fuente_reclamo"] == "SIN_DATO"]
+        ventanas = db.ventanas_secuencia(pad) if not sin_dato_filas.empty else pd.DataFrame()
     except Exception as exc:
         return _sin_datos(_error_ui(exc)), None
 
-    if df.empty:
-        return _sin_datos(), None
+    mensajes = []
+    fecha_hasta = pd.to_datetime(hasta, errors="coerce")
+    if not estado.empty and estado["ultima_topografia"].notna().all():
+        ultima_topografia = pd.to_datetime(estado["ultima_topografia"]).min()
+        mensajes.append(html.Div(
+            f"Topografía disponible hasta {_fecha(ultima_topografia)}.",
+            style={"color": GRIS, "fontSize": "13px", "padding": "10px 0 6px"},
+        ))
+        prelim_vigente = estado[estado["fecha_preliminar"].notna()]
+        if not prelim_vigente.empty:
+            fechas_prelim = pd.to_datetime(prelim_vigente["fecha_preliminar"])
+            mensajes.append(html.Div(
+                f"Proyección vigente para {_fecha(fechas_prelim.max())}.",
+                style={"color": AMBAR, "fontSize": "13px", "padding": "4px 0"},
+            ))
+            if prelim_vigente["tms_preliminar_dia"].notna().all() and (prelim_vigente["tms_preliminar_dia"] == 0).all():
+                mensajes.append(html.Div(
+                    "Proyección CV25: 0 TMS — sin operación detectada.",
+                    style={"color": AMBAR, "fontSize": "13px", "padding": "4px 0"},
+                ))
+        if pd.notna(fecha_hasta) and fecha_hasta.normalize() > ultima_topografia.normalize() + pd.Timedelta(days=1):
+            mensajes.append(html.Div(
+                "Sin proyección: pendiente topografía del día anterior.",
+                style={"color": AMBAR, "fontSize": "13px", "padding": "4px 0"},
+            ))
 
-    pad = int(pad_tab)
-    df = df[df["pad_id"] == pad]
     if df.empty:
-        return _sin_datos("Sin datos para este PAD en el período"), None
+        return _sin_datos("Sin datos para este PAD en el período"), html.Div(mensajes)
 
     agg = (df.groupby(["fecha_operacion", "fuente_reclamo"], as_index=False)
              .agg(tms=("tms_rotopala_dia", "sum")))
@@ -1836,22 +1922,40 @@ def cb_avance(n, _, pad_tab, desde, hasta):
     f.update_xaxes(showgrid=False)
     f.update_yaxes(gridcolor="#EEE")
 
-    prelim = df[df["fuente_reclamo"] == "PRELIMINAR_CV25"]
+    fuentes = df["fuente_reclamo"]
+    prelim = df[fuentes == "PRELIMINAR_CV25"]
+    sin_dato = _sin_dato_aplicable(sin_dato_filas, ventanas)
+    ajustes = int((fuentes == "AJUSTE_MANUAL").sum())
+    if not prelim.empty:
+        mensajes.append(html.Div(
+            f"{len(prelim)} combinaciones módulo/día con estimación CV25. "
+            "Se actualizan al incorporar topografía y reprocesar el período.",
+            style={"color": AMBAR, "fontSize": "13px", "fontWeight": 600,
+                   "padding": "10px 0 6px"},
+        ))
+    if sin_dato:
+        mensajes.append(html.Div(
+            f"{sin_dato} combinación(es) módulo/día aplicables sin respaldo "
+            "topográfico ni proyección CV25.",
+            style={"color": AMBAR, "fontSize": "13px", "fontWeight": 600,
+                   "padding": "10px 0 6px"},
+        ))
+    if ajustes:
+        mensajes.append(html.Div(
+            f"{ajustes} fila(s) con ajuste manual aprobado.",
+            style={"color": GRIS, "fontSize": "13px", "padding": "10px 0 6px"},
+        ))
+    if not mensajes:
+        mensajes.append(html.Div(
+            "El período contiene filas sin fuente de respaldo clasificada.",
+            style={"color": AMBAR, "fontSize": "13px", "padding": "10px 0 6px"},
+        ))
     if prelim.empty:
-        tabla = html.Div("Todo el período tiene respaldo topográfico.",
-                         style={"color": VERDE, "fontSize": "13px", "padding": "10px 0"})
+        tabla = html.Div(mensajes)
     else:
         cols = ["fecha_operacion", "pad_id", "campana", "modulo_numero", "tms_rotopala_dia",
                 "m3_rotopala_dia", "flag_calculo"]
-        tabla = html.Div([
-            html.Div(
-                f"{len(prelim)} combinaciones módulo/día con estimación CV25. "
-                "Se actualizan al incorporar topografía y reprocesar el período.",
-                style={"color": AMBAR, "fontSize": "13px", "fontWeight": 600,
-                       "padding": "10px 0 6px"},
-            ),
-            _tabla(prelim[cols].round(2), "t-prelim"),
-        ])
+        tabla = html.Div([*mensajes, _tabla(prelim[cols].round(2), "t-prelim")])
 
     return f, tabla
 

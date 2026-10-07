@@ -1,0 +1,151 @@
+{
+  "A": {
+    "torres": {
+      "TM1": {
+        "peso_real_fisico_kg": "30.180",
+        "peso_teorico_fisico_kg": 40.21659883796297,
+        "horas_reales": 9.572222222222223,
+        "factor_masa": 1.0,
+        "representatividad_fisica": "0.7504364086480433",
+        "valida_regla_vigente_mayor_0_75": true,
+        "malla_cruda": "73.436",
+        "malla_fecha_carga": "2026-10-06 18:40:04.310000",
+        "peso_fuente_archivo": "10_Peso Torre Octubre 2026 (1).xlsx",
+        "peso_fecha_carga": "2026-10-06 11:43:35"
+      },
+      "TM2": {
+        "peso_real_fisico_kg": "19.460",
+        "peso_teorico_fisico_kg": 30.749662821777775,
+        "horas_reales": 8.758333333333333,
+        "factor_masa": 0.8356536631779258,
+        "representatividad_fisica": "0.6328524677746347",
+        "valida_regla_vigente_mayor_0_75": false,
+        "malla_cruda": "73.659",
+        "malla_fecha_carga": "2026-10-06 18:39:54.427000",
+        "peso_fuente_archivo": "10_Peso Torre Octubre 2026 (1).xlsx",
+        "peso_fecha_carga": "2026-10-06 11:43:35"
+      }
+    },
+    "tms_tm1_neto": "21687.67697448102434926943490",
+    "tms_tm2_neto": "14624.72728545766932073056510",
+    "tms_total_neto": "36312.40425993869367000000000",
+    "malla_tm1_resuelta": "73.436",
+    "tm1_origen": "2026-10-04 A TM1",
+    "malla_tm2_resuelta": "70.742",
+    "tm2_origen": "2026-09-28 B TM2",
+    "tm2_regla": "ARRASTRE_ULTIMO_VALIDO",
+    "malla_siir_reconstruida": "72.35099843896347174523883857",
+    "malla_siir_cache": "72.350998",
+    "cache_actualizado": "2026-10-07 09:43:45.561020",
+    "malla_oficial_informada_por_usuario": "73.3121",
+    "delta_siir_menos_oficial": "-0.961102",
+    "malla_si_tm2_usara_03_b_redondeado": "73.31195379331876365906962223",
+    "tm2_implicito_si_tm1_73_436_y_pesos_siir": "73.12836302325581395348837211"
+  },
+  "B": {
+    "torres": {
+      "TM1": {
+        "peso_real_fisico_kg": "0.000",
+        "peso_teorico_fisico_kg": 64.54859125,
+        "horas_reales": 13.0,
+        "factor_masa": 1.0,
+        "representatividad_fisica": "0.0",
+        "valida_regla_vigente_mayor_0_75": false,
+        "malla_cruda": null,
+        "malla_fecha_carga": "2026-10-06 18:40:04.310000",
+        "peso_fuente_archivo": "10_Peso Torre Octubre 2026 (1).xlsx",
+        "peso_fecha_carga": "2026-10-06 11:43:35"
+      },
+      "TM2": {
+        "peso_real_fisico_kg": "22.500",
+        "peso_teorico_fisico_kg": 58.86301892533334,
+        "horas_reales": 12.783333333333333,
+        "factor_masa": 0.927374185136897,
+        "representatividad_fisica": "0.3822433917047448",
+        "valida_regla_vigente_mayor_0_75": false,
+        "malla_cruda": "72.858",
+        "malla_fecha_carga": "2026-10-06 18:39:54.427000",
+        "peso_fuente_archivo": "10_Peso Torre Octubre 2026 (1).xlsx",
+        "peso_fecha_carga": "2026-10-06 11:43:35"
+      }
+    },
+    "tms_tm1_neto": "24718.65166934558355620083646",
+    "tms_tm2_neto": "18699.87827071572294379916354",
+    "tms_total_neto": "43418.52994006130650000000000",
+    "malla_tm1_resuelta": "73.436",
+    "tm1_origen": "2026-10-04 A TM1",
+    "malla_tm2_resuelta": "70.742",
+    "tm2_origen": "2026-09-28 B TM2",
+    "tm2_regla": "ARRASTRE_ULTIMO_VALIDO",
+    "malla_siir_reconstruida": "72.27572414241445814462478600",
+    "malla_siir_cache": "72.275724",
+    "cache_actualizado": "2026-10-07 09:43:45.561020",
+    "malla_oficial_informada_por_usuario": "73.3035",
+    "delta_siir_menos_oficial": "-1.027776",
+    "malla_si_tm2_usara_03_b_redondeado": "73.30334782326045030012785228",
+    "tm2_implicito_si_tm1_73_436_y_pesos_siir": "73.12835333333333333333333335"
+  },
+  "03_B_TM2": {
+    "malla_cruda": "73.128",
+    "fecha_carga": "2026-10-06 18:39:54.427000",
+    "representatividad_fisica": 0.6879107544660663,
+    "peso_real_fisico": "17.100",
+    "peso_teorico_fisico": 24.857875660444442,
+    "base_elegida": {
+      "Fecha": "2026-10-03",
+      "Turno": "B",
+      "TM": "TM2",
+      "Malla_Menos_1_2": 0.0,
+      "Fuente_Malla_Menos_1_2": "NO_APLICA_MINA"
+    }
+  },
+  "official_excel": {
+    "available": true,
+    "path": "C:\\Users\\nimun\\Downloads\\Actual Reporte Leyes y Finos_Octubre_2026 con SRR(1).xlsx",
+    "reporte_por_turno_celdas": [
+      "AD29",
+      "AD30"
+    ],
+    "generador_celdas": [
+      "X12",
+      "Y12",
+      "Z12",
+      "AF25"
+    ],
+    "tm1_malla_origen": "Informe TORRE N°1!AL10; 04-10-2026 A",
+    "tm2_malla_origen": "Informe TORRE N°2!AL9; 03-10-2026 B",
+    "tm1_validacion": "Validacion de leyes TM1!T7=Informe TORRE N°1!AL10; U7=T7",
+    "tm2_validacion": "Validacion de leyes TM2!U6 por C6=1; T7=U6; U7=U6",
+    "tm2_rep_03_b_excel": "1",
+    "tm2_rep_03_b_siir": "0.6879107544660663",
+    "tm2_rep_04_a_excel": "1",
+    "tm2_rep_04_b_excel": "0.76",
+    "tm1_rep_04_a_excel": "0.76",
+    "tm1_rep_04_b_excel": "0.76",
+    "weighted": {
+      "A": {
+        "tm1_tms": "21673.198013617814",
+        "tm2_tms": "14614.963636992672",
+        "tm1_malla": "73.43608340888485",
+        "tm2_malla": "73.12831597563371",
+        "reconstruido": "73.31213086786269245628527554",
+        "excel_cache": "73.3121308678627",
+        "delta_siir_menos_oficial_exacto": "-0.9611328678627"
+      },
+      "B": {
+        "tm1_tms": "24733.897877540065",
+        "tm2_tms": "18711.41216184945",
+        "tm1_malla": "73.43608340888485",
+        "tm2_malla": "73.12831597563371",
+        "reconstruido": "73.30353139605917536879558191",
+        "excel_cache": "73.30353139605918",
+        "delta_siir_menos_oficial_exacto": "-1.02780739605918"
+      }
+    }
+  },
+  "daily": {
+    "siir_reconstructed": "72.31000655225764838989541836",
+    "official_excel_Z12": "73.30744517300005",
+    "delta_siir_menos_oficial": "-0.99743862074240161010458164"
+  }
+}

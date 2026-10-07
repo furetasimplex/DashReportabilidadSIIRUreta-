@@ -1,0 +1,1973 @@
+{
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "observed_at": "2026-10-07 10:59:45.683203"
+  },
+  "objects": {
+    "v_cv25_diario": {
+      "metadata": {
+        "type_desc": "VIEW",
+        "modify_date": "2026-10-07 10:51:32.127000",
+        "definition": "CREATE VIEW [reclamo].[v_cv25_diario]\nAS\n\nWITH hr AS\n(\n    SELECT\n        fecha_turno AS fecha,\n\n        SUM\n        (\n            CASE\n                WHEN h.rotopala_id = 1\n                THEN h.horas_operacion\n                ELSE 0\n            END\n        ) AS horas_r1,\n\n        SUM\n        (\n            CASE\n                WHEN h.rotopala_id = 2\n                THEN h.horas_operacion\n                ELSE 0\n            END\n        ) AS horas_r2,\n\n        SUM(h.horas_operacion) AS horas_total,\n\n        COUNT(DISTINCT h.turno) AS turnos_con_dato\n\n    FROM [reclamo].[rotopala_horas_turno] h\n\n    GROUP BY\n        fecha_turno\n)\n\nSELECT\n    COALESCE(cv.fecha, hr.fecha) AS fecha,\n\n    cv.tmh_dia,\n    cv.tms_dia,\n\n    cv.tmh_cv025tot,\n    cv.tmh_cv025_tot,\n\n    cv.tag_utilizado,\n\n    cv.flag AS flag_cv25,\n\n    cv.tmh_cv025tot - cv.tmh_cv025_tot\n        AS diferencia_entre_tags,\n\n    ------------------------------------------------------------\n    -- Contraste de tags CV025\n    ------------------------------------------------------------\n    CASE\n        WHEN cv.tmh_cv025tot IS NULL\n          OR cv.tmh_cv025_tot IS NULL\n            THEN 'SIN_CONTRASTE'\n\n        WHEN cv.tmh_cv025_tot = 0\n            THEN 'TAG_SECUNDARIO_CERO'\n\n        WHEN\n            ABS(cv.tmh_cv025tot - cv.tmh_cv025_tot)\n            * 100.0 / cv.tmh_cv025_tot > 1\n            THEN 'TAGS_DIFIEREN_SOBRE_1_PCT'\n\n        ELSE 'OK'\n    END AS flag_tags,\n\n    hr.horas_r1,\n    hr.horas_r2,\n    hr.horas_total,\n    hr.turnos_con_dato,\n\n    ------------------------------------------------------------\n    -- TMS estimado R1\n    --\n    -- Si CV025 = 0, no hubo operación:\n    -- corresponde explícitamente 0 TMS.\n    --\n    -- Con cobertura de corriente y cero horas: cero confirmado.\n    -- Sin cobertura y cero horas: no inferir cero.\n    ------------------------------------------------------------\n    CASE\n        WHEN cv.tms_dia IS NULL THEN NULL\n        WHEN COALESCE(cv.tms_dia, 0) = 0\n            THEN 0\n\n        WHEN COALESCE(hr.horas_r1, 0) = 0\n         AND COALESCE(cv.horas_con_dato_r1, 0) > 0\n            THEN 0\n\n        WHEN COALESCE(hr.horas_r1, 0) = 0\n         AND COALESCE(cv.horas_con_dato_r1, 0) = 0\n            THEN NULL\n\n        WHEN COALESCE(hr.horas_total, 0) = 0\n            THEN NULL\n\n        ELSE\n            cv.tms_dia\n            * hr.horas_r1\n            / hr.horas_total\n    END AS tms_estimado_r1,\n\n    ------------------------------------------------------------\n    -- TMS estimado R2\n    ------------------------------------------------------------\n    CASE\n        WHEN cv.tms_dia IS NULL THEN NULL\n        WHEN COALESCE(cv.tms_dia, 0) = 0\n            THEN 0\n\n        WHEN COALESCE(hr.horas_r2, 0) = 0\n         AND COALESCE(cv.horas_con_dato_r2, 0) > 0\n            THEN 0\n\n        WHEN COALESCE(hr.horas_r2, 0) = 0\n         AND COALESCE(cv.horas_con_dato_r2, 0) = 0\n            THEN NULL\n\n        WHEN COALESCE(hr.horas_total, 0) = 0\n            THEN NULL\n\n        ELSE\n            cv.tms_dia\n            * hr.horas_r2\n            / hr.horas_total\n    END AS tms_estimado_r2,\n\n    ------------------------------------------------------------\n    -- Estado del preliminar\n    ------------------------------------------------------------\n    CASE\n        WHEN cv.fecha IS NULL\n            THEN 'SIN_CV25'\n\n        WHEN cv.tms_dia IS NULL THEN 'SIN_RESOLVER_CV25'\n        WHEN COALESCE(cv.tms_dia, 0) = 0\n            THEN 'CV25_CERO_SIN_OPERACION'\n\n        WHEN COALESCE(hr.horas_total, 0) = 0\n         AND (\n             (COALESCE(hr.horas_r1, 0) = 0 AND COALESCE(cv.horas_con_dato_r1, 0) > 0)\n             OR (COALESCE(hr.horas_r2, 0) = 0 AND COALESCE(cv.horas_con_dato_r2, 0) > 0)\n         )\n            THEN 'CERO_OPERACION_CONFIRMADO'\n\n        WHEN COALESCE(hr.horas_total, 0) = 0\n            THEN 'SIN_HORAS_NO_REPARTIBLE'\n\n        ELSE 'OK'\n    END AS flag_preliminar\n\nFROM [reclamo].[cv25_diario] cv\n\nFULL OUTER JOIN hr\n    ON hr.fecha = cv.fecha;\n"
+      },
+      "columns": [
+        {
+          "name": "fecha",
+          "column_id": 1
+        },
+        {
+          "name": "tmh_dia",
+          "column_id": 2
+        },
+        {
+          "name": "tms_dia",
+          "column_id": 3
+        },
+        {
+          "name": "tmh_cv025tot",
+          "column_id": 4
+        },
+        {
+          "name": "tmh_cv025_tot",
+          "column_id": 5
+        },
+        {
+          "name": "tag_utilizado",
+          "column_id": 6
+        },
+        {
+          "name": "flag_cv25",
+          "column_id": 7
+        },
+        {
+          "name": "diferencia_entre_tags",
+          "column_id": 8
+        },
+        {
+          "name": "flag_tags",
+          "column_id": 9
+        },
+        {
+          "name": "horas_r1",
+          "column_id": 10
+        },
+        {
+          "name": "horas_r2",
+          "column_id": 11
+        },
+        {
+          "name": "horas_total",
+          "column_id": 12
+        },
+        {
+          "name": "turnos_con_dato",
+          "column_id": 13
+        },
+        {
+          "name": "tms_estimado_r1",
+          "column_id": 14
+        },
+        {
+          "name": "tms_estimado_r2",
+          "column_id": 15
+        },
+        {
+          "name": "flag_preliminar",
+          "column_id": 16
+        }
+      ]
+    },
+    "v_preliminar_cv25": {
+      "metadata": {
+        "type_desc": "VIEW",
+        "modify_date": "2026-09-07 14:07:51.303000",
+        "definition": "CREATE VIEW [reclamo].[v_preliminar_cv25]\r\nAS\r\n\r\nWITH abiertos AS\r\n(\r\n    SELECT\r\n        mb.[campaña_id],\r\n        mb.pad_id,\r\n        mb.modulo_id,\r\n        mb.modulo_numero,\r\n        mb.rotopala_id,\r\n        mb.orden_secuencia,\r\n        mb.m3_totales,\r\n        mb.densidad_oficial,\r\n        mb.fecha_apertura,\r\n        mb.fecha_cierre,\r\n\r\n        (\r\n            SELECT MAX(ta.fecha_medicion)\r\n            FROM [reclamo].[topografia_avance] ta\r\n            WHERE ta.[campaña_id] = mb.[campaña_id]\r\n              AND ta.modulo_id = mb.modulo_id\r\n              AND ta.estado = 'VIGENTE'\r\n        ) AS ultima_medicion_topografica\r\n\r\n    FROM [reclamo].[v_modulo_base] mb\r\n\r\n    WHERE mb.estado_secuencia = 'ABIERTO'\r\n      AND mb.rotopala_id IS NOT NULL\r\n),\r\n\r\ncv AS\r\n(\r\n    SELECT\r\n        d.fecha,\r\n        d.tms_estimado_r1,\r\n        d.tms_estimado_r2,\r\n        d.horas_r1,\r\n        d.horas_r2,\r\n        d.flag_preliminar\r\n\r\n    FROM [reclamo].[v_cv25_diario] d\r\n\r\n    -- Solo días operacionales ya cerrados.\r\n    -- El día actual no se publica como preliminar.\r\n    WHERE d.fecha < CAST(SYSDATETIME() AS date)\r\n),\r\n\r\nbase AS\r\n(\r\n    SELECT\r\n        cv.fecha,\r\n        a.[campaña_id],\r\n        a.pad_id,\r\n        a.modulo_id,\r\n        a.modulo_numero,\r\n        a.rotopala_id,\r\n        a.m3_totales,\r\n        a.densidad_oficial,\r\n        a.ultima_medicion_topografica,\r\n\r\n        CASE\r\n            WHEN a.rotopala_id = 1\r\n                THEN cv.tms_estimado_r1\r\n            ELSE cv.tms_estimado_r2\r\n        END AS tms_rotopala_dia_total,\r\n\r\n        CASE\r\n            WHEN a.rotopala_id = 1\r\n                THEN cv.horas_r1\r\n            ELSE cv.horas_r2\r\n        END AS horas_rotopala,\r\n\r\n        cv.flag_preliminar,\r\n\r\n        COUNT(*) OVER\r\n        (\r\n            PARTITION BY cv.fecha, a.rotopala_id\r\n        ) AS modulos_abiertos\r\n\r\n    FROM cv\r\n\r\n    CROSS JOIN abiertos a\r\n\r\n    WHERE\r\n        (\r\n            a.fecha_apertura IS NULL\r\n            OR cv.fecha >= a.fecha_apertura\r\n        )\r\n\r\n        AND\r\n        (\r\n            a.fecha_cierre IS NULL\r\n            OR cv.fecha <= a.fecha_cierre\r\n        )\r\n\r\n        AND\r\n        (\r\n            a.ultima_medicion_topografica IS NULL\r\n            OR cv.fecha > a.ultima_medicion_topografica\r\n        )\r\n),\r\n\r\ncon_acumulado AS\r\n(\r\n    SELECT\r\n        b.fecha AS fecha_operacion,\r\n        b.[campaña_id],\r\n        b.pad_id,\r\n        b.modulo_id,\r\n        b.modulo_numero,\r\n        b.rotopala_id,\r\n        b.horas_rotopala,\r\n        b.modulos_abiertos,\r\n        b.m3_totales,\r\n        b.densidad_oficial,\r\n\r\n        --------------------------------------------------------\r\n        -- DIARIO\r\n        --------------------------------------------------------\r\n        CAST\r\n        (\r\n            b.tms_rotopala_dia_total / b.modulos_abiertos\r\n            AS decimal(30,12)\r\n        ) AS tms_preliminar_dia,\r\n\r\n        CAST\r\n        (\r\n            CASE\r\n                WHEN b.densidad_oficial = 0\r\n                    THEN NULL\r\n                ELSE\r\n                    (\r\n                        b.tms_rotopala_dia_total\r\n                        / b.modulos_abiertos\r\n                    )\r\n                    / b.densidad_oficial\r\n            END\r\n            AS decimal(30,12)\r\n        ) AS m3_preliminar_dia,\r\n\r\n        --------------------------------------------------------\r\n        -- ACUMULADO TMS\r\n        --------------------------------------------------------\r\n        SUM\r\n        (\r\n            CAST\r\n            (\r\n                b.tms_rotopala_dia_total / b.modulos_abiertos\r\n                AS decimal(30,12)\r\n            )\r\n        )\r\n        OVER\r\n        (\r\n            PARTITION BY\r\n                b.[campaña_id],\r\n                b.modulo_id\r\n\r\n            ORDER BY b.fecha\r\n\r\n            ROWS UNBOUNDED PRECEDING\r\n        ) AS tms_preliminar_acum,\r\n\r\n        --------------------------------------------------------\r\n        -- ACUMULADO M3\r\n        --------------------------------------------------------\r\n        SUM\r\n        (\r\n            CAST\r\n            (\r\n                CASE\r\n                    WHEN b.densidad_oficial = 0\r\n                        THEN 0\r\n                    ELSE\r\n                        (\r\n                            b.tms_rotopala_dia_total\r\n                            / b.modulos_abiertos\r\n                        )\r\n                        / b.densidad_oficial\r\n                END\r\n                AS decimal(30,12)\r\n            )\r\n        )\r\n        OVER\r\n        (\r\n            PARTITION BY\r\n                b.[campaña_id],\r\n                b.modulo_id\r\n\r\n            ORDER BY b.fecha\r\n\r\n            ROWS UNBOUNDED PRECEDING\r\n        ) AS m3_preliminar_acum,\r\n\r\n        CAST(\r\n            'PRELIMINAR_CV25'\r\n            AS varchar(40)\r\n        ) AS fuente_reclamo,\r\n\r\n        CAST(\r\n            'CV25_REPARTIDO_POR_HORAS_ROTOPALA'\r\n            AS varchar(80)\r\n        ) AS metodo_calculo,\r\n\r\n        b.flag_preliminar\r\n\r\n    FROM base b\r\n\r\n    WHERE b.tms_rotopala_dia_total IS NOT NULL\r\n)\r\n\r\nSELECT\r\n    ca.fecha_operacion,\r\n    ca.[campaña_id],\r\n    ca.pad_id,\r\n    ca.modulo_id,\r\n    ca.modulo_numero,\r\n    ca.rotopala_id,\r\n    ca.horas_rotopala,\r\n    ca.modulos_abiertos,\r\n\r\n    ca.tms_preliminar_dia,\r\n    ca.m3_preliminar_dia,\r\n\r\n    ca.tms_preliminar_acum,\r\n    ca.m3_preliminar_acum,\r\n\r\n    CASE\r\n        WHEN ca.m3_totales = 0\r\n            THEN NULL\r\n        ELSE CAST\r\n        (\r\n            ca.m3_preliminar_acum / ca.m3_totales\r\n            AS float\r\n        )\r\n    END AS avance_preliminar_pct_total,\r\n\r\n    ca.fuente_reclamo,\r\n    ca.metodo_calculo,\r\n    ca.flag_preliminar\r\n\r\nFROM con_acumulado ca;\r\n"
+      },
+      "columns": [
+        {
+          "name": "fecha_operacion",
+          "column_id": 1
+        },
+        {
+          "name": "campaña_id",
+          "column_id": 2
+        },
+        {
+          "name": "pad_id",
+          "column_id": 3
+        },
+        {
+          "name": "modulo_id",
+          "column_id": 4
+        },
+        {
+          "name": "modulo_numero",
+          "column_id": 5
+        },
+        {
+          "name": "rotopala_id",
+          "column_id": 6
+        },
+        {
+          "name": "horas_rotopala",
+          "column_id": 7
+        },
+        {
+          "name": "modulos_abiertos",
+          "column_id": 8
+        },
+        {
+          "name": "tms_preliminar_dia",
+          "column_id": 9
+        },
+        {
+          "name": "m3_preliminar_dia",
+          "column_id": 10
+        },
+        {
+          "name": "tms_preliminar_acum",
+          "column_id": 11
+        },
+        {
+          "name": "m3_preliminar_acum",
+          "column_id": 12
+        },
+        {
+          "name": "avance_preliminar_pct_total",
+          "column_id": 13
+        },
+        {
+          "name": "fuente_reclamo",
+          "column_id": 14
+        },
+        {
+          "name": "metodo_calculo",
+          "column_id": 15
+        },
+        {
+          "name": "flag_preliminar",
+          "column_id": 16
+        }
+      ]
+    },
+    "v_preliminar_cv25_con_acumulado": {
+      "metadata": {
+        "type_desc": "VIEW",
+        "modify_date": "2026-09-04 15:32:35.723000",
+        "definition": "/* ============================================================================\n   CORRECCIÓN FINAL: v_preliminar_cv25_con_acumulado\n   \n   EL BUG: La fórmula anterior restaba al final, anulando la suma anterior\n   \n   CORRECCIÓN: \n   m3_preliminar_acum = m3_acum_ultima_topografia + SUM(m3_preliminar_dia)\n   \n   Sin restar nada. Simple suma de acumulados.\n   ============================================================================ */\n\nCREATE VIEW [reclamo].[v_preliminar_cv25_con_acumulado] AS\nWITH abiertos AS\n(\n    SELECT [campaña_id], modulo_id, MAX(fecha_medicion) AS ultima_topografia_fecha\n    FROM [reclamo].[v_topografia_resuelta]\n    GROUP BY [campaña_id], modulo_id\n),\ncv AS\n(\n    SELECT \n        [campaña_id], \n        modulo_id, \n        ultima_topografia_fecha,\n        (SELECT MAX(m3_reclamado_acum) \n         FROM [reclamo].[v_topografia_resuelta] tr\n         WHERE tr.[campaña_id] = ab.[campaña_id]\n           AND tr.modulo_id = ab.modulo_id\n           AND tr.fecha_medicion = ab.ultima_topografia_fecha) AS m3_acum_ultima_topografia\n    FROM abiertos ab\n),\nbase AS\n(\n    SELECT \n        c.[campaña_id],\n        c.modulo_id,\n        c.m3_acum_ultima_topografia,\n        pv.fecha_operacion,\n        pv.m3_preliminar_dia,\n        pv.tms_preliminar_dia,\n        pv.fuente_reclamo,\n        pv.metodo_calculo\n    FROM cv c\n    LEFT JOIN [reclamo].[v_preliminar_cv25] pv\n        ON pv.[campaña_id] = c.[campaña_id]\n       AND pv.modulo_id = c.modulo_id\n       AND pv.fecha_operacion > c.ultima_topografia_fecha\n),\npreliminar_diario AS\n(\n    SELECT \n        [campaña_id],\n        modulo_id,\n        m3_acum_ultima_topografia,\n        fecha_operacion,\n        m3_preliminar_dia,\n        tms_preliminar_dia,\n        fuente_reclamo,\n        metodo_calculo\n    FROM base\n),\npreliminar_acum AS\n(\n    SELECT\n        pd.[campaña_id],\n        pd.modulo_id,\n        pd.fecha_operacion,\n        pd.m3_preliminar_dia,\n        pd.tms_preliminar_dia,\n        /* CORRECCIÓN: sumar acumulado anterior + preliminar actual (SIN restar nada) */\n        COALESCE(pd.m3_acum_ultima_topografia, 0)\n        + SUM(COALESCE(pd.m3_preliminar_dia, 0))\n          OVER (\n              PARTITION BY pd.[campaña_id], pd.modulo_id\n              ORDER BY pd.fecha_operacion\n              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW\n          ) AS m3_preliminar_acum,\n        COALESCE(pd.tms_preliminar_dia, 0) * \n        (\n            SELECT COALESCE(densidad_oficial, 1) \n            FROM [reclamo].[v_modulo_base] mb\n            WHERE mb.[campaña_id] = pd.[campaña_id]\n              AND mb.modulo_id = pd.modulo_id\n        )\n        + SUM(COALESCE(pd.tms_preliminar_dia, 0) * \n              (SELECT COALESCE(densidad_oficial, 1) FROM [reclamo].[v_modulo_base] mb \n               WHERE mb.[campaña_id] = pd.[campaña_id] AND mb.modulo_id = pd.modulo_id))\n          OVER (\n              PARTITION BY pd.[campaña_id], pd.modulo_id\n              ORDER BY pd.fecha_operacion\n              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW\n          ) AS tms_preliminar_acum,\n        pd.m3_acum_ultima_topografia,\n        pd.fuente_reclamo,\n        pd.metodo_calculo\n    FROM preliminar_diario pd\n)\nSELECT\n    pa.fecha_operacion,\n    pa.[campaña_id],\n    pa.modulo_id,\n    pa.tms_preliminar_dia,\n    pa.m3_preliminar_dia,\n    pa.m3_preliminar_acum,\n    pa.m3_acum_ultima_topografia,\n    pa.fuente_reclamo,\n    pa.metodo_calculo\nFROM preliminar_acum pa;"
+      },
+      "columns": [
+        {
+          "name": "fecha_operacion",
+          "column_id": 1
+        },
+        {
+          "name": "campaña_id",
+          "column_id": 2
+        },
+        {
+          "name": "modulo_id",
+          "column_id": 3
+        },
+        {
+          "name": "tms_preliminar_dia",
+          "column_id": 4
+        },
+        {
+          "name": "m3_preliminar_dia",
+          "column_id": 5
+        },
+        {
+          "name": "m3_preliminar_acum",
+          "column_id": 6
+        },
+        {
+          "name": "m3_acum_ultima_topografia",
+          "column_id": 7
+        },
+        {
+          "name": "fuente_reclamo",
+          "column_id": 8
+        },
+        {
+          "name": "metodo_calculo",
+          "column_id": 9
+        }
+      ]
+    },
+    "v_reclamo_diario": {
+      "metadata": {
+        "type_desc": "VIEW",
+        "modify_date": "2026-09-04 15:06:24.313000",
+        "definition": "/* ============================================================================\n   V2. ALTER VIEW v_reclamo_diario para usar acumulado combinado\n   \n   Cambios clave:\n   - LEFT JOIN con v_preliminar_cv25_con_acumulado (en lugar de v_preliminar_cv25)\n   - Calcular: m3_acum_total = topografia_acum + preliminar_acum (nunca retrocede)\n   - Usar m3_acum_total para calcular avance_roto_pct\n   ============================================================================ */\n\nCREATE   VIEW [reclamo].[v_reclamo_diario]\nAS\nWITH universo AS\n(\n    SELECT fecha_medicion AS fecha_operacion, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_topografia_resuelta]\n    UNION\n    SELECT fecha_operacion, [campaña_id], \n           (SELECT pad_id FROM [reclamo].[v_modulo_base] mb WHERE mb.[campaña_id]=pca.[campaña_id] AND mb.modulo_id=pca.modulo_id),\n           modulo_id\n    FROM [reclamo].[v_preliminar_cv25_con_acumulado] pca\n    UNION\n    SELECT fecha, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_camiones_acumulado]\n    UNION\n    SELECT fecha_operacion, [campaña_id], pad_id, modulo_id\n    FROM [reclamo].[v_ajustes_aplicables]\n),\ncorte AS\n(\n    SELECT [reclamo].[fn_fecha_corte]() AS fecha_corte\n),\ncam AS\n(\n    SELECT\n        u.fecha_operacion,\n        u.[campaña_id],\n        u.modulo_id,\n        (\n            SELECT TOP (1) c.m3_camiones_acum\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha       <= u.fecha_operacion\n            ORDER BY c.fecha DESC\n        ) AS m3_camiones_acum,\n        (\n            SELECT TOP (1) c.tms_camiones_acum\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha       <= u.fecha_operacion\n            ORDER BY c.fecha DESC\n        ) AS tms_camiones_acum,\n        (\n            SELECT TOP (1) c.m3_camiones_dia\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha        = u.fecha_operacion\n        ) AS m3_camiones_dia,\n        (\n            SELECT TOP (1) c.tms_camiones_dia\n            FROM [reclamo].[v_camiones_acumulado] c\n            WHERE c.[campaña_id] = u.[campaña_id]\n              AND c.modulo_id    = u.modulo_id\n              AND c.fecha        = u.fecha_operacion\n        ) AS tms_camiones_dia\n    FROM universo u\n),\naju AS\n(\n    SELECT\n        a.fecha_operacion,\n        a.[campaña_id],\n        a.modulo_id,\n        SUM(COALESCE(a.delta_m3, 0))  AS ajuste_m3,\n        SUM(COALESCE(a.delta_tms, 0)) AS ajuste_tms,\n        COUNT(*)                      AS ajustes_aplicados\n    FROM [reclamo].[v_ajustes_aplicables] a\n    GROUP BY a.fecha_operacion, a.[campaña_id], a.modulo_id\n)\nSELECT\n    u.fecha_operacion,\n    u.[campaña_id],\n    u.pad_id,\n    u.modulo_id,\n    mb.modulo_numero,\n    mb.rotopala_id,\n    mb.orden_secuencia,\n\n    /* base congelada */\n    mb.tms_conformado,\n    mb.m3_totales,\n    mb.densidad_oficial,\n\n    /* camiones */\n    COALESCE(cam.m3_camiones_dia, 0)        AS m3_camiones_dia,\n    COALESCE(cam.tms_camiones_dia, 0)       AS tms_camiones_dia,\n    COALESCE(cam.m3_camiones_acum, 0)       AS m3_camiones_acum,\n    COALESCE(cam.tms_camiones_acum, 0)      AS tms_camiones_acum,\n\n    /* base disponible para la rotopala, neta de camiones. Piso en cero. */\n    CASE\n        WHEN mb.m3_totales - COALESCE(cam.m3_camiones_acum,0) < 0 THEN 0\n        ELSE mb.m3_totales - COALESCE(cam.m3_camiones_acum,0)\n    END                                     AS m3_disponible_roto,\n    CASE\n        WHEN mb.tms_conformado - COALESCE(cam.tms_camiones_acum,0) < 0 THEN 0\n        ELSE mb.tms_conformado - COALESCE(cam.tms_camiones_acum,0)\n    END                                     AS tms_disponible_roto,\n\n    /* reclamo de rotopala del dia: topografia manda, preliminar rellena */\n    COALESCE(tr.m3_incremento, pc_acum.m3_preliminar_dia, 0)\n        + COALESCE(aju.ajuste_m3, 0)        AS m3_rotopala_dia,\n\n    CASE\n        WHEN tr.m3_incremento IS NOT NULL\n            THEN tr.m3_incremento * mb.densidad_oficial\n        ELSE COALESCE(pc_acum.tms_preliminar_dia, 0)\n    END + COALESCE(aju.ajuste_tms, 0)       AS tms_rotopala_dia,\n\n    tr.m3_reclamado_acum                    AS m3_rotopala_acum_topografia,\n    tr.avance_total_pct,\n\n    /* ajustes */\n    COALESCE(aju.ajuste_m3, 0)              AS ajuste_m3,\n    COALESCE(aju.ajuste_tms, 0)             AS ajuste_tms,\n    COALESCE(aju.ajustes_aplicados, 0)      AS ajustes_aplicados,\n\n    /* porcentajes */\n    CASE\n        WHEN COALESCE(mb.m3_totales,0) = 0 THEN NULL\n        ELSE COALESCE(cam.m3_camiones_acum,0) / mb.m3_totales\n    END                                     AS avance_camiones_pct,\n\n    CASE\n        WHEN COALESCE(mb.m3_totales,0) = 0 THEN NULL\n        ELSE (COALESCE(cam.m3_camiones_acum,0) + COALESCE(tr.m3_reclamado_acum,0) + COALESCE(pc_acum.m3_preliminar_acum,0))\n             / mb.m3_totales\n    END                                     AS avance_total_pct_calculado,\n\n    /* EL PORCENTAJE QUE VA AL REPORTE: referido al remanente post camiones\n       CAMBIO CLAVE: usar acumulado combinado (topografia + preliminar)\n       que NUNCA RETROCEDE */\n    CASE\n        WHEN mb.m3_totales - COALESCE(cam.m3_camiones_acum,0) <= 0 THEN NULL\n        ELSE (COALESCE(tr.m3_reclamado_acum,0) + COALESCE(pc_acum.m3_preliminar_acum,0))\n             / (mb.m3_totales - COALESCE(cam.m3_camiones_acum,0))\n    END                                     AS avance_roto_pct,\n\n    /* trazabilidad */\n    CASE\n        WHEN tr.m3_incremento IS NOT NULL AND COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'TOPOGRAFIA'\n        WHEN tr.m3_incremento IS NOT NULL\n            THEN 'TOPOGRAFIA'\n        WHEN pc_acum.tms_preliminar_dia IS NOT NULL\n            THEN 'PRELIMINAR_CV25'\n        WHEN COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'AJUSTE_MANUAL'\n        ELSE 'SIN_DATO'\n    END                                     AS fuente_reclamo,\n\n    COALESCE(tr.metodo, pc_acum.metodo_calculo, 'SIN_METODO')\n                                            AS metodo_calculo,\n\n    CASE\n        WHEN mb.modulo_id IS NULL\n            THEN 'MODULO_NO_CONGELADO'\n        WHEN tr.flag_topografia IS NOT NULL\n            THEN tr.flag_topografia\n        WHEN pc_acum.fuente_reclamo IS NOT NULL\n            THEN 'PRELIMINAR_CV25'\n        WHEN COALESCE(aju.ajustes_aplicados,0) > 0\n            THEN 'SOLO_AJUSTE_MANUAL'\n        ELSE 'SIN_DATO'\n    END                                     AS flag_calculo,\n\n    COALESCE(aju.ajustes_aplicados,0)       AS n_ajustes\nFROM universo u\nCROSS JOIN corte\nLEFT JOIN [reclamo].[v_modulo_base] mb\n    ON  mb.[campaña_id] = u.[campaña_id]\n    AND mb.modulo_id    = u.modulo_id\nLEFT JOIN [reclamo].[v_topografia_resuelta] tr\n    ON  tr.[campaña_id]    = u.[campaña_id]\n    AND tr.modulo_id       = u.modulo_id\n    AND tr.fecha_medicion  = u.fecha_operacion\nLEFT JOIN [reclamo].[v_preliminar_cv25_con_acumulado] pc_acum\n    ON  pc_acum.[campaña_id]     = u.[campaña_id]\n    AND pc_acum.modulo_id        = u.modulo_id\n    AND pc_acum.fecha_operacion  = u.fecha_operacion\nLEFT JOIN cam\n    ON  cam.[campaña_id]     = u.[campaña_id]\n    AND cam.modulo_id        = u.modulo_id\n    AND cam.fecha_operacion  = u.fecha_operacion\nLEFT JOIN aju\n    ON  aju.[campaña_id]     = u.[campaña_id]\n    AND aju.modulo_id        = u.modulo_id\n    AND aju.fecha_operacion  = u.fecha_operacion\nWHERE u.fecha_operacion >= corte.fecha_corte;"
+      },
+      "columns": [
+        {
+          "name": "fecha_operacion",
+          "column_id": 1
+        },
+        {
+          "name": "campaña_id",
+          "column_id": 2
+        },
+        {
+          "name": "pad_id",
+          "column_id": 3
+        },
+        {
+          "name": "modulo_id",
+          "column_id": 4
+        },
+        {
+          "name": "modulo_numero",
+          "column_id": 5
+        },
+        {
+          "name": "rotopala_id",
+          "column_id": 6
+        },
+        {
+          "name": "orden_secuencia",
+          "column_id": 7
+        },
+        {
+          "name": "tms_conformado",
+          "column_id": 8
+        },
+        {
+          "name": "m3_totales",
+          "column_id": 9
+        },
+        {
+          "name": "densidad_oficial",
+          "column_id": 10
+        },
+        {
+          "name": "m3_camiones_dia",
+          "column_id": 11
+        },
+        {
+          "name": "tms_camiones_dia",
+          "column_id": 12
+        },
+        {
+          "name": "m3_camiones_acum",
+          "column_id": 13
+        },
+        {
+          "name": "tms_camiones_acum",
+          "column_id": 14
+        },
+        {
+          "name": "m3_disponible_roto",
+          "column_id": 15
+        },
+        {
+          "name": "tms_disponible_roto",
+          "column_id": 16
+        },
+        {
+          "name": "m3_rotopala_dia",
+          "column_id": 17
+        },
+        {
+          "name": "tms_rotopala_dia",
+          "column_id": 18
+        },
+        {
+          "name": "m3_rotopala_acum_topografia",
+          "column_id": 19
+        },
+        {
+          "name": "avance_total_pct",
+          "column_id": 20
+        },
+        {
+          "name": "ajuste_m3",
+          "column_id": 21
+        },
+        {
+          "name": "ajuste_tms",
+          "column_id": 22
+        },
+        {
+          "name": "ajustes_aplicados",
+          "column_id": 23
+        },
+        {
+          "name": "avance_camiones_pct",
+          "column_id": 24
+        },
+        {
+          "name": "avance_total_pct_calculado",
+          "column_id": 25
+        },
+        {
+          "name": "avance_roto_pct",
+          "column_id": 26
+        },
+        {
+          "name": "fuente_reclamo",
+          "column_id": 27
+        },
+        {
+          "name": "metodo_calculo",
+          "column_id": 28
+        },
+        {
+          "name": "flag_calculo",
+          "column_id": 29
+        },
+        {
+          "name": "n_ajustes",
+          "column_id": 30
+        }
+      ]
+    },
+    "v_modulo_base": {
+      "metadata": {
+        "type_desc": "VIEW",
+        "modify_date": "2026-07-30 10:03:48.680000",
+        "definition": "/* ============================================================================\n   V1. reclamo.v_modulo_base\n\n   Une el modulo congelado con su posicion en la secuencia de la rotopala.\n   Es el punto de entrada de todas las demas vistas: si un modulo no esta\n   congelado, no aparece aca y por lo tanto no puede reclamarse.\n   ============================================================================ */\nCREATE   VIEW [reclamo].[v_modulo_base]\nAS\nSELECT\n    mc.[campaña_id],\n    mc.pad_id,\n    mc.parcela_id,\n    mc.modulo_id,\n    COALESCE(mc.modulo_numero, md.numero)   AS modulo_numero,\n\n    mc.fecha_conformacion,\n    mc.fecha_congelamiento,\n\n    mc.tms_conformado,\n    mc.m3_totales,\n    mc.densidad_oficial,\n    mc.humedad_conformacion,\n\n    /* Linea base: lo extraido antes de la fecha de corte del sistema. */\n    mc.m3_camiones_previo,\n    mc.m3_rotopala_previo,\n    mc.fecha_linea_base,\n\n    /* Topologia fija del PAD. */\n    tp.nombre                               AS pad_nombre,\n    tp.material,\n    tp.parcelas,\n    tp.modulos_por_parcela,\n    tp.modulos_totales,\n    tp.modulo_numero_max,\n\n    sr.rotopala_id,\n    sr.orden_secuencia,\n    sr.estado                               AS estado_secuencia,\n    sr.fecha_apertura,\n    sr.fecha_cierre,\n\n    mc.fuente                               AS fuente_base,\n    mc.metodo                               AS metodo_base,\n    mc.estado                               AS estado_congelamiento,\n\n    /* Coherencia interna de la base congelada. La densidad declarada deberia\n       reproducir el TMS al multiplicarla por el volumen. */\n    CASE\n        WHEN mc.m3_totales = 0 THEN NULL\n        ELSE mc.tms_conformado / mc.m3_totales\n    END                                     AS densidad_implicita,\n    CASE\n        WHEN mc.m3_totales = 0 THEN 'SIN_VOLUMEN'\n        WHEN ABS(mc.tms_conformado / mc.m3_totales - mc.densidad_oficial)\n             > 0.01 THEN 'DENSIDAD_DECLARADA_DIFIERE'\n        ELSE 'OK'\n    END                                     AS flag_densidad,\n\n    /* El numero de modulo debe caer dentro del rango fisico de su PAD.\n       Oxido 1 a 64, sulfuro 1 a 140. */\n    CASE\n        WHEN tp.pad_id IS NULL\n            THEN 'PAD_SIN_TOPOLOGIA_DEFINIDA'\n        WHEN COALESCE(mc.modulo_numero, md.numero) IS NULL\n            THEN 'SIN_NUMERO_DE_MODULO'\n        WHEN COALESCE(mc.modulo_numero, md.numero)\n             NOT BETWEEN tp.modulo_numero_min AND tp.modulo_numero_max\n            THEN 'MODULO_FUERA_DEL_RANGO_DEL_PAD'\n        ELSE 'OK'\n    END                                     AS flag_topologia\nFROM [reclamo].[modulo_congelado] mc\nLEFT JOIN [reclamo].[secuencia_rotopala] sr\n    ON  sr.[campaña_id] = mc.[campaña_id]\n    AND sr.modulo_id    = mc.modulo_id\nLEFT JOIN [inventar_SpcHidr].[modulo] md\n    ON md.id_modulo = mc.modulo_id\nLEFT JOIN [reclamo].[topologia_pad] tp\n    ON tp.pad_id = mc.pad_id\nWHERE mc.estado = 'CONGELADO';"
+      },
+      "columns": [
+        {
+          "name": "campaña_id",
+          "column_id": 1
+        },
+        {
+          "name": "pad_id",
+          "column_id": 2
+        },
+        {
+          "name": "parcela_id",
+          "column_id": 3
+        },
+        {
+          "name": "modulo_id",
+          "column_id": 4
+        },
+        {
+          "name": "modulo_numero",
+          "column_id": 5
+        },
+        {
+          "name": "fecha_conformacion",
+          "column_id": 6
+        },
+        {
+          "name": "fecha_congelamiento",
+          "column_id": 7
+        },
+        {
+          "name": "tms_conformado",
+          "column_id": 8
+        },
+        {
+          "name": "m3_totales",
+          "column_id": 9
+        },
+        {
+          "name": "densidad_oficial",
+          "column_id": 10
+        },
+        {
+          "name": "humedad_conformacion",
+          "column_id": 11
+        },
+        {
+          "name": "m3_camiones_previo",
+          "column_id": 12
+        },
+        {
+          "name": "m3_rotopala_previo",
+          "column_id": 13
+        },
+        {
+          "name": "fecha_linea_base",
+          "column_id": 14
+        },
+        {
+          "name": "pad_nombre",
+          "column_id": 15
+        },
+        {
+          "name": "material",
+          "column_id": 16
+        },
+        {
+          "name": "parcelas",
+          "column_id": 17
+        },
+        {
+          "name": "modulos_por_parcela",
+          "column_id": 18
+        },
+        {
+          "name": "modulos_totales",
+          "column_id": 19
+        },
+        {
+          "name": "modulo_numero_max",
+          "column_id": 20
+        },
+        {
+          "name": "rotopala_id",
+          "column_id": 21
+        },
+        {
+          "name": "orden_secuencia",
+          "column_id": 22
+        },
+        {
+          "name": "estado_secuencia",
+          "column_id": 23
+        },
+        {
+          "name": "fecha_apertura",
+          "column_id": 24
+        },
+        {
+          "name": "fecha_cierre",
+          "column_id": 25
+        },
+        {
+          "name": "fuente_base",
+          "column_id": 26
+        },
+        {
+          "name": "metodo_base",
+          "column_id": 27
+        },
+        {
+          "name": "estado_congelamiento",
+          "column_id": 28
+        },
+        {
+          "name": "densidad_implicita",
+          "column_id": 29
+        },
+        {
+          "name": "flag_densidad",
+          "column_id": 30
+        },
+        {
+          "name": "flag_topologia",
+          "column_id": 31
+        }
+      ]
+    },
+    "cv25_diario": {
+      "metadata": {
+        "type_desc": "USER_TABLE",
+        "modify_date": "2026-10-06 13:51:57.393000",
+        "definition": null
+      },
+      "columns": [
+        {
+          "name": "cv25_id",
+          "column_id": 1
+        },
+        {
+          "name": "fecha",
+          "column_id": 2
+        },
+        {
+          "name": "tmh_cv025tot",
+          "column_id": 3
+        },
+        {
+          "name": "tmh_cv025_tot",
+          "column_id": 4
+        },
+        {
+          "name": "tmh_dia",
+          "column_id": 5
+        },
+        {
+          "name": "humedad_pct",
+          "column_id": 6
+        },
+        {
+          "name": "tms_dia",
+          "column_id": 7
+        },
+        {
+          "name": "horas_con_dato_r1",
+          "column_id": 8
+        },
+        {
+          "name": "horas_con_dato_r2",
+          "column_id": 9
+        },
+        {
+          "name": "tag_utilizado",
+          "column_id": 10
+        },
+        {
+          "name": "fuente",
+          "column_id": 11
+        },
+        {
+          "name": "metodo",
+          "column_id": 12
+        },
+        {
+          "name": "flag",
+          "column_id": 13
+        },
+        {
+          "name": "usuario_registro",
+          "column_id": 14
+        },
+        {
+          "name": "fecha_registro",
+          "column_id": 15
+        },
+        {
+          "name": "observacion",
+          "column_id": 16
+        }
+      ]
+    },
+    "rotopala_horas_turno": {
+      "metadata": {
+        "type_desc": "USER_TABLE",
+        "modify_date": "2026-07-29 16:36:44.877000",
+        "definition": null
+      },
+      "columns": [
+        {
+          "name": "horas_id",
+          "column_id": 1
+        },
+        {
+          "name": "fecha_turno",
+          "column_id": 2
+        },
+        {
+          "name": "turno",
+          "column_id": 3
+        },
+        {
+          "name": "rotopala_id",
+          "column_id": 4
+        },
+        {
+          "name": "muestras_sobre_umbral",
+          "column_id": 5
+        },
+        {
+          "name": "horas_por_muestra",
+          "column_id": 6
+        },
+        {
+          "name": "horas_operacion",
+          "column_id": 7
+        },
+        {
+          "name": "fuente",
+          "column_id": 8
+        },
+        {
+          "name": "metodo",
+          "column_id": 9
+        },
+        {
+          "name": "flag",
+          "column_id": 10
+        },
+        {
+          "name": "usuario_registro",
+          "column_id": 11
+        },
+        {
+          "name": "fecha_registro",
+          "column_id": 12
+        },
+        {
+          "name": "observacion",
+          "column_id": 13
+        }
+      ]
+    },
+    "calculo_diario": {
+      "metadata": {
+        "type_desc": "USER_TABLE",
+        "modify_date": "2026-07-29 22:58:49.443000",
+        "definition": null
+      },
+      "columns": [
+        {
+          "name": "calculo_id",
+          "column_id": 1
+        },
+        {
+          "name": "fecha_operacion",
+          "column_id": 2
+        },
+        {
+          "name": "campaña_id",
+          "column_id": 3
+        },
+        {
+          "name": "pad_id",
+          "column_id": 4
+        },
+        {
+          "name": "modulo_id",
+          "column_id": 5
+        },
+        {
+          "name": "modulo_numero",
+          "column_id": 6
+        },
+        {
+          "name": "rotopala_id",
+          "column_id": 7
+        },
+        {
+          "name": "tms_conformado",
+          "column_id": 8
+        },
+        {
+          "name": "m3_totales",
+          "column_id": 9
+        },
+        {
+          "name": "densidad_oficial",
+          "column_id": 10
+        },
+        {
+          "name": "m3_camiones_acum",
+          "column_id": 11
+        },
+        {
+          "name": "tms_camiones_acum",
+          "column_id": 12
+        },
+        {
+          "name": "m3_disponible_roto",
+          "column_id": 13
+        },
+        {
+          "name": "tms_disponible_roto",
+          "column_id": 14
+        },
+        {
+          "name": "m3_rotopala_dia",
+          "column_id": 15
+        },
+        {
+          "name": "tms_rotopala_dia",
+          "column_id": 16
+        },
+        {
+          "name": "m3_rotopala_acum",
+          "column_id": 17
+        },
+        {
+          "name": "tms_rotopala_acum",
+          "column_id": 18
+        },
+        {
+          "name": "avance_total_pct",
+          "column_id": 19
+        },
+        {
+          "name": "avance_roto_pct",
+          "column_id": 20
+        },
+        {
+          "name": "avance_camiones_pct",
+          "column_id": 21
+        },
+        {
+          "name": "ajuste_m3",
+          "column_id": 22
+        },
+        {
+          "name": "ajuste_tms",
+          "column_id": 23
+        },
+        {
+          "name": "ajustes_aplicados",
+          "column_id": 24
+        },
+        {
+          "name": "fuente_reclamo",
+          "column_id": 25
+        },
+        {
+          "name": "metodo_calculo",
+          "column_id": 26
+        },
+        {
+          "name": "flag_calculo",
+          "column_id": 27
+        },
+        {
+          "name": "flag_cuadratura",
+          "column_id": 28
+        },
+        {
+          "name": "fecha_calculo",
+          "column_id": 29
+        },
+        {
+          "name": "ejecucion_id",
+          "column_id": 30
+        },
+        {
+          "name": "m3_camiones_dia",
+          "column_id": 31
+        },
+        {
+          "name": "tms_camiones_dia",
+          "column_id": 32
+        }
+      ]
+    }
+  },
+  "rows": {
+    "cv25": [
+      {
+        "cv25_id": 3088,
+        "fecha": "2026-10-04",
+        "tmh_cv025tot": "40157.437500000000",
+        "tmh_cv025_tot": "40158.750000000000",
+        "tmh_dia": "40157.437500000000",
+        "humedad_pct": null,
+        "tms_dia": "40157.437500000000",
+        "horas_con_dato_r1": 0,
+        "horas_con_dato_r2": 24,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.042000",
+        "observacion": null
+      },
+      {
+        "cv25_id": 3089,
+        "fecha": "2026-10-05",
+        "tmh_cv025tot": "18.000000000000",
+        "tmh_cv025_tot": "17.750000000000",
+        "tmh_dia": "18.000000000000",
+        "humedad_pct": null,
+        "tms_dia": "18.000000000000",
+        "horas_con_dato_r1": 0,
+        "horas_con_dato_r2": 24,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.042000",
+        "observacion": null
+      },
+      {
+        "cv25_id": 3090,
+        "fecha": "2026-10-06",
+        "tmh_cv025tot": "3633.187500000000",
+        "tmh_cv025_tot": "3635.625000000000",
+        "tmh_dia": null,
+        "humedad_pct": null,
+        "tms_dia": null,
+        "horas_con_dato_r1": 0,
+        "horas_con_dato_r2": 19,
+        "tag_utilizado": "SIN_RESOLVER",
+        "fuente": "CONTINGENCIA_PI_TUM_CV025",
+        "metodo": "EPISODIO_CV025_PI_TUM",
+        "flag": "SIN_TUM_NO_RESOLUBLE",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.042000",
+        "observacion": null
+      }
+    ],
+    "cv_view": [
+      {
+        "fecha": "2026-10-04",
+        "tmh_dia": "40157.437500000000",
+        "tms_dia": "40157.437500000000",
+        "tmh_cv025tot": "40157.437500000000",
+        "tmh_cv025_tot": "40158.750000000000",
+        "tag_utilizado": "cv025tot",
+        "flag_cv25": "OK",
+        "diferencia_entre_tags": "-1.312500000000",
+        "flag_tags": "OK",
+        "horas_r1": "0.000000",
+        "horas_r2": "20.000000",
+        "horas_total": "20.000000",
+        "turnos_con_dato": 2,
+        "tms_estimado_r1": null,
+        "tms_estimado_r2": "40157.437500",
+        "flag_preliminar": "OK"
+      },
+      {
+        "fecha": "2026-10-05",
+        "tmh_dia": "18.000000000000",
+        "tms_dia": "18.000000000000",
+        "tmh_cv025tot": "18.000000000000",
+        "tmh_cv025_tot": "17.750000000000",
+        "tag_utilizado": "cv025tot",
+        "flag_cv25": "OK",
+        "diferencia_entre_tags": "0.250000000000",
+        "flag_tags": "TAGS_DIFIEREN_SOBRE_1_PCT",
+        "horas_r1": "0.000000",
+        "horas_r2": "0.000000",
+        "horas_total": "0.000000",
+        "turnos_con_dato": 2,
+        "tms_estimado_r1": null,
+        "tms_estimado_r2": "0.000000",
+        "flag_preliminar": "CERO_OPERACION_CONFIRMADO"
+      },
+      {
+        "fecha": "2026-10-06",
+        "tmh_dia": null,
+        "tms_dia": null,
+        "tmh_cv025tot": "3633.187500000000",
+        "tmh_cv025_tot": "3635.625000000000",
+        "tag_utilizado": "SIN_RESOLVER",
+        "flag_cv25": "SIN_TUM_NO_RESOLUBLE",
+        "diferencia_entre_tags": "-2.437500000000",
+        "flag_tags": "OK",
+        "horas_r1": "0.000000",
+        "horas_r2": "4.000000",
+        "horas_total": "4.000000",
+        "turnos_con_dato": 2,
+        "tms_estimado_r1": null,
+        "tms_estimado_r2": null,
+        "flag_preliminar": "SIN_RESOLVER_CV25"
+      }
+    ],
+    "horas": [
+      {
+        "horas_id": 3345,
+        "fecha_turno": "2026-10-04",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3347,
+        "fecha_turno": "2026-10-04",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3346,
+        "fecha_turno": "2026-10-04",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 10,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "10.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "OK",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3348,
+        "fecha_turno": "2026-10-04",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 10,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "10.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "OK",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3349,
+        "fecha_turno": "2026-10-05",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3351,
+        "fecha_turno": "2026-10-05",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3350,
+        "fecha_turno": "2026-10-05",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3352,
+        "fecha_turno": "2026-10-05",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3353,
+        "fecha_turno": "2026-10-06",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3355,
+        "fecha_turno": "2026-10-06",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3354,
+        "fecha_turno": "2026-10-06",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "SIN_OPERACION",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      },
+      {
+        "horas_id": 3356,
+        "fecha_turno": "2026-10-06",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 4,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "4.000000",
+        "fuente": "DATOS_FILTRADOS",
+        "metodo": "CONTEO_MUESTRAS_CORRIENTE_SOBRE_UMBRAL",
+        "flag": "OK",
+        "usuario_registro": "sa",
+        "fecha_registro": "2026-10-07 10:58:47.309000",
+        "observacion": null
+      }
+    ],
+    "prelim": [
+      {
+        "fecha_operacion": "2026-10-05",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 80,
+        "modulo_numero": 16,
+        "rotopala_id": 2,
+        "horas_rotopala": "0.000000",
+        "modulos_abiertos": 1,
+        "tms_preliminar_dia": "0E-12",
+        "m3_preliminar_dia": "0E-12",
+        "tms_preliminar_acum": "0E-12",
+        "m3_preliminar_acum": "0E-12",
+        "avance_preliminar_pct_total": 0.0,
+        "fuente_reclamo": "PRELIMINAR_CV25",
+        "metodo_calculo": "CV25_REPARTIDO_POR_HORAS_ROTOPALA",
+        "flag_preliminar": "CERO_OPERACION_CONFIRMADO"
+      }
+    ],
+    "reclamo_view": [
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 4,
+        "pad_id": 1,
+        "modulo_id": 52,
+        "modulo_numero": 52,
+        "rotopala_id": 1,
+        "orden_secuencia": 20,
+        "tms_conformado": "114313.790999999997",
+        "m3_totales": "58898.697000000000",
+        "densidad_oficial": "1.940854320000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "0E-12",
+        "tms_camiones_acum": "0E-12",
+        "m3_disponible_roto": "58898.697000000000",
+        "tms_disponible_roto": "114313.790999999997",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": "57652.097999999998",
+        "avance_total_pct": "0.978834862849",
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.000000",
+        "avance_total_pct_calculado": "0.978834",
+        "avance_roto_pct": "0.978834",
+        "fuente_reclamo": "TOPOGRAFIA",
+        "metodo_calculo": "SINCRONIZACION_DEDUPLICADA_ID_MAX",
+        "flag_calculo": "OK",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 4,
+        "pad_id": 1,
+        "modulo_id": 53,
+        "modulo_numero": 53,
+        "rotopala_id": 1,
+        "orden_secuencia": 21,
+        "tms_conformado": "116334.144000000000",
+        "m3_totales": "58898.697000000000",
+        "densidad_oficial": "1.975156000000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "0E-12",
+        "tms_camiones_acum": "0E-12",
+        "m3_disponible_roto": "58898.697000000000",
+        "tms_disponible_roto": "116334.144000000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": "15504.942999999999",
+        "avance_total_pct": "0.263247640266",
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.000000",
+        "avance_total_pct_calculado": "0.263247",
+        "avance_roto_pct": "0.263247",
+        "fuente_reclamo": "TOPOGRAFIA",
+        "metodo_calculo": "SINCRONIZACION_DEDUPLICADA_ID_MAX",
+        "flag_calculo": "OK",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 79,
+        "modulo_numero": 15,
+        "rotopala_id": 2,
+        "orden_secuencia": 15,
+        "tms_conformado": "183018.823000000000",
+        "m3_totales": "92893.517000000000",
+        "densidad_oficial": "1.970200000000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "0E-12",
+        "tms_camiones_acum": "0E-12",
+        "m3_disponible_roto": "92893.517000000000",
+        "tms_disponible_roto": "183018.823000000000",
+        "m3_rotopala_dia": "8561.789000000005",
+        "tms_rotopala_dia": "16868.436688",
+        "m3_rotopala_acum_topografia": "92629.434999999998",
+        "avance_total_pct": "0.997157153604",
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.000000",
+        "avance_total_pct_calculado": "0.997157",
+        "avance_roto_pct": "0.997157",
+        "fuente_reclamo": "TOPOGRAFIA",
+        "metodo_calculo": "SINCRONIZACION_DEDUPLICADA_ID_MAX",
+        "flag_calculo": "OK",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 80,
+        "modulo_numero": 16,
+        "rotopala_id": 2,
+        "orden_secuencia": 16,
+        "tms_conformado": "196380.042000000000",
+        "m3_totales": "100435.878000000000",
+        "densidad_oficial": "1.955278000000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "0.387000000000",
+        "tms_camiones_acum": "0.756693000000",
+        "m3_disponible_roto": "100435.491000000000",
+        "tms_disponible_roto": "196379.285307000000",
+        "m3_rotopala_dia": "7803.462000000000",
+        "tms_rotopala_dia": "15257.937572",
+        "m3_rotopala_acum_topografia": "7803.462000000000",
+        "avance_total_pct": "0.077695960402",
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.000003",
+        "avance_total_pct_calculado": "0.077699",
+        "avance_roto_pct": "0.077696",
+        "fuente_reclamo": "TOPOGRAFIA",
+        "metodo_calculo": "SINCRONIZACION_DEDUPLICADA_ID_MAX",
+        "flag_calculo": "PRIMERA_MEDICION_DEL_MODULO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 81,
+        "modulo_numero": 17,
+        "rotopala_id": 2,
+        "orden_secuencia": 17,
+        "tms_conformado": "196789.968000000000",
+        "m3_totales": "101377.095000000000",
+        "densidad_oficial": "1.941168000000",
+        "m3_camiones_dia": "53.226000000000",
+        "tms_camiones_dia": "103.320608000000",
+        "m3_camiones_acum": "1480.932000000000",
+        "tms_camiones_acum": "2874.737809000000",
+        "m3_disponible_roto": "99896.163000000000",
+        "tms_disponible_roto": "193915.230191000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.014608",
+        "avance_total_pct_calculado": "0.014608",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 82,
+        "modulo_numero": 18,
+        "rotopala_id": 2,
+        "orden_secuencia": 18,
+        "tms_conformado": "198199.477000000000",
+        "m3_totales": "99553.396000000000",
+        "densidad_oficial": "1.990886000000",
+        "m3_camiones_dia": "2027.818000000000",
+        "tms_camiones_dia": "4037.154467000000",
+        "m3_camiones_acum": "11282.316000000000",
+        "tms_camiones_acum": "22461.804971000000",
+        "m3_disponible_roto": "88271.080000000000",
+        "tms_disponible_roto": "175737.672029000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.113329",
+        "avance_total_pct_calculado": "0.113329",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 83,
+        "modulo_numero": 19,
+        "rotopala_id": 2,
+        "orden_secuencia": 19,
+        "tms_conformado": "193830.484000000000",
+        "m3_totales": "99944.621000000000",
+        "densidad_oficial": "1.939379000000",
+        "m3_camiones_dia": "1827.398000000000",
+        "tms_camiones_dia": "3544.017306000000",
+        "m3_camiones_acum": "9337.564000000000",
+        "tms_camiones_acum": "18109.075533000000",
+        "m3_disponible_roto": "90607.057000000000",
+        "tms_disponible_roto": "175721.408467000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.093427",
+        "avance_total_pct_calculado": "0.093427",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 84,
+        "modulo_numero": 20,
+        "rotopala_id": 2,
+        "orden_secuencia": 20,
+        "tms_conformado": "198020.130000000000",
+        "m3_totales": "100604.672000000000",
+        "densidad_oficial": "1.968300000000",
+        "m3_camiones_dia": "13.623000000000",
+        "tms_camiones_dia": "26.814151000000",
+        "m3_camiones_acum": "6087.614000000000",
+        "tms_camiones_acum": "11982.250637000000",
+        "m3_disponible_roto": "94517.058000000000",
+        "tms_disponible_roto": "186037.879363000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.060510",
+        "avance_total_pct_calculado": "0.060510",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 85,
+        "modulo_numero": 21,
+        "rotopala_id": 2,
+        "orden_secuencia": 21,
+        "tms_conformado": "202217.612000000000",
+        "m3_totales": "102243.264000000000",
+        "densidad_oficial": "1.977809000000",
+        "m3_camiones_dia": "3168.656000000000",
+        "tms_camiones_dia": "6266.996355000000",
+        "m3_camiones_acum": "9749.125000000000",
+        "tms_camiones_acum": "19281.907167000000",
+        "m3_disponible_roto": "92494.139000000000",
+        "tms_disponible_roto": "182935.704833000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.095352",
+        "avance_total_pct_calculado": "0.095352",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 86,
+        "modulo_numero": 22,
+        "rotopala_id": null,
+        "orden_secuencia": null,
+        "tms_conformado": "208123.915999999997",
+        "m3_totales": "105332.716000000000",
+        "densidad_oficial": "1.975871540000",
+        "m3_camiones_dia": "499.099000000000",
+        "tms_camiones_dia": "986.155510000000",
+        "m3_camiones_acum": "21931.469000000000",
+        "tms_camiones_acum": "43333.765428000000",
+        "m3_disponible_roto": "83401.247000000000",
+        "tms_disponible_roto": "164790.150571999997",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.208211",
+        "avance_total_pct_calculado": "0.208211",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 87,
+        "modulo_numero": 23,
+        "rotopala_id": null,
+        "orden_secuencia": null,
+        "tms_conformado": "201286.210000000000",
+        "m3_totales": "103065.200000000000",
+        "densidad_oficial": "1.952999000000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "31222.115000000000",
+        "tms_camiones_acum": "60976.759372000000",
+        "m3_disponible_roto": "71843.085000000000",
+        "tms_disponible_roto": "140309.450628000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.302935",
+        "avance_total_pct_calculado": "0.302935",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 88,
+        "modulo_numero": 24,
+        "rotopala_id": null,
+        "orden_secuencia": null,
+        "tms_conformado": "201611.865000000000",
+        "m3_totales": "102512.700000000000",
+        "densidad_oficial": "1.966701000000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "34951.508000000000",
+        "tms_camiones_acum": "68739.165734000000",
+        "m3_disponible_roto": "67561.192000000000",
+        "tms_disponible_roto": "132872.699266000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.340948",
+        "avance_total_pct_calculado": "0.340948",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 89,
+        "modulo_numero": 25,
+        "rotopala_id": null,
+        "orden_secuencia": null,
+        "tms_conformado": "192605.350000000000",
+        "m3_totales": "100418.600000000000",
+        "densidad_oficial": "1.918025000000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "34553.756000000000",
+        "tms_camiones_acum": "66274.967853000000",
+        "m3_disponible_roto": "65864.844000000000",
+        "tms_disponible_roto": "126330.382147000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.344097",
+        "avance_total_pct_calculado": "0.344097",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 90,
+        "modulo_numero": 26,
+        "rotopala_id": null,
+        "orden_secuencia": null,
+        "tms_conformado": "206964.828000000000",
+        "m3_totales": "106989.300000000000",
+        "densidad_oficial": "1.934444000000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "10968.114000000000",
+        "tms_camiones_acum": "21217.202319000000",
+        "m3_disponible_roto": "96021.186000000000",
+        "tms_disponible_roto": "185747.625681000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.102515",
+        "avance_total_pct_calculado": "0.102515",
+        "avance_roto_pct": "0.000000",
+        "fuente_reclamo": "SIN_DATO",
+        "metodo_calculo": "SIN_METODO",
+        "flag_calculo": "SIN_DATO",
+        "n_ajustes": 0
+      },
+      {
+        "fecha_operacion": "2026-10-05",
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 80,
+        "modulo_numero": 16,
+        "rotopala_id": 2,
+        "orden_secuencia": 16,
+        "tms_conformado": "196380.042000000000",
+        "m3_totales": "100435.878000000000",
+        "densidad_oficial": "1.955278000000",
+        "m3_camiones_dia": "0E-12",
+        "tms_camiones_dia": "0E-12",
+        "m3_camiones_acum": "0.387000000000",
+        "tms_camiones_acum": "0.756693000000",
+        "m3_disponible_roto": "100435.491000000000",
+        "tms_disponible_roto": "196379.285307000000",
+        "m3_rotopala_dia": "0E-12",
+        "tms_rotopala_dia": "0.000000",
+        "m3_rotopala_acum_topografia": null,
+        "avance_total_pct": null,
+        "ajuste_m3": "0E-12",
+        "ajuste_tms": "0E-12",
+        "ajustes_aplicados": 0,
+        "avance_camiones_pct": "0.000003",
+        "avance_total_pct_calculado": "0.077699",
+        "avance_roto_pct": "0.077696",
+        "fuente_reclamo": "PRELIMINAR_CV25",
+        "metodo_calculo": "CV25_REPARTIDO_POR_HORAS_ROTOPALA",
+        "flag_calculo": "PRELIMINAR_CV25",
+        "n_ajustes": 0
+      }
+    ],
+    "calculo": [
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 1,
+        "campaña_id": 4,
+        "modulo_id": 52,
+        "rotopala_id": 1,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "TOPOGRAFIA",
+        "flag_calculo": "OK"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 1,
+        "campaña_id": 4,
+        "modulo_id": 53,
+        "rotopala_id": 1,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "TOPOGRAFIA",
+        "flag_calculo": "OK"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 79,
+        "rotopala_id": 2,
+        "tms_rotopala_dia": "16868.436688000000",
+        "m3_rotopala_dia": "8561.789000000005",
+        "fuente_reclamo": "TOPOGRAFIA",
+        "flag_calculo": "OK"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 80,
+        "rotopala_id": 2,
+        "tms_rotopala_dia": "15257.937572000000",
+        "m3_rotopala_dia": "7803.462000000000",
+        "fuente_reclamo": "TOPOGRAFIA",
+        "flag_calculo": "PRIMERA_MEDICION_DEL_MODULO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 81,
+        "rotopala_id": 2,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 82,
+        "rotopala_id": 2,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 83,
+        "rotopala_id": 2,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 84,
+        "rotopala_id": 2,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 85,
+        "rotopala_id": 2,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 86,
+        "rotopala_id": null,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 87,
+        "rotopala_id": null,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 88,
+        "rotopala_id": null,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 89,
+        "rotopala_id": null,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-04",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 90,
+        "rotopala_id": null,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "SIN_DATO",
+        "flag_calculo": "SIN_DATO"
+      },
+      {
+        "fecha_operacion": "2026-10-05",
+        "pad_id": 2,
+        "campaña_id": 10,
+        "modulo_id": 80,
+        "rotopala_id": 2,
+        "tms_rotopala_dia": "0E-12",
+        "m3_rotopala_dia": "0E-12",
+        "fuente_reclamo": "PRELIMINAR_CV25",
+        "flag_calculo": "PRELIMINAR_CV25"
+      }
+    ],
+    "open_modules": [
+      {
+        "campaña_id": 4,
+        "pad_id": 1,
+        "modulo_id": 52,
+        "modulo_numero": 52,
+        "rotopala_id": 1,
+        "fecha_apertura": "2026-09-04",
+        "fecha_cierre": null,
+        "estado_secuencia": "ABIERTO",
+        "densidad_oficial": "1.940854320000"
+      },
+      {
+        "campaña_id": 4,
+        "pad_id": 1,
+        "modulo_id": 53,
+        "modulo_numero": 53,
+        "rotopala_id": 1,
+        "fecha_apertura": "2026-09-17",
+        "fecha_cierre": null,
+        "estado_secuencia": "ABIERTO",
+        "densidad_oficial": "1.975156000000"
+      },
+      {
+        "campaña_id": 10,
+        "pad_id": 2,
+        "modulo_id": 80,
+        "modulo_numero": 16,
+        "rotopala_id": 2,
+        "fecha_apertura": "2026-10-04",
+        "fecha_cierre": null,
+        "estado_secuencia": "ABIERTO",
+        "densidad_oficial": "1.955278000000"
+      }
+    ],
+    "last_topo": [
+      {
+        "campaña_id": 4,
+        "modulo_id": 37,
+        "ultima_medicion": "2026-08-01"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 38,
+        "ultima_medicion": "2026-08-03"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 39,
+        "ultima_medicion": "2026-08-06"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 40,
+        "ultima_medicion": "2026-08-08"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 41,
+        "ultima_medicion": "2026-08-11"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 42,
+        "ultima_medicion": "2026-08-12"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 43,
+        "ultima_medicion": "2026-08-12"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 44,
+        "ultima_medicion": "2026-08-13"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 45,
+        "ultima_medicion": "2026-08-14"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 46,
+        "ultima_medicion": "2026-08-15"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 47,
+        "ultima_medicion": "2026-08-15"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 48,
+        "ultima_medicion": "2026-08-19"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 49,
+        "ultima_medicion": "2026-08-30"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 50,
+        "ultima_medicion": "2026-09-02"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 51,
+        "ultima_medicion": "2026-09-10"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 52,
+        "ultima_medicion": "2026-10-04"
+      },
+      {
+        "campaña_id": 4,
+        "modulo_id": 53,
+        "ultima_medicion": "2026-10-04"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 65,
+        "ultima_medicion": "2026-08-24"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 66,
+        "ultima_medicion": "2026-08-26"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 67,
+        "ultima_medicion": "2026-08-27"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 68,
+        "ultima_medicion": "2026-08-29"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 69,
+        "ultima_medicion": "2026-09-10"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 70,
+        "ultima_medicion": "2026-09-11"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 71,
+        "ultima_medicion": "2026-09-11"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 73,
+        "ultima_medicion": "2026-09-12"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 74,
+        "ultima_medicion": "2026-09-13"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 75,
+        "ultima_medicion": "2026-09-16"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 76,
+        "ultima_medicion": "2026-09-25"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 77,
+        "ultima_medicion": "2026-09-28"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 78,
+        "ultima_medicion": "2026-10-03"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 79,
+        "ultima_medicion": "2026-10-04"
+      },
+      {
+        "campaña_id": 10,
+        "modulo_id": 80,
+        "ultima_medicion": "2026-10-04"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 187,
+        "ultima_medicion": "2026-07-04"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 188,
+        "ultima_medicion": "2026-07-08"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 189,
+        "ultima_medicion": "2026-07-11"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 190,
+        "ultima_medicion": "2026-07-20"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 191,
+        "ultima_medicion": "2026-07-22"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 192,
+        "ultima_medicion": "2026-07-23"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 193,
+        "ultima_medicion": "2026-07-26"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 194,
+        "ultima_medicion": "2026-07-27"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 195,
+        "ultima_medicion": "2026-07-29"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 196,
+        "ultima_medicion": "2026-07-30"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 197,
+        "ultima_medicion": "2026-07-31"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 198,
+        "ultima_medicion": "2026-08-20"
+      },
+      {
+        "campaña_id": 8,
+        "modulo_id": 199,
+        "ultima_medicion": "2026-08-22"
+      }
+    ],
+    "prelim_acum": [
+      {
+        "fecha_operacion": "2026-10-05",
+        "campaña_id": 10,
+        "modulo_id": 80,
+        "tms_preliminar_dia": "0E-12",
+        "m3_preliminar_dia": "0E-12",
+        "m3_preliminar_acum": "7803.462000000000",
+        "m3_acum_ultima_topografia": "7803.462000000000",
+        "fuente_reclamo": "PRELIMINAR_CV25",
+        "metodo_calculo": "CV25_REPARTIDO_POR_HORAS_ROTOPALA"
+      }
+    ]
+  }
+}

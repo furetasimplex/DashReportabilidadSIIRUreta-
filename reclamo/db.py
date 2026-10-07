@@ -149,6 +149,47 @@ def cuadratura() -> pd.DataFrame:
     )
 
 
+def estado_proyeccion(pad, hasta) -> pd.DataFrame:
+    """Topografía real y proyección vigente de módulos abiertos del PAD."""
+    return _read(
+        """
+        SELECT mb.modulo_id, topo.ultima_topografia,
+               p.fecha_operacion AS fecha_preliminar, p.tms_preliminar_dia
+        FROM reclamo.v_modulo_base mb
+        OUTER APPLY (
+            SELECT MAX(t.fecha_medicion) AS ultima_topografia
+            FROM reclamo.topografia_avance t
+            WHERE t.[campaña_id] = mb.[campaña_id]
+              AND t.modulo_id = mb.modulo_id
+              AND t.estado = 'VIGENTE'
+              AND t.fecha_medicion <= :hasta
+        ) topo
+        OUTER APPLY (
+            SELECT p.fecha_operacion, p.tms_preliminar_dia
+            FROM reclamo.v_preliminar_cv25 p
+            WHERE p.[campaña_id] = mb.[campaña_id]
+              AND p.modulo_id = mb.modulo_id
+              AND p.fecha_operacion <= :hasta
+        ) p
+        WHERE mb.estado_secuencia = 'ABIERTO' AND mb.pad_id = :pad
+        """,
+        {"pad": pad, "hasta": hasta},
+    )
+
+
+def ventanas_secuencia(pad) -> pd.DataFrame:
+    """Ventanas operacionales de módulos congelados, para mensajes del panel."""
+    return _read(
+        """
+        SELECT [campaña_id] AS campana_id, modulo_id, rotopala_id,
+               estado_secuencia, fecha_apertura, fecha_cierre
+        FROM reclamo.v_modulo_base
+        WHERE pad_id = :pad
+        """,
+        {"pad": pad},
+    )
+
+
 def avance_diario(desde, hasta) -> pd.DataFrame:
     """Reclamo diario por modulo, con su fuente y sus flags.
 
