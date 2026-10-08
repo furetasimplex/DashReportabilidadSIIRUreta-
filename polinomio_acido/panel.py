@@ -15,6 +15,10 @@ log = logging.getLogger(__name__)
 PREFIX = "polinomio-acido-"
 SESSION_KEY = "polinomio_acido_confirmacion"
 ETIQUETAS_PARAMETROS = {nombre: etiqueta for nombre, etiqueta, _ in db.PARAMETROS}
+POSICIONES_PARAMETROS = {
+    nombre: f"P{indice:02d}"
+    for indice, nombre in enumerate(db.NOMBRES_PARAMETROS, start=1)
+}
 
 
 def usuario_actual():
@@ -40,6 +44,7 @@ def _campo(nombre, etiqueta):
     return dbc.Col([
         dbc.Label([
             html.Span(className=f"polinomio-color-dot {categoria}"),
+            html.Span(POSICIONES_PARAMETROS[nombre], className="polinomio-posicion"),
             etiqueta,
         ], html_for=PREFIX + nombre, className="fw-semibold"),
         dbc.Input(id=PREFIX + nombre, type="number", step=0.000001,
@@ -89,6 +94,7 @@ def construir_esquema(p):
 
     def valor(nombre):
         return html.Label([
+            html.Span(POSICIONES_PARAMETROS[nombre], className="polinomio-chip-posicion"),
             html.Strong(numero_exacto(p[nombre]), className="polinomio-chip-valor"),
             html.Span(ETIQUETAS_PARAMETROS[nombre], className="polinomio-chip-etiqueta"),
             html.Small(nombre, className="polinomio-chip-nombre"),
@@ -114,7 +120,8 @@ def construir_esquema(p):
             dbc.Alert([
                 html.I(className="bi bi-cursor me-2"),
                 html.Strong("Edición guiada: "),
-                "haz clic en cualquier parámetro coloreado para ir directamente a su campo.",
+                "cada código P01–P11 identifica una posición exacta. Haz clic en el parámetro "
+                "coloreado para ir directamente a su campo.",
             ], color="primary", className="mb-3"),
             html.Div([
                 html.Span("Umbrales", className="polinomio-leyenda umbral"),

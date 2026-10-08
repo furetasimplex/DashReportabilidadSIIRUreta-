@@ -12,6 +12,7 @@ from . import db, panel
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "docs/migrations/polinomio_acido/001_dosis_acido_configuracion.sql"
+CONSUMER_MIGRATION = ROOT / "docs/migrations/polinomio_acido/002_integrar_consumidores_polinomio_acido.sql"
 
 
 def valores():
@@ -133,13 +134,21 @@ def test_esquema_coloreado_representa_funcion_completa_sin_redondear():
                        "polinomio-chip umbral", "polinomio-chip minimo",
                        "polinomio-chip base", "polinomio-chip cus", "polinomio-chip co3",
                        "Editar Factor CO3", "polinomio-acido-factor_co3",
-                       "Edición guiada"):
+                       "Edición guiada", "P01", "P03", "P11",
+                       "polinomio-chip-posicion"):
         assert fragmento in esquema
     assert esquema.index("Mineral Sulfuro") < esquema.index("Para CO3 ≤")
     assert esquema.index("Para CO3 ≤") < esquema.index("Para CO3 >")
     assert esquema.index("Para CO3 >") < esquema.index("Mineral Óxido")
     assert panel.numero_exacto(Decimal("0.250000")) == "0,25"
     assert panel.numero_exacto(Decimal("8.182345")) == "8,182345"
+
+
+def test_campos_y_formula_comparten_codigo_de_posicion():
+    for indice, nombre in enumerate(db.NOMBRES_PARAMETROS, start=1):
+        codigo = f"P{indice:02d}"
+        assert panel.POSICIONES_PARAMETROS[nombre] == codigo
+        assert codigo in str(panel._campo(nombre, panel.ETIQUETAS_PARAMETROS[nombre]))
 
 
 def test_esquema_controla_configuracion_incompleta():
@@ -165,6 +174,23 @@ def test_migracion_y_funcion_cubren_contrato_y_ramas():
     assert calcular_referencia(0.50, 0.20, -1) == 0.00
     assert calcular_referencia(0.50, 0.00, 0.10) == 14.00
     assert calcular_referencia(0.50, 0.20, 1.00) == 22.09
+
+
+def test_migracion_conecta_los_dos_consumidores_con_la_funcion_centralizada():
+    sql = CONSUMER_MIGRATION.read_text(encoding="utf-8-sig")
+    assert "USE [inventar_SpcHidr_PROD]" in sql
+    assert "CREATE OR ALTER FUNCTION [inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]" in sql
+    assert "CREATE OR ALTER PROCEDURE [inventar_SpcHidr].[sp_reporte_turno_emision_test]" in sql
+    assert ");\nGO\n\n/****** Objeto: StoredProcedure" in sql.replace("\r\n", "\n")
+    assert sql.count("[inventar_SpcHidr].[fn_calcular_dosis_acido]") == 6
+    for alias in (
+        "Dosis_Acido_Ideal_Dia",
+        "Dosis_Acido_Ideal_TM",
+        "Dosis_Acido_Programa_Semanal",
+    ):
+        assert alias in sql
+    assert "CAST(pr.CuS_Programa / NULLIF(pr.CuT_Programa, 0) AS DECIMAL(18,6))" in sql
+    assert "CAST(ISNULL(ps.Solubilidad_Plan_Semanal, 0) AS DECIMAL(18,6))" in sql
 
 
 def test_sidebar_monta_modulo_sin_conectarlo_a_consumidores():

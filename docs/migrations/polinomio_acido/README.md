@@ -76,3 +76,21 @@ Los objetos consumidores mantienen sus condiciones previas para decidir si el re
 
 El script idempotente que crea la tabla, registra la configuración inicial y crea o actualiza la función está en [`001_dosis_acido_configuracion.sql`](001_dosis_acido_configuracion.sql).
 
+Después de crear esos objetos, ejecutar
+[`002_integrar_consumidores_polinomio_acido.sql`](002_integrar_consumidores_polinomio_acido.sql)
+para actualizar las definiciones completas de producción de:
+
+- `[inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]`.
+- `[inventar_SpcHidr].[sp_reporte_turno_emision_test]`.
+
+La segunda migración fue construida desde las definiciones extraídas de
+`inventar_SpcHidr_PROD` el 08-10-2026. Es idempotente mediante `CREATE OR ALTER`,
+comprueba primero que exista `[inventar_SpcHidr].[fn_calcular_dosis_acido]` y
+conserva el resto de cada definición sin cambios.
+
+Orden de ejecución:
+
+```text
+001_dosis_acido_configuracion.sql
+002_integrar_consumidores_polinomio_acido.sql
+```
