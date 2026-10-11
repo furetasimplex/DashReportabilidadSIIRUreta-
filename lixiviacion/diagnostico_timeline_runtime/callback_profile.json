@@ -1,0 +1,68 @@
+[
+  {
+    "pad": 1,
+    "parcela_id": 1,
+    "calls": [
+      {
+        "query": "header",
+        "params": {
+          "fecha": "2026-09-10",
+          "pad_id": 1,
+          "parcela_id": 1
+        },
+        "execute_seconds": 0.058998600114136934,
+        "fetch_seconds": 0.034809499979019165,
+        "total_seconds": 0.0938081000931561,
+        "rows": 1
+      },
+      {
+        "query": "timeline",
+        "params": {
+          "desde": "2026-06-01",
+          "hasta": "2026-09-10",
+          "pad_id": 1,
+          "parcela_id": 1
+        },
+        "execute_seconds": 0.5083059000317007,
+        "fetch_seconds": 0.5267713000066578,
+        "total_seconds": 1.0350772000383586,
+        "rows": 102
+      }
+    ],
+    "total_seconds": 1.316673900000751,
+    "rest_seconds": 0.18778859986923635
+  },
+  {
+    "pad": 2,
+    "parcela_id": 39,
+    "calls": [
+      {
+        "query": "header",
+        "params": {
+          "fecha": "2026-09-10",
+          "pad_id": 2,
+          "parcela_id": 39
+        },
+        "execute_seconds": 0.05767460004426539,
+        "fetch_seconds": 0.0355470001231879,
+        "total_seconds": 0.09322160016745329,
+        "rows": 1
+      },
+      {
+        "query": "timeline",
+        "params": {
+          "desde": "2026-06-01",
+          "hasta": "2026-09-10",
+          "pad_id": 2,
+          "parcela_id": 39
+        },
+        "execute_seconds": 0.6772079998627305,
+        "fetch_seconds": 0.6457503999117762,
+        "total_seconds": 1.3229583997745067,
+        "rows": 102
+      }
+    ],
+    "total_seconds": 1.6050364000257105,
+    "rest_seconds": 0.1888564000837505
+  }
+]

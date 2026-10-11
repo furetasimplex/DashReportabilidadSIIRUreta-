@@ -1,25 +1,43 @@
+import os
+from env_loader import load_app_env
+
+load_app_env()
+
+# Debe ejecutarse antes de importar layout/auth/report_export: esos módulos
+# construyen nombres SQL al importarse y no deben ocultar un .env PROD inválido.
+from db_startup_check import run_startup_db_check
+
+run_startup_db_check()
+
 from dash import Dash
 import dash_bootstrap_components as dbc
-from layout import create_layout, register_callbacks
-from dotenv import load_dotenv
 from flask import session, redirect, request
-from auth import auth_bp
-from report_export.callbacks.reportabilidad_cb import setup_download_route
 
-load_dotenv()
+from auth import auth_bp
+from layout import create_layout, register_callbacks
+from report_export.callbacks.reportabilidad_cb import setup_download_route
 
 external_stylesheets = [
     dbc.themes.FLATLY,
     "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css",
 ]
 
-app = Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
+external_scripts = [
+    "https://cdn.jsdelivr.net/npm/date-fns@4.1.0/locale/es/cdn.min.js",
+]
+
+app = Dash(
+    __name__,
+    external_stylesheets=external_stylesheets,
+    external_scripts=external_scripts,
+    suppress_callback_exceptions=True,
+)
 server = app.server
 setup_download_route(server)
 app.title = "Dashboard Hidrometalurgico Spence"
 
 # 🔐 Config Flask
-server.secret_key = "s1mpl3x"
+server.secret_key = os.environ["SECRET_KEY"]
 server.register_blueprint(auth_bp, url_prefix="/auth")
 
 # Layout Dash
@@ -35,7 +53,5 @@ def protect_dash():
         return redirect("/auth/login_page")
 
 if __name__ == "__main__":
-    import os
-
     port = int(os.getenv("PORT", "8065"))
     app.run(debug=True, port=port)

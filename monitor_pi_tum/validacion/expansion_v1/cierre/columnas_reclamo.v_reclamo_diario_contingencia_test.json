@@ -1,0 +1,92 @@
+[
+  {
+    "name": "fecha_operacion"
+  },
+  {
+    "name": "campaña_id"
+  },
+  {
+    "name": "pad_id"
+  },
+  {
+    "name": "modulo_id"
+  },
+  {
+    "name": "modulo_numero"
+  },
+  {
+    "name": "rotopala_id"
+  },
+  {
+    "name": "orden_secuencia"
+  },
+  {
+    "name": "tms_conformado"
+  },
+  {
+    "name": "m3_totales"
+  },
+  {
+    "name": "densidad_oficial"
+  },
+  {
+    "name": "m3_camiones_dia"
+  },
+  {
+    "name": "tms_camiones_dia"
+  },
+  {
+    "name": "m3_camiones_acum"
+  },
+  {
+    "name": "tms_camiones_acum"
+  },
+  {
+    "name": "m3_disponible_roto"
+  },
+  {
+    "name": "tms_disponible_roto"
+  },
+  {
+    "name": "m3_rotopala_dia"
+  },
+  {
+    "name": "tms_rotopala_dia"
+  },
+  {
+    "name": "m3_rotopala_acum_topografia"
+  },
+  {
+    "name": "avance_total_pct"
+  },
+  {
+    "name": "ajuste_m3"
+  },
+  {
+    "name": "ajuste_tms"
+  },
+  {
+    "name": "ajustes_aplicados"
+  },
+  {
+    "name": "avance_camiones_pct"
+  },
+  {
+    "name": "avance_total_pct_calculado"
+  },
+  {
+    "name": "avance_roto_pct"
+  },
+  {
+    "name": "fuente_reclamo"
+  },
+  {
+    "name": "metodo_calculo"
+  },
+  {
+    "name": "flag_calculo"
+  },
+  {
+    "name": "n_ajustes"
+  }
+]

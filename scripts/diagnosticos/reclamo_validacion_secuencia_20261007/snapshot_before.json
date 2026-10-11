@@ -1,0 +1,10 @@
+{
+  "database": "inventar_SpcHidr",
+  "secuencia_rows": 85,
+  "frozen_rows": 85,
+  "calculo_diario_rows": 1100,
+  "blockers_before": 5,
+  "blockers_after_eligible": 0,
+  "calculo_tms_rotopala": "4002639.443107000000",
+  "calculo_tms_camiones": "1135757.803561000000"
+}

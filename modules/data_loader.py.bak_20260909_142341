@@ -1,0 +1,284 @@
+"""
+data_loader.py
+==============
+Módulo para cargar datos desde la BD dev_siir.hidro
+Implementa patrón singleton para gestión de conexiones
+
+Proporciona métodos para:
+- Cargar casos disponibles (recon_caso_oficial + recon_caso)
+- Cargar datos de reconciliación
+- Cargar datos medidos diarios
+- Cargar runs disponibles
+"""
+
+import pandas as pd
+import logging
+from sqlalchemy import create_engine
+import pyodbc
+import os
+
+logger = logging.getLogger(__name__)
+
+# Configuración de conexión (variables de entorno o hardcoded)
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_USER = os.getenv('DB_USER', 'sa')
+DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+DB_PORT = os.getenv('DB_PORT', '1433')
+
+
+class DataLoader:
+    """Cargador singleton de datos desde dev_siir.hidro"""
+
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(DataLoader, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+
+        try:
+            # Detectar ODBC Driver disponible (18, 17, o versiones más nuevas)
+            available_drivers = pyodbc.drivers()
+            odbc_driver = None
+
+            # Intentar con driver más reciente primero
+            for driver_name in available_drivers:
+                if 'ODBC Driver' in driver_name and 'SQL Server' in driver_name:
+                    odbc_driver = driver_name
+                    break
+
+            if not odbc_driver:
+                raise Exception(
+                    f"No ODBC Driver found. Available: {available_drivers}\n"
+                    "Please install: apt-get install msodbcsql18 (or msodbcsql17)"
+                )
+
+            logger.info(f"✓ Usando driver: {odbc_driver}")
+
+            # Crear conexión a SQL Server
+            connection_string = (
+                f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD}@"
+                f"{DB_HOST}:{DB_PORT}/dev_siir?"
+                f"driver={odbc_driver.replace(' ', '+')}"
+            )
+
+            self.engine = create_engine(connection_string, echo=False)
+            logger.info("✓ DataLoader inicializado - conexión a BD establecida")
+            self._initialized = True
+        except Exception as e:
+            logger.error(f"✗ Error inicializando DataLoader: {e}")
+            self.engine = None
+            self._initialized = False
+
+    # ========================================================================
+    # MÉTODOS DE CARGA DE DATOS
+    # ========================================================================
+
+    def get_available_casos(self):
+        """
+        Obtiene lista de casos disponibles desde DEV_SIIR.hidro
+        Query cross-database desde cualquier BD
+        Join entre recon_caso y recon_caso_oficial (solo casos con versión oficial)
+
+        Returns:
+            DataFrame con columnas: [id, nombre_caso, fecha_inicio, fecha_fin, estado]
+        """
+        try:
+            if not self.engine:
+                logger.warning("Sin conexión a BD")
+                return pd.DataFrame()
+
+            # Query CROSS-DATABASE: accede a DEV_SIIR desde cualquier BD actual
+            # Obtiene casos que tienen versión oficial (reconciliada)
+            query = """
+            SELECT DISTINCT
+                rc.id,
+                rc.nombre_caso,
+                rc.fecha_inicio,
+                rc.fecha_fin,
+                rc.estado
+            FROM [DEV_SIIR].[hidro].[recon_caso] rc
+            INNER JOIN [DEV_SIIR].[hidro].[recon_caso_oficial] rco
+                ON rc.id = rco.caso_id
+            ORDER BY rc.nombre_caso
+            """
+
+            df = pd.read_sql(query, self.engine)
+            logger.info(f"✓ Casos cargados: {len(df)} opciones desde DEV_SIIR.hidro.recon_caso")
+            return df
+
+        except Exception as e:
+            logger.error(f"✗ Error obteniendo casos: {e}")
+            logger.error(f"   Asegúrate que DEV_SIIR.hidro.recon_caso y recon_caso_oficial existen")
+            return pd.DataFrame()
+
+
+    def get_available_runs(self, caso_balance, fecha_inicio, fecha_fin):
+        """
+        Obtiene solver_run_id disponibles para un caso desde recon_caso_oficial
+
+        Args:
+            caso_balance: ID del caso (desde recon_caso.id)
+            fecha_inicio: Fecha inicio (para referencia)
+            fecha_fin: Fecha fin (para referencia)
+
+        Returns:
+            DataFrame con columnas: [solver_run_id, oficializado_en, comentario]
+        """
+        try:
+            if not self.engine:
+                logger.warning("Sin conexión a BD")
+                return pd.DataFrame()
+
+            query = """
+            SELECT DISTINCT
+                rco.solver_run_id,
+                rco.oficializado_en,
+                rco.comentario,
+                rc.nombre_caso,
+                rc.fecha_inicio,
+                rc.fecha_fin
+            FROM [DEV_SIIR].[hidro].[recon_caso_oficial] rco
+            INNER JOIN [DEV_SIIR].[hidro].[recon_caso] rc
+                ON rco.caso_id = rc.id
+            WHERE rco.caso_id = ?
+            ORDER BY rco.oficializado_en DESC
+            """
+
+            params = [caso_balance]
+            df = pd.read_sql(query, self.engine, params=params)
+            logger.info(f"✓ Runs cargados: {len(df)} versiones para caso_id={caso_balance}")
+            return df
+
+        except Exception as e:
+            logger.error(f"✗ Error obteniendo runs: {e}")
+            return pd.DataFrame()
+
+
+    def get_reconciliation_results(self, caso_balance, run_id, fecha_inicio, fecha_fin):
+        """
+        Obtiene resultados de reconciliación para un run_id y rango de fechas
+
+        Args:
+            caso_balance: ID del caso de balance
+            run_id: ID del run
+            fecha_inicio: Fecha inicio
+            fecha_fin: Fecha fin
+
+        Returns:
+            DataFrame con datos de reconciliación
+        """
+        try:
+            if not self.engine:
+                logger.warning("Sin conexión a BD")
+                return pd.DataFrame()
+
+            query = """
+            SELECT
+                rd.fecha_dia,
+                rd.flujo_id,
+                rd.valor_sistema,
+                rd.valor_medido,
+                rd.diferencia_bruta,
+                rd.estado
+            FROM dev_siir.hidro.recon_detalle rd
+            WHERE rd.caso_balance = ?
+                AND rd.run_id = ?
+                AND CAST(rd.fecha_dia AS DATE) BETWEEN ? AND ?
+            ORDER BY rd.fecha_dia, rd.flujo_id
+            """
+
+            params = [caso_balance, run_id, fecha_inicio, fecha_fin]
+            df = pd.read_sql(query, self.engine, params=params)
+            logger.info(f"✓ Datos reconciliación cargados: {len(df)} registros")
+            return df
+
+        except Exception as e:
+            logger.error(f"✗ Error obteniendo datos reconciliación: {e}")
+            return pd.DataFrame()
+
+
+    def get_daily_measured_data(self, fecha_inicio, fecha_fin):
+        """
+        Obtiene datos medidos diarios para validación
+
+        Args:
+            fecha_inicio: Fecha inicio
+            fecha_fin: Fecha fin
+
+        Returns:
+            DataFrame con datos medidos por día
+        """
+        try:
+            if not self.engine:
+                logger.warning("Sin conexión a BD")
+                return pd.DataFrame()
+
+            query = """
+            SELECT
+                dmd.fecha_dia,
+                dmd.flujo_id,
+                dmd.valor_medido
+            FROM dev_siir.hidro.datos_medidos_diarios dmd
+            WHERE CAST(dmd.fecha_dia AS DATE) BETWEEN ? AND ?
+            ORDER BY dmd.fecha_dia, dmd.flujo_id
+            """
+
+            params = [fecha_inicio, fecha_fin]
+            df = pd.read_sql(query, self.engine, params=params)
+            logger.info(f"✓ Datos medidos cargados: {len(df)} registros")
+            return df
+
+        except Exception as e:
+            logger.error(f"✗ Error obteniendo datos medidos: {e}")
+            return pd.DataFrame()
+
+
+    def save_reconciliation_adjustments(self, caso_balance, run_id, adjustments_df):
+        """
+        Guarda ajustes de reconciliación en BD
+
+        Args:
+            caso_balance: ID del caso
+            run_id: ID del run
+            adjustments_df: DataFrame con ajustes a guardar
+
+        Returns:
+            bool: True si guarda exitosamente
+        """
+        try:
+            if not self.engine:
+                logger.warning("Sin conexión a BD")
+                return False
+
+            # Implementar según estructura de tabla recon_ajustes
+            adjustments_df.to_sql(
+                'recon_ajustes',
+                self.engine,
+                schema='hidro',
+                if_exists='append',
+                index=False
+            )
+            logger.info(f"✓ {len(adjustments_df)} ajustes guardados en BD")
+            return True
+
+        except Exception as e:
+            logger.error(f"✗ Error guardando ajustes: {e}")
+            return False
+
+
+# Instancia singleton global
+_data_loader = None
+
+
+def get_data_loader():
+    """Obtiene la instancia singleton del DataLoader"""
+    global _data_loader
+    if _data_loader is None:
+        _data_loader = DataLoader()
+    return _data_loader

@@ -1,0 +1,441 @@
+{
+  "excel": "C:\\Users\\nimun\\OneDrive\\Documentos\\GitHub\\DashReportabilidadSIIR\\report_export\\exports\\Analisis_Torres_de_Muestreo_20260801_20260826_FUENTE_IMP_DEV.xlsx",
+  "size": 110872,
+  "rows_turno": 52,
+  "rows_clays": 98,
+  "rows_trace": 1000,
+  "imp_clays_rows": 8,
+  "imp_trace_caol_rows": 8,
+  "imp_cells": {
+    "Trazabilidad Analitos": [
+      {
+        "coordinate": "AD9",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z97",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z98",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z99",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "H100",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "J100",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "P100",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "V100",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "H101",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "J101",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "P101",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "V101",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z101",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "H102",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "J102",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "P102",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "V102",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z102",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "H103",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "J103",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "P103",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "V103",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z103",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "V104",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "V105",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z105",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "H106",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "J106",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "P106",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "V106",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z106",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "H107",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "J107",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "P107",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "V107",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      },
+      {
+        "coordinate": "Z107",
+        "colors": [
+          "FFFF0000",
+          "FFFFFFFF",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>"
+        ]
+      }
+    ],
+    "Clays-CuFe": [
+      {
+        "coordinate": "J3",
+        "colors": [
+          "FFFF0000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      },
+      {
+        "coordinate": "G95",
+        "colors": [
+          "00000000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      },
+      {
+        "coordinate": "G96",
+        "colors": [
+          "00000000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      },
+      {
+        "coordinate": "G97",
+        "colors": [
+          "00000000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      },
+      {
+        "coordinate": "G98",
+        "colors": [
+          "00000000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      },
+      {
+        "coordinate": "G99",
+        "colors": [
+          "00000000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      },
+      {
+        "coordinate": "G100",
+        "colors": [
+          "00000000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      },
+      {
+        "coordinate": "G101",
+        "colors": [
+          "00000000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      },
+      {
+        "coordinate": "G102",
+        "colors": [
+          "00000000",
+          "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+          "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+        ]
+      }
+    ]
+  },
+  "clays_imp_value_cells": [
+    {
+      "coordinate": "E95",
+      "colors": [
+        "FFFF0000",
+        "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+        "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+      ]
+    },
+    {
+      "coordinate": "E96",
+      "colors": [
+        "FFFF0000",
+        "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+        "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+      ]
+    },
+    {
+      "coordinate": "E97",
+      "colors": [
+        "FFFF0000",
+        "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+        "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+      ]
+    },
+    {
+      "coordinate": "E98",
+      "colors": [
+        "FFFF0000",
+        "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+        "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+      ]
+    },
+    {
+      "coordinate": "E99",
+      "colors": [
+        "FFFF0000",
+        "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+        "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+      ]
+    },
+    {
+      "coordinate": "E100",
+      "colors": [
+        "FFFF0000",
+        "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+        "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+      ]
+    },
+    {
+      "coordinate": "E101",
+      "colors": [
+        "FFFF0000",
+        "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+        "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+      ]
+    },
+    {
+      "coordinate": "E102",
+      "colors": [
+        "FFFF0000",
+        "VALUES MUST BE OF TYPE <CLASS 'INT'>",
+        "VALUES MUST BE OF TYPE <CLASS 'STR'>"
+      ]
+    }
+  ]
+}

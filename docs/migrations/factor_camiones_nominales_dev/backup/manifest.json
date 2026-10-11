@@ -1,0 +1,12 @@
+{
+  "sp_registrar_limite_factor_camiones_vigencia_test": "8dc5067062bb1bbe7b69560e452795e69db473fb833fa4f66f7e18da3bbcd755",
+  "tr_factor_camiones_vigencia_solapamiento_test": "af291b82e87b8a13ee6d5e6a0aba2824b3fcc6c317287661f6c641a217bae278",
+  "sp_factor_ajuste_camiones_test": "a6920ec883031708cf098945af0f4ad7700dffb6ededa0e5a6ecf2bd90e395f4",
+  "sp_mantiene_factor_ajuste_camiones_v2_test": "99c68abd7ca302e13ef81e81bf732612ee1074f7681bb44fc1734a2e822b583e",
+  "sp_factor_ajuste_camiones_standalone_test": "061e664e17a47df051d9ec07061be205c0bb8fd8597fd55e6897d133ccc5059c",
+  "sp_mantiene_factor_ajuste_camiones_v2_standalone_test": "f50fc3b4ba29fba91c430688fffef874f2b4fd9fe66212238dd6eb5e5b85e480",
+  "v_ajuste_camiones_emision_test": "97e9146446ad029c45e1ce271ed79d4b6eabbaba25c20f3e08bd0236b64eff34",
+  "monitor_pi_tum/db.py": "9095de836733ec05e76a612bbf4a4ecc2677a23d13849f9405895b6186ab27df",
+  "monitor_pi_tum/limites_camiones_panel.py": "60f207ef4b61dc975e372c1c6a0ec2a1d04918a26438af8995b42b6a50c91aa5",
+  "monitor_pi_tum/factor_camiones_panel.py": "2abf575d0287d2e687a685b52d7adc8cf96fd11ef7440e11b6b56683642d73c8"
+}

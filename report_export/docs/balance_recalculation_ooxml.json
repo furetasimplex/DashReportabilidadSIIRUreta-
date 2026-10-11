@@ -1,0 +1,44 @@
+{
+  "template": {
+    "calcPr": {
+      "calcId": "191029"
+    },
+    "selection": {
+      "activeCell": "A13",
+      "sqref": "A1:XFD1048576"
+    },
+    "formulas": 2774,
+    "caches": 2774,
+    "parts": 66
+  },
+  "case21": {
+    "calcPr": {
+      "calcId": "191029",
+      "calcMode": "auto",
+      "fullCalcOnLoad": "1",
+      "forceFullCalc": "1"
+    },
+    "selection": {
+      "activeCell": "A1",
+      "sqref": "A1"
+    },
+    "formulas": 2774,
+    "caches": 0,
+    "parts": 66
+  },
+  "case24": {
+    "calcPr": {
+      "calcId": "191029",
+      "calcMode": "auto",
+      "fullCalcOnLoad": "1",
+      "forceFullCalc": "1"
+    },
+    "selection": {
+      "activeCell": "A1",
+      "sqref": "A1"
+    },
+    "formulas": 2774,
+    "caches": 0,
+    "parts": 66
+  }
+}

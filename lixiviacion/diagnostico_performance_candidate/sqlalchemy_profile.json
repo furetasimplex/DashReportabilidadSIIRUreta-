@@ -1,0 +1,54 @@
+[
+  {
+    "candidate": "candidate_generic",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "execute_seconds": 0.3851329998578876,
+    "fetch_seconds": 0.7631546999327838,
+    "total_seconds": 1.1482876997906715
+  },
+  {
+    "candidate": "candidate_ox",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 1,
+      "parcela_id": 1
+    },
+    "rows": 102,
+    "execute_seconds": 0.2725812999997288,
+    "fetch_seconds": 0.9377659000456333,
+    "total_seconds": 1.2103472000453621
+  },
+  {
+    "candidate": "candidate_generic",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "execute_seconds": 0.32395679992623627,
+    "fetch_seconds": 1.036488899961114,
+    "total_seconds": 1.3604456998873502
+  },
+  {
+    "candidate": "candidate_sulf",
+    "params": {
+      "desde": "2026-06-01",
+      "hasta": "2026-09-10",
+      "pad_id": 2,
+      "parcela_id": 39
+    },
+    "rows": 102,
+    "execute_seconds": 0.37584310001693666,
+    "fetch_seconds": 1.2288634998258203,
+    "total_seconds": 1.604706599842757
+  }
+]

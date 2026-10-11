@@ -1,0 +1,86 @@
+[
+  {
+    "batch_id": 10439,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_camiones_turno",
+    "equipo": null,
+    "filas": 16
+  },
+  {
+    "batch_id": 10439,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_topografia",
+    "equipo": null,
+    "filas": 16
+  },
+  {
+    "batch_id": 10439,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_totalizadores_turno",
+    "equipo": "RIPIOS_CV025",
+    "filas": 15
+  },
+  {
+    "batch_id": 10463,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_camiones_turno",
+    "equipo": null,
+    "filas": 4
+  },
+  {
+    "batch_id": 10463,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_topografia",
+    "equipo": null,
+    "filas": 4
+  },
+  {
+    "batch_id": 10463,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_totalizadores_turno",
+    "equipo": "RIPIOS_CV025",
+    "filas": 3
+  },
+  {
+    "batch_id": 20454,
+    "template_code": "informe_tum_srr",
+    "dataset_name": "informe_tum_totalizadores_turno",
+    "equipo": "SRR_CV001",
+    "filas": 10
+  },
+  {
+    "batch_id": 20454,
+    "template_code": "informe_tum_srr",
+    "dataset_name": "informe_tum_totalizadores_turno",
+    "equipo": "SRR_CV002",
+    "filas": 10
+  },
+  {
+    "batch_id": 20454,
+    "template_code": "informe_tum_srr",
+    "dataset_name": "informe_tum_totalizadores_turno",
+    "equipo": "SRR_CV003",
+    "filas": 10
+  },
+  {
+    "batch_id": 20455,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_camiones_turno",
+    "equipo": null,
+    "filas": 10
+  },
+  {
+    "batch_id": 20455,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_topografia",
+    "equipo": null,
+    "filas": 10
+  },
+  {
+    "batch_id": 20455,
+    "template_code": "informe_tum_ripios",
+    "dataset_name": "informe_tum_totalizadores_turno",
+    "equipo": "RIPIOS_CV025",
+    "filas": 10
+  }
+]

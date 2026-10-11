@@ -1,0 +1,34 @@
+[
+  {
+    "name": "id_factor",
+    "tipo": "int"
+  },
+  {
+    "name": "fecha_inicio",
+    "tipo": "date"
+  },
+  {
+    "name": "fecha_fin",
+    "tipo": "date"
+  },
+  {
+    "name": "factor_ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "fuente",
+    "tipo": "varchar"
+  },
+  {
+    "name": "descripcion",
+    "tipo": "varchar"
+  },
+  {
+    "name": "activo",
+    "tipo": "bit"
+  },
+  {
+    "name": "fecha_carga",
+    "tipo": "datetime2"
+  }
+]

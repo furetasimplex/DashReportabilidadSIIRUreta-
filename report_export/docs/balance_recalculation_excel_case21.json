@@ -1,0 +1,31 @@
+{
+  "file": "C:\\Users\\nimun\\OneDrive\\Documentos\\GitHub\\DashReportabilidadSIIR\\report_export\\exports\\Balance_Planta_Hidrometalurgia_20260801_20260808_Caso21_Run149.xlsx",
+  "excel_version": "16.0",
+  "calculation_state": 2,
+  "active_cell": "$A$1",
+  "selection": "$A$1",
+  "active_sheet": "Resumen",
+  "scroll_row": 1.0,
+  "scroll_column": 1.0,
+  "selected_sheets": 1,
+  "zoom": 85.0,
+  "normal_open_succeeded": true,
+  "corrupt_load": 0,
+  "sheets": 9,
+  "case_run": "Caso 21 | Run oficial 149",
+  "days": [
+    8.0,
+    8.0
+  ],
+  "summary_e12": 253003.6957,
+  "report_f15": 8.0,
+  "data_f1_mass": 253003.6957,
+  "data_f1_fine": 2203.433327,
+  "summary_period": "Período 01 al 08",
+  "summary_accumulated": "Acumulado al 08",
+  "analysis_g4_k4_o4": [
+    253003.6957,
+    0.87091,
+    2203.433327
+  ]
+}

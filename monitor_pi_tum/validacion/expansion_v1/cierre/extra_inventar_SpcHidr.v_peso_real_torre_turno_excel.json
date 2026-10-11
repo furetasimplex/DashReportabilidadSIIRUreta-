@@ -1,0 +1,272 @@
+[
+  {
+    "Fecha": "2026-08-31",
+    "Turno": "A",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "08_Peso Torre Agosto 2026-5.xlsx",
+    "fecha_carga": "2026-09-02 12:58:14"
+  },
+  {
+    "Fecha": "2026-08-31",
+    "Turno": "A",
+    "Torre": "T1",
+    "PesoReal_Quimico": "7.040",
+    "PesoReal_Fisico": "28.120",
+    "nombre_archivo": "08_Peso Torre Agosto 2026-5.xlsx",
+    "fecha_carga": "2026-09-02 12:58:14"
+  },
+  {
+    "Fecha": "2026-08-31",
+    "Turno": "A",
+    "Torre": "T2",
+    "PesoReal_Quimico": "5.300",
+    "PesoReal_Fisico": "7.320",
+    "nombre_archivo": "08_Peso Torre Agosto 2026-5.xlsx",
+    "fecha_carga": "2026-09-02 12:58:14"
+  },
+  {
+    "Fecha": "2026-08-31",
+    "Turno": "B",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "08_Peso Torre Agosto 2026-5.xlsx",
+    "fecha_carga": "2026-09-02 12:58:14"
+  },
+  {
+    "Fecha": "2026-08-31",
+    "Turno": "B",
+    "Torre": "T1",
+    "PesoReal_Quimico": "2.500",
+    "PesoReal_Fisico": "5.160",
+    "nombre_archivo": "08_Peso Torre Agosto 2026-5.xlsx",
+    "fecha_carga": "2026-09-02 12:58:14"
+  },
+  {
+    "Fecha": "2026-08-31",
+    "Turno": "B",
+    "Torre": "T2",
+    "PesoReal_Quimico": "2.120",
+    "PesoReal_Fisico": "2.580",
+    "nombre_archivo": "08_Peso Torre Agosto 2026-5.xlsx",
+    "fecha_carga": "2026-09-02 12:58:14"
+  },
+  {
+    "Fecha": "2026-09-07",
+    "Turno": "A",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-07",
+    "Turno": "A",
+    "Torre": "T1",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-07",
+    "Turno": "A",
+    "Torre": "T2",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-07",
+    "Turno": "B",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-07",
+    "Turno": "B",
+    "Torre": "T1",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-07",
+    "Turno": "B",
+    "Torre": "T2",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-08",
+    "Turno": "A",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-08",
+    "Turno": "A",
+    "Torre": "T1",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-08",
+    "Turno": "A",
+    "Torre": "T2",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-08",
+    "Turno": "B",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-08",
+    "Turno": "B",
+    "Torre": "T1",
+    "PesoReal_Quimico": "2.660",
+    "PesoReal_Fisico": "0.300",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-08",
+    "Turno": "B",
+    "Torre": "T2",
+    "PesoReal_Quimico": "9.400",
+    "PesoReal_Fisico": "12.410",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-10",
+    "Turno": "A",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-10",
+    "Turno": "A",
+    "Torre": "T1",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-10",
+    "Turno": "A",
+    "Torre": "T2",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-10",
+    "Turno": "B",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-10",
+    "Turno": "B",
+    "Torre": "T1",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-10",
+    "Turno": "B",
+    "Torre": "T2",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-13",
+    "Turno": "A",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-13",
+    "Turno": "A",
+    "Torre": "T1",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-13",
+    "Turno": "A",
+    "Torre": "T2",
+    "PesoReal_Quimico": "13.940",
+    "PesoReal_Fisico": "6.880",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-13",
+    "Turno": "B",
+    "Torre": "SRR",
+    "PesoReal_Quimico": "0.000",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-13",
+    "Turno": "B",
+    "Torre": "T1",
+    "PesoReal_Quimico": "2.060",
+    "PesoReal_Fisico": "9.720",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  },
+  {
+    "Fecha": "2026-09-13",
+    "Turno": "B",
+    "Torre": "T2",
+    "PesoReal_Quimico": "4.460",
+    "PesoReal_Fisico": "0.000",
+    "nombre_archivo": "09_Peso Torre Septiembre 2026 (2).xlsx",
+    "fecha_carga": "2026-09-17 11:59:52"
+  }
+]

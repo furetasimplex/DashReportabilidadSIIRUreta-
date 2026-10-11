@@ -1,0 +1,12 @@
+﻿[
+    {
+        "Algorithm":  "SHA256",
+        "Hash":  "C6660F314B6C413D8A2990185E2D9E8FD4EFCD2594EB5D9438B8C14B53CBB219",
+        "Path":  "C:\\Users\\nimun\\OneDrive\\Documentos\\GitHub\\DashReportabilidadSIIR\\report_export\\report_export.py"
+    },
+    {
+        "Algorithm":  "SHA256",
+        "Hash":  "3DEE0C9D8C3B90BAAD18445CD800864A9DE4EA627EC37726873E6B70AD73E6D0",
+        "Path":  "C:\\Users\\nimun\\OneDrive\\Documentos\\GitHub\\DashReportabilidadSIIR\\report_export\\callbacks\\reportabilidad_cb.py"
+    }
+]

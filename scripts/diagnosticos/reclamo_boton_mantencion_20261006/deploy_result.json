@@ -1,0 +1,30 @@
+{
+  "applied_utc": "2026-10-06T14:31:01.144672+00:00",
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "login_name": "sa"
+  },
+  "objects_modified": [
+    "reclamo.sp_auto_congelar_modulos_nuevos",
+    "reclamo.sp_auto_mantener_secuencia",
+    "reclamo.sp_auto_cerrar_y_avanzar_secuencia"
+  ],
+  "hash_before": {
+    "sp_auto_congelar_modulos_nuevos": "c11704af2ae209447d606169f28b72b0aee5a4cf2a577ad93d5b9c45fb37ef1f",
+    "sp_auto_mantener_secuencia": "df60d0e06baf77816ac17da786af23f2aa9050f8f2e02b5add336b6013ea3341",
+    "sp_auto_cerrar_y_avanzar_secuencia": "4bc0a309313db5f1fc7611526633269dbb1e529d9f052bb9e3827e72a11acd19"
+  },
+  "candidate_file_hashes": {
+    "sp_auto_congelar_modulos_nuevos": "68d75a96bd4a7912611e0a34efe95c354349bcaebaef41fff4652276e945000c",
+    "sp_auto_mantener_secuencia": "f0c29b8929acb8c3e7c5318caa7f5018290b3dae2fba88084c3b0a844b8bde12",
+    "sp_auto_cerrar_y_avanzar_secuencia": "abaedff02983a80635faf35a80317b0c5580475f243845cc7e6bb5267c96ed09"
+  },
+  "hash_after_live": {
+    "sp_auto_congelar_modulos_nuevos": "d43cf1bb4dd6ff52d8a9b774df297370bb0aac97891fe9217c50e66f34bfd98e",
+    "sp_auto_mantener_secuencia": "9e8dba30b8117fa451e31631cdb8d7fd020b68ca91445078ca54f4396cf05640",
+    "sp_auto_cerrar_y_avanzar_secuencia": "6375746d83f39a7f769da98930cd4058428a4a17cca2909d40e98024c1092191"
+  },
+  "expected_hashes_changed": true,
+  "scope": "DEV only; no table data updated by deployment"
+}

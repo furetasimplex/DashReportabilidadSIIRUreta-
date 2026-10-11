@@ -1,0 +1,42 @@
+[
+  {
+    "caso": "septiembre",
+    "start": "2026-09-01",
+    "end": "2026-09-30",
+    "resultado": [
+      {
+        "Fecha_Maxima_Exportable": "2026-09-30"
+      }
+    ]
+  },
+  {
+    "caso": "octubre_mes",
+    "start": "2026-10-01",
+    "end": "2026-10-31",
+    "resultado": [
+      {
+        "Fecha_Maxima_Exportable": null
+      }
+    ]
+  },
+  {
+    "caso": "octubre_rango",
+    "start": "2026-10-01",
+    "end": "2026-10-03",
+    "resultado": [
+      {
+        "Fecha_Maxima_Exportable": null
+      }
+    ]
+  },
+  {
+    "caso": "global",
+    "start": "1900-01-01",
+    "end": "9999-12-31",
+    "resultado": [
+      {
+        "Fecha_Maxima_Exportable": "2026-09-30"
+      }
+    ]
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "fecha_turno",
+    "tipo": "date"
+  },
+  {
+    "name": "turno_op",
+    "tipo": "char"
+  },
+  {
+    "name": "torre_id",
+    "tipo": "tinyint"
+  },
+  {
+    "name": "Torre",
+    "tipo": "varchar"
+  },
+  {
+    "name": "ts_ini",
+    "tipo": "datetime2"
+  },
+  {
+    "name": "ts_fin",
+    "tipo": "datetime2"
+  },
+  {
+    "name": "flag_arrastre",
+    "tipo": "int"
+  },
+  {
+    "name": "duracion_min",
+    "tipo": "int"
+  },
+  {
+    "name": "comentario",
+    "tipo": "nvarchar"
+  },
+  {
+    "name": "nombre_archivo",
+    "tipo": "varchar"
+  }
+]

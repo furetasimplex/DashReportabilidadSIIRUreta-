@@ -1,0 +1,63 @@
+{
+  "table_rows": [
+    {
+      "name": "campana_parcela_control",
+      "approximate_rows": 980
+    },
+    {
+      "name": "drena_concentrados_oxido",
+      "approximate_rows": 4141
+    },
+    {
+      "name": "drena_concentrados_sulfuro",
+      "approximate_rows": 4291
+    },
+    {
+      "name": "flujos_reales_oxido",
+      "approximate_rows": 3774
+    },
+    {
+      "name": "flujos_reales_sulfuro",
+      "approximate_rows": 3774
+    },
+    {
+      "name": "pad",
+      "approximate_rows": 2
+    },
+    {
+      "name": "parcela",
+      "approximate_rows": 60
+    }
+  ],
+  "query_store_matches": [],
+  "source_counts": [
+    {
+      "source": "CPC",
+      "rows": 980
+    },
+    {
+      "source": "flujo_ox",
+      "rows": 120768
+    },
+    {
+      "source": "flujo_sulf",
+      "rows": 105672
+    },
+    {
+      "source": "drenaje_ox",
+      "rows": 132512
+    },
+    {
+      "source": "drenaje_sulf",
+      "rows": 120148
+    },
+    {
+      "source": "pad",
+      "rows": 2
+    },
+    {
+      "source": "parcela",
+      "rows": 60
+    }
+  ]
+}

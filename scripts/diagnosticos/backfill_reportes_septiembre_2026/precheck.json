@@ -1,0 +1,202 @@
+{
+  "estado": "PASS",
+  "cortes": {
+    "representatividad": "2026-09-30",
+    "apilado": "2026-10-04"
+  },
+  "cobertura_bitacora": [
+    {
+      "fecha_turno": "2026-09-01",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-02 07:20:00"
+    },
+    {
+      "fecha_turno": "2026-09-02",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-03 07:20:00"
+    },
+    {
+      "fecha_turno": "2026-09-03",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-04 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-04",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-05 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-05",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-06 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-06",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-07 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-07",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-08 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-08",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-09 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-09",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-10 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-10",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-11 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-11",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-12 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-12",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-13 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-13",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-14 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-14",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-15 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-15",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-16 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-16",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-17 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-17",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-18 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-18",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-19 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-19",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-20 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-20",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-21 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-21",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-22 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-22",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-23 07:40:00"
+    },
+    {
+      "fecha_turno": "2026-09-23",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-24 07:25:00"
+    },
+    {
+      "fecha_turno": "2026-09-24",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-25 07:40:00"
+    },
+    {
+      "fecha_turno": "2026-09-25",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-26 07:30:00"
+    },
+    {
+      "fecha_turno": "2026-09-26",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-27 07:45:00"
+    },
+    {
+      "fecha_turno": "2026-09-27",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-28 07:20:00"
+    },
+    {
+      "fecha_turno": "2026-09-28",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-29 07:20:00"
+    },
+    {
+      "fecha_turno": "2026-09-29",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-09-30 07:40:00"
+    },
+    {
+      "fecha_turno": "2026-09-30",
+      "registros": 6,
+      "claves": 6,
+      "fin_dia": "2026-10-01 07:40:00"
+    }
+  ],
+  "filas_pi_tum": 120,
+  "max_totalizador": "2026-10-04 08:00:00",
+  "octubre_corte_readonly": "2026-10-03",
+  "validaciones": {
+    "bitacora": "30 días / 6 claves; cierre completo",
+    "pi_tum": "120 claves únicas, 30 días, cierre válido según regla runtime",
+    "duplicados_destino": "0 en claves funcionales",
+    "triggers_destino": "Ninguno activo",
+    "idempotencia": "MERGE, UPDATE+INSERT NOT EXISTS o DELETE+INSERT por rango. Clays registra cambios de valor/fuente, SIN_CAMBIO no agrega auditoría. Fechas de cálculo cambian por diseño.",
+    "limite_permanente": "Sin modificación",
+    "entorno": "DEV",
+    "escrituras_fuera_septiembre": "Filtros revisados; hash externo previo capturado"
+  }
+}

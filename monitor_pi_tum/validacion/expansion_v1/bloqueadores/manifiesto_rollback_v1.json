@@ -1,0 +1,90 @@
+{
+  "alcance": "Ocho objetos de expansión V1: cinco creados y tres modificados. No desinstala fases anteriores del módulo PI/TUM.",
+  "ejecutado": false,
+  "objetos": [
+    {
+      "orden": 1,
+      "objeto": "reclamo.v_diferencia_cv25_contingencia_test",
+      "accion": "DROP VIEW",
+      "existia_antes_v1": false,
+      "definicion_previa": null,
+      "estado_previo": "AUSENTE: creado por desplegar_reclamo_dev.py, que exige OBJECT_ID IS NULL",
+      "rollback_individual": "rollback_reclamo.v_diferencia_cv25_contingencia_test.sql",
+      "ddl_actual": "ddl/reclamo.v_diferencia_cv25_contingencia_test.sql"
+    },
+    {
+      "orden": 2,
+      "objeto": "reclamo.v_reclamo_diario_contingencia_test",
+      "accion": "DROP VIEW",
+      "existia_antes_v1": false,
+      "definicion_previa": null,
+      "estado_previo": "AUSENTE: creado por desplegar_reclamo_dev.py, que exige OBJECT_ID IS NULL",
+      "rollback_individual": "rollback_reclamo.v_reclamo_diario_contingencia_test.sql",
+      "ddl_actual": "ddl/reclamo.v_reclamo_diario_contingencia_test.sql"
+    },
+    {
+      "orden": 3,
+      "objeto": "reclamo.v_preliminar_cv25_con_acumulado_contingencia_test",
+      "accion": "DROP VIEW",
+      "existia_antes_v1": false,
+      "definicion_previa": null,
+      "estado_previo": "AUSENTE: creado por desplegar_reclamo_dev.py, que exige OBJECT_ID IS NULL",
+      "rollback_individual": "rollback_reclamo.v_preliminar_cv25_con_acumulado_contingencia_test.sql",
+      "ddl_actual": "ddl/reclamo.v_preliminar_cv25_con_acumulado_contingencia_test.sql"
+    },
+    {
+      "orden": 4,
+      "objeto": "reclamo.v_preliminar_cv25_contingencia_test",
+      "accion": "DROP VIEW",
+      "existia_antes_v1": false,
+      "definicion_previa": null,
+      "estado_previo": "AUSENTE: creado por desplegar_reclamo_dev.py, que exige OBJECT_ID IS NULL",
+      "rollback_individual": "rollback_reclamo.v_preliminar_cv25_contingencia_test.sql",
+      "ddl_actual": "ddl/reclamo.v_preliminar_cv25_contingencia_test.sql"
+    },
+    {
+      "orden": 5,
+      "objeto": "reclamo.v_cv25_diario_contingencia_test",
+      "accion": "DROP VIEW",
+      "existia_antes_v1": false,
+      "definicion_previa": null,
+      "estado_previo": "AUSENTE: creado por desplegar_reclamo_dev.py, que exige OBJECT_ID IS NULL",
+      "rollback_individual": "rollback_reclamo.v_cv25_diario_contingencia_test.sql",
+      "ddl_actual": "ddl/reclamo.v_cv25_diario_contingencia_test.sql"
+    },
+    {
+      "orden": 6,
+      "objeto": "inventar_SpcHidr.sp_calcular_balance_flujos_contingencia_test",
+      "accion": "RESTORE DEFINITION",
+      "existia_antes_v1": true,
+      "definicion_previa": "backup\\inventar_SpcHidr.sp_calcular_balance_flujos_contingencia_test.sql",
+      "estado_previo": "DEFINICION_RESPALDADA",
+      "rollback_individual": "rollback_inventar_SpcHidr.sp_calcular_balance_flujos_contingencia_test.sql",
+      "ddl_actual": "ddl/inventar_SpcHidr.sp_calcular_balance_flujos_contingencia_test.sql",
+      "sha256_definicion_previa": "bae7d33822775583b95e4832106ccfc15dcf1ed1b4d8286ad265eca139c37ab9"
+    },
+    {
+      "orden": 7,
+      "objeto": "inventar_SpcHidr.v_peso_teorico_turno_torre_contingencia_test",
+      "accion": "RESTORE DEFINITION",
+      "existia_antes_v1": true,
+      "definicion_previa": "backup\\inventar_SpcHidr.v_peso_teorico_turno_torre_contingencia_test.sql",
+      "estado_previo": "DEFINICION_RESPALDADA",
+      "rollback_individual": "rollback_inventar_SpcHidr.v_peso_teorico_turno_torre_contingencia_test.sql",
+      "ddl_actual": "ddl/inventar_SpcHidr.v_peso_teorico_turno_torre_contingencia_test.sql",
+      "sha256_definicion_previa": "96eb1cccadcde5b0f58dff279f070b9f3ec9696cda05cea84a6fe31f8b0f980e"
+    },
+    {
+      "orden": 8,
+      "objeto": "inventar_SpcHidr.v_bd_ton_t12_contingencia_test",
+      "accion": "RESTORE DEFINITION",
+      "existia_antes_v1": true,
+      "definicion_previa": "backup\\inventar_SpcHidr.v_bd_ton_t12_contingencia_test.sql",
+      "estado_previo": "DEFINICION_RESPALDADA",
+      "rollback_individual": "rollback_inventar_SpcHidr.v_bd_ton_t12_contingencia_test.sql",
+      "ddl_actual": "ddl/inventar_SpcHidr.v_bd_ton_t12_contingencia_test.sql",
+      "sha256_definicion_previa": "fd16b12167f7589632d44346726ec377793adfa4ab942c1b28061c3734c7536d"
+    }
+  ],
+  "sha256_script": "24dba33948a940c9fb906278c6b29d74ff1e2604241d1f315e41865cb6bf4671"
+}

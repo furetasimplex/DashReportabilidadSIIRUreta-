@@ -1,0 +1,125 @@
+--- report_export/report_export.py (antes 4B3B)
++++ report_export/report_export.py
+@@ -837,6 +837,7 @@
+ def fetch_datos_conciliados_emision_report(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """Consulta exclusivamente Datos Conciliados de emision."""
+     if start_date is None or end_date is None:
+@@ -855,7 +856,7 @@
+         ORDER BY [Fecha] ASC;
+     """)
+     try:
+-        with _get_engine().connect() as conn:
++        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+             df = pd.read_sql(
+                 sql,
+                 conn,
+@@ -875,6 +876,7 @@
+ def fetch_factor_ajuste_camiones_report(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """Lee el factor oficial de camiones ya calculado por el mantenedor."""
+     if start_date is None or end_date is None:
+@@ -928,7 +930,7 @@
+         ORDER BY Fecha;
+     """)
+     try:
+-        with _get_engine().connect() as conn:
++        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+             df = pd.read_sql(
+                 sql,
+                 conn,
+@@ -967,6 +969,7 @@
+ def fetch_balance_chancado_report(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """Lee el balance diario de chancado sin ejecutar mantenedores."""
+     if start_date is None or end_date is None:
+@@ -1147,7 +1150,7 @@
+         ORDER BY Fecha;
+     """)
+     try:
+-        with _get_engine().connect() as conn:
++        with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+             df = pd.read_sql(
+                 sql,
+                 conn,
+@@ -2364,6 +2367,7 @@
+ def refrescar_dependencias_datos_conciliados_emision(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> dict:
+     """
+     Prepara una única fotografía transaccional para Datos Conciliados:
+@@ -2380,6 +2384,7 @@
+ 
+     El factor no se recalcula dentro del mantenedor de Datos Conciliados:
+     la fotografía válida es la generada previamente por el coordinador RTO.
++    Con conn externa participa sin begin/commit/rollback/close propios.
+     """
+     if start_date is None or end_date is None:
+         raise ValueError(
+@@ -2392,7 +2397,7 @@
+             "FechaInicio no puede ser posterior a FechaFin."
+         )
+ 
+-    with _get_engine().begin() as conn:
++    with (nullcontext(conn) if conn is not None else _get_engine().begin()) as conn:
+ 
+         # -----------------------------------------------------
+         # 1. Fotografía Reporte por Turno.
+@@ -2446,6 +2451,46 @@
+         )
+ 
+         return refresco_turno
++def preparar_paquete_datos_conciliados_emision(
++    start_date: date,
++    end_date: date,
++    *, salida: str,
++) -> dict:
++    """Refresca y materializa DC bajo el global F4, antes de construir la UI.
++
++    DC conserva calendario completo; Factor/Balance usan corte operacional.
++    La garantía de coherencia alcanza a writers cooperativos con el applock.
++    """
++    if start_date is None or end_date is None or start_date > end_date:
++        raise ValueError("Se requiere un rango válido para preparar Datos Conciliados.")
++    if salida not in {"preview", "excel"}:
++        raise ValueError("Salida DC no válida: use preview o excel.")
++    with _get_engine().begin() as conn:
++        refresco = refrescar_dependencias_datos_conciliados_emision(
++            start_date=start_date, end_date=end_date, conn=conn,
++        )
++        fin_efectiva = refresco["fecha_corte_operacional"]
++        datos = fetch_datos_conciliados_emision_report(
++            start_date=start_date, end_date=end_date, conn=conn,
++        )
++        paquete = {"refresco": refresco, "df_datos": datos, "salida": salida}
++        if salida == "excel":
++            inicio_mes = start_date.replace(day=1)
++            paquete["df_datos_visible"] = datos
++            paquete["df_resumen_mtd"] = (
++                fetch_datos_conciliados_emision_report(
++                    start_date=inicio_mes, end_date=end_date, conn=conn,
++                ) if inicio_mes < start_date else datos
++            )
++        paquete["df_factor"] = fetch_factor_ajuste_camiones_report(
++            start_date=start_date, end_date=fin_efectiva, conn=conn,
++        )
++        paquete["df_balance"] = fetch_balance_chancado_report(
++            start_date=start_date, end_date=fin_efectiva, conn=conn,
++        )
++    return paquete
++
++
+ def preparar_paquete_reporte_turno_emision(
+     start_date: date,
+     end_date: date,

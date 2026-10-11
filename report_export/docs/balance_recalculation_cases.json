@@ -1,0 +1,29 @@
+{
+  "template_sha256": "C8F5AE2730EAE6827E083031D7A907432B385D9BFFA941E472F44A5D01EEBF8D",
+  "cases": [
+    {
+      "case_id": 21,
+      "run_id": 149,
+      "days": 8,
+      "file": "report_export\\exports\\Balance_Planta_Hidrometalurgia_20260801_20260808_Caso21_Run149.xlsx",
+      "f1_mass": 253003.6957,
+      "f1_fine": 2203.433327,
+      "formulas": 2774,
+      "formula_caches_remaining": 0,
+      "matches_official_inputs": true,
+      "previous_case24_values_unchanged": false
+    },
+    {
+      "case_id": 24,
+      "run_id": 147,
+      "days": 23,
+      "file": "report_export\\exports\\Balance_Planta_Hidrometalurgia_20260801_20260823_Caso24_Run147.xlsx",
+      "f1_mass": 713463.52787,
+      "f1_fine": 4125.435436,
+      "formulas": 2774,
+      "formula_caches_remaining": 0,
+      "matches_official_inputs": true,
+      "previous_case24_values_unchanged": true
+    }
+  ]
+}

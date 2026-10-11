@@ -1,0 +1,16 @@
+Interprete: C:\Users\nimun\OneDrive\Documentos\GitHub\DashReportabilidadSIIR\venv\Scripts\python.exe
+Working directory: C:\Users\nimun\OneDrive\Documentos\GitHub\DashReportabilidadSIIR
+
+sys.path observado, en orden:
+
+<entrada vacia: working directory actual>
+C:\Users\nimun\AppData\Local\Programs\Python\Python313\python313.zip
+C:\Users\nimun\AppData\Local\Programs\Python\Python313\DLLs
+C:\Users\nimun\AppData\Local\Programs\Python\Python313\Lib
+C:\Users\nimun\AppData\Local\Programs\Python\Python313
+C:\Users\nimun\OneDrive\Documentos\GitHub\DashReportabilidadSIIR\venv
+C:\Users\nimun\OneDrive\Documentos\GitHub\DashReportabilidadSIIR\venv\Lib\site-packages
+
+Diagnostico local: la raiz del proyecto ocupa la primera posicion efectiva y resuelve reclamo.db desde esa raiz. No se detecto una ruta anterior que lo sombree.
+
+sys.path del proceso que genero los logs SQL: NO DETERMINADO EN PROCESO VIVO.

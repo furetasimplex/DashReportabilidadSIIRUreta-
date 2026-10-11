@@ -1,0 +1,130 @@
+{
+  "checks": [
+    {
+      "total": "Consulta aplicada: 2026-06-01 → 2026-09-10 · 6120 registros. Cambie filtros y pulse Consultar.",
+      "kpis": [
+        "12.168.556,400",
+        "30.136,222",
+        "1,206",
+        "2.062"
+      ]
+    },
+    {
+      "navigation": "reportabilidad",
+      "visible": true
+    },
+    {
+      "navigation": "reclamo",
+      "visible": true
+    },
+    {
+      "navigation": "powerbi",
+      "visible": true
+    },
+    {
+      "navigation": "monitor-pitum",
+      "visible": true
+    },
+    {
+      "navigation": "lixiviacion",
+      "visible": true
+    },
+    {
+      "pad_ox": "Consulta aplicada: 2026-06-01 → 2026-09-10 · 3264 registros. Cambie filtros y pulse Consultar."
+    },
+    {
+      "fuera": "Consulta aplicada: 2026-06-01 → 2026-09-10 · 1045 registros. Cambie filtros y pulse Consultar.",
+      "table_text": "Fecha\n\t\nPAD\n\t\nParcela\n\t\nCampaña\n\t\nEstado\n\t\nFlujo [m³/d]\n\t\nCu drenaje [g/L]\n\t\nCu refino [g/L]\n\t\nΔCu [g/L]\n\t\nTransferencia Cu [t/d]\n\n\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\n2026-06-01\tÓxidos\t12\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t13\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t14\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t15\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t16\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t17\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t18\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t19\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t20\t\tFUERA_VENTANA_RIEGO\t0,032\t0,000\t0,630\t−0,630\t0,000\n2026-06-01\tÓxidos\t21\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t13\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t14\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t15\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t16\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t17\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t18\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t19\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t20\t\tFUERA_VENTANA_RIEGO\t0,032\t0,000\t0,630\t−0,630\t0,000\n2026-06-02\tÓxidos\t21\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,630\t−0,630\t0,000\n2026-06-03\tÓxidos\t13\t\tFUERA_VENTANA_RIEGO\t0,000\t0,000\t0,650\t−0"
+    },
+    {
+      "filter": "campana",
+      "selected": "Óxidos · Campaña 17"
+    },
+    {
+      "filter": "parcela",
+      "selected": "Óxidos · P22"
+    },
+    {
+      "filtered": "Consulta aplicada: 2026-06-01 → 2026-09-10 · 4 registros. Cambie filtros y pulse Consultar.",
+      "errors": ""
+    },
+    {
+      "width": 900,
+      "overflow": false
+    },
+    {
+      "width": 520,
+      "overflow": false
+    }
+  ],
+  "page_errors": [],
+  "map": {
+    "parcels": 60,
+    "labels": [
+      "P1",
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12",
+      "P13",
+      "P14",
+      "P15",
+      "P16",
+      "P32",
+      "P31",
+      "P30",
+      "P29",
+      "P28",
+      "P27",
+      "P26",
+      "P25",
+      "P24",
+      "P23",
+      "P22",
+      "P21",
+      "P20",
+      "P19",
+      "P18",
+      "P17",
+      "P1",
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12",
+      "P13",
+      "P14",
+      "P28",
+      "P27",
+      "P26",
+      "P25",
+      "P24",
+      "P23",
+      "P22",
+      "P21",
+      "P20",
+      "P19",
+      "P18",
+      "P17",
+      "P16",
+      "P15"
+    ],
+    "detail": "Registro V2 disponible.\n\nPAD\nÓxidos\nParcela\nP29\nCampaña\nSin dato\nFecha\n2026-09-10\nEstado asignación\nFUERA_VENTANA_RIEGO\nPrimer riego\nSin dato\nÚltimo riego\nSin dato\nLímite hidráulico\nSin dato\nInicio operación\nSin dato\nFin operación\nSin dato\nInicio drenaje\nSin dato\nFin drenaje\nSin dato\nFlujo [m³/h]\n0,000\nFlujo [m³/d]\n0,000",
+    "sulf": 28,
+    "date": "11-09-2026",
+    "missing": 28
+  }
+}

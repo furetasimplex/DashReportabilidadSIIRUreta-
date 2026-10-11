@@ -1,0 +1,3013 @@
+{
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "observed_at": "2026-10-06 13:56:02.550767"
+  },
+  "queries": {
+    "cv25": "SELECT fecha,tmh_cv025tot,tmh_cv025_tot,tmh_dia,tms_dia,humedad_pct,tag_utilizado,fuente,metodo,flag,observacion FROM reclamo.cv25_diario WHERE fecha BETWEEN '2026-09-01' AND '2026-09-15' ORDER BY fecha",
+    "graph": "SELECT fecha,tms_cv25,tms_topografia,tms_preliminar,tms_publicado,diferencia_pct,flag_diferencia FROM reclamo.v_diferencia_cv25 WHERE fecha BETWEEN '2026-09-01' AND '2026-09-15' ORDER BY fecha",
+    "rendimiento": "SELECT * FROM reclamo.v_rendimiento_rotopala WHERE fecha BETWEEN '2026-09-01' AND '2026-09-15' ORDER BY fecha,rotopala_id",
+    "preliminar": "SELECT * FROM reclamo.v_preliminar_cv25 WHERE fecha_operacion BETWEEN '2026-09-01' AND '2026-09-15' ORDER BY fecha_operacion,modulo_id,rotopala_id",
+    "preliminar_acumulado": "SELECT * FROM reclamo.v_preliminar_cv25_con_acumulado WHERE fecha_operacion BETWEEN '2026-09-01' AND '2026-09-15' ORDER BY fecha_operacion,modulo_id",
+    "missing_tum": "SELECT fecha,estado_episodio,fuente_resuelta_dia,tmh_resuelto FROM inventar_SpcHidr.v_contingencia_cv025_diario_resuelto WHERE fecha='2026-10-06'",
+    "hours": "SELECT fecha_turno,turno,rotopala_id,muestras_sobre_umbral,horas_por_muestra,horas_operacion,flag FROM reclamo.rotopala_horas_turno WHERE fecha_turno BETWEEN '2026-09-01' AND '2026-09-15' ORDER BY fecha_turno,turno,rotopala_id",
+    "other_equipment": "SELECT fecha_operacional,turno,equipo_codigo,valor_final_resuelto,fuente_resuelta FROM inventar_SpcHidr.v_contingencia_totalizador_resuelto_turno WHERE equipo_codigo IN ('CHANCADOR_CV006','PRINCIPAL_CV008','PRINCIPAL_CV108','SRR_CV001','SRR_CV002','SRR_CV003') AND fecha_operacional BETWEEN '2026-09-01' AND '2026-09-15' ORDER BY equipo_codigo,fecha_operacional,turno",
+    "downstream": "SELECT OBJECT_SCHEMA_NAME(d.referencing_id) referencing_schema,OBJECT_NAME(d.referencing_id) referencing_name,o.type_desc,d.referenced_entity_name FROM sys.sql_expression_dependencies d JOIN sys.objects o ON o.object_id=d.referencing_id WHERE d.referenced_entity_name IN ('cv25_diario','v_cv25_diario','v_preliminar_cv25','v_preliminar_cv25_con_acumulado','v_diferencia_cv25','v_rendimiento_rotopala') ORDER BY d.referenced_entity_name,referencing_schema,referencing_name",
+    "modified_objects": "SELECT SCHEMA_NAME(o.schema_id) schema_name,o.name,o.modify_date,m.definition FROM sys.objects o LEFT JOIN sys.sql_modules m ON m.object_id=o.object_id WHERE o.name IN ('v_contingencia_cv025_diario_resuelto','sp_cargar_cv25_horas','v_cv25_diario','v_diferencia_cv25')",
+    "downstream_definitions": "SELECT SCHEMA_NAME(o.schema_id) schema_name,o.name,m.definition FROM sys.objects o JOIN sys.sql_modules m ON m.object_id=o.object_id WHERE o.name IN ('sp_calcular_reclamo_diario','v_reclamo_diario','v_reclamo_para_conciliados','v_preliminar_cv25','v_preliminar_cv25_con_acumulado','v_rendimiento_rotopala','sp_mantiene_datos_conciliados_emision_test')",
+    "downstream_dependencies": "SELECT OBJECT_SCHEMA_NAME(d.referencing_id) referencing_schema,OBJECT_NAME(d.referencing_id) referencing_name,d.referenced_schema_name,d.referenced_entity_name FROM sys.sql_expression_dependencies d WHERE OBJECT_NAME(d.referencing_id) IN ('sp_calcular_reclamo_diario','v_reclamo_diario','v_reclamo_para_conciliados','sp_mantiene_datos_conciliados_emision_test')",
+    "cv25_constraints": "SELECT name,definition FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('reclamo.cv25_diario') ORDER BY name"
+  },
+  "results": {
+    "cv25": [
+      {
+        "fecha": "2026-09-01",
+        "tmh_cv025tot": "65502.000000000000",
+        "tmh_cv025_tot": "65499.625000000000",
+        "tmh_dia": "65502.000000000000",
+        "tms_dia": "65502.000000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-02",
+        "tmh_cv025tot": "68709.625000000000",
+        "tmh_cv025_tot": "68709.750000000000",
+        "tmh_dia": "68709.625000000000",
+        "tms_dia": "68709.625000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-03",
+        "tmh_cv025tot": "64548.375000000000",
+        "tmh_cv025_tot": "64548.250000000000",
+        "tmh_dia": "64548.375000000000",
+        "tms_dia": "64548.375000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-04",
+        "tmh_cv025tot": "41698.750000000000",
+        "tmh_cv025_tot": "41699.500000000000",
+        "tmh_dia": "41698.750000000000",
+        "tms_dia": "41698.750000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-05",
+        "tmh_cv025tot": "45590.250000000000",
+        "tmh_cv025_tot": "45589.250000000000",
+        "tmh_dia": "45590.250000000000",
+        "tms_dia": "45590.250000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-06",
+        "tmh_cv025tot": "0E-12",
+        "tmh_cv025_tot": "0E-12",
+        "tmh_dia": "0E-12",
+        "tms_dia": "0E-12",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "SIN_OPERACION",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-07",
+        "tmh_cv025tot": "23.500000000000",
+        "tmh_cv025_tot": "0E-12",
+        "tmh_dia": "31387.000000000000",
+        "tms_dia": "31387.000000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "TUM_CV025",
+        "fuente": "CONTINGENCIA_PI_TUM_CV025",
+        "metodo": "EPISODIO_CV025_PI_TUM",
+        "flag": "OK",
+        "observacion": "episodio=CV025_20260907; inicio=2026-09-07; recuperacion=2026-09-11; estado=CONTINGENCIA_TUM_RECONCILIADA; residual=0.000000000000; TUM_A=10439; TUM_B=10439"
+      },
+      {
+        "fecha": "2026-09-08",
+        "tmh_cv025tot": "41.000000000000",
+        "tmh_cv025_tot": "0E-12",
+        "tmh_dia": "4616.000000000000",
+        "tms_dia": "4616.000000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "TUM_CV025",
+        "fuente": "CONTINGENCIA_PI_TUM_CV025",
+        "metodo": "EPISODIO_CV025_PI_TUM",
+        "flag": "OK",
+        "observacion": "episodio=CV025_20260907; inicio=2026-09-07; recuperacion=2026-09-11; estado=CONTINGENCIA_TUM_RECONCILIADA; residual=0.000000000000; TUM_A=10439; TUM_B=20477"
+      },
+      {
+        "fecha": "2026-09-09",
+        "tmh_cv025tot": "41.125000000000",
+        "tmh_cv025_tot": "0E-12",
+        "tmh_dia": "0E-12",
+        "tms_dia": "0E-12",
+        "humedad_pct": null,
+        "tag_utilizado": "TUM_CV025",
+        "fuente": "CONTINGENCIA_PI_TUM_CV025",
+        "metodo": "EPISODIO_CV025_PI_TUM",
+        "flag": "OK",
+        "observacion": "episodio=CV025_20260907; inicio=2026-09-07; recuperacion=2026-09-11; estado=CONTINGENCIA_TUM_RECONCILIADA; residual=0.000000000000; TUM_A=10463; TUM_B=20477"
+      },
+      {
+        "fecha": "2026-09-10",
+        "tmh_cv025tot": "41.000000000000",
+        "tmh_cv025_tot": "0E-12",
+        "tmh_dia": "41234.000000000000",
+        "tms_dia": "41234.000000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "TUM_CV025",
+        "fuente": "CONTINGENCIA_PI_TUM_CV025",
+        "metodo": "EPISODIO_CV025_PI_TUM",
+        "flag": "OK",
+        "observacion": "episodio=CV025_20260907; inicio=2026-09-07; recuperacion=2026-09-11; estado=CONTINGENCIA_TUM_RECONCILIADA; residual=0.000000000000; TUM_A=10463; TUM_B=10463"
+      },
+      {
+        "fecha": "2026-09-11",
+        "tmh_cv025tot": "140342.375000000000",
+        "tmh_cv025_tot": "0E-12",
+        "tmh_dia": "63252.000000000000",
+        "tms_dia": "63252.000000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "TUM_CV025",
+        "fuente": "CONTINGENCIA_PI_TUM_CV025",
+        "metodo": "EPISODIO_CV025_PI_TUM",
+        "flag": "OK",
+        "observacion": "episodio=CV025_20260907; inicio=2026-09-07; recuperacion=2026-09-11; estado=CONTINGENCIA_TUM_RECONCILIADA; residual=0.000000000000; TUM_A=20455; TUM_B=20455"
+      },
+      {
+        "fecha": "2026-09-12",
+        "tmh_cv025tot": "41121.000000000000",
+        "tmh_cv025_tot": "41121.750000000000",
+        "tmh_dia": "41121.000000000000",
+        "tms_dia": "41121.000000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-13",
+        "tmh_cv025tot": "47381.500000000000",
+        "tmh_cv025_tot": "47381.250000000000",
+        "tmh_dia": "47381.500000000000",
+        "tms_dia": "47381.500000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-14",
+        "tmh_cv025tot": "51750.125000000000",
+        "tmh_cv025_tot": "51750.000000000000",
+        "tmh_dia": "51750.125000000000",
+        "tms_dia": "51750.125000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      },
+      {
+        "fecha": "2026-09-15",
+        "tmh_cv025tot": "49343.875000000000",
+        "tmh_cv025_tot": "49344.250000000000",
+        "tmh_dia": "49343.875000000000",
+        "tms_dia": "49343.875000000000",
+        "humedad_pct": null,
+        "tag_utilizado": "cv025tot",
+        "fuente": "VISTA_RESUMEN_DATOS_FILTRADOS",
+        "metodo": "DELTA_TOTALIZADOR_CV25_DIARIO",
+        "flag": "OK",
+        "observacion": null
+      }
+    ],
+    "graph": [
+      {
+        "fecha": "2026-09-01",
+        "tms_cv25": "65502.000000000000",
+        "tms_topografia": "60187.989171",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "60187.989171",
+        "diferencia_pct": "-8.112745",
+        "flag_diferencia": "OK"
+      },
+      {
+        "fecha": "2026-09-02",
+        "tms_cv25": "68709.625000000000",
+        "tms_topografia": "62477.419374",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "62477.419374",
+        "diferencia_pct": "-9.070353",
+        "flag_diferencia": "OK"
+      },
+      {
+        "fecha": "2026-09-03",
+        "tms_cv25": "64548.375000000000",
+        "tms_topografia": "59627.270381",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "59627.270381",
+        "diferencia_pct": "-7.623901",
+        "flag_diferencia": "OK"
+      },
+      {
+        "fecha": "2026-09-04",
+        "tms_cv25": "41698.750000000000",
+        "tms_topografia": "37090.795282",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "37090.795282",
+        "diferencia_pct": "-11.050582",
+        "flag_diferencia": "BRECHA_SOBRE_10_PCT"
+      },
+      {
+        "fecha": "2026-09-05",
+        "tms_cv25": "45590.250000000000",
+        "tms_topografia": "40366.416060",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "40366.416060",
+        "diferencia_pct": "-11.458226",
+        "flag_diferencia": "BRECHA_SOBRE_10_PCT"
+      },
+      {
+        "fecha": "2026-09-06",
+        "tms_cv25": "0E-12",
+        "tms_topografia": "0.000000",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "0.000000",
+        "diferencia_pct": null,
+        "flag_diferencia": "CV25_CERO"
+      },
+      {
+        "fecha": "2026-09-07",
+        "tms_cv25": "31387.000000000000",
+        "tms_topografia": "29015.894387",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "29015.894387",
+        "diferencia_pct": "-7.554419",
+        "flag_diferencia": "OK"
+      },
+      {
+        "fecha": "2026-09-08",
+        "tms_cv25": "4616.000000000000",
+        "tms_topografia": "4041.694207",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "4041.694207",
+        "diferencia_pct": "-12.441633",
+        "flag_diferencia": "BRECHA_SOBRE_10_PCT"
+      },
+      {
+        "fecha": "2026-09-09",
+        "tms_cv25": "0E-12",
+        "tms_topografia": "0.000000",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "0.000000",
+        "diferencia_pct": null,
+        "flag_diferencia": "CV25_CERO"
+      },
+      {
+        "fecha": "2026-09-10",
+        "tms_cv25": "41234.000000000000",
+        "tms_topografia": "30322.899543",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "30322.899543",
+        "diferencia_pct": "-26.461416",
+        "flag_diferencia": "BRECHA_SOBRE_10_PCT"
+      },
+      {
+        "fecha": "2026-09-11",
+        "tms_cv25": "63252.000000000000",
+        "tms_topografia": "67667.839155",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "67667.839155",
+        "diferencia_pct": "6.981343",
+        "flag_diferencia": "OK"
+      },
+      {
+        "fecha": "2026-09-12",
+        "tms_cv25": "41121.000000000000",
+        "tms_topografia": "10436.196531",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "10436.196531",
+        "diferencia_pct": "-74.620761",
+        "flag_diferencia": "BRECHA_SOBRE_10_PCT"
+      },
+      {
+        "fecha": "2026-09-13",
+        "tms_cv25": "47381.500000000000",
+        "tms_topografia": "74759.967703",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "74759.967703",
+        "diferencia_pct": "57.783032",
+        "flag_diferencia": "BRECHA_SOBRE_10_PCT"
+      },
+      {
+        "fecha": "2026-09-14",
+        "tms_cv25": "51750.125000000000",
+        "tms_topografia": "45045.761237",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "45045.761237",
+        "diferencia_pct": "-12.955261",
+        "flag_diferencia": "BRECHA_SOBRE_10_PCT"
+      },
+      {
+        "fecha": "2026-09-15",
+        "tms_cv25": "49343.875000000000",
+        "tms_topografia": "53487.551646",
+        "tms_preliminar": "0.000000",
+        "tms_publicado": "53487.551646",
+        "diferencia_pct": "8.397550",
+        "flag_diferencia": "OK"
+      }
+    ],
+    "rendimiento": [
+      {
+        "fecha": "2026-09-01",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "14.000000",
+        "horas_total": "14.000000",
+        "tms_cv25_dia_ambas": "65502.000000000000",
+        "tms_cv25_asignado": "65502.000000",
+        "tms_topografia": "60187.989171",
+        "tms_publicado": "60187.989171",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "4678.714285",
+        "rendimiento_topografia_tms_hr": "4299.142083",
+        "diferencia_tms": "-5314.010829",
+        "diferencia_pct": "-8.112745",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-01",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "14.000000",
+        "tms_cv25_dia_ambas": "65502.000000000000",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 7,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-02",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "9.000000",
+        "horas_total": "20.000000",
+        "tms_cv25_dia_ambas": "68709.625000000000",
+        "tms_cv25_asignado": "30919.331250",
+        "tms_topografia": "27045.786288",
+        "tms_publicado": "27045.786288",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "3435.481250",
+        "rendimiento_topografia_tms_hr": "3005.087365",
+        "diferencia_tms": "-3873.544962",
+        "diferencia_pct": "-12.527906",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-02",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "11.000000",
+        "horas_total": "20.000000",
+        "tms_cv25_dia_ambas": "68709.625000000000",
+        "tms_cv25_asignado": "37790.293750",
+        "tms_topografia": "35431.633086",
+        "tms_publicado": "35431.633086",
+        "modulos_con_movimiento": 7,
+        "rendimiento_pesometro_tms_hr": "3435.481250",
+        "rendimiento_topografia_tms_hr": "3221.057553",
+        "diferencia_tms": "-2358.660664",
+        "diferencia_pct": "-6.241445",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-03",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "14.000000",
+        "horas_total": "14.000000",
+        "tms_cv25_dia_ambas": "64548.375000000000",
+        "tms_cv25_asignado": "64548.375000",
+        "tms_topografia": "59627.270381",
+        "tms_publicado": "59627.270381",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "4610.598214",
+        "rendimiento_topografia_tms_hr": "4259.090741",
+        "diferencia_tms": "-4921.104619",
+        "diferencia_pct": "-7.623901",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-03",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "14.000000",
+        "tms_cv25_dia_ambas": "64548.375000000000",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 7,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-04",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "10.000000",
+        "horas_total": "10.000000",
+        "tms_cv25_dia_ambas": "41698.750000000000",
+        "tms_cv25_asignado": "41698.750000",
+        "tms_topografia": "37090.795282",
+        "tms_publicado": "37090.795282",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "4169.875000",
+        "rendimiento_topografia_tms_hr": "3709.079528",
+        "diferencia_tms": "-4607.954718",
+        "diferencia_pct": "-11.050582",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-04",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "10.000000",
+        "tms_cv25_dia_ambas": "41698.750000000000",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 7,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-05",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "11.000000",
+        "horas_total": "11.000000",
+        "tms_cv25_dia_ambas": "45590.250000000000",
+        "tms_cv25_asignado": "45590.250000",
+        "tms_topografia": "40366.416060",
+        "tms_publicado": "40366.416060",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "4144.568181",
+        "rendimiento_topografia_tms_hr": "3669.674187",
+        "diferencia_tms": "-5223.833940",
+        "diferencia_pct": "-11.458226",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-05",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "11.000000",
+        "tms_cv25_dia_ambas": "45590.250000000000",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 7,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-06",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "0E-12",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "CV25_CERO_SIN_OPERACION"
+      },
+      {
+        "fecha": "2026-09-06",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "0E-12",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 7,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "CV25_CERO_SIN_OPERACION"
+      },
+      {
+        "fecha": "2026-09-07",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "31387.000000000000",
+        "tms_cv25_asignado": null,
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": null,
+        "diferencia_pct": null,
+        "flag_cv25": "SIN_HORAS_NO_REPARTIBLE"
+      },
+      {
+        "fecha": "2026-09-07",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "31387.000000000000",
+        "tms_cv25_asignado": null,
+        "tms_topografia": "29015.894387",
+        "tms_publicado": "29015.894387",
+        "modulos_con_movimiento": 7,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": null,
+        "diferencia_pct": null,
+        "flag_cv25": "SIN_HORAS_NO_REPARTIBLE"
+      },
+      {
+        "fecha": "2026-09-08",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "4616.000000000000",
+        "tms_cv25_asignado": null,
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": null,
+        "diferencia_pct": null,
+        "flag_cv25": "SIN_HORAS_NO_REPARTIBLE"
+      },
+      {
+        "fecha": "2026-09-08",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "4616.000000000000",
+        "tms_cv25_asignado": null,
+        "tms_topografia": "4041.694207",
+        "tms_publicado": "4041.694207",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": null,
+        "diferencia_pct": null,
+        "flag_cv25": "SIN_HORAS_NO_REPARTIBLE"
+      },
+      {
+        "fecha": "2026-09-09",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "0E-12",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "CV25_CERO_SIN_OPERACION"
+      },
+      {
+        "fecha": "2026-09-09",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "0E-12",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "CV25_CERO_SIN_OPERACION"
+      },
+      {
+        "fecha": "2026-09-10",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "41234.000000000000",
+        "tms_cv25_asignado": null,
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": null,
+        "diferencia_pct": null,
+        "flag_cv25": "SIN_HORAS_NO_REPARTIBLE"
+      },
+      {
+        "fecha": "2026-09-10",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "0.000000",
+        "horas_total": "0.000000",
+        "tms_cv25_dia_ambas": "41234.000000000000",
+        "tms_cv25_asignado": null,
+        "tms_topografia": "30322.899543",
+        "tms_publicado": "30322.899543",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": null,
+        "diferencia_pct": null,
+        "flag_cv25": "SIN_HORAS_NO_REPARTIBLE"
+      },
+      {
+        "fecha": "2026-09-11",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "10.000000",
+        "horas_total": "15.000000",
+        "tms_cv25_dia_ambas": "63252.000000000000",
+        "tms_cv25_asignado": "42168.000000",
+        "tms_topografia": "43672.994327",
+        "tms_publicado": "43672.994327",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "4216.800000",
+        "rendimiento_topografia_tms_hr": "4367.299432",
+        "diferencia_tms": "1504.994327",
+        "diferencia_pct": "3.569043",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-11",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "5.000000",
+        "horas_total": "15.000000",
+        "tms_cv25_dia_ambas": "63252.000000000000",
+        "tms_cv25_asignado": "21084.000000",
+        "tms_topografia": "23994.844828",
+        "tms_publicado": "23994.844828",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "4216.800000",
+        "rendimiento_topografia_tms_hr": "4798.968965",
+        "diferencia_tms": "2910.844828",
+        "diferencia_pct": "13.805942",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-12",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "12.000000",
+        "tms_cv25_dia_ambas": "41121.000000000000",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-12",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "12.000000",
+        "horas_total": "12.000000",
+        "tms_cv25_dia_ambas": "41121.000000000000",
+        "tms_cv25_asignado": "41121.000000",
+        "tms_topografia": "10436.196531",
+        "tms_publicado": "10436.196531",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "3426.750000",
+        "rendimiento_topografia_tms_hr": "869.683044",
+        "diferencia_tms": "-30684.803469",
+        "diferencia_pct": "-74.620761",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-13",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "14.000000",
+        "tms_cv25_dia_ambas": "47381.500000000000",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-13",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "14.000000",
+        "horas_total": "14.000000",
+        "tms_cv25_dia_ambas": "47381.500000000000",
+        "tms_cv25_asignado": "47381.500000",
+        "tms_topografia": "74759.967703",
+        "tms_publicado": "74759.967703",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "3384.392857",
+        "rendimiento_topografia_tms_hr": "5339.997693",
+        "diferencia_tms": "27378.467703",
+        "diferencia_pct": "57.783032",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-14",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "16.000000",
+        "tms_cv25_dia_ambas": "51750.125000000000",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-14",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "16.000000",
+        "horas_total": "16.000000",
+        "tms_cv25_dia_ambas": "51750.125000000000",
+        "tms_cv25_asignado": "51750.125000",
+        "tms_topografia": "45045.761237",
+        "tms_publicado": "45045.761237",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "3234.382812",
+        "rendimiento_topografia_tms_hr": "2815.360077",
+        "diferencia_tms": "-6704.363763",
+        "diferencia_pct": "-12.955261",
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-15",
+        "rotopala_id": 1,
+        "rotopala": "Rotopala 1",
+        "material": "OXIDO",
+        "horas_operacion": "0.000000",
+        "horas_total": "13.000000",
+        "tms_cv25_dia_ambas": "49343.875000000000",
+        "tms_cv25_asignado": "0.000000",
+        "tms_topografia": "0.000000",
+        "tms_publicado": "0.000000",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": null,
+        "rendimiento_topografia_tms_hr": null,
+        "diferencia_tms": "0.000000",
+        "diferencia_pct": null,
+        "flag_cv25": "OK"
+      },
+      {
+        "fecha": "2026-09-15",
+        "rotopala_id": 2,
+        "rotopala": "Rotopala 2",
+        "material": "SULFURO",
+        "horas_operacion": "13.000000",
+        "horas_total": "13.000000",
+        "tms_cv25_dia_ambas": "49343.875000000000",
+        "tms_cv25_asignado": "49343.875000",
+        "tms_topografia": "53487.551646",
+        "tms_publicado": "53487.551646",
+        "modulos_con_movimiento": 2,
+        "rendimiento_pesometro_tms_hr": "3795.682692",
+        "rendimiento_topografia_tms_hr": "4114.427049",
+        "diferencia_tms": "4143.676646",
+        "diferencia_pct": "8.397550",
+        "flag_cv25": "OK"
+      }
+    ],
+    "preliminar": [],
+    "preliminar_acumulado": [],
+    "missing_tum": [
+      {
+        "fecha": "2026-10-06",
+        "estado_episodio": "SIN_TUM_NO_RESOLUBLE",
+        "fuente_resuelta_dia": "SIN_RESOLVER",
+        "tmh_resuelto": null
+      }
+    ],
+    "hours": [
+      {
+        "fecha_turno": "2026-09-01",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 6,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "6.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-01",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-01",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 8,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "8.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-01",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-02",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 7,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "7.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-02",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 3,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "3.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-02",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 2,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "2.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-02",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 8,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "8.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-03",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 7,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "7.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-03",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-03",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 7,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "7.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-03",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-04",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 2,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "2.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-04",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-04",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 8,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "8.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-04",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-05",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 10,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "10.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-05",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-05",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 1,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "1.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-05",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-06",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-06",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-06",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-06",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-07",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-07",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-07",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-07",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-08",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-08",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-08",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-08",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-09",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-09",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-09",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-09",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-10",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-10",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-10",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-10",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-11",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 2,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "2.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-11",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 3,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "3.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-11",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 8,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "8.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-11",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 2,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "2.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-12",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-12",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 3,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "3.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-12",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-12",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 9,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "9.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-13",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-13",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 5,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "5.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-13",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-13",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 9,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "9.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-14",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-14",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 5,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "5.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-14",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-14",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 11,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "11.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-15",
+        "turno": "A",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-15",
+        "turno": "A",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 2,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "2.000000",
+        "flag": "OK"
+      },
+      {
+        "fecha_turno": "2026-09-15",
+        "turno": "B",
+        "rotopala_id": 1,
+        "muestras_sobre_umbral": 0,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "0.000000",
+        "flag": "SIN_OPERACION"
+      },
+      {
+        "fecha_turno": "2026-09-15",
+        "turno": "B",
+        "rotopala_id": 2,
+        "muestras_sobre_umbral": 11,
+        "horas_por_muestra": "1.000000",
+        "horas_operacion": "11.000000",
+        "flag": "OK"
+      }
+    ],
+    "other_equipment": [
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "2526.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "633.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "3241.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "2725.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "2898.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "11820.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "31013.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "31287.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "17977.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "23119.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "26044.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "19283.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "10858.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "22137.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "22136.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "22137.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "22137.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "22137.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "22136.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "22137.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "24038.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "26010.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "25443.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "26481.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "18819.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "20943.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "22027.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "24440.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "A",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "24002.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "B",
+        "equipo_codigo": "CHANCADOR_CV006",
+        "valor_final_resuelto": "23071.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "6616.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "19994.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "23148.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "16056.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "17998.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "22802.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "16664.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "8960.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "19130.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "19130.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "19130.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "19130.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "19130.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "19130.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "19130.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "22982.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "22536.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "25690.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "23666.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "16138.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "21044.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "26488.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "26526.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "24540.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV008",
+        "valor_final_resuelto": "25630.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "3238.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "5119.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "14942.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "22337.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "13777.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "20113.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "21990.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "14527.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "5491.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16766.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16767.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16766.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16766.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16766.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16767.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16766.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "20153.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "22351.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "22545.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "20817.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "14864.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "13325.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "2390.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16911.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "A",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "16305.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "B",
+        "equipo_codigo": "PRINCIPAL_CV108",
+        "valor_final_resuelto": "14956.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "261.317250",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "9247.048611",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "8436.034333",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "13597.066972",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "14753.244417",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "10372.780167",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "1116.523611",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "2019.049083",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "5139.177917",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "8259.306750",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "11379.435667",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "14499.564528",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "17619.693361",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "20739.822306",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "19831.145583",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "16064.050639",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "18154.125056",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "14786.524194",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "10526.727528",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "10693.111833",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "2303.729944",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "15539.271361",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "13458.959861",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV001",
+        "valor_final_resuelto": "15357.961639",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "138.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "4621.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "4243.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "6791.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "7351.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "5190.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "1298.500000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "8551.500000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "8551.500000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "4374.500000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "8067.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "9126.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "7402.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "5275.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "32768.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "1157.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "7777.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "6720.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV002",
+        "valor_final_resuelto": "7688.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "138.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-01",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-02",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-03",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "0.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-04",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "4621.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "4243.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-05",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "6791.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "7351.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-06",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "5190.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "1298.500000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-07",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-08",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "8551.500000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-09",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "8552.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-10",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "8551.500000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "4374.500000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-11",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "8067.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "9126.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-12",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "32768.000000",
+        "fuente_resuelta": "PI"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "5275.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-13",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "5343.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "1157.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-14",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "7777.000000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "A",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "6720.500000",
+        "fuente_resuelta": "TUM"
+      },
+      {
+        "fecha_operacional": "2026-09-15",
+        "turno": "B",
+        "equipo_codigo": "SRR_CV003",
+        "valor_final_resuelto": "32768.000000",
+        "fuente_resuelta": "PI"
+      }
+    ],
+    "downstream": [
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "CK_cv_tag",
+        "type_desc": "CHECK_CONSTRAINT",
+        "referenced_entity_name": "cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "CK_cv_tmh",
+        "type_desc": "CHECK_CONSTRAINT",
+        "referenced_entity_name": "cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "sp_cargar_cv25_horas",
+        "type_desc": "SQL_STORED_PROCEDURE",
+        "referenced_entity_name": "cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_cv25_diario",
+        "type_desc": "VIEW",
+        "referenced_entity_name": "cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_cv25_diario_contingencia_test",
+        "type_desc": "VIEW",
+        "referenced_entity_name": "cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "sp_cargar_cv25_horas",
+        "type_desc": "SQL_STORED_PROCEDURE",
+        "referenced_entity_name": "v_cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_diferencia_cv25",
+        "type_desc": "VIEW",
+        "referenced_entity_name": "v_cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_preliminar_cv25",
+        "type_desc": "VIEW",
+        "referenced_entity_name": "v_cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_rendimiento_rotopala",
+        "type_desc": "VIEW",
+        "referenced_entity_name": "v_cv25_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_preliminar_cv25_con_acumulado",
+        "type_desc": "VIEW",
+        "referenced_entity_name": "v_preliminar_cv25"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_reclamo_diario",
+        "type_desc": "VIEW",
+        "referenced_entity_name": "v_preliminar_cv25_con_acumulado"
+      }
+    ],
+    "modified_objects": [
+      {
+        "schema_name": "reclamo",
+        "name": "sp_cargar_cv25_horas",
+        "modify_date": "2026-10-06 13:51:57.467000",
+        "sha256": "975189cfa854d380a8e537b5b8a22429eef5f4ec8370fcdc6766ab39c350ef55"
+      },
+      {
+        "schema_name": "inventar_SpcHidr",
+        "name": "v_contingencia_cv025_diario_resuelto",
+        "modify_date": "2026-10-06 13:51:57.353000",
+        "sha256": "472fd1cc7a7187cbc329e4ec06d284a2069bc08fede52a5df77e9c1fb7f24f46"
+      },
+      {
+        "schema_name": "reclamo",
+        "name": "v_cv25_diario",
+        "modify_date": "2026-10-06 13:51:57.510000",
+        "sha256": "fee87909c6b7010f0485c2c46c708d9185e5dbf0c27280d50343337e1973e18f"
+      },
+      {
+        "schema_name": "reclamo",
+        "name": "v_diferencia_cv25",
+        "modify_date": "2026-10-06 13:51:57.547000",
+        "sha256": "69dead91938b61d9810dfe0bbda5edb0a6e8c2880ecc12fb07ac29010f8cc9a5"
+      }
+    ],
+    "downstream_definitions": [
+      {
+        "schema_name": "reclamo",
+        "name": "sp_calcular_reclamo_diario",
+        "sha256": "771eff68b53f377cbef12ce530e9f790a85a23ed67d51aa43cde4a73c4a590d1"
+      },
+      {
+        "schema_name": "inventar_SpcHidr",
+        "name": "sp_mantiene_datos_conciliados_emision_test",
+        "sha256": "0314c957ad8ad3da1a33186aa7d1935f27081a9f150811cfc8d25f647440a906"
+      },
+      {
+        "schema_name": "reclamo",
+        "name": "v_preliminar_cv25",
+        "sha256": "7187d11c0da212a4ade1835707fbf6d1ad881f9f90d25864a0c0364a08dad3d6"
+      },
+      {
+        "schema_name": "reclamo",
+        "name": "v_preliminar_cv25_con_acumulado",
+        "sha256": "5b8d3086a792abbc67f9faa05cf4eb01721dc7e6e8c8b8c1effe411d30ecc53e"
+      },
+      {
+        "schema_name": "reclamo",
+        "name": "v_reclamo_diario",
+        "sha256": "4e5e58b4c4fa74da5bc054333e0b16185e9c29184a5a44a975fea4c58d6bea56"
+      },
+      {
+        "schema_name": "reclamo",
+        "name": "v_reclamo_para_conciliados",
+        "sha256": "72ce4439b593a1a9cb12d13df10f6ffae741ea7072bc3504e9220297aeb495b1"
+      },
+      {
+        "schema_name": "reclamo",
+        "name": "v_rendimiento_rotopala",
+        "sha256": "fd04034b78db47de8ada9b2c43bd8b82ddba2a7d2331afe1a1e2493f1e96fa7c"
+      }
+    ],
+    "downstream_dependencies": [
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "sp_calcular_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "calculo_diario"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "campaña"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "configuracion_reclamo_rotopala_periodo"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "control_reclamo_sulfuro_camiones_thm_diario"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "Datos_conciliados_of"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "fn_fecha_corte"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "sp_calcular_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "fn_fecha_corte"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "fn_generador_reporte_diario_emision_test"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "Historico_Apilado_Diario"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "hidro",
+        "referenced_entity_name": "imp_csv"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "sp_calcular_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "log_ejecucion"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "mov_cam"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "reporte_turno_cache_emision_test"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "sp_mantiene_factor_ajuste_camiones_v2_test"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "v_ajuste_camiones_emision_test"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_ajustes_aplicables"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_camiones_acumulado"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "sp_calcular_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_cuadratura_modulo"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_modulo_base"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "v_planes_mensuales_diarios_test"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_preliminar_cv25_con_acumulado"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "inventar_SpcHidr",
+        "referenced_entity_name": "v_produccion_catodica_diaria_test"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_reclamo_para_conciliados",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_reclamo_diario"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "sp_calcular_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_reclamo_diario"
+      },
+      {
+        "referencing_schema": "inventar_SpcHidr",
+        "referencing_name": "sp_mantiene_datos_conciliados_emision_test",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_reclamo_para_conciliados"
+      },
+      {
+        "referencing_schema": "reclamo",
+        "referencing_name": "v_reclamo_diario",
+        "referenced_schema_name": "reclamo",
+        "referenced_entity_name": "v_topografia_resuelta"
+      }
+    ],
+    "cv25_constraints": [
+      {
+        "name": "CK_cv_tag",
+        "definition": "([tag_utilizado]='SIN_RESOLVER' OR [tag_utilizado]='TUM_CV025' OR [tag_utilizado]='cv025_tot' OR [tag_utilizado]='cv025tot')"
+      },
+      {
+        "name": "CK_cv_tmh",
+        "definition": "([tmh_dia] IS NULL OR [tmh_dia]>=(0))"
+      }
+    ]
+  }
+}

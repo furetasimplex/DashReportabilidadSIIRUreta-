@@ -1,0 +1,49 @@
+{
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "observed_at": "2026-10-06 23:47:42.384390"
+  },
+  "rows": [
+    {
+      "Fecha": "2026-10-01",
+      "Apilado_TMS_Reporte": 0.0,
+      "Sal_TMH_Dia": 0.0,
+      "SRR_TMS_Dia": 0.0,
+      "Delta_Inventario_Chancado_TMS": 147.51238555955297,
+      "Chancado_TMS_Reporte": 147.51238555955297,
+      "Chancado_TMS_Real": 0.0,
+      "Ley_CuT_Real_srr": null
+    },
+    {
+      "Fecha": "2026-10-02",
+      "Apilado_TMS_Reporte": 0.0,
+      "Sal_TMH_Dia": 0.0,
+      "SRR_TMS_Dia": 0.0,
+      "Delta_Inventario_Chancado_TMS": -133.40134699605733,
+      "Chancado_TMS_Reporte": -133.40134699605733,
+      "Chancado_TMS_Real": 0.0,
+      "Ley_CuT_Real_srr": null
+    },
+    {
+      "Fecha": "2026-10-03",
+      "Apilado_TMS_Reporte": 20466.4804,
+      "Sal_TMH_Dia": 383.21,
+      "SRR_TMS_Dia": 8064.3406249882,
+      "Delta_Inventario_Chancado_TMS": -432.990705899505,
+      "Chancado_TMS_Reporte": 11969.149069112296,
+      "Chancado_TMS_Real": 11969.149069112296,
+      "Ley_CuT_Real_srr": 0.2031724329073147
+    },
+    {
+      "Fecha": "2026-10-04",
+      "Apilado_TMS_Reporte": 79730.9342,
+      "Sal_TMH_Dia": 1248.83,
+      "SRR_TMS_Dia": 31964.934646463702,
+      "Delta_Inventario_Chancado_TMS": 1386.5355036659712,
+      "Chancado_TMS_Reporte": 49152.53505720227,
+      "Chancado_TMS_Real": 49152.53505720227,
+      "Ley_CuT_Real_srr": 0.5358398425731673
+    }
+  ]
+}

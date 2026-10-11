@@ -4,21 +4,19 @@ import openpyxl as ox
 from pathlib import Path
 from db_connection import get_connection  # mismo que usa utils_dash.py
 
-
+SQL = """
+SELECT Codigo AS codigo_flujo,
+       Masa_medida   AS ton_med,
+       Ley_medida_Cu AS ley_med,
+       Masa_recon    AS ton_rec,
+       Ley_recon_Cu  AS ley_rec
+FROM Data_balance_rec
+WHERE caso_id = %(caso_id)s
+"""
 
 def exportar_excel_desbalance(caso_id:int, plantilla:str, salida:str)->str:
     cnx = get_connection()
-    SQL = f"""
-    SELECT 
-        Codigo AS codigo_flujo,
-        Masa_medida AS ton_med,
-        Ley_medida_Cu AS ley_med,
-        Masa_recon AS ton_rec,
-        Ley_recon_Cu AS ley_rec
-    FROM inventar_SpcHidr.Data_balance_rec
-    WHERE caso_id = {caso_id};
-    """
-    df = pd.read_sql(SQL, cnx)#, params={"caso_id": caso_id})
+    df = pd.read_sql(SQL, cnx, params={"caso_id": caso_id})
     cnx.close()
 
     wb = ox.load_workbook(plantilla, data_only=False)

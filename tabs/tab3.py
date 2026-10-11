@@ -33,8 +33,10 @@ def load_data(fecha_ini, fecha_fin, pad):
             modulos_turnos.FeS, 
             modulos_turnos.CO3, 
             modulos_turnos.Consumo_H, 
-            modulos_turnos.[Adición_H], 
-            modulos_turnos.[Altura Módulo], 
+            modulos_turnos.`Adición_H`, 
+            modulos_turnos.`Altura Módulo`, 
+            modulos_turnos.Caolinita, 
+            modulos_turnos.Cuarzo, 
             modulos_turnos.M34, 
             modulos_turnos.M10, 
             modulos_turnos.M100, 
@@ -45,7 +47,7 @@ def load_data(fecha_ini, fecha_fin, pad):
             modulos_turnos.CSR_Cu, 
             modulos_turnos.Betaclay, 
             modulos_turnos.CuFe
-        FROM inventar_SpcHidr.modulos_turnos
+        FROM modulos_turnos
         WHERE Fecha BETWEEN '{fecha_ini}' AND '{fecha_fin}' AND PAD='{pad}'
     """
     conn = get_connection()
@@ -91,7 +93,7 @@ def render_tab3():
                      dbc.Col([
                         html.Label("Fecha Inicio", className="form-label fw-semibold"),
                         dcc.DatePickerSingle(
-                            id="fecha-inicio-t3",
+                            id="fecha-inicio",
                             date="2024-01-01",
                             display_format="YYYY-MM-DD",
                             className="w-100"   # ocupa el ancho de la columna
@@ -100,7 +102,7 @@ def render_tab3():
                     dbc.Col([
                         html.Label("Fecha Inicio", className="form-label fw-semibold"),
                         dcc.DatePickerSingle(
-                            id="fecha-fin-t3",
+                            id="fecha-fin",
                             date="2025-12-31",
                             display_format="YYYY-MM-DD",
                             className="w-100"   # ocupa el ancho de la columna
@@ -121,7 +123,7 @@ def render_tab3():
                     dbc.Col(
                         dbc.Button(
                             [html.I(className="bi bi-arrow-repeat me-2"), "Actualizar"],
-                            id="boton-filtrar-t3", n_clicks=1, color="primary", className="mt-2 mt-md-0"
+                            id="boton-filtrar", n_clicks=1, color="primary", className="mt-2 mt-md-0"
                         ),
                         md=2
                     )
@@ -186,18 +188,17 @@ def render_tab3():
                 ]),
                 dbc.Row([
                     dbc.Col(
-                        # Este botón ahora tiene el id "download_tab3" y actuará como un enlace
                         dbc.Button(
-                            [html.I(className="bi bi-box-arrow-up me-2"), "Abrir CSV"],
-                            id="download_tab3",          # ID del antiguo enlace
-                            color="secondary",
-                            outline=True,
-                            href="",                    # Propiedad para que actúe como enlace
-                            download="filtrado.csv",    # Nombre del archivo al descargar
-                            target="_blank"             # Para abrir en una nueva pestaña
+                            [html.I(className="bi bi-download me-2"), "Descargar CSV"],
+                            id="btn-dl-tab3", color="secondary", outline=True, className="me-2"
                         ),
                         md="auto"
-                    )
+                    ),
+                    dbc.Col(
+                        html.A("Abrir CSV", id="download_tab3", download="filtrado_tab3.csv",
+                               href="", target="_blank", className="align-self-center"),
+                        md="auto"
+                    ),
                 ], className="g-2 mb-3"),
             ]),
             dcc.Tab(label='Correlaciones', children=[
@@ -226,9 +227,9 @@ def register_tab3_callbacks(app):
             Output("parcela_tab3", "value"),
             Output("modulo_tab3", "value"),
         ],
-        [Input("boton-filtrar-t3", "n_clicks")],
-        [State("fecha-inicio-t3", "date"),
-         State("fecha-fin-t3", "date"),
+        [Input("boton-filtrar", "n_clicks")],
+        [State("fecha-inicio", "date"),
+         State("fecha-fin", "date"),
          State("sel-PAD", "value")]
     )
     def actualizar_filtros(n_clicks, f_ini, f_fin, pad):
@@ -270,8 +271,8 @@ def register_tab3_callbacks(app):
             Input("campania_tab3", "value"),
             Input("parcela_tab3", "value"),
             Input("modulo_tab3", "value"),
-            Input("fecha-inicio-t3", "date"),
-            Input("fecha-fin-t3", "date"),
+            Input("fecha-inicio", "date"),
+            Input("fecha-fin", "date"),
             Input("sel-PAD", "value")
         ]
     )

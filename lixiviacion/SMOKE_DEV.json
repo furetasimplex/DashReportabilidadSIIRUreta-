@@ -1,0 +1,50 @@
+{
+  "1": {
+    "actual": {
+      "registros": 3264,
+      "flujo": "2908120.161887395403000",
+      "transferencia": "6801.723817085",
+      "delta": "1.220839",
+      "fuera": 1045
+    },
+    "diferencias": {
+      "registros": 0,
+      "flujo_exacto": "0E-15",
+      "transferencia_t": "0E-9"
+    },
+    "dias_pad": 102,
+    "passed": true
+  },
+  "2": {
+    "actual": {
+      "registros": 2856,
+      "flujo": "9260436.238434241623000",
+      "transferencia": "23334.497994245",
+      "delta": "1.189065",
+      "fuera": 1017
+    },
+    "diferencias": {
+      "registros": 0,
+      "flujo_exacto": "0E-15",
+      "transferencia_t": "0E-9"
+    },
+    "dias_pad": 102,
+    "passed": true
+  },
+  "None": {
+    "actual": {
+      "registros": 6120,
+      "flujo": "12168556.400321637026000",
+      "transferencia": "30136.221811330",
+      "delta": "1.206011",
+      "fuera": 2062
+    },
+    "diferencias": {
+      "registros": 0,
+      "flujo_exacto": "0E-15",
+      "transferencia_t": "0E-9"
+    },
+    "dias_pad": 204,
+    "passed": true
+  }
+}

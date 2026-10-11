@@ -1,0 +1,58 @@
+{
+  "type": "CURRENT_SMOKE",
+  "executed_at": "2026-10-06T03:12:05.943669+00:00",
+  "environment": "DEV",
+  "database": "inventar_SpcHidr",
+  "period": {
+    "desde": "2026-06-01",
+    "hasta": "2026-09-10"
+  },
+  "definitions": {
+    "inventar_SpcHidr.vw_tablero_lixiviacion_final_v2": "7328a0eded0b7b04daeb7682b5f67d71a61f7e58bd4aac75bc132d9d11080a71",
+    "inventar_SpcHidr.fn_estado_operacional_parcela_diario": "a08c1ec60cccc4f40728540ab295a7cd7a08038d96e9a84da05796e003a91f50"
+  },
+  "result": {
+    "passed": true,
+    "checks": {
+      "contract": true,
+      "rows": {
+        "rows": 6120,
+        "unique_keys": 6120,
+        "nulls": {
+          "fecha": 0,
+          "pad_id": 0,
+          "parcela_id": 0,
+          "nro_parcela_pad": 0,
+          "campana_id": 2062,
+          "estado_asignacion": 0,
+          "flujo_m3_d": 0,
+          "cu_drenaje_gl": 0,
+          "cu_refino_gl": 0,
+          "delta_cu_gl": 0,
+          "transferencia_cu_t_d": 0,
+          "expected_delta": 0,
+          "expected_t": 0
+        }
+      },
+      "coverage_60_reference_period": true,
+      "formulas_null_safe": true
+    },
+    "expected_totals": null,
+    "observed": {
+      "flujo_m3_d": {
+        "PAD": {
+          "1": "2908120.161887395403000",
+          "2": "9260436.238434241623000"
+        },
+        "total": "12168556.400321637026000"
+      },
+      "transferencia_cu_t_d": {
+        "PAD": {
+          "1": "6816.842571007",
+          "2": "23578.418057589"
+        },
+        "total": "30395.260628596"
+      }
+    }
+  }
+}

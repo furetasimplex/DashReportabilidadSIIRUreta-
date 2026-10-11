@@ -1,0 +1,12 @@
+{
+  "deployed_utc": "2026-10-06T15:00:01.136758+00:00",
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "login_name": "sa"
+  },
+  "object": "reclamo.sp_auto_congelar_modulos_nuevos",
+  "hash_before": "d43cf1bb4dd6ff52d8a9b774df297370bb0aac97891fe9217c50e66f34bfd98e",
+  "hash_after": "24876c5b2f397ee71fe751882afc903a8cc7b127643284f060a598782ffc571f",
+  "candidate_hash": "99d90ee9407a0979c98dff2f837c81ca15abcbaca5bc85ee7f3d1dd98cf11be7"
+}

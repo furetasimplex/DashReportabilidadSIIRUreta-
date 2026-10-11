@@ -12,29 +12,29 @@ from db_connection import get_connection
 from datetime import datetime
 
 VARIABLES_VALIDAS = [
-    "Tonelaje", "CuT", "CuS", "Razón solubilidad", "Carbonato",
-    "Rec Lix", "Malla 100", "Clay Beta", "CUFE", "Fe"
+    "Ton", "CuTG00_pond", "CusG01_pond", "RS_pond", "C03G02_pond",
+    "RecLixG03_pond", "100G07_pond", "ClayBG10_pond", "CUFE_pond", "FE_pond"
 ]
 
 # ---------- DATA ----------
 def load_data(fecha_ini, fecha_fin):
     query = f"""
         SELECT
-            Fecha, 
-            Turno, 
-            Origen, 
-            Fase, 
-            Ton as Tonelaje, 
-            PONDCuTG00 as CuT,
-            PONDCusG01 as CuS, 
-            PONDRS as [Razón solubilidad], 
-            PONDC03G02 as Carbonato,
-            PONDRecLixG03 as [Rec Lix], 
-            POND100G07 as [Malla 100], 
-            PONDClayBG10 as [Clay Beta],
-            PONDCUFE as CUFE, 
-            PONDFE as Fe
-        FROM inventar_SpcHidr.resumen_mina
+            resumen_mina.Fecha, 
+            resumen_mina.Turno, 
+            resumen_mina.Origen, 
+            resumen_mina.Fase, 
+            resumen_mina.Ton, 
+            resumen_mina.CuTG00_pond, 
+            resumen_mina.CusG01_pond, 
+            resumen_mina.RS_pond, 
+            resumen_mina.C03G02_pond, 
+            resumen_mina.RecLixG03_pond, 
+            resumen_mina.100G07_pond, 
+            resumen_mina.ClayBG10_pond, 
+            resumen_mina.CUFE_pond, 
+            resumen_mina.FE_pond
+        FROM resumen_mina
         WHERE Fecha BETWEEN '{fecha_ini}' AND '{fecha_fin}'
     """
     conn = get_connection()
@@ -76,7 +76,7 @@ def render_tab1():
                         ),
                     ], md=2),
                     dbc.Col([
-                        html.Label("Fecha Fin", className="form-label fw-semibold"),
+                        html.Label("Fecha Inicio", className="form-label fw-semibold"),
                         dcc.DatePickerSingle(
                             id="fecha-fin",
                             date="2025-12-31",
@@ -148,7 +148,7 @@ def register_tab1_callbacks(app):
                             dcc.Dropdown(
                                 id="filtro-variable",
                                 options=[{"label": v, "value": v} for v in VARIABLES_VALIDAS],
-                                value=["Tonelaje"], multi=True
+                                value=["Ton"], multi=True
                             ),
                             html.Div(className="mb-3"),
 
@@ -156,7 +156,6 @@ def register_tab1_callbacks(app):
                             dbc.RadioItems(
                                 id="agregacion-tiempo",
                                 options=[
-                                    {"label": "Diaria", "value": "dia"},
                                     {"label": "Semanal", "value": "semana"},
                                     {"label": "Mensual", "value": "mes"}
                                 ],
@@ -170,7 +169,7 @@ def register_tab1_callbacks(app):
                             dcc.Dropdown(
                                 id="variable-secundaria",
                                 options=[{"label": v, "value": v} for v in VARIABLES_VALIDAS],
-                                value="CuT"
+                                value="CuTG00_pond"
                             ),
 
                             # Store con los datos base ya filtrados por fecha
@@ -281,16 +280,7 @@ def register_tab1_callbacks(app):
             df = df[df["Fase"] == fase]
 
         # Agregación temporal
-        if frecuencia == "dia":
-            df["Fecha"] = pd.to_datetime(df["Fecha"])  # asegúrate de que sea datetime real
-            df_group = (
-                df.groupby(df["Fecha"].dt.date)[variables]
-                .mean()
-                .reset_index()
-                .rename(columns={"Fecha": "Fecha"})
-            )
-            df_group["Fecha"] = pd.to_datetime(df_group["Fecha"])
-        elif frecuencia == "semana":
+        if frecuencia == "semana":
             df_group = df.groupby(["Año", "Semana"])[variables].mean().reset_index()
             df_group["Fecha"] = pd.to_datetime(
                 df_group["Año"].astype(str) + "-W" + df_group["Semana"].astype(str) + "-1",

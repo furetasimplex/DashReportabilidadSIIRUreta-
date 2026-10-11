@@ -1,0 +1,50 @@
+[
+  {
+    "id": 100014,
+    "flota": "CAT",
+    "parametro": "CARGA_NOMINAL_TMH_VIAJE",
+    "valor": "236.000000",
+    "vigencia_desde": "2026-07-01",
+    "vigencia_hasta": null,
+    "motivo": "Seed aprobado: carga nominal por viaje para reconstruccion de produccion V2; vigencia 2026-07-01.",
+    "usuario_registro": "MIGRACION_NOMINALES_V2_DEV",
+    "fecha_registro": "2026-09-30 12:16:49.131689",
+    "activo": true
+  },
+  {
+    "id": 100013,
+    "flota": "KOM",
+    "parametro": "CARGA_NOMINAL_TMH_VIAJE",
+    "valor": "357.000000",
+    "vigencia_desde": "2026-07-01",
+    "vigencia_hasta": null,
+    "motivo": "Seed aprobado: carga nominal por viaje para reconstruccion de produccion V2; vigencia 2026-07-01.",
+    "usuario_registro": "MIGRACION_NOMINALES_V2_DEV",
+    "fecha_registro": "2026-09-30 12:16:49.131689",
+    "activo": true
+  },
+  {
+    "id": 2,
+    "flota": "CAT",
+    "parametro": "LIMITE_CARGA_AJUSTE",
+    "valor": "265.000000",
+    "vigencia_desde": "2026-07-01",
+    "vigencia_hasta": null,
+    "motivo": "Seed: limites originales cadena V2; MIN(Fecha)=01-07-2026",
+    "usuario_registro": "MIGRACION_FASE2A",
+    "fecha_registro": "2026-09-28 10:24:51.656208",
+    "activo": true
+  },
+  {
+    "id": 1,
+    "flota": "KOM",
+    "parametro": "LIMITE_CARGA_AJUSTE",
+    "valor": "380.000000",
+    "vigencia_desde": "2026-07-01",
+    "vigencia_hasta": null,
+    "motivo": "Seed: limites originales cadena V2; MIN(Fecha)=01-07-2026",
+    "usuario_registro": "MIGRACION_FASE2A",
+    "fecha_registro": "2026-09-28 10:24:51.656208",
+    "activo": true
+  }
+]

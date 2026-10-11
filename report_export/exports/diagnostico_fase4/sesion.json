@@ -1,0 +1,9 @@
+[
+  {
+    "base": "inventar_SpcHidr",
+    "spid": 54,
+    "trancount": 1,
+    "xact_state": 1,
+    "transaction_isolation_level": 2
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "login_name": "sa"
+  },
+  "compiled_alter_batches": [
+    "sp_auto_congelar_modulos_nuevos",
+    "sp_auto_mantener_secuencia",
+    "sp_auto_cerrar_y_avanzar_secuencia"
+  ],
+  "transaction": "ROLLBACK",
+  "definitions_unchanged_after_rollback": true,
+  "hash_before": {
+    "sp_auto_congelar_modulos_nuevos": "c11704af2ae209447d606169f28b72b0aee5a4cf2a577ad93d5b9c45fb37ef1f",
+    "sp_auto_mantener_secuencia": "df60d0e06baf77816ac17da786af23f2aa9050f8f2e02b5add336b6013ea3341",
+    "sp_auto_cerrar_y_avanzar_secuencia": "4bc0a309313db5f1fc7611526633269dbb1e529d9f052bb9e3827e72a11acd19"
+  },
+  "hash_after": {
+    "sp_auto_congelar_modulos_nuevos": "c11704af2ae209447d606169f28b72b0aee5a4cf2a577ad93d5b9c45fb37ef1f",
+    "sp_auto_mantener_secuencia": "df60d0e06baf77816ac17da786af23f2aa9050f8f2e02b5add336b6013ea3341",
+    "sp_auto_cerrar_y_avanzar_secuencia": "4bc0a309313db5f1fc7611526633269dbb1e529d9f052bb9e3827e72a11acd19"
+  },
+  "persistent_change": false
+}

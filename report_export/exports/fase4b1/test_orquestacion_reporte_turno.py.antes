@@ -1,0 +1,187 @@
+"""Contratos de fechas, secuencia y frescura; sin conexiones SQL reales."""
+import ast
+from datetime import date, datetime, timedelta
+from pathlib import Path
+import unittest
+from unittest.mock import MagicMock, patch
+
+from report_export import report_export as repo
+
+
+class OrquestacionTurnoTests(unittest.TestCase):
+    def test_periodos_y_orden(self):
+        casos = [
+            (date(2026, 9, 1), date(2026, 9, 30), date(2026, 9, 13), date(2026, 9, 7)),
+            (date(2026, 8, 1), date(2026, 8, 31), date(2026, 8, 31), date(2026, 8, 25)),
+            (date(2026, 9, 5), date(2026, 9, 10), date(2026, 9, 10), date(2026, 9, 5)),
+            (date(2026, 9, 1), date(2026, 9, 30), date(2026, 9, 10), date(2026, 9, 4)),
+        ]
+        for inicio, fin, corte, ventana in casos:
+            with self.subTest(corte=corte, inicio=inicio):
+                momento = datetime(2026, 10, 1)
+                engine = MagicMock()
+                conn = engine.connect.return_value.__enter__.return_value
+                conn.execute.return_value.scalar.return_value = momento
+                conn.execute.return_value.mappings.return_value.all.side_effect = [
+                    [{"Fecha": ventana + timedelta(days=i), "Fecha_Calculo": momento}
+                     for i in range((corte - ventana).days + 1)],
+                    [{"Fecha": corte, "Turno": t, "Fecha_Actualizacion": momento} for t in ("A", "B")],
+                ]
+                llamadas = []
+                def registrar(nombre):
+                    return lambda *a, **kw: llamadas.append((nombre, a, kw))
+                with patch.object(repo, "_get_engine", return_value=engine), \
+                     patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=corte), \
+                     patch.object(repo, "actualizar_apilado_tmh_v2_report", side_effect=registrar("apilado")), \
+                     patch.object(repo, "refrescar_historico_apilado_report", side_effect=registrar("historico")), \
+                     patch.object(repo, "actualizar_factor_ajuste_camiones_v2_report", side_effect=registrar("factor")), \
+                     patch.object(repo, "actualizar_reporte_turno_cache_emision", side_effect=registrar("cache")):
+                    resultado = repo.refrescar_dependencias_reporte_turno_emision(inicio, fin)
+                self.assertEqual(resultado["inicio_ventana"], ventana)
+                self.assertEqual(resultado["fin_solicitada"], fin)
+                self.assertEqual(llamadas, [
+                    ("apilado", (inicio, corte, 7), {}),
+                    ("historico", (ventana, corte), {"dias_reproceso": 0}),
+                    ("factor", (inicio, corte), {"dias_reproceso": 0}),
+                    ("cache", (inicio, corte + timedelta(days=1)), {}),
+                ])
+                self.assertEqual(resultado["fin_sql_exclusivo"], corte + timedelta(days=1))
+
+    def test_historico_incluye_faltantes_antiguos_sin_ampliar_huecos(self):
+        momento = datetime(2026, 9, 19)
+        engine = MagicMock()
+        conn = engine.connect.return_value.__enter__.return_value
+        conn.execute.return_value.scalar.return_value = momento
+        conn.execute.return_value.mappings.return_value.all.side_effect = [
+            [{"Fecha": date(2026, 9, d), "Fecha_Calculo": momento if d in (1, 9, 10)
+              else momento - timedelta(days=1)} for d in (1, 2, 9, 10)],
+            [{"Fecha": date(2026, 9, 10), "Turno": t, "Fecha_Actualizacion": momento} for t in ("A", "B")],
+        ]
+        with patch.object(repo, "_get_engine", return_value=engine), \
+             patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=date(2026, 9, 10)), \
+             patch.object(repo, "actualizar_apilado_tmh_v2_report"), \
+             patch.object(repo, "refrescar_historico_apilado_report") as historico, \
+             patch.object(repo, "actualizar_factor_ajuste_camiones_v2_report"), \
+             patch.object(repo, "actualizar_reporte_turno_cache_emision"):
+            repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 1), date(2026, 9, 10), 2)
+        self.assertEqual([(c.args, c.kwargs) for c in historico.call_args_list], [
+            ((date(2026, 9, 1), date(2026, 9, 1)), {"dias_reproceso": 0}),
+            ((date(2026, 9, 9), date(2026, 9, 10)), {"dias_reproceso": 0}),
+        ])
+
+    def test_fallos_conservan_commits_previos_y_detienen_downstream(self):
+        from contextlib import contextmanager
+        nombres = ["sp_mantiene_apilado_tmh_v2_test", "sp_refrescar_historico_apilado_test",
+                   "sp_mantiene_factor_ajuste_camiones_v2_test", "sp_refrescar_clays_cufe",
+                   "sp_actualizar_reporte_turno_cache_emision_test"]
+        for falla in range(1, 5):
+            with self.subTest(falla=nombres[falla]):
+                confirmados = []
+                engine = MagicMock()
+                lectura = engine.connect.return_value.__enter__.return_value
+                momento = datetime(2026, 9, 19)
+                lectura.execute.return_value.scalar.return_value = momento
+                lectura.execute.return_value.mappings.return_value.all.return_value = [
+                    {"Fecha": date(2026, 9, 10), "Fecha_Calculo": momento}]
+
+                @contextmanager
+                def transaccion():
+                    pendientes = []
+                    conexion = MagicMock()
+                    def ejecutar(sql, params):
+                        nombre = next(n for n in nombres if n in str(sql))
+                        if nombre == nombres[falla]:
+                            raise RuntimeError("fallo inyectado")
+                        pendientes.append(nombre)
+                    conexion.execute.side_effect = ejecutar
+                    yield conexion
+                    confirmados.extend(pendientes)
+
+                engine.begin.side_effect = transaccion
+                with patch.object(repo, "_get_engine", return_value=engine), \
+                     patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=date(2026, 9, 10)):
+                    with self.assertRaises(RuntimeError):
+                        repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 10), date(2026, 9, 10))
+                self.assertEqual(confirmados, nombres[:falla])
+
+    def test_sin_corte_no_escribe(self):
+        with patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=None), \
+             patch.object(repo, "actualizar_apilado_tmh_v2_report") as apilado:
+            with self.assertRaisesRegex(RuntimeError, "No existe una fecha operacional"):
+                repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 1), date(2026, 9, 30))
+            apilado.assert_not_called()
+
+    def test_apilado_no_actualizado_detiene_antes_de_historico(self):
+        momento = datetime(2026, 9, 19)
+        engine = MagicMock()
+        conn = engine.connect.return_value.__enter__.return_value
+        conn.execute.return_value.scalar.return_value = momento
+        conn.execute.return_value.mappings.return_value.all.return_value = [
+            {"Fecha": date(2026, 9, 10), "Fecha_Calculo": momento - timedelta(days=1)}]
+        with patch.object(repo, "_get_engine", return_value=engine), \
+             patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=date(2026, 9, 10)), \
+             patch.object(repo, "actualizar_apilado_tmh_v2_report"), \
+             patch.object(repo, "refrescar_historico_apilado_report") as historico, \
+             patch.object(repo, "actualizar_factor_ajuste_camiones_v2_report") as factor:
+            with self.assertRaisesRegex(RuntimeError, "filas obsoletas"):
+                repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 10), date(2026, 9, 10))
+        historico.assert_not_called()
+        factor.assert_not_called()
+
+    def test_historico_rango_explicito_sin_ampliacion(self):
+        engine = MagicMock()
+        with patch.object(repo, "_get_engine", return_value=engine):
+            repo.refrescar_historico_apilado_report(date(2026, 9, 4), date(2026, 9, 10), dias_reproceso=0)
+        call = engine.begin.return_value.__enter__.return_value.execute.call_args
+        self.assertIn("sp_refrescar_historico_apilado_test", str(call.args[0]))
+        self.assertEqual(call.args[1], {"fecha_inicio": date(2026, 9, 4),
+                                      "fecha_fin": date(2026, 9, 10), "dias_reproceso": 0})
+
+    def test_cache_incompleto_obsoleto_y_duplicado(self):
+        corte = date(2026, 9, 13)
+        momento = datetime(2026, 9, 14)
+        filas = [{"Fecha": corte, "Turno": t, "Fecha_Actualizacion": momento} for t in ("A", "B")]
+        args = (date(2026, 9, 1), date(2026, 10, 1), corte, momento)
+        repo._validar_frescura_cache_turno(filas, *args)
+        for invalido in ([], filas[:1], filas + filas[:1],
+                         [dict(f, Fecha_Actualizacion=momento - timedelta(seconds=1)) for f in filas]):
+            with self.subTest(filas=invalido), self.assertRaises(RuntimeError):
+                repo._validar_frescura_cache_turno(invalido, *args)
+
+    def test_clays_precede_cache_y_respeta_fin_exclusivo(self):
+        engine = MagicMock()
+        conn = engine.begin.return_value.__enter__.return_value
+        with patch.object(repo, "_get_engine", return_value=engine):
+            repo.actualizar_reporte_turno_cache_emision(date(2026, 9, 1), date(2026, 10, 1))
+        llamadas = conn.execute.call_args_list
+        self.assertEqual(len(llamadas), 2)
+        self.assertIn("sp_refrescar_clays_cufe", str(llamadas[0].args[0]))
+        self.assertEqual(llamadas[0].args[1]["fecha_fin"], date(2026, 9, 30))
+        self.assertIn("sp_actualizar_reporte_turno_cache", str(llamadas[1].args[0]))
+        self.assertEqual(llamadas[1].args[1]["fecha_fin"], date(2026, 10, 1))
+
+    def test_consumidores_comparten_orquestacion(self):
+        path = Path(repo.__file__).parent / "callbacks/reportabilidad_cb.py"
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        consumidores = []
+        for fn in tree.body:
+            if not isinstance(fn, ast.FunctionDef):
+                continue
+            calls = [n.func.id for n in ast.walk(fn) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
+            if "refrescar_dependencias_reporte_turno_emision" in calls:
+                consumidores.append(fn.name)
+                self.assertNotIn("actualizar_apilado_tmh_v2_report", calls)
+                self.assertNotIn("actualizar_factor_ajuste_camiones_v2_report", calls)
+                fetches = [n for n in ast.walk(fn) if isinstance(n, ast.Call)
+                           and isinstance(n.func, ast.Name) and n.func.id == "fetch_reporte_turno_cache_emision"]
+                for fetch in fetches:
+                    end = next(k.value for k in fetch.keywords if k.arg == "end_date")
+                    self.assertEqual(ast.unparse(end), "refresco_turno['fin_sql_exclusivo']")
+        self.assertIn("generar_reporte", consumidores)
+        self.assertIn("exportar_excel", consumidores)
+        self.assertIn("generar_pdf", consumidores)
+        self.assertEqual(len(consumidores), 3)  # Preview, Excel y PDF.
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -150,34 +150,10 @@ body::before {
         Ingresar
       </button>
     </form>
-    <div id="message" class="message"></div>
+    {% if request.args.get('error') %}
+    <div class="message" style="color:#dc2626">❌ Usuario o contraseña incorrectos</div>
+    {% endif %}
   </div>
-
-  <script>
-    const form = document.getElementById("loginForm");
-    const msg = document.getElementById("message");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      msg.textContent = "Procesando...";
-
-      const formData = new FormData(form);
-      const res = await fetch(form.action, {
-        method: "POST",
-        body: new URLSearchParams(formData),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (1=1) {//res.ok
-        msg.style.color = "green";
-        msg.textContent = "✅ Login exitoso, redirigiendo...";
-        setTimeout(() => (window.location.href = "/"), 800);
-      } else {
-        msg.style.color = "red";
-        msg.textContent = data.error || "❌ Error en las credenciales";
-      }
-    });
-  </script>
+  <!-- ponytail: POST nativo del form, sin fetch. El server ya redirige. -->
 </body>
 </html>

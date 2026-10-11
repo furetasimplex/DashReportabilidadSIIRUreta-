@@ -1,0 +1,122 @@
+[
+  {
+    "modulo": "inventar_SpcHidr.v_datos_apilado_tmh_v2",
+    "linea": 7,
+    "texto": "sp_mantiene_apilado_tmh_v2_test."
+  },
+  {
+    "modulo": "inventar_SpcHidr.v_datos_apilado_tmh_v2",
+    "linea": 11,
+    "texto": "- correr crear_sp_mantiene_apilado_tmh_v2_test.sql"
+  },
+  {
+    "modulo": "inventar_SpcHidr.v_datos_apilado_tmh_v2",
+    "linea": 21,
+    "texto": "llamar a sp_mantiene_apilado_tmh_v2_test para que la vista vea"
+  },
+  {
+    "modulo": "inventar_SpcHidr.v_datos_apilado_tmh_v2",
+    "linea": 25,
+    "texto": "sp_mantiene_factor_ajuste_camiones_v2_test), los dias que no se"
+  },
+  {
+    "modulo": "inventar_SpcHidr.v_datos_apilado_tmh_v2",
+    "linea": 29,
+    "texto": "sp_mantiene_factor_ajuste_camiones_v2_test que ya existe ahi,"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_v2_test",
+    "linea": 2,
+    "texto": "CREATE   PROCEDURE [inventar_SpcHidr].[sp_mantiene_factor_ajuste_camiones_v2_test]"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_actualizar_reporte_turno_cache_emision_test",
+    "linea": 6,
+    "texto": "[inventar_SpcHidr].[sp_actualizar_reporte_turno_cache_emision_test]"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_datos_conciliados_emision_test",
+    "linea": 95,
+    "texto": "EXEC [inventar_SpcHidr].[sp_mantiene_factor_ajuste_camiones_v2_test]"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_clays_cufe",
+    "linea": 3,
+    "texto": "[inventar_SpcHidr].[sp_refrescar_clays_cufe]"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_clays_cufe",
+    "linea": 970,
+    "texto": "N'inventar_SpcHidr.sp_refrescar_clays_cufe',"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test",
+    "linea": 1,
+    "texto": "CREATE PROCEDURE [inventar_SpcHidr].[sp_mantiene_apilado_tmh_v2_test]"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test",
+    "linea": 143,
+    "texto": "'sp_mantiene_apilado_tmh_v2_test: nada que reprocesar, todo el rango ya estaba vigente.';"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_apilado_tmh_v2_test",
+    "linea": 1212,
+    "texto": "'sp_mantiene_apilado_tmh_v2_test finalizado.';"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v4_7_1_test",
+    "linea": 123,
+    "texto": "Se mantiene con sp_refrescar_historico_apilado_test."
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_resumen_totTM_diario",
+    "linea": 12,
+    "texto": "SECCION B: sp_refrescar_historico_apilado_test SIN los EXEC"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v4_8_1_test",
+    "linea": 123,
+    "texto": "Se mantiene con sp_refrescar_historico_apilado_test."
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_historico_apilado_diario",
+    "linea": 8,
+    "texto": "EXEC inventar_SpcHidr.sp_refrescar_historico_apilado_test"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_datos_conciliados_of",
+    "linea": 332,
+    "texto": "Se mantiene con sp_refrescar_historico_apilado_test."
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v4_9_test",
+    "linea": 123,
+    "texto": "Se mantiene con sp_refrescar_historico_apilado_test."
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_datos_conciliados_of_v4_3_test",
+    "linea": 123,
+    "texto": "Se mantiene con sp_refrescar_historico_apilado_test."
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_historico_apilado_test",
+    "linea": 2,
+    "texto": "SECCION B: sp_refrescar_historico_apilado_test sin el PASO 0"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_historico_apilado_test",
+    "linea": 5,
+    "texto": "CREATE   PROCEDURE [inventar_SpcHidr].[sp_refrescar_historico_apilado_test]"
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_refrescar_historico_srr_test",
+    "linea": 4,
+    "texto": "sp_mantiene_datos_conciliados_of y sp_refrescar_historico_apilado_test."
+  },
+  {
+    "modulo": "inventar_SpcHidr.sp_mantiene_factor_ajuste_camiones_test",
+    "linea": 9,
+    "texto": "sp_refrescar_historico_apilado_test y"
+  }
+]

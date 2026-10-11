@@ -28,7 +28,7 @@ def _to_csv_href(df):
 # ---------------- Layout ----------------
 def render_tab4():
     conn = get_connection()
-    fechas_df = pd.read_sql("SELECT MIN(CAST(Fecha AS DATE)) as min_fecha, MAX(CAST(Fecha AS DATE)) as max_fecha FROM inventar_SpcHidr.vista_control_torres", conn)
+    fechas_df = pd.read_sql("SELECT MIN(Fecha) as min_fecha, MAX(Fecha) as max_fecha FROM vista_control_torres", conn)
     conn.close()
 
     torres = ['TM1', 'TM2']
@@ -52,7 +52,7 @@ def render_tab4():
                             id='fecha-rango-tab4',
                             min_date_allowed=min_fecha,
                             max_date_allowed=max_fecha,
-                            start_date='2025-01-01',
+                            start_date=min_fecha,
                             end_date=max_fecha,
                             display_format='YYYY-MM-DD'
                         ),
@@ -175,41 +175,21 @@ def register_tab4_callbacks(app):
         # Leer datos
         conn = get_connection()
         query = f"""
-            SELECT * FROM inventar_SpcHidr.vista_control_torres
-            WHERE Fecha
-            BETWEEN '{start_date}' AND '{end_date}'
+            SELECT * FROM vista_control_torres
+            WHERE Fecha BETWEEN '{start_date}' AND '{end_date}'
         """
-        #print(query)
-        #print(conn)
         df = pd.read_sql(query, conn)
-        #print(df)
         conn.close()
 
         # Filtrar torres + preparar tipos
+        torres = torres or ['TM1', 'TM2']
         df = df[df['Torre'].isin(torres)]
         if df.empty:
             opts = []
             return (opts, *_empty_all())
 
         df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
-
-        # --- INICIO DEL CAMBIO ---
-        # 1. Limpiamos el texto: Quitamos '%' y convertimos a número.
-        # "Tambor detenido" se convertirá en NaN (Vacío) automáticamente.
-        df['Representatividad'] = pd.to_numeric(
-            df['Representatividad'].astype(str).str.replace('%', '', regex=False), 
-            errors='coerce'
-        )
-
-        # 2. Ajuste de escala: Si el número es mayor a 1 (ej: 35), lo dividimos por 100 (0.35)
-        mask_enteros = df['Representatividad'] > 1
-        df.loc[mask_enteros, 'Representatividad'] = df.loc[mask_enteros, 'Representatividad'] / 100
-        # --- FIN DEL CAMBIO ---
-
-        # 2. Si el Excel mandó "35" (entero) lo pasamos a "0.35"
-        mask_enteros = df['Representatividad'] > 1
-        df.loc[mask_enteros, 'Representatividad'] = df.loc[mask_enteros, 'Representatividad'] / 100
-        # --- CORRECCIÓN FIN ---
+        df['Representatividad'] = pd.to_numeric(df['Representatividad'], errors='coerce').fillna(0)
 
         # Opciones de elemento (todas numéricas excepto meta columnas)
         meta_cols = ['Fecha', 'Torre', 'Turno', 'Representatividad', 'Apilado']

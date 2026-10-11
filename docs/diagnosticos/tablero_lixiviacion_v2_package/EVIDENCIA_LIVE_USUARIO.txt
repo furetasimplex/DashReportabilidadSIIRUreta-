@@ -1,0 +1,488 @@
+Evidencia LIVE validada para desbloquear parcialmente el paquete V2
+Los siguientes fragmentos y resultados fueron ejecutados y validados directamente en SQL Server. Úsalos como VALIDADO LIVE únicamente en el alcance indicado.
+No marques aún la proyección final V2/V4 como validada, porque todavía falta ejecutar la vista física definitiva y sus pruebas de conservación.
+1. Regla de fecha operacional — Drenaje OX/SULF
+Regla validada:
+CASE
+    WHEN fecha_registro >= '2026-06-01T21:00:00'
+     AND DATEPART(HOUR, fecha_registro) >= 20
+    THEN DATEADD(
+            DAY,
+            1,
+            CAST(fecha_registro AS date)
+         )
+    ELSE CAST(fecha_registro AS date)
+END
+
+Interpretación aprobada:
+antes del cambio de régimen:
+    se conserva la fecha calendario
+
+bloque moderno:
+    registros tardíos 20:00/21:00
+    pertenecen al día operacional siguiente
+
+No documentar esto como corrección de timezone; solo como normalización de fecha operacional validada.
+Ejemplo de borde:
+2026-06-01 00:00 → 2026-06-01
+2026-06-01 21:00 → 2026-06-02
+2026-06-02 21:00 → 2026-06-03
+
+Las vistas operacionales de drenaje preservan:
+id_registro
+fecha_registro_raw
+fecha_operacional
+parcela_numero
+cu_pp
+
+Correspondencia PAD:
+Drenaje OX   → pad_id = 1
+Drenaje SULF → pad_id = 2
+
+Cuando se requiere resolver parcela_id contra dimensión:
+-- OX
+p.numero = d.parcela_numero
+AND p.id_pad = 1
+
+-- SULF
+p.numero = d.parcela_numero
+AND p.id_pad = 2
+
+No unir únicamente por número de parcela ignorando PAD.
+La normalización fue validada en el bloque moderno 2026-06-01 → 2026-09-10:
+OX:
+102 registros/días operacionales
+102 fechas distintas
+0 duplicados
+
+SULF:
+102 registros/días operacionales
+102 fechas distintas
+0 duplicados
+
+2. Drenaje multianalito usado por el tablero
+Las vistas live originales:
+vw_drena_concentrados_oxido_long
+vw_drena_concentrados_sulfuro_long
+
+exponen:
+id_registro
+fecha
+fecha_registro
+nro_parcela_pad
+cu_pp
+h_p
+ph
+cl
+fet
+fe2
+eh
+
+La versión TEST validada conserva exactamente los siete analitos y el timestamp raw.
+El único cambio temporal es:
+-- ANTES
+CAST(d.fecha_registro AS date) AS fecha
+
+-- TEST VALIDADO
+CASE
+    WHEN d.fecha_registro >= '2026-06-01T21:00:00'
+     AND DATEPART(HOUR,d.fecha_registro) >= 20
+    THEN DATEADD(
+            DAY,
+            1,
+            CAST(d.fecha_registro AS date)
+         )
+    ELSE CAST(d.fecha_registro AS date)
+END AS fecha
+
+d.fecha_registro se conserva sin modificación como timestamp raw.
+Los casts químicos originales también se conservan:
+CAST(v.cu_pp AS decimal(12,2)) AS cu_pp,
+CAST(v.h_p  AS decimal(12,2)) AS h_p,
+CAST(v.ph   AS decimal(12,2)) AS ph,
+CAST(v.cl   AS decimal(12,2)) AS cl,
+CAST(v.fet  AS decimal(12,2)) AS fet,
+CAST(v.fe2  AS decimal(12,2)) AS fe2,
+CAST(v.eh   AS decimal(12,2)) AS eh
+
+Validación de unicidad de fecha operacional:
+OX
+131.840 claves fecha+parcela
+duplicadas = 0
+max = 1
+
+SULF
+136.640 claves fecha+parcela
+duplicadas = 0
+max = 1
+
+Para el período moderno y las parcelas físicas realmente utilizadas:
+OX:
+102 × 32 = 3.264 claves
+
+SULF:
+102 × 28 = 2.856 claves
+
+Nota importante:
+vw_drena_concentrados_sulfuro_long
+contiene columnas P29-P32 con datos históricos.
+
+NO eliminar esas columnas de la fuente.
+
+El flujo físico Sulfuro utilizado por el tablero contempla P1-P28,
+por lo que P29-P32 no deben inventarse como parcelas de otro PAD.
+
+3. Refino operacional OX/SULF
+Las vistas operacionales validadas son conceptualmente:
+CREATE OR ALTER VIEW
+inventar_SpcHidr.vw_riego_oxido_refino_operacional
+AS
+SELECT
+    id_registro,
+
+    CASE
+        WHEN fecha_registro >= '2026-06-01T21:00:00'
+         AND DATEPART(HOUR,fecha_registro) >= 20
+        THEN DATEADD(DAY,1,CAST(fecha_registro AS date))
+        ELSE CAST(fecha_registro AS date)
+    END AS fecha,
+
+    fecha_registro AS fecha_registro_raw,
+
+    CASE
+        WHEN fecha_registro >= '2026-06-01T21:00:00'
+         AND DATEPART(HOUR,fecha_registro) >= 20
+        THEN DATEADD(DAY,1,CAST(fecha_registro AS date))
+        ELSE CAST(fecha_registro AS date)
+    END AS fecha_operacional,
+
+    cu_pp,
+    h_p,
+    ph,
+    cl,
+    fet,
+    fe2,
+    eh
+
+FROM inventar_SpcHidr.vw_riego_oxido_refino_base;
+
+Sulfuro usa la misma estructura sobre:
+vw_riego_sulfuro_refino_base
+
+y corresponde a:
+OX   → pad_id = 1
+SULF → pad_id = 2
+
+No inventar precisión/scale adicional: preservar los tipos de las vistas base hasta realizar comparación live de metadatos.
+Validación completa:
+OX
+4.120 registros
+4.120 fechas operacionales distintas
+duplicadas = 0
+
+SULF
+4.270 registros
+4.270 fechas operacionales distintas
+duplicadas = 0
+
+Bloque moderno:
+OX   102 registros = 102 fechas = 102 días
+SULF 102 registros = 102 fechas = 102 días
+
+La colisión original del 01-06-2026 quedó demostrada:
+01-06 00:00 → 01-06
+01-06 21:00 → 02-06
+
+4. Evidencia de por qué drenaje + refino deben normalizarse coordinadamente
+Tablero legacy, período 01-06 → 10-09:
+PAD1  25.796 filas
+PAD2  64.002 filas
+
+Solo drenaje operacional:
+PAD1  25.306
+PAD2  62.814
+
+Drenaje + refino operacional:
+PAD1  25.061
+PAD2  62.220
+
+A nivel:
+id_campana_parcela_control + fecha
+
+el resultado final fue:
+PAD1
+claves duplicadas = 0
+excedentes        = 0
+máximo            = 1
+
+PAD2
+claves duplicadas = 0
+excedentes        = 0
+máximo            = 1
+
+Esto valida que los dos factores temporales eran independientes:
+Drenaje:
+PAD1 -490 filas
+PAD2 -1.188 filas
+
+Refino:
+PAD1 -245 filas
+PAD2 -594 filas
+
+5. Ventana hidráulica y asignación de campaña — VALIDADO LIVE
+No usar:
+ISNULL(fecha_fin_retiro,'2099-12-31')
+
+para asignar señales físicas a campañas.
+Eso fue demostrado como incorrecto porque mantenía abiertas campañas históricas y replicaba la misma señal contra hasta cinco campañas.
+La campaña se preagrega primero a:
+pad_id + campana_id + parcela_id
+
+Fragmento validado:
+WITH campana_parcela_base AS
+(
+    SELECT
+        c.pad_id,
+        c.campana_id,
+        c.numero_campana,
+        c.parcela_id,
+
+        MIN(c.fecha_primer_riego)
+            AS fecha_primer_riego,
+
+        MAX(c.fecha_ultimo_riego)
+            AS fecha_ultimo_riego
+
+    FROM inventar_SpcHidr.campana_parcela_control c
+
+    GROUP BY
+        c.pad_id,
+        c.campana_id,
+        c.numero_campana,
+        c.parcela_id
+),
+
+campana_parcela_orden AS
+(
+    SELECT
+        c.*,
+
+        LEAD(c.fecha_primer_riego) OVER
+        (
+            PARTITION BY
+                c.pad_id,
+                c.parcela_id
+
+            ORDER BY
+                c.fecha_primer_riego,
+                c.campana_id
+        ) AS siguiente_primer_riego
+
+    FROM campana_parcela_base c
+),
+
+campana_parcela AS
+(
+    SELECT
+        c.*,
+
+        CASE
+            WHEN c.fecha_ultimo_riego IS NULL
+                THEN NULL
+
+            WHEN c.siguiente_primer_riego IS NULL
+                THEN c.fecha_ultimo_riego
+
+            WHEN c.fecha_ultimo_riego
+                 < DATEADD(
+                       DAY,
+                       -1,
+                       c.siguiente_primer_riego
+                   )
+                THEN c.fecha_ultimo_riego
+
+            ELSE DATEADD(
+                    DAY,
+                    -1,
+                    c.siguiente_primer_riego
+                 )
+
+        END AS fecha_limite_hidraulica
+
+    FROM campana_parcela_orden c
+)
+
+Asignación:
+LEFT JOIN campana_parcela c
+    ON  c.pad_id     = f.pad_id
+    AND c.parcela_id = f.parcela_id
+    AND f.fecha >= c.fecha_primer_riego
+    AND f.fecha <= c.fecha_limite_hidraulica
+
+Semántica validada:
+límite inferior:
+fecha_primer_riego, inclusivo
+
+límite superior:
+fecha_ultimo_riego, inclusivo
+
+si la campaña siguiente comienza antes:
+día anterior al primer riego de la campaña siguiente
+
+si fecha_ultimo_riego es NULL:
+NO abrir hasta 2099;
+no se asigna mediante esta regla.
+
+solapamientos:
+la ventana se corta antes de la campaña siguiente.
+
+Resultado LIVE 01-06 → 10-09:
+OX
+3.264 claves físicas
+2.219 → exactamente 1 campaña
+1.045 → sin campaña
+0     → múltiples campañas
+
+SULF
+2.856 claves físicas
+1.839 → exactamente 1 campaña
+1.017 → sin campaña
+0     → múltiples campañas
+
+Por tanto:
+máximo de campañas por PAD+parcela+fecha = 1
+
+6. Tratamiento de filas sin campaña
+NO eliminarlas.
+Resultado OX:
+1.045 fuera de ventana
+939 con flujo = 0
+106 con flujo > 0
+
+Los 106 positivos suman solamente:
+6,128278 m³
+
+y están concentrados en:
+P23   66 registros   4,6432 m³
+P20   37 registros   1,3975 m³
+P17    3 registros   0,0875 m³
+
+Todos:
+flujo_m3_h < 0,01
+
+pero NO aplicar un umbral de descarte, porque dentro de campaña también existen señales positivas de magnitud similar.
+Resultado SULF:
+1.017 fuera de ventana
+1.017 flujo = 0
+0 positivos
+
+Contrato aprobado para estos casos:
+campana_id = NULL
+numero_campana = NULL
+estado_asignacion = 'FUERA_VENTANA_RIEGO'
+
+No asignarles la última campaña por proximidad.
+7. Grano físico aprobado como diseño
+El hecho hidráulico debe tener grano:
+pad_id + parcela_id + fecha
+
+No:
+campaña + PAD + parcela + módulo + fecha
+
+porque:
+flujo    → parcela/día
+drenaje  → parcela/día
+refino   → PAD/día
+
+y no existen mediciones hidráulicas por módulo.
+Los módulos/CPC deben mantenerse como contexto separado, no copiando flujo/química/transferencia en cada módulo.
+La prueba de preagregación campaña/parcela dio:
+OX
+3.106 filas
+3.106 claves únicas
+
+SULF
+2.047 filas
+2.047 claves únicas
+
+antes de adoptar definitivamente la ventana primer/último riego.
+8. Unidades químicas — VALIDADO LIVE
+Para estas fuentes:
+cu_pp = g/L
+
+Por tanto:
+m³/d × g/L = kg/d
+
+Fórmulas aprobadas para el nuevo contrato:
+delta_cu_gl =
+    cu_drenaje_gl - cu_refino_gl
+
+transferencia_cu_kg_d =
+    flujo_m3_d * delta_cu_gl
+
+transferencia_cu_t_d =
+    flujo_m3_d * delta_cu_gl / 1000.0
+
+Ejemplo validado:
+672 m³/d
+Cu drenaje = 2,03 g/L
+Cu refino  = 0,28 g/L
+ΔCu        = 1,75 g/L
+
+672 × 1,75 = 1.176 kg/d
+            = 1,176 t/d
+
+El tablero legacy actualmente calcula:
+flujo_m3_d * delta_cu / 1000
+
+bajo el alias:
+transferencia_cu_kg_d
+
+por lo que el valor legacy está realmente en t/d aunque su nombre diga kg/d.
+NO cambiar silenciosamente el significado de ese alias dentro del contrato legacy.
+En V2 publicar ambos campos con unidad correcta:
+transferencia_cu_kg_d
+transferencia_cu_t_d
+
+y usar:
+cu_drenaje_gl
+cu_refino_gl
+delta_cu_gl
+
+en vez de _ppm.
+9. Proyección final V4/V2 — TODAVÍA PENDIENTE
+No existe todavía una proyección final V4 validada LIVE.
+Se diseñó un candidato con:
+grano:
+pad_id + parcela_id + fecha
+
+campaña:
+nullable
+
+estado:
+CAMPANA_HIDRAULICA
+FUERA_VENTANA_RIEGO
+
+medidas:
+flujo_m3_h
+flujo_m3_d
+química drenaje
+química refino
+delta Cu
+kg Cu/d
+t Cu/d
+
+pero todavía falta ejecutar y validar como mínimo:
+1. unicidad PAD+parcela+fecha
+2. conservación exacta del flujo fuente
+3. 0 o 1 campaña por clave
+4. conservación de filas sin campaña
+5. unicidad drenaje/refino después del JOIN
+6. tipos, precision, scale y nullability finales
+
+Por tanto:
+NO marcar 01_create_v2_candidate.sql como listo para despliegue.
+NO marcar el contrato final como VALIDADO LIVE.
+
+Puedes actualizar el paquete con drenaje, refino, ventana hidráulica y unidades como VALIDADO LIVE, pero deja la proyección final y sus tipos como PENDIENTE VALIDACION LIVE.
+Tampoco utilizar nombres _test_v2 como contrato productivo definitivo; esos nombres identifican los objetos utilizados durante la validación.

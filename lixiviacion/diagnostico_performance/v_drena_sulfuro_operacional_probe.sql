@@ -1,0 +1,1 @@
+SELECT COUNT_BIG(*) AS rows FROM inventar_SpcHidr.v_drena_sulfuro_operacional

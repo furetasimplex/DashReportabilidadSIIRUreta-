@@ -1,0 +1,286 @@
+"""FASE 4B3A. Manual DEV, rollback-only. Sin flag no importa ni conecta SQL."""
+import argparse
+from contextlib import contextmanager, ExitStack
+from datetime import date
+import hashlib
+import json
+from pathlib import Path
+import sys
+import threading
+import time
+from unittest.mock import patch
+
+RESOURCE = 'SIIR_CONTINGENCIA_PI_APILADO'
+TABLES = ('Control_Apilado_TMH_v2_test', 'Historico_Apilado_Diario',
+          'Control_Factor_Ajuste_Camiones_v2_test', 'Clays_CuFe',
+          'Clays_CuFe_trazabilidad', 'reporte_turno_cache_emision_test')
+FETCHES = ('fetch_reporte_turno_cache_emision', 'fetch_clays_cufe_report',
+           'fetch_trazabilidad_analitos_report', 'fetch_curva_granulometrica_report',
+           'fetch_generador_reporte_diario_emision', 'fetch_reconstitucion_srr_report')
+
+
+class Sentinel(Exception):
+    pass
+
+
+class FetchFailure(Exception):
+    pass
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--execute-rollback', action='store_true')
+    parser.add_argument('--fail-fetch', type=int, choices=range(1, 8), default=None,
+                        help='Fallar deliberadamente antes del fetch 1..7 de Excel')
+    parser.add_argument('--output', type=Path, default=Path('scripts/diagnosticos/fase4b3a/manual_dev.json'))
+    args = parser.parse_args(argv)
+    if not args.execute_rollback:
+        print('SAFE: no se conecta ni escribe. Requiere --execute-rollback.')
+        return 0
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from sqlalchemy import text, event
+    from monitor_pi_tum.db import _engine_dev, _assert_dev_connection
+    from report_export import report_export as repo
+    from scripts.validate_reclamo_publicar_factor_dev import encode, state, require_transaction, no_commit
+
+    engine = _engine_dev()
+    evidence = {'fecha': '2026-09-10', 'fail_fetch': args.fail_fetch, 'stages': [], 'status': 'FAIL'}
+    ready, acquired, finished = threading.Event(), threading.Event(), threading.Event()
+    other = {}
+    worker = None
+    active = False
+    count = 0
+    baseline = None
+    original_lock = repo._adquirir_lock_refresco_turno
+
+    def trace_sp(conn, cursor, statement, parameters, context, executemany):
+        if 'EXEC' in statement.upper() and any(name in statement.lower() for name in (
+            'sp_mantiene_apilado_tmh_v2_test', 'sp_refrescar_historico_apilado_test',
+            'sp_mantiene_factor_ajuste_camiones_v2_test', 'sp_refrescar_clays_cufe',
+            'sp_actualizar_reporte_turno_cache_emision_test')):
+            st = state(conn, text)
+            require_transaction(st)
+            evidence.setdefault('refresh_stages', []).append(dict(st, sql=statement))
+
+    def snapshot(conn):
+        result = {}
+        for table in TABLES:
+            rows = conn.execute(text(f'SELECT * FROM inventar_SpcHidr.[{table}]'))
+            columns = list(rows.keys())
+            serialized = sorted(json.dumps([encode(v) for v in row], sort_keys=True) for row in rows)
+            result[table] = {'columns': columns, 'count': len(serialized),
+                             'sha256': hashlib.sha256(json.dumps(serialized).encode()).hexdigest()}
+        return result
+
+    def competing_session():
+        try:
+            with engine.connect() as conn:
+                event.listen(conn, 'commit', no_commit)
+                try:
+                    _assert_dev_connection(conn)
+                    other['spid'] = conn.execute(text('SELECT @@SPID')).scalar_one()
+                    ready.set()
+                    rc = conn.execute(text('''DECLARE @r int;
+                        EXEC @r=sys.sp_getapplock @Resource=:resource, @LockMode='Exclusive',
+                            @LockOwner='Transaction', @LockTimeout=60000;
+                        SELECT @r;'''), {'resource': RESOURCE}).scalar_one()
+                    if rc < 0:
+                        raise RuntimeError(f'Segunda sesión applock={rc}')
+                    other['acquired'] = True
+                    acquired.set()
+                finally:
+                    conn.rollback()
+        except BaseException as exc:
+            other['error'] = repr(exc)
+            ready.set()
+        finally:
+            finished.set()
+
+    ALLOWED_IDENTITIES = {
+        "Clays_CuFe_trazabilidad.id_trazabilidad",
+    }
+
+
+    def identity_state(conn):
+        rows = conn.execute(text("""
+            SELECT
+                OBJECT_NAME(object_id) AS tabla,
+                name AS columna,
+                TRY_CONVERT(bigint, last_value) AS last_value
+            FROM sys.identity_columns
+            WHERE OBJECT_SCHEMA_NAME(object_id) = 'inventar_SpcHidr'
+        """)).mappings().all()
+
+        return {
+            f"{row['tabla']}.{row['columna']}": (
+                None
+                if row["last_value"] is None
+                else int(row["last_value"])
+            )
+            for row in rows
+            if row["tabla"] in TABLES
+        }
+
+    def locked(conn):
+        nonlocal baseline
+        original_lock(conn)
+        baseline = snapshot(conn)  # Antes del primer mantenedor y con exclusión F4.
+        evidence['baseline'] = baseline
+        # SQL Server no revierte el contador IDENTITY.
+        # Se permite únicamente la clave surrogate auditada de
+        # Clays_CuFe_trazabilidad; cualquier otra IDENTITY obliga a revisar
+        # nuevamente la seguridad de esta prueba.
+        identity_before = identity_state(conn)
+
+        if set(identity_before) != ALLOWED_IDENTITIES:
+            raise RuntimeError(
+                "Mapa IDENTITY inesperado en tablas bajo prueba: "
+                f"{identity_before}"
+            )
+
+        evidence["identity_before"] = identity_before
+        evidence["identity_policy"] = (
+            "Se permite avance únicamente de "
+            "Clays_CuFe_trazabilidad.id_trazabilidad; "
+            "las filas y hashes deben restaurarse exactamente."
+        )
+
+    class RollbackEngine:
+        @contextmanager
+        def begin(self):
+            nonlocal active
+            with engine.connect() as conn:
+                event.listen(conn, 'commit', no_commit)
+                try:
+                    _assert_dev_connection(conn)
+                    conn.rollback()
+                    conn.begin()
+                    active = True
+                    event.listen(conn, 'before_cursor_execute', trace_sp)
+                    yield conn
+                    evidence['materialized_all'] = count == 7
+                    if count != 7:
+                        raise RuntimeError('Excel no materializó las siete fuentes esperadas.')
+                    raise Sentinel('Todos los DataFrames materializados: rollback deliberado')
+                finally:
+                    conn.rollback()
+                    active = False
+
+    def wrap(name, original):
+        def fetch(*a, **kw):
+            nonlocal count, worker
+            count += 1
+            conn = kw['conn']
+            st = state(conn, text)
+            require_transaction(st)
+            if evidence['stages'] and st['spid'] != evidence['stages'][0]['spid']:
+                raise RuntimeError('Cambio de SPID')
+            evidence['stages'].append(dict(st, fetch=name, ordinal=count))
+            if count == 1:
+                worker = threading.Thread(target=competing_session, daemon=True)
+                worker.start()
+                if not ready.wait(10) or 'error' in other:
+                    raise RuntimeError(f'Segunda sesión no inició: {other}')
+                deadline = time.monotonic() + 10
+                while time.monotonic() < deadline:
+                    wait = conn.execute(text('''SELECT blocking_session_id, wait_type
+                        FROM sys.dm_exec_requests WHERE session_id=:spid'''), {'spid': other['spid']}).mappings().first()
+                    if wait and wait['blocking_session_id'] == st['spid'] and str(wait['wait_type']).startswith('LCK_M_'):
+                        evidence['second_waiting'] = dict(wait)
+                        break
+                    if acquired.wait(.1):
+                        raise RuntimeError('Segunda sesión adquirió global antes del rollback')
+                else:
+                    raise RuntimeError('No se acreditó espera DMV (requiere permiso para observar otra sesión).')
+            if acquired.is_set():
+                raise RuntimeError('Global liberado entre fetches')
+            if count == args.fail_fetch:
+                raise FetchFailure(f'Fallo deliberado fetch {count}')
+            result = original(*a, **kw)
+            require_transaction(state(conn, text))
+            evidence['stages'][-1]['rows'] = len(result)
+            return result
+        return fetch
+
+    try:
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(repo, '_get_engine', return_value=RollbackEngine()))
+            stack.enter_context(patch.object(repo, '_adquirir_lock_refresco_turno', locked))
+            for name in FETCHES:
+                stack.enter_context(patch.object(repo, name, wrap(name, getattr(repo, name))))
+            try:
+                repo.preparar_paquete_reporte_turno_emision(date(2026, 9, 10), date(2026, 9, 10), salida='excel')
+                raise RuntimeError('El paquete retornó sin SENTINEL')
+            except Sentinel:
+                if args.fail_fetch:
+                    raise
+                assert not active
+                evidence['simulated_constructor_after_rollback'] = True
+            except FetchFailure:
+                if not args.fail_fetch:
+                    raise
+                evidence['no_artifact_on_error'] = True
+        if not finished.wait(10) or not acquired.is_set() or 'error' in other:
+            raise RuntimeError(f'Segunda sesión no adquirió/terminó tras rollback: {other}')
+        with engine.connect() as conn:
+            event.listen(conn, "commit", no_commit)
+            try:
+                _assert_dev_connection(conn)
+                original_lock(conn)
+
+                evidence["after"] = snapshot(conn)
+                evidence["identity_after"] = identity_state(conn)
+
+            finally:
+                conn.rollback()
+        if baseline != evidence["after"]:
+            raise RuntimeError("Baseline distinto después de rollback")
+
+        identity_before = evidence["identity_before"]
+        identity_after = evidence["identity_after"]
+
+        if set(identity_after) != ALLOWED_IDENTITIES:
+            raise RuntimeError(
+                "Mapa IDENTITY posterior inesperado: "
+                f"{identity_after}"
+            )
+
+        identity_delta = {}
+
+        for key in ALLOWED_IDENTITIES:
+            before = identity_before[key]
+            after = identity_after[key]
+
+            if before is None:
+                delta = None if after is None else after
+            elif after is None:
+                raise RuntimeError(
+                    f"IDENTITY desapareció después de rollback: {key}"
+                )
+            else:
+                if after < before:
+                    raise RuntimeError(
+                        f"IDENTITY retrocedió inesperadamente: "
+                        f"{key}: {before} -> {after}"
+                    )
+                delta = after - before
+
+            identity_delta[key] = delta
+
+        evidence["identity_delta"] = identity_delta
+        evidence["status"] = "PASS"
+    except BaseException as exc:
+        evidence['error'] = repr(exc)
+    finally:
+        if worker:
+            worker.join(timeout=10)
+        evidence['second_session'] = other
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(evidence, indent=2, default=encode), encoding='utf-8')
+    print(evidence['status'], args.output)
+    return 0 if evidence['status'] == 'PASS' else 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

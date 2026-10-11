@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-# === Conexión DB (mysql.connector) ===
 from db_connection import get_connection
 
 # =========================
@@ -57,7 +56,7 @@ def create_cell(cell_index):
         n_clicks=0
     )
     return html.Div(
-        id={'type': 'grid-cell-container-sulfuro', 'index': cell_index},
+        id={'type': 'grid-cell-container', 'index': cell_index},
         children=[html.Div(f'{cell_index}'), html.Div([inner_cell], style=grid_style)],
         className='grid-cell',
         style=outer_style
@@ -72,8 +71,7 @@ grid_children = [top_row, bottom_row]
 # =========================
 #  Layout del tab
 # =========================
-def layout():
-    return html.Div([
+layout = html.Div([
     # Fila 1: fechas + reset
     html.Div([
         html.Div([
@@ -85,7 +83,7 @@ def layout():
                 display_format='YYYY-MM-DD'
             ),
         ], style={'display': 'flex', 'alignItems': 'center'}),
-        html.Div([html.Button('Reiniciar selección', id='sulfuro-reset-button', className='btn btn-primary', n_clicks=0)])
+        html.Div([html.Button('Reiniciar selección', id='sulfuro-reset-button', n_clicks=0)])
     ], style={
         'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center',
         'marginBottom': '8px', 'padding': '0 20px'
@@ -94,7 +92,7 @@ def layout():
     # Fila 2: Detectar campañas + selector campañas
     html.Div([
         html.Div([
-            html.Button('Detectar campañas por fecha', id='sulfuro-detect-camp-btn', className='btn btn-primary', n_clicks=0),
+            html.Button('Detectar campañas por fecha', id='sulfuro-detect-camp-btn', n_clicks=0),
             dcc.Dropdown(
                 id='sulfuro-campanias',
                 options=[],
@@ -149,26 +147,12 @@ def layout():
 # =========================
 def _query_df(sql, params):
     """ Ejecuta SQL usando get_connection() y retorna DataFrame. """
-    #print(sql)
-    #print(params)
     conn = get_connection()
-
     try:
-        #cur = conn.cursor(dictionary=True)
-        cur = conn.cursor()
-        if conn.__class__.__module__.startswith("pyodbc"):
-            sql = sql.replace('%s',"?")
-        print(f'{sql} and parameters {params}')
+        cur = conn.cursor(dictionary=True)
         cur.execute(sql, params)
-        print(cur.description)
-        columns = [desc[0] for desc in cur.description]
         rows = cur.fetchall()
-  
-        #print(f"rows: {rows}")
-        #df = pd.DataFrame(rows,columns=cols)
-        df = pd.DataFrame([dict(zip(columns,r)) for r in rows])
-        print(df)
-        return df
+        return pd.DataFrame(rows)
     finally:
         try:
             cur.close()
@@ -196,14 +180,14 @@ def _parse_selected_parcelas(selected_cells):
 #  Lógica de campañas / cinética
 # =========================
 def _detect_campanias(pad, parcelas, start_date, end_date):
-    """Detecta campañas por fecha en inventar_SpcHidr.control_ley_ripio_diario; si no hay, busca en inventar_SpcHidr.res_parcelas_apilado."""
+    """Detecta campañas por fecha en control_ley_ripio_diario; si no hay, busca en res_parcelas_apilado."""
     if not parcelas:
         return []
 
     # 1) control_ley_ripio_diario (por drenaje)
     sql1 = f"""
         SELECT DISTINCT Campana
-        FROM inventar_SpcHidr.control_ley_ripio_diario
+        FROM control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Fecha_drenaje BETWEEN %s AND %s
@@ -214,10 +198,10 @@ def _detect_campanias(pad, parcelas, start_date, end_date):
     if not df.empty:
         return df['Campana'].astype(int).tolist()
 
-    # 2) fallback: inventar_SpcHidr.res_parcelas_apilado (por apilado)
+    # 2) fallback: res_parcelas_apilado (por apilado)
     sql2 = f"""
         SELECT DISTINCT Campana
-        FROM inventar_SpcHidr.res_parcelas_apilado
+        FROM res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Fecha_apilado BETWEEN %s AND %s
@@ -241,7 +225,7 @@ def _load_kinetics_total(pad, parcelas, campanias, start_date, end_date):
     # Denominador
     sql_den = f"""
         SELECT SUM(fino_apilado_cu) AS fino_apilado_total
-        FROM inventar_SpcHidr.res_parcelas_apilado
+        FROM res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -255,7 +239,7 @@ def _load_kinetics_total(pad, parcelas, campanias, start_date, end_date):
     # Aporte diario total
     sql_day = f"""
         SELECT Fecha_drenaje AS fecha, SUM(fino_dia) AS fino_dia_sel
-        FROM inventar_SpcHidr.control_ley_ripio_diario
+        FROM control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -287,7 +271,7 @@ def _load_kinetics_by_parcela(pad, parcelas, campanias, start_date, end_date):
     # Denominador por parcela
     sql_den = f"""
         SELECT Parcela, SUM(fino_apilado_cu) AS fino_apilado_total
-        FROM inventar_SpcHidr.res_parcelas_apilado
+        FROM res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -303,7 +287,7 @@ def _load_kinetics_by_parcela(pad, parcelas, campanias, start_date, end_date):
     # Aporte diario por parcela
     sql_day = f"""
         SELECT Fecha_drenaje AS fecha, Parcela, SUM(fino_dia) AS fino_dia
-        FROM inventar_SpcHidr.control_ley_ripio_diario
+        FROM control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -335,7 +319,7 @@ def register_callbacks(app):
     # 1) Redibuja grilla con coloreo de celdas seleccionadas
     @app.callback(
         Output('sulfuro-grid-main-container', 'children'),
-        Input('selected-cells-sulfuro', 'data')
+        Input('selected-cells', 'data')
     )
     def update_grid_layout(selected_cells):
         def create_zoomed_cell(cell_index):
@@ -363,7 +347,7 @@ def register_callbacks(app):
                 n_clicks=0
             )
             return html.Div(
-                id={'type': 'grid-cell-container-sulfuro', 'index': cell_index},
+                id={'type': 'grid-cell-container', 'index': cell_index},
                 children=[html.Div(f'{cell_index}'), html.Div([inner_cell], style=grid_style)],
                 className='grid-cell',
                 style=outer_style
@@ -377,10 +361,10 @@ def register_callbacks(app):
 
     # 2) Toggle de selección de celdas (tolerante a versiones Dash)
     @app.callback(
-        Output('selected-cells-sulfuro', 'data', allow_duplicate=True),
+        Output('selected-cells', 'data', allow_duplicate=True),
         Input({'type': 'sulfuro-inner-cell', 'index': ALL}, 'n_clicks_timestamp'),
         Input('sulfuro-reset-button', 'n_clicks'),
-        State('selected-cells-sulfuro', 'data'),
+        State('selected-cells', 'data'),
         prevent_initial_call=True
     )
     def update_selected_cells(ts_list, reset_clicks, selected_cells):
@@ -411,7 +395,7 @@ def register_callbacks(app):
         Output('sulfuro-campanias', 'options'),
         Output('sulfuro-campanias', 'value'),
         Input('sulfuro-detect-camp-btn', 'n_clicks'),
-        State('selected-cells-sulfuro', 'data'),
+        State('selected-cells', 'data'),
         State('sulfuro-date-picker-range', 'start_date'),
         State('sulfuro-date-picker-range', 'end_date'),
         prevent_initial_call=True
@@ -428,7 +412,7 @@ def register_callbacks(app):
         Output('sulfuro-cell-table', 'data'),
         Output('sulfuro-cell-graph', 'figure'),            # total ponderado
         Output('sulfuro-cell-graph-parcelas', 'figure'),   # por parcela
-        Input('selected-cells-sulfuro', 'data'),
+        Input('selected-cells', 'data'),
         Input('sulfuro-date-picker-range', 'start_date'),
         Input('sulfuro-date-picker-range', 'end_date'),
         Input('sulfuro-campanias', 'value')

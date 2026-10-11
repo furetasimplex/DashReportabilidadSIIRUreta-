@@ -1,0 +1,6 @@
+﻿clave,valor,tipo_dato,descripcion,usuario,modificado
+BRECHA_CV25_ALERTA_PCT,10,decimal,Brecha porcentual entre CV25 y topografia que dispara alerta.,sa,2026-07-29 16:36:43.728
+FECHA_CORTE_SISTEMA,2026-07-01,date,El sistema calcula desde esta fecha en adelante. Lo anterior entra como linea base en modulo_congelado y no se recalcula.,sa,2026-07-29 16:36:43.728
+RENDIMIENTO_MAX_TMS_HR,4500,decimal,Techo de la banda de referencia de rendimiento.,sa,2026-07-29 16:36:43.728
+RENDIMIENTO_MIN_TMS_HR,1500,decimal,Piso de la banda de referencia de rendimiento. Derivado de la hoja Rendimiento del libro de ripios.,sa,2026-07-29 16:36:43.728
+TOLERANCIA_CUADRATURA_PCT,0.5,decimal,Holgura sobre 100 por ciento antes de exigir ajuste de traspaso.,sa,2026-07-29 16:36:43.728

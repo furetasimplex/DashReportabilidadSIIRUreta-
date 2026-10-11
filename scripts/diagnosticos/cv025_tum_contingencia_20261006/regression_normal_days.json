@@ -1,0 +1,285 @@
+{
+  "normal_days": 9,
+  "normal_differences": [],
+  "topografia_unchanged": true,
+  "hours_unchanged": true,
+  "other_equipment_unchanged": true,
+  "preliminar_rows_september_before": 0,
+  "preliminar_rows_september_after": 0,
+  "preliminar_acumulado_rows_september_before": 0,
+  "preliminar_acumulado_rows_september_after": 0,
+  "rendimiento_differences": [
+    {
+      "key": [
+        "2026-09-07",
+        "1"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "23.500000000000",
+      "after": "31387.000000000000"
+    },
+    {
+      "key": [
+        "2026-09-07",
+        "2"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "23.500000000000",
+      "after": "31387.000000000000"
+    },
+    {
+      "key": [
+        "2026-09-08",
+        "1"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "41.000000000000",
+      "after": "4616.000000000000"
+    },
+    {
+      "key": [
+        "2026-09-08",
+        "2"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "41.000000000000",
+      "after": "4616.000000000000"
+    },
+    {
+      "key": [
+        "2026-09-09",
+        "1"
+      ],
+      "column": "diferencia_tms",
+      "before": null,
+      "after": "0.000000"
+    },
+    {
+      "key": [
+        "2026-09-09",
+        "1"
+      ],
+      "column": "flag_cv25",
+      "before": "SIN_HORAS_NO_REPARTIBLE",
+      "after": "CV25_CERO_SIN_OPERACION"
+    },
+    {
+      "key": [
+        "2026-09-09",
+        "1"
+      ],
+      "column": "tms_cv25_asignado",
+      "before": null,
+      "after": "0.000000"
+    },
+    {
+      "key": [
+        "2026-09-09",
+        "1"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "41.125000000000",
+      "after": "0E-12"
+    },
+    {
+      "key": [
+        "2026-09-09",
+        "2"
+      ],
+      "column": "diferencia_tms",
+      "before": null,
+      "after": "0.000000"
+    },
+    {
+      "key": [
+        "2026-09-09",
+        "2"
+      ],
+      "column": "flag_cv25",
+      "before": "SIN_HORAS_NO_REPARTIBLE",
+      "after": "CV25_CERO_SIN_OPERACION"
+    },
+    {
+      "key": [
+        "2026-09-09",
+        "2"
+      ],
+      "column": "tms_cv25_asignado",
+      "before": null,
+      "after": "0.000000"
+    },
+    {
+      "key": [
+        "2026-09-09",
+        "2"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "41.125000000000",
+      "after": "0E-12"
+    },
+    {
+      "key": [
+        "2026-09-10",
+        "1"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "41.000000000000",
+      "after": "41234.000000000000"
+    },
+    {
+      "key": [
+        "2026-09-10",
+        "2"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "41.000000000000",
+      "after": "41234.000000000000"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "1"
+      ],
+      "column": "diferencia_pct",
+      "before": "-53.321659",
+      "after": "3.569043"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "1"
+      ],
+      "column": "diferencia_tms",
+      "before": "-49888.589006",
+      "after": "1504.994327"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "1"
+      ],
+      "column": "rendimiento_pesometro_tms_hr",
+      "before": "9356.158333",
+      "after": "4216.800000"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "1"
+      ],
+      "column": "tms_cv25_asignado",
+      "before": "93561.583333",
+      "after": "42168.000000"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "1"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "140342.375000000000",
+      "after": "63252.000000000000"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "2"
+      ],
+      "column": "diferencia_pct",
+      "before": "-48.707912",
+      "after": "13.805942"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "2"
+      ],
+      "column": "diferencia_tms",
+      "before": "-22785.946838",
+      "after": "2910.844828"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "2"
+      ],
+      "column": "rendimiento_pesometro_tms_hr",
+      "before": "9356.158333",
+      "after": "4216.800000"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "2"
+      ],
+      "column": "tms_cv25_asignado",
+      "before": "46780.791666",
+      "after": "21084.000000"
+    },
+    {
+      "key": [
+        "2026-09-11",
+        "2"
+      ],
+      "column": "tms_cv25_dia_ambas",
+      "before": "140342.375000000000",
+      "after": "63252.000000000000"
+    }
+  ],
+  "missing_tum_case": [
+    {
+      "fecha": "2026-10-06",
+      "estado_episodio": "SIN_TUM_NO_RESOLUBLE",
+      "fuente_resuelta_dia": "SIN_RESOLVER",
+      "tmh_resuelto": null
+    }
+  ],
+  "idempotence": {
+    "same_business_rows": true,
+    "same_hours": true,
+    "same_other_equipment": true,
+    "hash_first": "a6f4a371a95e71815ecb31773644ad4a4175f047a3afe749db05914f090f97cd",
+    "hash_second": "a6f4a371a95e71815ecb31773644ad4a4175f047a3afe749db05914f090f97cd"
+  },
+  "before_hashes": {
+    "cv25_diario": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sp_cargar_cv25_horas": "192da27c09cc39f9db1d79586c2dc45036a95d1c3d33ee07319bbe6a5924fe75",
+    "v_contingencia_pi_frontera_turno": "264ed686d490c25b12b0dc5c720a9084b61c5e8ca7bf5130ea4ac6945ec73e9c",
+    "v_contingencia_pi_serie": "e5406793983de1b69a74abc001a7294d5481696e24eab82bfba71dad85ff0991",
+    "v_contingencia_pi_totalizador_turno": "78aa4b812cf48a210141f8475f18a35399433ca73f899d67fbc1b4f7a71c71b7",
+    "v_contingencia_totalizador_diagnostico_turno": "8158c9e547b7698fc917cd22f9047a9f8ee580f412be2d6090321fb3d59fe6a5",
+    "v_contingencia_totalizador_resuelto_turno": "d2dead4f16a60d5981d0d22abe4c28bb3bcb249ba4ccc7673a72f89fa533aad2",
+    "v_cv25_diario": "f1d9befa1514708eb8cbfe6f4ce88702572af73996ed441972e60c15c3c79cc1",
+    "v_diferencia_cv25": "97b19223c78e31fb0415a0203ce6d6ae488d0fdd98fc665cc62564a24cc967d6",
+    "v_preliminar_cv25": "7187d11c0da212a4ade1835707fbf6d1ad881f9f90d25864a0c0364a08dad3d6",
+    "v_preliminar_cv25_con_acumulado": "5b8d3086a792abbc67f9faa05cf4eb01721dc7e6e8c8b8c1effe411d30ecc53e",
+    "v_rendimiento_rotopala": "fd04034b78db47de8ada9b2c43bd8b82ddba2a7d2331afe1a1e2493f1e96fa7c",
+    "vista_resumen_datos_filtrados": "1e4fb62414e6e7634ad615ddaf128be945f95aaf7464c4f0b0cc00fa3ab94b86"
+  },
+  "after_hashes": {
+    "sp_cargar_cv25_horas": "975189cfa854d380a8e537b5b8a22429eef5f4ec8370fcdc6766ab39c350ef55",
+    "v_contingencia_cv025_diario_resuelto": "472fd1cc7a7187cbc329e4ec06d284a2069bc08fede52a5df77e9c1fb7f24f46",
+    "v_cv25_diario": "fee87909c6b7010f0485c2c46c708d9185e5dbf0c27280d50343337e1973e18f",
+    "v_diferencia_cv25": "69dead91938b61d9810dfe0bbda5edb0a6e8c2880ecc12fb07ac29010f8cc9a5"
+  },
+  "constraint_before": [
+    {
+      "name": "CK_cv_tag",
+      "definition": "([tag_utilizado]='cv025_tot' OR [tag_utilizado]='cv025tot')"
+    },
+    {
+      "name": "CK_cv_tmh",
+      "definition": "([tmh_dia] IS NULL OR [tmh_dia]>=(0))"
+    }
+  ],
+  "constraint_after": [
+    {
+      "name": "CK_cv_tag",
+      "definition": "([tag_utilizado]='SIN_RESOLVER' OR [tag_utilizado]='TUM_CV025' OR [tag_utilizado]='cv025_tot' OR [tag_utilizado]='cv025tot')"
+    },
+    {
+      "name": "CK_cv_tmh",
+      "definition": "([tmh_dia] IS NULL OR [tmh_dia]>=(0))"
+    }
+  ]
+}

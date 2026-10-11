@@ -1,0 +1,257 @@
+def refrescar_dependencias_reporte_turno_emision(
+    start_date: date,
+    end_date: date,
+    dias_reproceso: int = 7,
+    *,
+    conn=None,
+) -> dict:
+    """Preparación común de Preview, Excel y PDF; fechas inclusivas.
+
+    Apilado -> Histórico -> Factor -> Clays -> Cache, hasta el corte operacional.
+    Histórico copia únicamente los días recalculados, sin ampliar su rango.
+
+    Con ``conn`` participa en la transacción del caller.
+    Sin ``conn`` conserva una única transacción propia.
+    """
+    if start_date is None or end_date is None or start_date > end_date:
+        raise ValueError(
+            "Rango inclusivo inválido para Reporte por Turno."
+        )
+
+    if not isinstance(dias_reproceso, int) or dias_reproceso < 1:
+        raise ValueError(
+            "DiasReproceso debe ser un entero positivo."
+        )
+
+    with (
+        nullcontext(conn)
+        if conn is not None
+        else _get_engine().begin()
+    ) as db_conn:
+
+        # -----------------------------------------------------
+        # Lock global compartido con PI/TUM.
+        # LockOwner=Transaction: permanece hasta el final de
+        # esta transacción o de la transacción exterior.
+        # -----------------------------------------------------
+        _adquirir_lock_refresco_turno(db_conn)
+
+        corte = fetch_fecha_corte_apilado_tmh_report(
+            start_date,
+            end_date,
+            conn=db_conn,
+        )
+
+        if corte is None:
+            raise RuntimeError(
+                "No existe una fecha operacional cerrada para "
+                "actualizar el apilado TMH."
+            )
+
+        fin_efectiva = min(end_date, corte)
+
+        if fin_efectiva < start_date:
+            raise RuntimeError(
+                "La fecha de corte de apilado está fuera del "
+                "rango solicitado."
+            )
+
+        ventana = max(
+            start_date,
+            fin_efectiva - timedelta(
+                days=dias_reproceso - 1
+            ),
+        )
+
+        fin_exclusivo = (
+            fin_efectiva + timedelta(days=1)
+        )
+
+        print(
+            f"[RTO] Periodo solicitado: "
+            f"{start_date} -> {end_date}"
+        )
+        print(
+            f"[RTO] Fecha corte apilado: "
+            f"{fin_efectiva}"
+        )
+        print(
+            f"[RTO] Dias reproceso: "
+            f"{dias_reproceso}"
+        )
+        print(
+            f"[RTO] Ventana efectiva reproceso: "
+            f"{ventana} -> {fin_efectiva}"
+        )
+
+        desde = db_conn.execute(
+            _sa_text("SELECT SYSDATETIME()")
+        ).scalar()
+
+        # -----------------------------------------------------
+        # 1. Apilado
+        # -----------------------------------------------------
+        actualizar_apilado_tmh_v2_report(
+            start_date,
+            fin_efectiva,
+            dias_reproceso,
+            conn=db_conn,
+        )
+
+        print(
+            f"[RTO] Apilado TMH actualizado: "
+            f"{start_date} -> {fin_efectiva}"
+        )
+
+        apilado = db_conn.execute(
+            _sa_text("""
+                SELECT
+                    Fecha,
+                    Fecha_Calculo
+                FROM inventar_SpcHidr.Control_Apilado_TMH_v2_test
+                WHERE Fecha >= :inicio
+                  AND Fecha <= :fin
+            """),
+            {
+                "inicio": start_date,
+                "fin": fin_efectiva,
+            },
+        ).mappings().all()
+
+        if not any(
+            pd.Timestamp(f["Fecha"]).date()
+            == fin_efectiva
+            for f in apilado
+        ):
+            raise RuntimeError(
+                "El apilado actualizado no contiene "
+                "el último día operacional."
+            )
+
+        if any(
+            (
+                f["Fecha_Calculo"] is None
+                or f["Fecha_Calculo"] < desde
+            )
+            for f in apilado
+            if pd.Timestamp(f["Fecha"]).date()
+            >= ventana
+        ):
+            raise RuntimeError(
+                "El apilado conserva filas obsoletas "
+                "en la ventana de reproceso."
+            )
+
+        # -----------------------------------------------------
+        # Fechas realmente materializadas en esta ejecución.
+        # -----------------------------------------------------
+        fechas = sorted({
+            pd.Timestamp(f["Fecha"]).date()
+            for f in apilado
+            if (
+                f["Fecha_Calculo"] is not None
+                and f["Fecha_Calculo"] >= desde
+            )
+        })
+
+        rangos = []
+
+        for fecha in fechas:
+            if (
+                rangos
+                and fecha
+                == rangos[-1][1] + timedelta(days=1)
+            ):
+                rangos[-1] = (
+                    rangos[-1][0],
+                    fecha,
+                )
+            else:
+                rangos.append(
+                    (fecha, fecha)
+                )
+
+        # -----------------------------------------------------
+        # 2. Histórico
+        # -----------------------------------------------------
+        for inicio_historico, fin_historico in rangos:
+            refrescar_historico_apilado_report(
+                inicio_historico,
+                fin_historico,
+                dias_reproceso=0,
+                conn=db_conn,
+            )
+
+            print(
+                f"[RTO] Histórico actualizado: "
+                f"{inicio_historico} -> "
+                f"{fin_historico}"
+            )
+
+        # -----------------------------------------------------
+        # 3. Factor
+        # -----------------------------------------------------
+        actualizar_factor_ajuste_camiones_v2_report(
+            start_date,
+            fin_efectiva,
+            dias_reproceso=0,
+            conn=db_conn,
+        )
+
+        print(
+            f"[RTO] Factor ajuste actualizado: "
+            f"{start_date} -> {fin_efectiva}"
+        )
+
+        # -----------------------------------------------------
+        # 4. Clays + 5. Cache
+        # -----------------------------------------------------
+        actualizar_reporte_turno_cache_emision(
+            start_date,
+            fin_exclusivo,
+            conn=db_conn,
+        )
+
+        # -----------------------------------------------------
+        # Validación final en la misma conexión.
+        # -----------------------------------------------------
+        filas = db_conn.execute(
+            _sa_text(f"""
+                SELECT
+                    Fecha,
+                    Turno,
+                    Fecha_Actualizacion
+                FROM {TABLE_REPORTE_TURNO_CACHE_EMISION}
+                WHERE Fecha >= :inicio
+                  AND Fecha < :fin
+            """),
+            {
+                "inicio": start_date,
+                "fin": fin_exclusivo,
+            },
+        ).mappings().all()
+
+        _validar_frescura_cache_turno(
+            filas,
+            start_date,
+            fin_exclusivo,
+            fin_efectiva,
+            desde,
+        )
+
+        print(
+            "[RTO] Validación cache: OK; "
+            f"filas={len(filas)}; "
+            f"corte={fin_efectiva}; "
+            "A/B presentes"
+        )
+
+        return {
+            "inicio": start_date,
+            "fin_solicitada": end_date,
+            "fecha_corte_operacional": fin_efectiva,
+            "inicio_ventana": ventana,
+            "fin_sql_exclusivo": fin_exclusivo,
+            "filas_cache": len(filas),
+            "rangos_historico": rangos,
+        }

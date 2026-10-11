@@ -1,9 +1,20 @@
-from flask import Blueprint, request, jsonify, session, render_template_string,redirect,render_template
+import os
+import re
+
+from flask import Blueprint, request, session, redirect, render_template
 from sqlalchemy import text
-from werkzeug.security import generate_password_hash, check_password_hash
+from passlib.hash import django_pbkdf2_sha256
 from db_connection import get_engine
+from env_loader import load_app_env
+
+load_app_env()
 
 auth_bp = Blueprint("auth", __name__, template_folder="templatesFrontend")
+
+
+LOGIN_TABLE = os.environ["LOGIN_DATABASE"]
+if not re.fullmatch(r"[\w.]+", LOGIN_TABLE):
+    raise ValueError(f"LOGIN_DATABASE inválido: {LOGIN_TABLE!r}")
 
 
 @auth_bp.route("/login_page")
@@ -11,50 +22,27 @@ def login_page():
     return render_template("login.html")
 
 
-@auth_bp.route("/register", methods=["POST"])
-def register():
-    data = request.get_json()
-    username = data["username"]
-    password = data["password"]
-
-    engine = get_engine()
-    hashed = generate_password_hash(password)
-
-    with engine.begin() as conn:
-        # Verificar si existe
-        existing = conn.execute(text("SELECT 1 FROM inventar_SpcHidr.usuarios WHERE username=:u"), {"u": username}).fetchone()
-        if existing:
-            return jsonify({"error": "Usuario ya existe"}), 400
-
-        conn.execute(
-            text("INSERT INTO inventar_SpcHidr.usuarios (username, password_hash) VALUES (:u, :p)"),
-            {"u": username, "p": hashed}
-        )
-
-    return jsonify({"message": "Usuario creado"}), 201
-
-
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    username = request.form["username"]
-    password = request.form["password"]
+    username = request.form.get("username", "")
+    password = request.form.get("password", "")
     engine = get_engine()
     with engine.connect() as conn:
         row = conn.execute(
-            text("SELECT password_hash FROM inventar_SpcHidr.usuarios WHERE username=:u"),
+            # ponytail: la tabla no se puede parametrizar; viene de env, validada arriba.
+            text(f"SELECT password FROM {LOGIN_TABLE} WHERE username=:u AND is_active=1"),
             {"u": username}
         ).fetchone()
-    
-    if row and check_password_hash(row.password_hash, password):
+
+    # Django guarda "!xxxx" para cuentas sin password usable -> verify() tira ValueError.
+    if row and django_pbkdf2_sha256.identify(row.password) \
+            and django_pbkdf2_sha256.verify(password, row.password):
         session["user"] = username
         return redirect("/")
-    session["user"] = username
-    return redirect("/")
-    #return jsonify({"error": "Credenciales inválidas"}), 401
+    return redirect("/auth/login_page?error=1")
 
 
 @auth_bp.route("/logout")
 def logout():
     session.pop("user", None)
-    return redirect("/auth/login_page")  #jsonify({"message": "Sesión cerrada"}), 200
-
+    return redirect("/auth/login_page")

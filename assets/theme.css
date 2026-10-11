@@ -17,7 +17,7 @@
   --siir-bg:            #F5F6FA;
   --siir-white:         #FFFFFF;
   --siir-green:         #22C55E;
-  --siir-sidebar-w:     230px;
+  --siir-sidebar-w:     250px;
   --siir-radius:        8px;
   --siir-radius-card:   10px;
   --siir-transition:    0.18s ease;
@@ -138,6 +138,10 @@ a:hover { color: var(--siir-orange-hover); text-decoration: none; }
   border-left-color: var(--siir-orange);
 }
 
+.siir-nav-link > .bi {
+  flex-shrink: 0;
+}
+
 .siir-nav-link.active,
 .siir-nav-link.active:focus {
   background: var(--siir-orange-light) !important;
@@ -154,6 +158,27 @@ a:hover { color: var(--siir-orange-hover); text-decoration: none; }
   padding: 24px 32px;
   overflow-x: hidden;
   min-width: 0;
+}
+
+/* Keep the existing side-by-side layout without imposing desktop width on phones. */
+@media (max-width: 767px) {
+  .siir-sidebar {
+    width: min(var(--siir-sidebar-w), 40vw);
+  }
+
+  .siir-nav-link {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .siir-sidebar-brand > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .siir-main {
+    padding: 16px;
+  }
 }
 
 /* ================================================================
@@ -372,3 +397,160 @@ a:hover { color: var(--siir-orange-hover); text-decoration: none; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--siir-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--siir-muted); }
+
+/* Polinomio ácido: lectura visual de la función por ramas */
+.polinomio-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.polinomio-arrow { color: var(--siir-orange); font-size: 1.5rem; font-weight: 700; }
+.polinomio-decision {
+  border: 2px solid var(--siir-orange);
+  border-radius: 8px;
+  padding: 8px 16px;
+  background: var(--siir-orange-light);
+  font-weight: 700;
+}
+.polinomio-branch-title {
+  border-left: 5px solid;
+  padding: 7px 10px;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+.polinomio-branch-title.sulfuro { border-color: #548235; background: #eef6ea; }
+.polinomio-branch-title.oxido { border-color: #1f4e78; background: #eaf2f8; }
+.polinomio-formula { overflow-wrap: anywhere; }
+.polinomio-leyendas { display: flex; flex-wrap: wrap; gap: 8px; }
+.polinomio-leyenda,
+.polinomio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 3px 7px;
+  margin: 2px;
+  background: #fff;
+  white-space: nowrap;
+}
+.polinomio-chip {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  grid-template-areas: "position value label" "position name name";
+  column-gap: 7px;
+  cursor: pointer;
+  vertical-align: middle;
+  text-align: left;
+  transition: transform var(--siir-transition), box-shadow var(--siir-transition);
+}
+.polinomio-chip-posicion,
+.polinomio-posicion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: currentColor;
+  color: #fff;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.polinomio-chip-posicion { grid-area: position; align-self: stretch; }
+.polinomio-posicion { margin-right: 7px; }
+.polinomio-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.16);
+}
+.polinomio-chip-valor { grid-area: value; font-size: 1rem; }
+.polinomio-chip-etiqueta { grid-area: label; font-size: 0.72rem; font-weight: 700; }
+.polinomio-chip-nombre {
+  grid-area: name;
+  opacity: 0.75;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.66rem;
+}
+.polinomio-chip-editar {
+  position: absolute;
+  right: 4px;
+  top: 3px;
+  opacity: 0;
+  font-size: 0.68rem;
+}
+.polinomio-chip:hover .polinomio-chip-editar { opacity: 1; }
+.polinomio-leyenda { font-size: 0.75rem; font-weight: 700; }
+.polinomio-chip.umbral, .polinomio-leyenda.umbral { color: #1F4E78; background: #EAF2F8; }
+.polinomio-chip.minimo, .polinomio-leyenda.minimo { color: #548235; background: #EEF6EA; }
+.polinomio-chip.base, .polinomio-leyenda.base { color: #A84F10; background: #FFF1E8; }
+.polinomio-chip.cus, .polinomio-leyenda.cus { color: #7030A0; background: #F4EAFB; }
+.polinomio-chip.co3, .polinomio-leyenda.co3 { color: #007A7A; background: #E7F6F6; }
+.polinomio-campo {
+  padding-top: 6px;
+  border-radius: 8px;
+  transition: background var(--siir-transition), box-shadow var(--siir-transition);
+}
+.polinomio-campo:focus-within {
+  background: var(--siir-orange-light);
+  box-shadow: 0 0 0 2px rgba(232,109,31,0.22);
+}
+.polinomio-color-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 7px;
+}
+.polinomio-color-dot.umbral { background: #1F4E78; }
+.polinomio-color-dot.minimo { background: #548235; }
+.polinomio-color-dot.base { background: #A84F10; }
+.polinomio-color-dot.cus { background: #7030A0; }
+.polinomio-color-dot.co3 { background: #007A7A; }
+.polinomio-input { border-left-width: 5px; scroll-margin-top: 20px; }
+.polinomio-input.umbral { border-left-color: #1F4E78; }
+.polinomio-input.minimo { border-left-color: #548235; }
+.polinomio-input.base { border-left-color: #A84F10; }
+.polinomio-input.cus { border-left-color: #7030A0; }
+.polinomio-input.co3 { border-left-color: #007A7A; }
+.polinomio-ficha {
+  border: 1px solid #8b8b8b;
+  background: #fff;
+}
+.polinomio-ficha-titulo {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  border-right: 1px solid #8b8b8b;
+  color: #8A5A13;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.polinomio-ficha-contenido { padding: 18px 20px; }
+.polinomio-ficha-seccion { padding: 8px 10px; border-left: 4px solid; }
+.polinomio-ficha-seccion + .polinomio-ficha-seccion { margin-top: 18px; }
+.polinomio-ficha-seccion.sulfuro { border-color: #548235; }
+.polinomio-ficha-seccion.oxido { border-color: #1F4E78; }
+.polinomio-ficha-linea {
+  margin-top: 8px;
+  line-height: 1.9;
+}
+.polinomio-ficha-linea.tecnica {
+  color: var(--siir-muted);
+  font-size: 0.78rem;
+  border-top: 1px dashed var(--siir-border);
+  padding-top: 6px;
+}
+@media (max-width: 767.98px) {
+  .polinomio-ficha-titulo {
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid #8b8b8b;
+  }
+}

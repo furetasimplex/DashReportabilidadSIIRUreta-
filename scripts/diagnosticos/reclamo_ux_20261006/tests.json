@@ -1,0 +1,19 @@
+{
+  "checks": {
+    "original_ids_preserved": true,
+    "only_new_id_main_tabs": true,
+    "no_duplicate_layout_ids": true,
+    "callback_decorators_unchanged": true,
+    "db_calls_unchanged": true,
+    "registered_callback_count": true,
+    "automatizacion_input_registered": true,
+    "panel_compiles": true
+  },
+  "callback_count": 26,
+  "ids_before": 74,
+  "ids_after": 75,
+  "db_calls": 25,
+  "new_ids": [
+    "reclamo-main-tabs"
+  ]
+}

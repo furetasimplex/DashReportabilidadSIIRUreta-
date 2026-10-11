@@ -1,5 +1,4 @@
 # tabs_recon_cas.py
-import json
 import os
 import io
 import base64
@@ -11,25 +10,14 @@ from dash import html, dcc, Input, Output, State, ctx
 import dash_bootstrap_components as dbc
 import dash_ag_grid as dag
 from dash import no_update
-import urllib
-import time
 
 # Utils propios
 from tabs.utils_dash import (
     get_fig_bal_casos,        # devuelve src para <img> (base64/data-url o ruta servible)
     get_agua_his_casos,       # histórico
     get_data_agua_casos,      # caso activo
-    get_data_save_casos,
-    get_info_caso_html,       # para flowsheet
+    get_data_save_casos,      # persiste edición de caso
 )
-
-# ====== Ajuste reporte (DEBUG) ======
-# OJO: ajusta este import si tu estructura es distinta.
-try:
-    from ajuste_reporte.rep_prod_adjuster import run_ajuste_reporte_prod
-except Exception as _e:
-    run_ajuste_reporte_prod = None
-
 
 # ====== Definiciones de columnas (AgGrid) ======
 columnsDefs_data_casos = [
@@ -49,7 +37,6 @@ columnsDefs_hist_caso = [
     {'field': 'modelo',       'maxWidth': 120, 'editable': True},
     {'field': 'comentarios',  'maxWidth': 260, 'editable': True},
 ]
-
 
 # ====== Layout ======
 def render_recon_cas():
@@ -130,23 +117,7 @@ def render_recon_cas():
                                 id='btn-save-casos', n_clicks=0,
                                 color="success", className="w-100"
                             ),
-                            html.Small(id='btn-sim-msg_caso', className='text-muted', children=' '),
-
-                            # ===== NUEVO BOTÓN DEBUG =====
-                            dbc.Button(
-                                [html.I(className="bi bi-gear-wide-connected me-2"), "Ajustar Reporte (debug)"],
-                                id='btn-ajustar-reporte', n_clicks=0,
-                                color="warning", outline=False, className="w-100"
-                            ),
-                            dcc.Loading(
-                                html.Div(
-                                    id='btn-ajustar-msg',
-                                    className="small text-muted",
-                                    children=" "
-                                ),
-                                type="default"
-                            ),
-                            # =============================
+                            html.Small(id='btn-sim-msg_caso', className='text-muted', children=' ')
                         ], gap=2)
                     ], md=3),
                 ], className="gy-2"),
@@ -157,25 +128,57 @@ def render_recon_cas():
         dbc.Card([
             dbc.CardHeader(html.H5("Visualización", className="mb-0")),
             dbc.CardBody([
+                html.Label("Valores a visualizar", className="fw-semibold"),
+                dbc.RadioItems(
+                    id="agg-tab2",
+                    options=[
+                        {"label": "Medidos",      "value": "Medido"},
+                        {"label": "Reconciliado", "value": "Reconciliado"},
+                        {"label": "Tolerancia",   "value": "Tolerancia"},
+                    ],
+                    value="Reconciliado",
+                    inline=True,
+                ),
                 html.Div(className="my-3"),
                 dbc.Row([
                     dbc.Col([
                         dcc.Loading(
-                            html.Iframe(
-                                id="flowsheet-iframe",
-                                src="/assets/ripios.html",
-                                style={
-                                    "width": "100%",
-                                    "height": "80vh",
-                                    "border": "none",
-                                    "overflow": "hidden"
-                                }
+                            html.Img(
+                                id="imagen_balance",
+                                style={"width": "100%", "maxWidth": "1100px", "cursor": "zoom-in"}
                             ),
                             type="default"
                         ),
-                        html.Div(id="dummy-div", style={"display": "none"}),
+                        dbc.Stack(direction="horizontal", gap=2, className="mt-2", children=[
+                            dbc.Button(
+                                [html.I(className="bi bi-arrows-fullscreen me-2"), "Ver a pantalla completa"],
+                                id="btn-full-img", color="secondary", outline=True
+                            ),
+                        ]),
                     ], md=12),
                 ]),
+
+                # Modal fullscreen con zoom
+                dbc.Modal(
+                    id="modal-img", is_open=False, fullscreen=True, scrollable=True, size="xl",
+                    children=[
+                        dbc.ModalHeader(dbc.ModalTitle("Imagen: Balance")),
+                        dbc.ModalBody([
+                            html.Div("Zoom", className="mb-1 small text-muted"),
+                            dcc.Slider(id="zoom-img", min=0.5, max=3, step=0.1, value=1),
+
+                            # Contenedor con scroll para la imagen ampliada
+                            html.Div(
+                                id="img-zoom-wrapper",
+                                style={"overflow": "auto", "border": "1px solid #eee", "height": "70vh", "marginTop": "0.5rem"},
+                                children=html.Img(id="imagen_balance_modal", style={"width": "100%", "height": "auto"})
+                            ),
+                        ]),
+                        dbc.ModalFooter(
+                            dbc.Button("Cerrar", id="close-modal-img", className="ms-auto")
+                        ),
+                    ]
+                )
             ])
         ], className="mb-4 shadow-sm border-0"),
 
@@ -205,25 +208,28 @@ def register_recon_callbacks(app):
         Output('id_caso_activo', 'value'),
         Output('active-case', 'data'),
         Input('btn-get-casos', 'n_clicks'),
-        Input('id_caso_activo', 'value'),
+        Input('id_caso_activo', 'value'), # <--- AÑADIMOS EL INPUT DEL OTRO CALLBACK
         State('fecha_inicio_caso', 'value'),
         State('fecha_final_caso', 'value'),
         State('crea-caso', 'value'),
-        State('recon-data', 'data'),
+        State('recon-data', 'data'), # <--- Añadimos el State para no perder datos
         prevent_initial_call=True,
     )
     def manejar_casos_y_store(n_clicks, caso_id_manual, inicio, final, crea_caso, shared_data):
+        # --- Disparador del callback ---
         triggered_id = ctx.triggered_id
-        print(f"caso id manual: {caso_id_manual}, triggered by: {triggered_id}")
 
-        # Normalización estricta del Store del caso activo
+        # --- Normalización estricta del Store del caso activo ---
+        # 1) shared_data debe ser SIEMPRE un dict
         if not isinstance(shared_data, dict):
+            # Si por error llega una lista de dicts, toma el primero; en otro caso, dict vacío
             if isinstance(shared_data, list) and shared_data and isinstance(shared_data[0], dict):
-                shared_data = dict(shared_data[0])
+                shared_data = dict(shared_data[0])  # copia defensiva
             else:
                 shared_data = {}
 
-        # Normalizar flag crear caso
+        # 2) Normalizar el flag del checkbox/Select para "crear caso"
+        #    Tu UI a veces entrega ['Si'] o ['No']; volvemos a 'Si'/'No'
         if isinstance(crea_caso, (list, tuple)) and crea_caso:
             crea_flag = 'Si' if (crea_caso[0] == 'Si') else 'No'
         elif isinstance(crea_caso, str):
@@ -231,26 +237,21 @@ def register_recon_callbacks(app):
         else:
             crea_flag = 'No'
 
-        # Botón "Obtener Datos"
+        # --- 1) Botón "Obtener Datos" ---
         if triggered_id == 'btn-get-casos':
+            # Consultas a BD
+            df_caso = get_data_agua_casos(inicio, final, crea_flag)
             df_hist = get_agua_his_casos(final)
 
-            if caso_id_manual:
-                crea_flag = 'No'
-                df_caso_aux = df_hist.loc[df_hist['caso_id'] == caso_id_manual]
-                print(f"df_caso_aux: {df_caso_aux}")
-                final = df_caso_aux['fecha'].values[0]
-                inicio = df_caso_aux['fecha_ini'].values[0]
-
-            df_caso = get_data_agua_casos(inicio, final, crea_flag)
-
-            caso_id_calculado = caso_id_manual
+            caso_id_calculado = None
             if df_caso is not None and not df_caso.empty:
+                # Asegurar entero
                 try:
                     caso_id_calculado = int(df_caso['caso_id'].max())
                 except Exception:
                     caso_id_calculado = None
 
+            # Preparar store de caso activo (dict)
             new_shared_data = {
                 "caso_id": caso_id_calculado,
                 "fecha_inicio": inicio,
@@ -264,19 +265,25 @@ def register_recon_callbacks(app):
                 new_shared_data
             )
 
-        # Cambio manual del ID de caso
+        # --- 2) Cambio manual del ID de caso ---
         if triggered_id == 'id_caso_activo':
+            # Ignorar vacíos/None
             if caso_id_manual in (None, '', ' '):
                 return no_update, no_update, no_update, no_update
 
+            # Tipar a entero de forma segura
             try:
                 caso_id_manual_int = int(caso_id_manual)
             except Exception:
+                # Si no es convertible a int, no tocar nada
                 return no_update, no_update, no_update, no_update
 
+            # Actualizar SOLO el store, sin tocar las tablas
             shared_data["caso_id"] = caso_id_manual_int
+            # (Si quieres conservar también fechas previas en shared_data, no las borres)
             return no_update, no_update, no_update, shared_data
 
+        # --- 3) Ningún disparador relevante: no hacer nada ---
         return no_update, no_update, no_update, no_update
 
 
@@ -301,87 +308,45 @@ def register_recon_callbacks(app):
         except Exception as e:
             return f"❌ Error al guardar: {e}"
 
-
-    # ==============================================================================
-    # CALLBACK #3: ACTUALIZAR FLOWSHEET SEGÚN CASO
-    # ==============================================================================
+    # Actualizar imagen según selección e id caso activo
     @app.callback(
-        Output('flowsheet-iframe', 'src'),
-        Input("id_caso_activo", "value"),
+        Output('imagen_balance', 'src'),
+        Input('agg-tab2', 'value'),
+        Input('id_caso_activo', 'value'),
         prevent_initial_call=True,
     )
-    def actualizar_flowsheet(caso_id):
+    def actualizar_imagen(vista, caso_id):
         if not caso_id:
-            return no_update
-
+            return dash.no_update
         try:
-            info = get_info_caso_html(caso_id)
-            flows = info["flowData"]
-            nodes = info["nodeData"]
-
-            flow_json_str = json.dumps(flows)
-            node_json_str = json.dumps(nodes)
-
-            flow_encoded = urllib.parse.quote(flow_json_str, safe='')
-            node_encoded = urllib.parse.quote(node_json_str, safe='')
-            metric_encoded = urllib.parse.quote("TMS")
-
-            html_file = "/assets/ripios.html"
-            cache_buster = f"?v={time.time()}"
-
-            new_src = (
-                f"{html_file}{cache_buster}"
-                f"#flowData={flow_encoded}"
-                f"&nodeData={node_encoded}"
-                f"&metric={metric_encoded}"
-            )
-
-            print("Updated iframe src:", new_src)
-            return new_src
-
+            return get_fig_bal_casos(caso_id, vista)
         except Exception as e:
-            print("❌ ERROR en actualizar_flowsheet:", e)
-            return no_update
-
-
-    # ==============================================================================
-    # CALLBACK #4 (NUEVO): AJUSTAR REPORTE (DEBUG)
-    # ==============================================================================
+            # Si prefieres mostrar una alerta, podrías devolver
+            # un 1x1 transparente o similar.
+            return dash.no_update
+    # Abrir/cerrar modal y propagar el src de la imagen
     @app.callback(
-        Output("btn-ajustar-msg", "children"),
-        Input("btn-ajustar-reporte", "n_clicks"),
-        State("id_caso_activo", "value"),
-        prevent_initial_call=True,
+        Output("modal-img", "is_open"),
+        Output("imagen_balance_modal", "src"),
+        Input("btn-full-img", "n_clicks"),
+        Input("close-modal-img", "n_clicks"),
+        State("modal-img", "is_open"),
+        State("imagen_balance", "src"),
+        prevent_initial_call=True
     )
-    def ajustar_reporte_debug(n_clicks, caso_id):
-        if not n_clicks or ctx.triggered_id != "btn-ajustar-reporte":
-            return no_update
+    def toggle_modal(n_open, n_close, is_open, src):
+        if ctx.triggered_id == "btn-full-img":
+            # también actualizamos el href del link "Abrir en nueva pestaña"
+            return True, src
+        if ctx.triggered_id == "close-modal-img":
+            return False, no_update
+        return is_open, no_update
 
-        if not caso_id:
-            return "⚠️ Selecciona un caso (id_caso_activo) antes de ajustar."
-
-        if run_ajuste_reporte_prod is None:
-            return "❌ No se pudo importar run_ajuste_reporte_prod. Revisa: ajuste_reporte/rep_prod_adjuster.py"
-
-        try:
-            t0 = time.time()
-            res = run_ajuste_reporte_prod(int(caso_id))
-            dt_s = round(time.time() - t0, 2)
-
-            # res esperado: {"ok": True, "run_id": "...", "totales": {...}}
-            if isinstance(res, dict) and res.get("ok"):
-                run_id = res.get("run_id", "-")
-                tot = res.get("totales", {}) or {}
-                sum_ch = tot.get("sum_chancado", None)
-                sum_sal = tot.get("sum_sal", None)
-                sum_fi = tot.get("sum_finos", None)
-
-                return (
-                    f"✅ Ajuste OK | caso={caso_id} | run_id={run_id} | "
-                    f"t={dt_s}s | ΣCh={sum_ch} | ΣSal={sum_sal} | ΣFinos={sum_fi}"
-                )
-
-            return f"⚠️ Ajuste ejecutado, pero respuesta no esperada: {res}"
-
-        except Exception as e:
-            return f"❌ Error ajuste reporte (caso {caso_id}): {e}"
+    # Slider de zoom (simple: cambia el ancho relativo)
+    @app.callback(
+        Output("imagen_balance_modal", "style"),
+        Input("zoom-img", "value")
+    )
+    def zoom_image(zoom):
+        zoom = zoom or 1
+        return {"width": f"{int(zoom*100)}%", "height": "auto"}

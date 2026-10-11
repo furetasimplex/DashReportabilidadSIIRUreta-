@@ -1,0 +1,557 @@
+--- lixiviacion\diagnostico_auditoria\inventar_SpcHidr__vw_tablero_lixiviacion_final_v2.sql
++++ inventar_SpcHidr.vw_tablero_lixiviacion_final_v2 LIVE
+@@ -1,277 +1,277 @@
+-CREATE VIEW inventar_SpcHidr.vw_tablero_lixiviacion_final_v2
+-AS
+-
+-WITH
+-/*====================================================================
+-  FLUJO FISICO
+-  Grano: PAD + parcela + fecha
+-====================================================================*/
+-flujo_union AS
+-(
+-    SELECT
+-        1 AS pad_id,
+-        f.parcela_id,
+-        f.nro_parcela_pad,
+-        f.fecha,
+-        f.flujo_m3_h,
+-        f.flujo_m3_d
+-    FROM inventar_SpcHidr.vw_flujos_reales_oxido_long f
+-
+-    UNION ALL
+-
+-    SELECT
+-        2 AS pad_id,
+-        f.parcela_id,
+-        f.nro_parcela_pad,
+-        f.fecha,
+-        f.flujo_m3_h,
+-        f.flujo_m3_d
+-    FROM inventar_SpcHidr.vw_flujos_reales_sulfuro_long f
+-),
+-
+-/*====================================================================
+-  DRENAJE - FECHA OPERACIONAL VALIDADA
+-====================================================================*/
+-drenaje_union AS
+-(
+-    SELECT
+-        1 AS pad_id,
+-        d.fecha,
+-        d.nro_parcela_pad,
+-        d.cu_pp,
+-        d.h_p,
+-        d.ph,
+-        d.cl,
+-        d.fet,
+-        d.fe2,
+-        d.eh
+-    FROM inventar_SpcHidr.vw_drena_concentrados_oxido_long_operacional d
+-
+-    UNION ALL
+-
+-    SELECT
+-        2 AS pad_id,
+-        d.fecha,
+-        d.nro_parcela_pad,
+-        d.cu_pp,
+-        d.h_p,
+-        d.ph,
+-        d.cl,
+-        d.fet,
+-        d.fe2,
+-        d.eh
+-    FROM inventar_SpcHidr.vw_drena_concentrados_sulfuro_long_operacional d
+-),
+-
+-/*====================================================================
+-  REFINO - FECHA OPERACIONAL VALIDADA
+-====================================================================*/
+-refino_union AS
+-(
+-    SELECT
+-        1 AS pad_id,
+-        r.fecha,
+-        r.cu_pp,
+-        r.h_p,
+-        r.ph,
+-        r.cl,
+-        r.fet,
+-        r.fe2,
+-        r.eh
+-    FROM inventar_SpcHidr.vw_riego_oxido_refino_operacional r
+-
+-    UNION ALL
+-
+-    SELECT
+-        2 AS pad_id,
+-        r.fecha,
+-        r.cu_pp,
+-        r.h_p,
+-        r.ph,
+-        r.cl,
+-        r.fet,
+-        r.fe2,
+-        r.eh
+-    FROM inventar_SpcHidr.vw_riego_sulfuro_refino_operacional r
+-),
+-
+-/*====================================================================
+-  CPC REDUCIDA A CAMPANA + PARCELA
+-
+-  No se arrastra modulo_id ni id_campana_parcela_control.
+-====================================================================*/
+-campana_parcela_base AS
+-(
+-    SELECT
+-        c.pad_id,
+-        c.campana_id,
+-        c.numero_campana,
+-        c.parcela_id,
+-
+-        MIN(c.fecha_primer_riego)  AS fecha_primer_riego,
+-        MAX(c.fecha_ultimo_riego)  AS fecha_ultimo_riego,
+-
+-        MIN(c.fecha_ini_operacion) AS fecha_ini_operacion,
+-        MAX(c.fecha_fin_operacion) AS fecha_fin_operacion,
+-
+-        MIN(c.fecha_ini_drenaje)   AS fecha_ini_drenaje,
+-        MAX(c.fecha_fin_drenaje)   AS fecha_fin_drenaje
+-
+-    FROM inventar_SpcHidr.campana_parcela_control c
+-
+-    GROUP BY
+-        c.pad_id,
+-        c.campana_id,
+-        c.numero_campana,
+-        c.parcela_id
+-),
+-
+-/*====================================================================
+-  CAMPANA SIGUIENTE DE LA MISMA PARCELA
+-====================================================================*/
+-campana_parcela_orden AS
+-(
+-    SELECT
+-        c.*,
+-
+-        LEAD(c.fecha_primer_riego) OVER
+-        (
+-            PARTITION BY
+-                c.pad_id,
+-                c.parcela_id
+-
+-            ORDER BY
+-                c.fecha_primer_riego,
+-                c.campana_id
+-        ) AS siguiente_primer_riego
+-
+-    FROM campana_parcela_base c
+-),
+-
+-/*====================================================================
+-  VENTANA HIDRAULICA
+-====================================================================*/
+-campana_parcela AS
+-(
+-    SELECT
+-        c.*,
+-
+-        CASE
+-            WHEN c.fecha_ultimo_riego IS NULL
+-                THEN NULL
+-
+-            WHEN c.siguiente_primer_riego IS NULL
+-                THEN c.fecha_ultimo_riego
+-
+-            WHEN c.fecha_ultimo_riego <
+-                 DATEADD(DAY, -1, c.siguiente_primer_riego)
+-                THEN c.fecha_ultimo_riego
+-
+-            ELSE DATEADD(DAY, -1, c.siguiente_primer_riego)
+-
+-        END AS fecha_limite_hidraulica
+-
+-    FROM campana_parcela_orden c
+-)
+-
+-SELECT
+-    /* clave física */
+-    f.pad_id,
+-    f.parcela_id,
+-    f.nro_parcela_pad,
+-    f.fecha,
+-
+-    /* campaña: puede ser NULL */
+-    c.campana_id,
+-    c.numero_campana,
+-
+-    c.fecha_primer_riego,
+-    c.fecha_ultimo_riego,
+-    c.fecha_limite_hidraulica,
+-
+-    c.fecha_ini_operacion,
+-    c.fecha_fin_operacion,
+-    c.fecha_ini_drenaje,
+-    c.fecha_fin_drenaje,
+-
+-    CASE
+-        WHEN c.campana_id IS NULL
+-            THEN 'FUERA_VENTANA_RIEGO'
+-        ELSE 'CAMPANA_HIDRAULICA'
+-    END AS estado_asignacion,
+-
+-    /* flujo físico */
+-    f.flujo_m3_h,
+-    f.flujo_m3_d,
+-
+-    /* drenaje */
+-    d.cu_pp AS cu_drenaje_gl,
+-    d.h_p   AS h_drenaje,
+-    d.ph    AS ph_drenaje,
+-    d.cl    AS cl_drenaje,
+-    d.fet   AS fet_drenaje,
+-    d.fe2   AS fe2_drenaje,
+-    d.eh    AS eh_drenaje,
+-
+-    /* refino */
+-    r.cu_pp AS cu_refino_gl,
+-    r.h_p   AS h_refino,
+-    r.ph    AS ph_refino,
+-    r.cl    AS cl_refino,
+-    r.fet   AS fet_refino,
+-    r.fe2   AS fe2_refino,
+-    r.eh    AS eh_refino,
+-
+-    /* Cu */
+-    CASE
+-        WHEN d.cu_pp IS NOT NULL
+-         AND r.cu_pp IS NOT NULL
+-        THEN d.cu_pp - r.cu_pp
+-    END AS delta_cu_gl,
+-
+-    /* m3/d × g/L = kg/d */
+-    CASE
+-        WHEN f.flujo_m3_d IS NOT NULL
+-         AND d.cu_pp IS NOT NULL
+-         AND r.cu_pp IS NOT NULL
+-        THEN
+-            f.flujo_m3_d
+-            * (d.cu_pp - r.cu_pp)
+-    END AS transferencia_cu_kg_d,
+-
+-    /* kg/d / 1000 = t/d
+-       Se estabiliza primero el valor kg/d a 6 decimales
+-       y se conserva precisión suficiente al convertir a toneladas.
+-    */
+-    CASE
+-        WHEN f.flujo_m3_d IS NOT NULL
+-         AND d.cu_pp IS NOT NULL
+-         AND r.cu_pp IS NOT NULL
+-        THEN
+-            CAST(
+-                CAST(
+-                    f.flujo_m3_d
+-                    * (d.cu_pp - r.cu_pp)
+-                    AS decimal(31,6)
+-                )
+-                / CAST(1000.0 AS decimal(5,1))
+-                AS decimal(38,9)
+-            )
+-    END AS transferencia_cu_t_d
+-
+-FROM flujo_union f
+-
+-LEFT JOIN campana_parcela c
+-    ON  c.pad_id     = f.pad_id
+-    AND c.parcela_id = f.parcela_id
+-    AND f.fecha >= c.fecha_primer_riego
+-    AND f.fecha <= c.fecha_limite_hidraulica
+-
+-LEFT JOIN drenaje_union d
+-    ON  d.pad_id          = f.pad_id
+-    AND d.nro_parcela_pad = f.nro_parcela_pad
+-    AND d.fecha            = f.fecha
+-
+-LEFT JOIN refino_union r
+-    ON  r.pad_id = f.pad_id
+-    AND r.fecha  = f.fecha;
++CREATE VIEW inventar_SpcHidr.vw_tablero_lixiviacion_final_v2
++AS
++
++WITH
++/*====================================================================
++  FLUJO FISICO
++  Grano: PAD + parcela + fecha
++====================================================================*/
++flujo_union AS
++(
++    SELECT
++        1 AS pad_id,
++        f.parcela_id,
++        f.nro_parcela_pad,
++        f.fecha,
++        f.flujo_m3_h,
++        f.flujo_m3_d
++    FROM inventar_SpcHidr.vw_flujos_reales_oxido_long f
++
++    UNION ALL
++
++    SELECT
++        2 AS pad_id,
++        f.parcela_id,
++        f.nro_parcela_pad,
++        f.fecha,
++        f.flujo_m3_h,
++        f.flujo_m3_d
++    FROM inventar_SpcHidr.vw_flujos_reales_sulfuro_long f
++),
++
++/*====================================================================
++  DRENAJE - FECHA OPERACIONAL VALIDADA
++====================================================================*/
++drenaje_union AS
++(
++    SELECT
++        1 AS pad_id,
++        d.fecha,
++        d.nro_parcela_pad,
++        d.cu_pp,
++        d.h_p,
++        d.ph,
++        d.cl,
++        d.fet,
++        d.fe2,
++        d.eh
++    FROM inventar_SpcHidr.vw_drena_concentrados_oxido_long_operacional d
++
++    UNION ALL
++
++    SELECT
++        2 AS pad_id,
++        d.fecha,
++        d.nro_parcela_pad,
++        d.cu_pp,
++        d.h_p,
++        d.ph,
++        d.cl,
++        d.fet,
++        d.fe2,
++        d.eh
++    FROM inventar_SpcHidr.vw_drena_concentrados_sulfuro_long_operacional d
++),
++
++/*====================================================================
++  REFINO - FECHA OPERACIONAL VALIDADA
++====================================================================*/
++refino_union AS
++(
++    SELECT
++        1 AS pad_id,
++        r.fecha,
++        r.cu_pp,
++        r.h_p,
++        r.ph,
++        r.cl,
++        r.fet,
++        r.fe2,
++        r.eh
++    FROM inventar_SpcHidr.vw_riego_oxido_refino_operacional r
++
++    UNION ALL
++
++    SELECT
++        2 AS pad_id,
++        r.fecha,
++        r.cu_pp,
++        r.h_p,
++        r.ph,
++        r.cl,
++        r.fet,
++        r.fe2,
++        r.eh
++    FROM inventar_SpcHidr.vw_riego_sulfuro_refino_operacional r
++),
++
++/*====================================================================
++  CPC REDUCIDA A CAMPANA + PARCELA
++
++  No se arrastra modulo_id ni id_campana_parcela_control.
++====================================================================*/
++campana_parcela_base AS
++(
++    SELECT
++        c.pad_id,
++        c.campana_id,
++        c.numero_campana,
++        c.parcela_id,
++
++        MIN(c.fecha_primer_riego)  AS fecha_primer_riego,
++        MAX(c.fecha_ultimo_riego)  AS fecha_ultimo_riego,
++
++        MIN(c.fecha_ini_operacion) AS fecha_ini_operacion,
++        MAX(c.fecha_fin_operacion) AS fecha_fin_operacion,
++
++        MIN(c.fecha_ini_drenaje)   AS fecha_ini_drenaje,
++        MAX(c.fecha_fin_drenaje)   AS fecha_fin_drenaje
++
++    FROM inventar_SpcHidr.campana_parcela_control c
++
++    GROUP BY
++        c.pad_id,
++        c.campana_id,
++        c.numero_campana,
++        c.parcela_id
++),
++
++/*====================================================================
++  CAMPANA SIGUIENTE DE LA MISMA PARCELA
++====================================================================*/
++campana_parcela_orden AS
++(
++    SELECT
++        c.*,
++
++        LEAD(c.fecha_primer_riego) OVER
++        (
++            PARTITION BY
++                c.pad_id,
++                c.parcela_id
++
++            ORDER BY
++                c.fecha_primer_riego,
++                c.campana_id
++        ) AS siguiente_primer_riego
++
++    FROM campana_parcela_base c
++),
++
++/*====================================================================
++  VENTANA HIDRAULICA
++====================================================================*/
++campana_parcela AS
++(
++    SELECT
++        c.*,
++
++        CASE
++            WHEN c.fecha_ultimo_riego IS NULL
++                THEN NULL
++
++            WHEN c.siguiente_primer_riego IS NULL
++                THEN c.fecha_ultimo_riego
++
++            WHEN c.fecha_ultimo_riego <
++                 DATEADD(DAY, -1, c.siguiente_primer_riego)
++                THEN c.fecha_ultimo_riego
++
++            ELSE DATEADD(DAY, -1, c.siguiente_primer_riego)
++
++        END AS fecha_limite_hidraulica
++
++    FROM campana_parcela_orden c
++)
++
++SELECT
++    /* clave física */
++    f.pad_id,
++    f.parcela_id,
++    f.nro_parcela_pad,
++    f.fecha,
++
++    /* campaña: puede ser NULL */
++    c.campana_id,
++    c.numero_campana,
++
++    c.fecha_primer_riego,
++    c.fecha_ultimo_riego,
++    c.fecha_limite_hidraulica,
++
++    c.fecha_ini_operacion,
++    c.fecha_fin_operacion,
++    c.fecha_ini_drenaje,
++    c.fecha_fin_drenaje,
++
++    CASE
++        WHEN c.campana_id IS NULL
++            THEN 'FUERA_VENTANA_RIEGO'
++        ELSE 'CAMPANA_HIDRAULICA'
++    END AS estado_asignacion,
++
++    /* flujo físico */
++    f.flujo_m3_h,
++    f.flujo_m3_d,
++
++    /* drenaje */
++    d.cu_pp AS cu_drenaje_gl,
++    d.h_p   AS h_drenaje,
++    d.ph    AS ph_drenaje,
++    d.cl    AS cl_drenaje,
++    d.fet   AS fet_drenaje,
++    d.fe2   AS fe2_drenaje,
++    d.eh    AS eh_drenaje,
++
++    /* refino */
++    r.cu_pp AS cu_refino_gl,
++    r.h_p   AS h_refino,
++    r.ph    AS ph_refino,
++    r.cl    AS cl_refino,
++    r.fet   AS fet_refino,
++    r.fe2   AS fe2_refino,
++    r.eh    AS eh_refino,
++
++    /* Cu */
++    CASE
++        WHEN d.cu_pp IS NOT NULL
++         AND r.cu_pp IS NOT NULL
++        THEN d.cu_pp - r.cu_pp
++    END AS delta_cu_gl,
++
++    /* m3/d × g/L = kg/d */
++    CASE
++        WHEN f.flujo_m3_d IS NOT NULL
++         AND d.cu_pp IS NOT NULL
++         AND r.cu_pp IS NOT NULL
++        THEN
++            f.flujo_m3_d
++            * (d.cu_pp - r.cu_pp)
++    END AS transferencia_cu_kg_d,
++
++    /* kg/d / 1000 = t/d
++       Se estabiliza primero el valor kg/d a 6 decimales
++       y se conserva precisión suficiente al convertir a toneladas.
++    */
++    CASE
++        WHEN f.flujo_m3_d IS NOT NULL
++         AND d.cu_pp IS NOT NULL
++         AND r.cu_pp IS NOT NULL
++        THEN
++            CAST(
++                CAST(
++                    f.flujo_m3_d
++                    * (d.cu_pp - r.cu_pp)
++                    AS decimal(31,6)
++                )
++                / CAST(1000.0 AS decimal(5,1))
++                AS decimal(38,9)
++            )
++    END AS transferencia_cu_t_d
++
++FROM flujo_union f
++
++LEFT JOIN campana_parcela c
++    ON  c.pad_id     = f.pad_id
++    AND c.parcela_id = f.parcela_id
++    AND f.fecha >= c.fecha_primer_riego
++    AND f.fecha <= c.fecha_limite_hidraulica
++
++LEFT JOIN drenaje_union d
++    ON  d.pad_id          = f.pad_id
++    AND d.nro_parcela_pad = f.nro_parcela_pad
++    AND d.fecha            = f.fecha
++
++LEFT JOIN refino_union r
++    ON  r.pad_id = f.pad_id
++    AND r.fecha  = f.fecha;

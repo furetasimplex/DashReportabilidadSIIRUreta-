@@ -1,0 +1,452 @@
+[
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 1,
+    "rep": 1,
+    "figure_seconds": 0.39683010010048747,
+    "serialization_seconds": 0.012517800088971853,
+    "json_bytes": 7583,
+    "sql_execute_fetch_seconds": 0.5564164000097662
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 1,
+    "rep": 2,
+    "figure_seconds": 0.050948600051924586,
+    "serialization_seconds": 0.005029299994930625,
+    "json_bytes": 7583,
+    "sql_execute_fetch_seconds": 0.5326310999225825
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 1,
+    "rep": 3,
+    "figure_seconds": 0.05089139984920621,
+    "serialization_seconds": 0.006100200116634369,
+    "json_bytes": 7583,
+    "sql_execute_fetch_seconds": 0.5436680999118835
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 7,
+    "rep": 1,
+    "figure_seconds": 0.07206229981966317,
+    "serialization_seconds": 0.0021201001945883036,
+    "json_bytes": 8399,
+    "sql_execute_fetch_seconds": 3.4797231999691576
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 7,
+    "rep": 2,
+    "figure_seconds": 0.0433487999252975,
+    "serialization_seconds": 0.0022368000354617834,
+    "json_bytes": 8399,
+    "sql_execute_fetch_seconds": 3.512540200026706
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 7,
+    "rep": 3,
+    "figure_seconds": 0.05768630001693964,
+    "serialization_seconds": 0.003372600069269538,
+    "json_bytes": 8399,
+    "sql_execute_fetch_seconds": 3.4225107000675052
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 31,
+    "rep": 1,
+    "figure_seconds": 0.08379649999551475,
+    "serialization_seconds": 0.012425200082361698,
+    "json_bytes": 11663,
+    "sql_execute_fetch_seconds": 15.46852090000175
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 31,
+    "rep": 2,
+    "figure_seconds": 0.04318930022418499,
+    "serialization_seconds": 0.0024259998463094234,
+    "json_bytes": 11663,
+    "sql_execute_fetch_seconds": 15.672800699947402
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 31,
+    "rep": 3,
+    "figure_seconds": 0.06782080000266433,
+    "serialization_seconds": 0.003054100088775158,
+    "json_bytes": 11663,
+    "sql_execute_fetch_seconds": 15.356774599989876
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 62,
+    "rep": 1,
+    "figure_seconds": 0.10123140015639365,
+    "serialization_seconds": 0.008771899854764342,
+    "json_bytes": 15879,
+    "sql_execute_fetch_seconds": 30.87870439980179
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 62,
+    "rep": 2,
+    "figure_seconds": 0.034803900169208646,
+    "serialization_seconds": 0.0027272000443190336,
+    "json_bytes": 15879,
+    "sql_execute_fetch_seconds": 31.905658000148833
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 62,
+    "rep": 3,
+    "figure_seconds": 0.04343670001253486,
+    "serialization_seconds": 0.004390199901536107,
+    "json_bytes": 15879,
+    "sql_execute_fetch_seconds": 31.418038700008765
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 102,
+    "rep": 1,
+    "figure_seconds": 0.05519330012612045,
+    "serialization_seconds": 0.006649599876254797,
+    "json_bytes": 21319,
+    "sql_execute_fetch_seconds": 50.28231930010952
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 102,
+    "rep": 2,
+    "figure_seconds": 0.0662801000289619,
+    "serialization_seconds": 0.008334500016644597,
+    "json_bytes": 21319,
+    "sql_execute_fetch_seconds": 50.87073620012961
+  },
+  {
+    "pad": 1,
+    "parcel_number": 1,
+    "days": 102,
+    "rep": 3,
+    "figure_seconds": 0.04468340007588267,
+    "serialization_seconds": 0.004890199983492494,
+    "json_bytes": 21319,
+    "sql_execute_fetch_seconds": 51.158602700103074
+  },
+  {
+    "pad": 1,
+    "parcel_number": 17,
+    "days": 102,
+    "rep": 1,
+    "figure_seconds": 0.07153249997645617,
+    "serialization_seconds": 0.005511800060048699,
+    "json_bytes": 20209,
+    "sql_execute_fetch_seconds": 51.47939390013926
+  },
+  {
+    "pad": 1,
+    "parcel_number": 17,
+    "days": 102,
+    "rep": 2,
+    "figure_seconds": 0.05681369989179075,
+    "serialization_seconds": 0.004989200038835406,
+    "json_bytes": 20209,
+    "sql_execute_fetch_seconds": 51.25334830000065
+  },
+  {
+    "pad": 1,
+    "parcel_number": 17,
+    "days": 102,
+    "rep": 3,
+    "figure_seconds": 0.05392239987850189,
+    "serialization_seconds": 0.004344000015407801,
+    "json_bytes": 20209,
+    "sql_execute_fetch_seconds": 50.98191460012458
+  },
+  {
+    "pad": 1,
+    "parcel_number": 29,
+    "days": 102,
+    "rep": 1,
+    "figure_seconds": 0.2068372000940144,
+    "serialization_seconds": 0.02457199990749359,
+    "json_bytes": 21400,
+    "sql_execute_fetch_seconds": 50.8943711000029
+  },
+  {
+    "pad": 1,
+    "parcel_number": 29,
+    "days": 102,
+    "rep": 2,
+    "figure_seconds": 0.059716799994930625,
+    "serialization_seconds": 0.004287400050088763,
+    "json_bytes": 21400,
+    "sql_execute_fetch_seconds": 50.87910560006276
+  },
+  {
+    "pad": 1,
+    "parcel_number": 29,
+    "days": 102,
+    "rep": 3,
+    "figure_seconds": 0.04766579996794462,
+    "serialization_seconds": 0.005573099944740534,
+    "json_bytes": 21400,
+    "sql_execute_fetch_seconds": 51.11170840007253
+  },
+  {
+    "pad": 2,
+    "parcel_number": 1,
+    "days": 102,
+    "rep": 1,
+    "figure_seconds": 0.06783880013972521,
+    "serialization_seconds": 0.005978399887681007,
+    "json_bytes": 20751,
+    "sql_execute_fetch_seconds": 50.30723079992458
+  },
+  {
+    "pad": 2,
+    "parcel_number": 1,
+    "days": 102,
+    "rep": 2,
+    "figure_seconds": 0.058568800101056695,
+    "serialization_seconds": 0.00745539995841682,
+    "json_bytes": 20751,
+    "sql_execute_fetch_seconds": 50.87836560001597
+  },
+  {
+    "pad": 2,
+    "parcel_number": 1,
+    "days": 102,
+    "rep": 3,
+    "figure_seconds": 0.05488210008479655,
+    "serialization_seconds": 0.0035190999042242765,
+    "json_bytes": 20751,
+    "sql_execute_fetch_seconds": 51.824722399935126
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 1,
+    "rep": 1,
+    "figure_seconds": 0.03491679998114705,
+    "serialization_seconds": 0.0021784999407827854,
+    "json_bytes": 7583,
+    "sql_execute_fetch_seconds": 0.634806300047785
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 1,
+    "rep": 2,
+    "figure_seconds": 0.04080100008286536,
+    "serialization_seconds": 0.003309600055217743,
+    "json_bytes": 7583,
+    "sql_execute_fetch_seconds": 0.5830796000082046
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 1,
+    "rep": 3,
+    "figure_seconds": 0.04137120000086725,
+    "serialization_seconds": 0.0033098000567406416,
+    "json_bytes": 7583,
+    "sql_execute_fetch_seconds": 0.6286228999961168
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 7,
+    "rep": 1,
+    "figure_seconds": 0.04603309999220073,
+    "serialization_seconds": 0.0028643999248743057,
+    "json_bytes": 8399,
+    "sql_execute_fetch_seconds": 3.4789617001079023
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 7,
+    "rep": 2,
+    "figure_seconds": 0.060829600086435676,
+    "serialization_seconds": 0.004925000015646219,
+    "json_bytes": 8399,
+    "sql_execute_fetch_seconds": 3.6710051000118256
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 7,
+    "rep": 3,
+    "figure_seconds": 0.042364299995824695,
+    "serialization_seconds": 0.005430999910458922,
+    "json_bytes": 8399,
+    "sql_execute_fetch_seconds": 3.5359726999886334
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 31,
+    "rep": 1,
+    "figure_seconds": 0.057400599820539355,
+    "serialization_seconds": 0.0034100001212209463,
+    "json_bytes": 11653,
+    "sql_execute_fetch_seconds": 15.323990899836645
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 31,
+    "rep": 2,
+    "figure_seconds": 0.0415849001146853,
+    "serialization_seconds": 0.002723800018429756,
+    "json_bytes": 11653,
+    "sql_execute_fetch_seconds": 15.31512299994938
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 31,
+    "rep": 3,
+    "figure_seconds": 0.07590349996462464,
+    "serialization_seconds": 0.006555899977684021,
+    "json_bytes": 11653,
+    "sql_execute_fetch_seconds": 14.903585799969733
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 62,
+    "rep": 1,
+    "figure_seconds": 0.04045179998502135,
+    "serialization_seconds": 0.003634700085967779,
+    "json_bytes": 15836,
+    "sql_execute_fetch_seconds": 30.66455870005302
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 62,
+    "rep": 2,
+    "figure_seconds": 0.064776899991557,
+    "serialization_seconds": 0.008087700000032783,
+    "json_bytes": 15836,
+    "sql_execute_fetch_seconds": 30.687199000036344
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 62,
+    "rep": 3,
+    "figure_seconds": 0.06862629996612668,
+    "serialization_seconds": 0.007599599892273545,
+    "json_bytes": 15836,
+    "sql_execute_fetch_seconds": 30.87677549989894
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 102,
+    "rep": 1,
+    "figure_seconds": 0.05833959998562932,
+    "serialization_seconds": 0.005196999991312623,
+    "json_bytes": 21229,
+    "sql_execute_fetch_seconds": 51.34973290003836
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 102,
+    "rep": 2,
+    "figure_seconds": 0.04867559997364879,
+    "serialization_seconds": 0.0060975998640060425,
+    "json_bytes": 21229,
+    "sql_execute_fetch_seconds": 50.58311400003731
+  },
+  {
+    "pad": 2,
+    "parcel_number": 7,
+    "days": 102,
+    "rep": 3,
+    "figure_seconds": 0.049281900050118566,
+    "serialization_seconds": 0.005898399977013469,
+    "json_bytes": 21229,
+    "sql_execute_fetch_seconds": 50.58132439991459
+  },
+  {
+    "pad": 2,
+    "parcel_number": 9,
+    "days": 102,
+    "rep": 1,
+    "figure_seconds": 0.050018199952319264,
+    "serialization_seconds": 0.0057767999824136496,
+    "json_bytes": 21532,
+    "sql_execute_fetch_seconds": 50.49139850004576
+  },
+  {
+    "pad": 2,
+    "parcel_number": 9,
+    "days": 102,
+    "rep": 2,
+    "figure_seconds": 0.046407399931922555,
+    "serialization_seconds": 0.003766300156712532,
+    "json_bytes": 21532,
+    "sql_execute_fetch_seconds": 51.33377410005778
+  },
+  {
+    "pad": 2,
+    "parcel_number": 9,
+    "days": 102,
+    "rep": 3,
+    "figure_seconds": 0.06010599993169308,
+    "serialization_seconds": 0.009721300099045038,
+    "json_bytes": 21532,
+    "sql_execute_fetch_seconds": 51.58261679997668
+  },
+  {
+    "pad": 2,
+    "parcel_number": 28,
+    "days": 102,
+    "rep": 1,
+    "figure_seconds": 0.07461240002885461,
+    "serialization_seconds": 0.0040692000184208155,
+    "json_bytes": 20539,
+    "sql_execute_fetch_seconds": 51.228243899997324
+  },
+  {
+    "pad": 2,
+    "parcel_number": 28,
+    "days": 102,
+    "rep": 2,
+    "figure_seconds": 0.05223089992068708,
+    "serialization_seconds": 0.00482130004093051,
+    "json_bytes": 20539,
+    "sql_execute_fetch_seconds": 50.90902870008722
+  },
+  {
+    "pad": 2,
+    "parcel_number": 28,
+    "days": 102,
+    "rep": 3,
+    "figure_seconds": 0.04764629993587732,
+    "serialization_seconds": 0.0035911002196371555,
+    "json_bytes": 20539,
+    "sql_execute_fetch_seconds": 50.40080709988251
+  }
+]

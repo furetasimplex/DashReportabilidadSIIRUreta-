@@ -1,0 +1,14 @@
+Comando equivalente ejecutado desde la raiz:
+rg -n "def mantener_secuencia" .
+
+Unica coincidencia (excluyendo venv/.git):
+reclamo\db.py:671:def mantener_secuencia(ventana_dias: int = 90, siguientes: int = 5) -> pd.DataFrame:
+
+Referencias a sp_auto_mantener_secuencia:
+db_startup_check.py:133 (inventario/chequeo de objeto)
+reclamo\db.py:557 (documentacion de recalcular)
+reclamo\db.py:595 (SQL dentro de recalcular)
+reclamo\db.py:672 (documentacion de mantener_secuencia)
+reclamo\db.py:682 (SQL dentro de mantener_secuencia)
+
+La funcion mantener_secuencia y su llamada al SP existen desde el commit fb2532f (2026-07-31 15:07 -04). Por ello, la ausencia del SP al pulsar el boton separado no queda explicada solamente por la version historica a9fd8da: en esa version el callback tambien llamaba db.mantener_secuencia().

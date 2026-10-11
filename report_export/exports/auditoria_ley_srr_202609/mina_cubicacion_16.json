@@ -1,0 +1,180 @@
+{
+  "sheet": "BD_Cubicación (no tocar)",
+  "cells": {
+    "B1": {
+      "v": null,
+      "f": null,
+      "type": null,
+      "formula_attrs": null
+    },
+    "C1": {
+      "v": null,
+      "f": null,
+      "type": null,
+      "formula_attrs": null
+    },
+    "D1": {
+      "v": "1",
+      "f": null,
+      "type": null,
+      "formula_attrs": null
+    },
+    "E1": {
+      "v": "2",
+      "f": "1+D1",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "F1": {
+      "v": "3",
+      "f": "1+E1",
+      "type": null,
+      "formula_attrs": {
+        "t": "shared",
+        "ref": "F1:O1",
+        "si": "0"
+      }
+    },
+    "G1": {
+      "v": "4",
+      "f": null,
+      "type": null,
+      "formula_attrs": {
+        "t": "shared",
+        "si": "0"
+      }
+    },
+    "H1": {
+      "v": "5",
+      "f": null,
+      "type": null,
+      "formula_attrs": {
+        "t": "shared",
+        "si": "0"
+      }
+    },
+    "I1": {
+      "v": "6",
+      "f": null,
+      "type": null,
+      "formula_attrs": {
+        "t": "shared",
+        "si": "0"
+      }
+    },
+    "J1": {
+      "v": "7",
+      "f": null,
+      "type": null,
+      "formula_attrs": {
+        "t": "shared",
+        "si": "0"
+      }
+    },
+    "K1": {
+      "v": "8",
+      "f": null,
+      "type": null,
+      "formula_attrs": {
+        "t": "shared",
+        "si": "0"
+      }
+    },
+    "L1": {
+      "v": "9",
+      "f": null,
+      "type": null,
+      "formula_attrs": {
+        "t": "shared",
+        "si": "0"
+      }
+    },
+    "M1": {
+      "v": "10",
+      "f": null,
+      "type": null,
+      "formula_attrs": {
+        "t": "shared",
+        "si": "0"
+      }
+    },
+    "A85": {
+      "v": "46281",
+      "f": "+Pegar_Cubicación!A85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "B85": {
+      "v": "SRR_10x_15jun26_final.bmf",
+      "f": "+Pegar_Cubicación!B85",
+      "type": "str",
+      "formula_attrs": {}
+    },
+    "C85": {
+      "v": "16-09-26-Ripio",
+      "f": "+Pegar_Cubicación!C85",
+      "type": "str",
+      "formula_attrs": {}
+    },
+    "D85": {
+      "v": "0.2935807909371006",
+      "f": "+Pegar_Cubicación!D85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "E85": {
+      "v": "3.0365430588219489E-2",
+      "f": "+Pegar_Cubicación!E85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "F85": {
+      "v": "0.10343125819401874",
+      "f": "+Pegar_Cubicación!F85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "G85": {
+      "v": "7.0301971417157036E-2",
+      "f": "+Pegar_Cubicación!G85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "H85": {
+      "v": "63.72431549871235",
+      "f": "+Pegar_Cubicación!H85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "I85": {
+      "v": "0",
+      "f": "+Pegar_Cubicación!I85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "J85": {
+      "v": "0",
+      "f": "+Pegar_Cubicación!J85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "K85": {
+      "v": "0",
+      "f": "+Pegar_Cubicación!K85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "L85": {
+      "v": "24.011893858724612",
+      "f": "+Pegar_Cubicación!L85",
+      "type": null,
+      "formula_attrs": {}
+    },
+    "M85": {
+      "v": "0",
+      "f": "+Pegar_Cubicación!M85",
+      "type": null,
+      "formula_attrs": {}
+    }
+  }
+}

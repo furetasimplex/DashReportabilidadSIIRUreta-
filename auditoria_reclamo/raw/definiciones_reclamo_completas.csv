@@ -1,0 +1,3811 @@
+﻿esquema,objeto,type_desc,definition
+reclamo,fn_fecha_corte,SQL_SCALAR_FUNCTION,"/* Funcion de acceso, para que las vistas puedan leer la fecha de corte sin
+   repetir el literal. */
+CREATE   FUNCTION [reclamo].[fn_fecha_corte]()
+RETURNS date
+AS
+BEGIN
+    RETURN
+    (
+        SELECT TRY_CONVERT(date, c.valor)
+        FROM [reclamo].[configuracion] c
+        WHERE c.clave = 'FECHA_CORTE_SISTEMA'
+    );
+END;"
+reclamo,sp_actualizar_disponible_rotopala,SQL_STORED_PROCEDURE,"/* ================================================================
+   v2 de reclamo.sp_actualizar_disponible_rotopala y
+   reclamo.sp_insertar_disponible_rotopala, con dos cambios pedidos:
+
+   1) DENSIDAD AUTOMATICA. Si no se informa @Densidad explicita, y
+      cambia TMS o m3_totales, la densidad se recalcula sola como
+      TMS/m3_totales. Si se informa @Densidad, esa manda (override
+      manual). Si no cambia ni TMS ni m3_totales, la densidad
+      existente se conserva tal cual.
+
+   2) PROPAGACION A MODULO YA CONGELADO. Si el (campaña_id, modulo_id)
+      editado ya tiene una fila CONGELADO en reclamo.modulo_congelado,
+      el cambio de tms_conformado/m3_totales/densidad_oficial se
+      aplica TAMBIEN ahi (ya no queda desincronizado de disponible_
+      rotopalas), y cada campo que cambio queda registrado en
+      reclamo.log_sincronizacion (tabla_destino='modulo_congelado',
+      tabla_origen='disponible_rotopalas (dashboard)', con valor
+      anterior y nuevo). Nada de esto pasa si el modulo no esta
+      congelado -- ahi disponible_rotopalas sigue siendo la unica
+      fuente y modulo_congelado ni se toca.
+
+   Ambas procedimientos devuelven, en su SELECT final, la columna
+   propagado_a_modulo_congelado (bit) para que el dashboard pueda
+   avisar explicitamente cuando esto ocurrio.
+================================================================ */
+
+CREATE   PROCEDURE [reclamo].[sp_actualizar_disponible_rotopala]
+(
+    @IdDisponibleRotopalas int,
+    @Tms             decimal(30,12) = NULL,
+    @M3Totales       decimal(30,12) = NULL,
+    @Densidad        decimal(30,12) = NULL,
+    @M3Apilado       decimal(30,12) = NULL,
+    @TmhApilado      decimal(30,12) = NULL,
+    @RemanenteM3     decimal(30,12) = NULL,
+    @RemanenteTms    decimal(30,12) = NULL,
+    @SoloInformados  bit = 1,
+    @Observacion     nvarchar(500) = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF NOT EXISTS
+    (
+        SELECT 1 FROM [inventar_SpcHidr].[disponible_rotopalas]
+        WHERE id_disponible_rotopalas = @IdDisponibleRotopalas
+    )
+        THROW 61001, 'No existe ese id_disponible_rotopalas.', 1;
+
+    IF @Densidad IS NOT NULL AND @Densidad <= 0
+        THROW 61002, 'La densidad debe ser mayor a 0.', 1;
+
+    IF @Tms IS NOT NULL AND @Tms < 0
+        THROW 61003, 'El TMS no puede ser negativo.', 1;
+
+    IF @M3Totales IS NOT NULL AND @M3Totales < 0
+        THROW 61004, 'El m3_totales no puede ser negativo.', 1;
+
+    DECLARE @PadId bigint, @ModuloId bigint, @CampañaId bigint;
+    DECLARE @TmsPrevio decimal(30,12), @M3Previo decimal(30,12), @DensidadPrevia decimal(30,12);
+
+    SELECT @PadId = pad_id, @ModuloId = modulo_id, @CampañaId = [campaña_id],
+           @TmsPrevio = tms, @M3Previo = m3_totales, @DensidadPrevia = densidad
+    FROM [inventar_SpcHidr].[disponible_rotopalas]
+    WHERE id_disponible_rotopalas = @IdDisponibleRotopalas;
+
+    DECLARE @TmsNuevo decimal(30,12) =
+        CASE WHEN @SoloInformados = 1 THEN COALESCE(@Tms, @TmsPrevio) ELSE @Tms END;
+    DECLARE @M3Nuevo decimal(30,12) =
+        CASE WHEN @SoloInformados = 1 THEN COALESCE(@M3Totales, @M3Previo) ELSE @M3Totales END;
+
+    /* Densidad automatica: manual explicita manda; si no, se recalcula
+       solo cuando cambio TMS o m3_totales; si no cambio nada de eso, se
+       conserva la que ya tenia (o NULL si @SoloInformados=0 y no se
+       informo densidad). */
+    DECLARE @DensidadNueva decimal(30,12);
+    IF @Densidad IS NOT NULL
+        SET @DensidadNueva = @Densidad;
+    ELSE IF (@Tms IS NOT NULL OR @M3Totales IS NOT NULL) AND COALESCE(@M3Nuevo, 0) > 0
+        SET @DensidadNueva = @TmsNuevo / @M3Nuevo;
+    ELSE IF @SoloInformados = 1
+        SET @DensidadNueva = @DensidadPrevia;
+    ELSE
+        SET @DensidadNueva = NULL;
+
+    BEGIN TRANSACTION;
+
+    UPDATE [inventar_SpcHidr].[disponible_rotopalas]
+    SET tms           = @TmsNuevo,
+        m3_totales    = @M3Nuevo,
+        densidad      = @DensidadNueva,
+        m3_apilado    = CASE WHEN @SoloInformados = 1 THEN COALESCE(@M3Apilado, m3_apilado) ELSE @M3Apilado END,
+        tmh_apilado   = CASE WHEN @SoloInformados = 1 THEN COALESCE(@TmhApilado, tmh_apilado) ELSE @TmhApilado END,
+        remanente_m3  = CASE WHEN @SoloInformados = 1 THEN COALESCE(@RemanenteM3, remanente_m3) ELSE @RemanenteM3 END,
+        remanente_tms = CASE WHEN @SoloInformados = 1 THEN COALESCE(@RemanenteTms, remanente_tms) ELSE @RemanenteTms END
+    WHERE id_disponible_rotopalas = @IdDisponibleRotopalas;
+
+    /* Propagacion: solo si el modulo ya esta CONGELADO. */
+    IF EXISTS
+    (
+        SELECT 1 FROM [reclamo].[modulo_congelado]
+        WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId AND estado = 'CONGELADO'
+    )
+    BEGIN
+        DECLARE @TmsCongPrevio decimal(30,12), @M3CongPrevio decimal(30,12), @DensCongPrevia decimal(30,12);
+
+        SELECT @TmsCongPrevio = tms_conformado, @M3CongPrevio = m3_totales, @DensCongPrevia = densidad_oficial
+        FROM [reclamo].[modulo_congelado]
+        WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId AND estado = 'CONGELADO';
+
+        UPDATE [reclamo].[modulo_congelado]
+        SET tms_conformado   = @TmsNuevo,
+            m3_totales       = @M3Nuevo,
+            densidad_oficial = @DensidadNueva
+        WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId AND estado = 'CONGELADO';
+
+        INSERT INTO [reclamo].[log_sincronizacion]
+            (tabla_destino, tabla_origen, accion, fecha_dato,
+             [campaña_id], modulo_id, campo, valor_anterior, valor_nuevo, observacion)
+        SELECT
+            'modulo_congelado', 'disponible_rotopalas (dashboard)', 'ACTUALIZADO',
+            CAST(SYSDATETIME() AS date),
+            @CampañaId, @ModuloId, cambios.campo, cambios.valor_anterior, cambios.valor_nuevo,
+            COALESCE(@Observacion, N'Editado desde disponible_rotopalas; modulo ya estaba congelado.')
+        FROM
+        (
+            VALUES
+                ('tms_conformado',   @TmsCongPrevio,  @TmsNuevo),
+                ('m3_totales',       @M3CongPrevio,   @M3Nuevo),
+                ('densidad_oficial', @DensCongPrevia, @DensidadNueva)
+        ) AS cambios(campo, valor_anterior, valor_nuevo)
+        WHERE NOT
+        (
+            (cambios.valor_anterior IS NULL AND cambios.valor_nuevo IS NULL)
+            OR (cambios.valor_anterior IS NOT NULL AND cambios.valor_nuevo IS NOT NULL
+                AND cambios.valor_anterior = cambios.valor_nuevo)
+        );
+    END;
+
+    COMMIT TRANSACTION;
+
+    SELECT dr.*,
+           CASE WHEN EXISTS
+           (
+               SELECT 1 FROM [reclamo].[modulo_congelado] mc
+               WHERE mc.[campaña_id] = @CampañaId AND mc.modulo_id = @ModuloId AND mc.estado = 'CONGELADO'
+           ) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS propagado_a_modulo_congelado
+    FROM [inventar_SpcHidr].[disponible_rotopalas] dr
+    WHERE dr.id_disponible_rotopalas = @IdDisponibleRotopalas;
+END;"
+reclamo,sp_aprobar_ajuste_manual,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 5. reclamo.sp_aprobar_ajuste_manual
+
+   Separa quien propone de quien aprueba. El procedimiento impide que ambos
+   sean el mismo login, salvo que se pase @PermitirAutoaprobacion = 1, lo que
+   queda anotado en la observacion.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_aprobar_ajuste_manual]
+(
+    @AjusteId                int,
+    @Decision                varchar(20),
+    @Comentario              nvarchar(500) = NULL,
+    @PermitirAutoaprobacion  bit = 0
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF @Decision NOT IN ('APROBADO','RECHAZADO','REVERTIDO')
+        THROW 60401, 'La decision debe ser APROBADO, RECHAZADO o REVERTIDO.', 1;
+
+    DECLARE @Solicitante sysname =
+    (
+        SELECT usuario_solicita FROM [reclamo].[ajuste_manual] WHERE ajuste_id = @AjusteId
+    );
+
+    IF @Solicitante IS NULL
+        THROW 60402, 'No existe ese ajuste.', 1;
+
+    IF @Solicitante = SUSER_SNAME() AND @PermitirAutoaprobacion = 0
+        THROW 60403,
+              'Quien propone un ajuste no deberia aprobarlo. Use @PermitirAutoaprobacion = 1 si corresponde.', 1;
+
+    UPDATE [reclamo].[ajuste_manual]
+    SET estado           = @Decision,
+        usuario_aprueba  = SUSER_SNAME(),
+        fecha_aprobacion = SYSDATETIME(),
+        observacion      = LTRIM(RTRIM(COALESCE(observacion, N'')
+                           + N' | ' + @Decision + N': ' + COALESCE(@Comentario, N'sin comentario')
+                           + CASE WHEN @PermitirAutoaprobacion = 1
+                                  THEN N' | AUTOAPROBADO POR EL SOLICITANTE' ELSE N'' END))
+    WHERE ajuste_id = @AjusteId;
+
+    PRINT 'Ajuste ' + CAST(@AjusteId AS varchar) + ' -> ' + @Decision;
+    PRINT 'Recuerde reprocesar el rango con sp_calcular_reclamo_diario.';
+
+    SELECT * FROM [reclamo].[ajuste_manual] WHERE ajuste_id = @AjusteId;
+END;"
+reclamo,sp_auto_cerrar_y_avanzar_secuencia,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 3.d reclamo.sp_auto_cerrar_y_avanzar_secuencia
+
+   Regla pedida: ""si un modulo X llega a 100 y el que sigue X+1 no esta
+   abierto, se debe abrir"".
+
+   Cierra los modulos ABIERTO por dos motivos distintos:
+
+     1. SOBRE_100_PROPONER_TRASPASO: la cuadratura (reclamo.v_cuadratura_modulo,
+        que ya incluye la linea base y la tolerancia configurada) marca que
+        la extraccion supero el 100 % del volumen congelado.
+
+     2. AVANCE_DE_SECUENCIA (agregado 2026-07-30, corregido el mismo dia
+        tras verificar en base de datos, regla pedida por el usuario): el
+        modulo sigue ABIERTO pero la rotopala ya paso de largo -- hay dos o
+        mas modulos de numero mayor, mismo pad y campaña, con AL MENOS UNA
+        medicion real VIGENTE en reclamo.topografia_avance.
+
+        Version anterior (incorrecta, descartada): se conto contra
+        secuencia_rotopala.estado <> 'PENDIENTE'. Se comprobo con el caso
+        del modulo 124 (campaña 8, modulo_id 188) que esa evidencia no
+        sirve: secuencia_rotopala solo tenia UNA fila para esa rotopala y
+        campaña (el propio 124), porque esa tabla solo agrega el siguiente
+        modulo cuando el anterior SE CIERRA -- y como 124 nunca cerraba,
+        125 a 130 nunca llegaban a tener fila ahi aunque ya estuvieran
+        CONGELADOS en modulo_congelado y con mediciones reales de
+        topografia posteriores al 2026-07-08 (verificado: 125 con 3
+        mediciones, 126 con 12, 127 con 11, 128 con 3, 129 con 4, 130 con
+        3). La evidencia correcta es la medicion fisica real, no el estado
+        formal de una tabla que depende del propio cierre que se busca
+        disparar.
+
+        Esto pasa cuando un modulo se estanca justo por debajo del 100 %
+        (la topografia deja de medirlo porque la rotopala fisicamente ya se
+        movio) y por eso nunca dispara el motivo 1. Sin este segundo motivo
+        quedaria ABIERTO para siempre, compitiendo indefinidamente por
+        tonelaje preliminar de CV25 que ya no le corresponde. No se fuerza
+        el cierre por simple antiguedad ni por dias sin medicion: se exige
+        evidencia fisica concreta de mediciones reales en modulos
+        posteriores (regla R5, maximo dos), no una suposicion de tiempo ni
+        el estado de una tabla que todavia no se alcanzo a poblar.
+
+   Abre el que sigue en la MISMA rotopala y campana, por orden_secuencia.
+
+   ""El que sigue"" nunca se calcula como modulo_numero + 1: se toma de
+   secuencia_rotopala, que respeta la campana y el rango fisico del PAD.
+
+   Cuidado explicito con los dos casos limite:
+     - Modulo final del PAD (modulo_numero = topologia_pad.modulo_numero_max):
+       no hay siguiente posible. Se registra ALERTA_FIN_DE_PAD.
+     - No hay siguiente CONGELADO en la secuencia de esta campana, sin ser
+       el ultimo del PAD: puede ser cambio de campana (una campana nueva ya
+       empezo a apilar en otra posicion) o que el siguiente modulo todavia
+       no tiene base en disponible_rotopalas. Se registra
+       ALERTA_FIN_DE_CAMPANA. No se adivina ni se fuerza nada.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_auto_cerrar_y_avanzar_secuencia]
+(
+    @EjecucionId int = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @EjecucionPropia bit = 0;
+    IF @EjecucionId IS NULL
+    BEGIN
+        INSERT INTO [reclamo].[log_ejecucion] (procedimiento, estado)
+        VALUES ('reclamo.sp_auto_cerrar_y_avanzar_secuencia', 'EN_CURSO');
+        SET @EjecucionId = SCOPE_IDENTITY();
+        SET @EjecucionPropia = 1;
+    END;
+
+    BEGIN TRY
+        DECLARE @SecuenciaId int, @RotId tinyint, @Camp int, @Mod int, @Pad int, @ModNum int;
+        DECLARE @OrdenActual int, @PctExtraido decimal(9,4), @ModulosPasados int;
+        DECLARE @SigSecuenciaId int, @SigModId int, @SigModNum int, @SigEstado varchar(20);
+        DECLARE @EsFinDePad bit;
+
+        WHILE EXISTS
+        (
+            SELECT 1
+            FROM [reclamo].[secuencia_rotopala] s
+            INNER JOIN [reclamo].[v_cuadratura_modulo] cm
+                ON cm.[campaña_id] = s.[campaña_id] AND cm.modulo_id = s.modulo_id
+            WHERE s.estado = 'ABIERTO'
+              AND
+              (
+                  cm.flag_cuadratura = 'SOBRE_100_PROPONER_TRASPASO'
+                  OR
+                  (
+                      SELECT COUNT(DISTINCT mc3.modulo_id)
+                      FROM [reclamo].[modulo_congelado] mc3
+                      WHERE mc3.pad_id        = s.pad_id
+                        AND mc3.[campaña_id]  = s.[campaña_id]
+                        AND mc3.modulo_numero > s.modulo_numero
+                        AND EXISTS
+                            (
+                                SELECT 1
+                                FROM [reclamo].[topografia_avance] t3
+                                WHERE t3.modulo_id = mc3.modulo_id
+                                  AND t3.estado    = 'VIGENTE'
+                            )
+                  ) >= 2
+              )
+        )
+        BEGIN
+            SELECT TOP (1)
+                @SecuenciaId = s.secuencia_id, @RotId = s.rotopala_id,
+                @Camp = s.[campaña_id], @Mod = s.modulo_id,
+                @Pad = s.pad_id, @ModNum = s.modulo_numero, @OrdenActual = s.orden_secuencia,
+                @PctExtraido = cm.porcentaje_extraido,
+                @ModulosPasados =
+                (
+                    SELECT COUNT(DISTINCT mc3.modulo_id)
+                    FROM [reclamo].[modulo_congelado] mc3
+                    WHERE mc3.pad_id        = s.pad_id
+                      AND mc3.[campaña_id]  = s.[campaña_id]
+                      AND mc3.modulo_numero > s.modulo_numero
+                      AND EXISTS
+                          (
+                              SELECT 1
+                              FROM [reclamo].[topografia_avance] t3
+                              WHERE t3.modulo_id = mc3.modulo_id
+                                AND t3.estado    = 'VIGENTE'
+                          )
+                )
+            FROM [reclamo].[secuencia_rotopala] s
+            INNER JOIN [reclamo].[v_cuadratura_modulo] cm
+                ON cm.[campaña_id] = s.[campaña_id] AND cm.modulo_id = s.modulo_id
+            WHERE s.estado = 'ABIERTO'
+              AND
+              (
+                  cm.flag_cuadratura = 'SOBRE_100_PROPONER_TRASPASO'
+                  OR
+                  (
+                      SELECT COUNT(DISTINCT mc3.modulo_id)
+                      FROM [reclamo].[modulo_congelado] mc3
+                      WHERE mc3.pad_id        = s.pad_id
+                        AND mc3.[campaña_id]  = s.[campaña_id]
+                        AND mc3.modulo_numero > s.modulo_numero
+                        AND EXISTS
+                            (
+                                SELECT 1
+                                FROM [reclamo].[topografia_avance] t3
+                                WHERE t3.modulo_id = mc3.modulo_id
+                                  AND t3.estado    = 'VIGENTE'
+                            )
+                  ) >= 2
+              )
+            ORDER BY s.orden_secuencia;
+
+            UPDATE [reclamo].[secuencia_rotopala]
+            SET estado = 'CERRADO', fecha_cierre = CAST(SYSDATETIME() AS date)
+            WHERE secuencia_id = @SecuenciaId;
+
+            INSERT INTO [reclamo].[log_automatizacion]
+                (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+            VALUES
+                (@EjecucionId, 'CERRADO_AUTOMATICO', @Pad, @Camp, @Mod, @ModNum,
+                 CASE
+                     WHEN @PctExtraido >= 100
+                         THEN N'Extraccion alcanzo o supero el 100% del volumen congelado ('
+                              + CAST(@PctExtraido AS varchar) + N'%).'
+                     ELSE N'Rotopala ya avanzo ' + CAST(@ModulosPasados AS varchar)
+                          + N' modulo(s) mas adelante en la secuencia sin que este se cerrara '
+                          + N'(quedo estancado en ' + CAST(@PctExtraido AS varchar)
+                          + N'% sin nuevas mediciones). Cerrado automaticamente por avance de '
+                          + N'secuencia, no por cuadratura.'
+                 END);
+
+            SET @SigSecuenciaId = NULL; SET @SigModId = NULL;
+            SET @SigModNum = NULL; SET @SigEstado = NULL;
+
+            SELECT TOP (1)
+                @SigSecuenciaId = s2.secuencia_id, @SigModId = s2.modulo_id,
+                @SigModNum = s2.modulo_numero, @SigEstado = s2.estado
+            FROM [reclamo].[secuencia_rotopala] s2
+            WHERE s2.rotopala_id = @RotId AND s2.[campaña_id] = @Camp
+              AND s2.orden_secuencia > @OrdenActual
+            ORDER BY s2.orden_secuencia;
+
+            IF @SigSecuenciaId IS NOT NULL AND @SigEstado = 'PENDIENTE'
+            BEGIN
+                UPDATE [reclamo].[secuencia_rotopala]
+                SET estado = 'ABIERTO', fecha_apertura = CAST(SYSDATETIME() AS date)
+                WHERE secuencia_id = @SigSecuenciaId;
+
+                INSERT INTO [reclamo].[log_automatizacion]
+                    (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+                VALUES
+                    (@EjecucionId, 'ABIERTO_AUTOMATICO', @Pad, @Camp, @SigModId, @SigModNum,
+                     N'Modulo siguiente de la secuencia. Se abre al cerrarse el modulo '
+                        + CAST(@ModNum AS varchar) + N'.');
+            END
+            ELSE IF @SigSecuenciaId IS NULL
+            BEGIN
+                SET @EsFinDePad =
+                (
+                    SELECT CASE WHEN @ModNum >= tp.modulo_numero_max THEN 1 ELSE 0 END
+                    FROM [reclamo].[topologia_pad] tp
+                    WHERE tp.pad_id = @Pad
+                );
+
+                INSERT INTO [reclamo].[log_automatizacion]
+                    (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+                VALUES
+                    (@EjecucionId,
+                     CASE WHEN @EsFinDePad = 1 THEN 'ALERTA_FIN_DE_PAD' ELSE 'ALERTA_FIN_DE_CAMPANA' END,
+                     @Pad, @Camp, @Mod, @ModNum,
+                     CASE WHEN @EsFinDePad = 1
+                          THEN N'Modulo ' + CAST(@ModNum AS varchar)
+                               + N' es el ultimo del rango fisico del PAD. Revisar cierre de campana.'
+                          ELSE N'No hay mas modulos congelados en esta campana despues del '
+                               + CAST(@ModNum AS varchar)
+                               + N'. Puede ser cambio de campana: revisar si ya hay apilado en una campana nueva.'
+                     END);
+            END;
+            /* Si el siguiente ya estaba ABIERTO o CERRADO, no hay nada mas que hacer. */
+        END;
+
+        IF @EjecucionPropia = 1
+            UPDATE [reclamo].[log_ejecucion] SET fecha_fin = SYSDATETIME(), estado = 'OK'
+            WHERE ejecucion_id = @EjecucionId;
+    END TRY
+    BEGIN CATCH
+        IF @EjecucionPropia = 1
+            UPDATE [reclamo].[log_ejecucion]
+            SET fecha_fin = SYSDATETIME(), estado = 'ERROR', mensaje = ERROR_MESSAGE()
+            WHERE ejecucion_id = @EjecucionId;
+        THROW;
+    END CATCH
+END;"
+reclamo,sp_auto_congelar_modulos_nuevos,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 3.c reclamo.sp_auto_congelar_modulos_nuevos
+
+   El usuario no opera la base de datos para congelar modulos: este
+   procedimiento reacciona solo a lo que ya llego de topografia o camiones.
+
+   Congela dos tipos de modulo, dentro de la MISMA campana de cada uno:
+
+     - Con movimiento real: aparecio con volumen en control_reclamo_diario o
+       en control_reclamo_sulfuro_camiones_thm_diario y todavia no esta en
+       modulo_congelado. Es el caso pedido: ""cada nuevo modulo que se
+       reporte en topografica debe congelar y abrir un modulo"".
+     - Precongelado (""los siguientes""): hasta @Siguientes modulos por
+       delante del maximo alcanzado en la misma campana, siempre que
+       disponible_rotopalas ya tenga su base. Asi, cuando le toque el turno,
+       sp_auto_cerrar_y_avanzar_secuencia no se encuentra con un modulo sin
+       congelar.
+
+   Un modulo sin base valida en disponible_rotopalas NO se congela solo:
+   queda como ALERTA_SIN_BASE en reclamo.log_automatizacion, porque
+   inventar datos ahi violaria la regla R1.
+
+   Abre automaticamente los que tienen movimiento real, respetando el
+   maximo de dos modulos ABIERTO por rotopala (regla R5). Si para una
+   rotopala/campana no hay TODAVIA ningun modulo abierto (arranque, o
+   catch-up de un bloque historico completo), abre primero los de
+   movimiento MAS RECIENTE: son los que la rotopala esta trabajando ahora,
+   no los mas antiguos del bloque que recien se esta poniendo al dia.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_auto_congelar_modulos_nuevos]
+(
+    @VentanaDias int = 90,
+    @Siguientes  int = 5,
+    @EjecucionId int = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @Ventana date = DATEADD(DAY, -@VentanaDias, CAST(SYSDATETIME() AS date));
+    DECLARE @EjecucionPropia bit = 0;
+
+    IF @EjecucionId IS NULL
+    BEGIN
+        INSERT INTO [reclamo].[log_ejecucion] (procedimiento, estado)
+        VALUES ('reclamo.sp_auto_congelar_modulos_nuevos', 'EN_CURSO');
+        SET @EjecucionId = SCOPE_IDENTITY();
+        SET @EjecucionPropia = 1;
+    END;
+
+    BEGIN TRY
+        IF OBJECT_ID('tempdb..#Alcance') IS NOT NULL DROP TABLE #Alcance;
+
+        ;WITH actividad AS
+        (
+            SELECT pad_id, [campaña_id], modulo_id, fecha
+            FROM
+            (
+                SELECT cr.pad_id, cr.[campaña_id], cr.modulo_id, CAST(cr.fecha AS date) AS fecha
+                FROM [inventar_SpcHidr].[control_reclamo_diario] cr
+                WHERE CAST(cr.fecha AS date) >= @Ventana
+                  AND COALESCE(cr.volumen_diario_m3,0) > 0
+                  AND cr.[campaña_id] IS NOT NULL AND cr.modulo_id IS NOT NULL
+
+                UNION ALL
+
+                SELECT crc.pad_id, crc.[campaña_id], crc.modulo_id, CAST(crc.fecha AS date)
+                FROM [inventar_SpcHidr].[control_reclamo_sulfuro_camiones_thm_diario] crc
+                WHERE CAST(crc.fecha AS date) >= @Ventana
+                  AND COALESCE(crc.volumen_diario_m3,0) > 0
+            ) x
+        ),
+        activos AS
+        (
+            SELECT pad_id, [campaña_id], modulo_id, MAX(fecha) AS ultima_actividad
+            FROM actividad
+            GROUP BY pad_id, [campaña_id], modulo_id
+        ),
+        ultimo AS
+        (
+            SELECT a.pad_id, a.[campaña_id], MAX(md.numero) AS modulo_max
+            FROM activos a
+            INNER JOIN [inventar_SpcHidr].[modulo] md ON md.id_modulo = a.modulo_id
+            GROUP BY a.pad_id, a.[campaña_id]
+        ),
+        siguientes AS
+        (
+            /* Precongelado: MISMA campana, dentro del rango fisico del PAD,
+               con base ya disponible. No se cruza a otra campana: las
+               posiciones se reutilizan y el numero por si solo no identifica
+               el modulo fisico si cambia la campana. */
+            SELECT dr.pad_id, dr.[campaña_id], dr.modulo_id,
+                   CAST(NULL AS date) AS ultima_actividad
+            FROM ultimo u
+            INNER JOIN [reclamo].[topologia_pad] tp ON tp.pad_id = u.pad_id
+            INNER JOIN [inventar_SpcHidr].[disponible_rotopalas] dr
+                ON dr.[campaña_id] = u.[campaña_id]
+            INNER JOIN [inventar_SpcHidr].[modulo] md2
+                ON  md2.id_modulo = dr.modulo_id
+                AND md2.numero > u.modulo_max
+                AND md2.numero <= u.modulo_max + @Siguientes
+                AND md2.numero <= tp.modulo_numero_max
+        ),
+        alcance AS
+        (
+            SELECT pad_id, [campaña_id], modulo_id, CAST(1 AS bit) AS con_actividad,
+                   ultima_actividad
+            FROM activos
+            UNION
+            SELECT pad_id, [campaña_id], modulo_id, CAST(0 AS bit), ultima_actividad
+            FROM siguientes
+        )
+        SELECT
+            al.pad_id, al.[campaña_id], al.modulo_id, al.con_actividad,
+            al.ultima_actividad,
+            md.numero AS modulo_numero,
+            CAST(NULL AS nvarchar(20)) AS resultado
+        INTO #Alcance
+        FROM alcance al
+        INNER JOIN [inventar_SpcHidr].[modulo] md ON md.id_modulo = al.modulo_id
+        WHERE NOT EXISTS
+        (
+            SELECT 1 FROM [reclamo].[modulo_congelado] mc
+            WHERE mc.[campaña_id] = al.[campaña_id] AND mc.modulo_id = al.modulo_id
+        );
+
+        /* -------------------------------------------------------------
+           Congelar, uno por uno. Un fallo no detiene al resto: queda
+           como alerta y sigue con el siguiente modulo.
+        ------------------------------------------------------------- */
+        DECLARE @Camp int, @Mod int, @Pad int, @ModNum int, @ConAct bit;
+        DECLARE @Tms decimal(30,12), @M3 decimal(30,12);
+
+        WHILE EXISTS (SELECT 1 FROM #Alcance WHERE resultado IS NULL)
+        BEGIN
+            SELECT TOP (1) @Pad = pad_id, @Camp = [campaña_id], @Mod = modulo_id,
+                   @ModNum = modulo_numero, @ConAct = con_actividad
+            FROM #Alcance WHERE resultado IS NULL
+            ORDER BY pad_id, modulo_numero;
+
+            SELECT @Tms = dr.tms, @M3 = dr.m3_totales
+            FROM [inventar_SpcHidr].[disponible_rotopalas] dr
+            WHERE dr.[campaña_id] = @Camp AND dr.modulo_id = @Mod;
+
+            IF COALESCE(@Tms,0) <= 0 OR COALESCE(@M3,0) <= 0
+            BEGIN
+                INSERT INTO [reclamo].[log_automatizacion]
+                    (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+                VALUES
+                    (@EjecucionId, 'ALERTA_SIN_BASE', @Pad, @Camp, @Mod, @ModNum,
+                     N'disponible_rotopalas no tiene tms/m3_totales validos. No se congelo automaticamente.');
+
+                UPDATE #Alcance SET resultado = 'SIN_BASE'
+                WHERE pad_id = @Pad AND [campaña_id] = @Camp AND modulo_id = @Mod;
+            END
+            ELSE
+            BEGIN
+                BEGIN TRY
+                    EXEC [reclamo].[sp_congelar_modulo]
+                         @CampañaId = @Camp, @ModuloId = @Mod, @PadId = @Pad;
+
+                    INSERT INTO [reclamo].[log_automatizacion]
+                        (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+                    VALUES
+                        (@EjecucionId, 'CONGELADO_AUTOMATICO', @Pad, @Camp, @Mod, @ModNum,
+                         CASE WHEN @ConAct = 1
+                              THEN N'Movimiento real detectado en topografia o camiones.'
+                              ELSE N'Precongelado como siguiente en la secuencia, aun sin movimiento.'
+                         END);
+
+                    EXEC [reclamo].[sp_definir_secuencia] @CampañaId = @Camp, @PadId = @Pad;
+
+                    UPDATE #Alcance SET resultado = 'CONGELADO'
+                    WHERE pad_id = @Pad AND [campaña_id] = @Camp AND modulo_id = @Mod;
+                END TRY
+                BEGIN CATCH
+                    INSERT INTO [reclamo].[log_automatizacion]
+                        (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+                    VALUES
+                        (@EjecucionId, 'ALERTA_SIN_BASE', @Pad, @Camp, @Mod, @ModNum,
+                         N'Error al congelar: ' + ERROR_MESSAGE());
+
+                    UPDATE #Alcance SET resultado = 'ERROR'
+                    WHERE pad_id = @Pad AND [campaña_id] = @Camp AND modulo_id = @Mod;
+                END CATCH
+            END;
+        END;
+
+        /* -------------------------------------------------------------
+           Linea base automatica para lo que se acaba de congelar.
+
+           sp_establecer_linea_base estaba pensado como paso manual, unico,
+           corrido una vez despues del congelamiento inicial. Como este
+           procedimiento congela modulos nuevos en cualquier momento (cada
+           vez que aparece topografia o camiones de un modulo que no
+           existia), sin este paso esos modulos quedaban con
+           m3_rotopala_previo = 0 para siempre -- confirmado en los modulos
+           33, 34, 35, 36 y 38 de PAD1/campaña 4, que arrastraban su
+           acumulado previo al corte como si fuera tonelaje del primer dia.
+
+           Se llama con @SoloSiVacio = 1: nunca toca un modulo que ya tiene
+           linea base, solo rellena los que quedaron en NULL. Por eso es
+           seguro llamarlo una vez por cada campaña que tuvo congelamientos
+           en esta corrida, aunque esa campaña ya tenga otros modulos con
+           linea base buena de antes.
+        ------------------------------------------------------------- */
+        IF EXISTS (SELECT 1 FROM #Alcance WHERE resultado = 'CONGELADO')
+        BEGIN
+            IF OBJECT_ID('tempdb..#CandidatosLineaBase') IS NOT NULL
+                DROP TABLE #CandidatosLineaBase;
+
+            SELECT mc.[campaña_id], mc.pad_id, mc.modulo_id, mc.modulo_numero
+            INTO #CandidatosLineaBase
+            FROM [reclamo].[modulo_congelado] mc
+            WHERE mc.estado = 'CONGELADO'
+              AND mc.fecha_linea_base IS NULL
+              AND EXISTS (SELECT 1 FROM #Alcance al
+                          WHERE al.[campaña_id] = mc.[campaña_id]
+                            AND al.resultado    = 'CONGELADO');
+
+            DECLARE @CampLb int;
+            DECLARE campañas_lb CURSOR LOCAL FAST_FORWARD FOR
+                SELECT DISTINCT [campaña_id] FROM #Alcance WHERE resultado = 'CONGELADO';
+
+            OPEN campañas_lb;
+            FETCH NEXT FROM campañas_lb INTO @CampLb;
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                BEGIN TRY
+                    EXEC [reclamo].[sp_establecer_linea_base]
+                         @CampañaId = @CampLb, @Confirmar = 1, @SoloSiVacio = 1,
+                         @Silencioso = 1;
+                END TRY
+                BEGIN CATCH
+                    INSERT INTO [reclamo].[log_automatizacion]
+                        (ejecucion_id, accion, [campaña_id], detalle)
+                    VALUES
+                        (@EjecucionId, 'ALERTA_SIN_BASE', @CampLb,
+                         N'Error al establecer linea base automatica: ' + ERROR_MESSAGE());
+                END CATCH;
+
+                FETCH NEXT FROM campañas_lb INTO @CampLb;
+            END;
+            CLOSE campañas_lb;
+            DEALLOCATE campañas_lb;
+
+            INSERT INTO [reclamo].[log_automatizacion]
+                (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+            SELECT
+                @EjecucionId, 'LINEA_BASE_AUTOMATICA', c.pad_id, c.[campaña_id],
+                c.modulo_id, c.modulo_numero,
+                N'Linea base establecida automaticamente tras el congelamiento.'
+            FROM #CandidatosLineaBase c
+            INNER JOIN [reclamo].[modulo_congelado] mc
+                ON mc.[campaña_id] = c.[campaña_id] AND mc.modulo_id = c.modulo_id
+            WHERE mc.fecha_linea_base IS NOT NULL;
+
+            DROP TABLE #CandidatosLineaBase;
+        END;
+
+        /* -------------------------------------------------------------
+           Abrir los que tienen movimiento real, con cupo (maximo dos
+           ABIERTO por rotopala y campana, regla R5). Por cada rotopala y
+           campana afectada: si no hay ningun modulo abierto todavia, se
+           prioriza por ultima_actividad descendente (el mas reciente
+           primero); si ya hay al menos uno abierto, se respeta el orden
+           de secuencia (el que sigue).
+        ------------------------------------------------------------- */
+        DECLARE @RotId tinyint, @CampAbrir int;
+        DECLARE @SecuenciaId int, @ModAbrir int, @PadAbrir int, @ModNumAbrir int;
+        DECLARE @AbiertosActuales int, @ModoBootstrap bit;
+
+        DECLARE grupos CURSOR LOCAL FAST_FORWARD FOR
+            SELECT DISTINCT s.rotopala_id, s.[campaña_id]
+            FROM [reclamo].[secuencia_rotopala] s
+            INNER JOIN #Alcance al
+                ON al.[campaña_id] = s.[campaña_id] AND al.modulo_id = s.modulo_id
+            WHERE al.con_actividad = 1 AND al.resultado = 'CONGELADO' AND s.estado = 'PENDIENTE';
+
+        OPEN grupos;
+        FETCH NEXT FROM grupos INTO @RotId, @CampAbrir;
+
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            SET @AbiertosActuales =
+            (
+                SELECT COUNT(*) FROM [reclamo].[secuencia_rotopala]
+                WHERE rotopala_id = @RotId AND [campaña_id] = @CampAbrir AND estado = 'ABIERTO'
+            );
+            SET @ModoBootstrap = CASE WHEN @AbiertosActuales = 0 THEN 1 ELSE 0 END;
+
+            WHILE @AbiertosActuales < 2 AND EXISTS
+            (
+                SELECT 1
+                FROM [reclamo].[secuencia_rotopala] s
+                INNER JOIN #Alcance al
+                    ON al.[campaña_id] = s.[campaña_id] AND al.modulo_id = s.modulo_id
+                WHERE s.rotopala_id = @RotId AND s.[campaña_id] = @CampAbrir
+                  AND s.estado = 'PENDIENTE' AND al.con_actividad = 1 AND al.resultado = 'CONGELADO'
+            )
+            BEGIN
+                IF @ModoBootstrap = 1
+                    SELECT TOP (1)
+                        @SecuenciaId = s.secuencia_id, @ModAbrir = s.modulo_id,
+                        @PadAbrir = s.pad_id, @ModNumAbrir = s.modulo_numero
+                    FROM [reclamo].[secuencia_rotopala] s
+                    INNER JOIN #Alcance al
+                        ON al.[campaña_id] = s.[campaña_id] AND al.modulo_id = s.modulo_id
+                    WHERE s.rotopala_id = @RotId AND s.[campaña_id] = @CampAbrir
+                      AND s.estado = 'PENDIENTE' AND al.con_actividad = 1 AND al.resultado = 'CONGELADO'
+                    ORDER BY al.ultima_actividad DESC, s.orden_secuencia DESC;
+                ELSE
+                    SELECT TOP (1)
+                        @SecuenciaId = s.secuencia_id, @ModAbrir = s.modulo_id,
+                        @PadAbrir = s.pad_id, @ModNumAbrir = s.modulo_numero
+                    FROM [reclamo].[secuencia_rotopala] s
+                    INNER JOIN #Alcance al
+                        ON al.[campaña_id] = s.[campaña_id] AND al.modulo_id = s.modulo_id
+                    WHERE s.rotopala_id = @RotId AND s.[campaña_id] = @CampAbrir
+                      AND s.estado = 'PENDIENTE' AND al.con_actividad = 1 AND al.resultado = 'CONGELADO'
+                    ORDER BY s.orden_secuencia ASC;
+
+                UPDATE [reclamo].[secuencia_rotopala]
+                SET estado = 'ABIERTO', fecha_apertura = CAST(SYSDATETIME() AS date)
+                WHERE secuencia_id = @SecuenciaId;
+
+                INSERT INTO [reclamo].[log_automatizacion]
+                    (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+                VALUES
+                    (@EjecucionId, 'ABIERTO_AUTOMATICO', @PadAbrir, @CampAbrir, @ModAbrir, @ModNumAbrir,
+                     CASE WHEN @ModoBootstrap = 1
+                          THEN N'Sin modulos abiertos previos para esta rotopala: se abre el de movimiento mas reciente.'
+                          ELSE N'Movimiento real detectado y cupo disponible en la rotopala.'
+                     END);
+
+                SET @AbiertosActuales = @AbiertosActuales + 1;
+            END;
+
+            FETCH NEXT FROM grupos INTO @RotId, @CampAbrir;
+        END;
+        CLOSE grupos;
+        DEALLOCATE grupos;
+
+        DROP TABLE IF EXISTS #Alcance;
+
+        IF @EjecucionPropia = 1
+            UPDATE [reclamo].[log_ejecucion] SET fecha_fin = SYSDATETIME(), estado = 'OK'
+            WHERE ejecucion_id = @EjecucionId;
+    END TRY
+    BEGIN CATCH
+        IF @EjecucionPropia = 1
+            UPDATE [reclamo].[log_ejecucion]
+            SET fecha_fin = SYSDATETIME(), estado = 'ERROR', mensaje = ERROR_MESSAGE()
+            WHERE ejecucion_id = @EjecucionId;
+        THROW;
+    END CATCH
+END;"
+reclamo,sp_auto_mantener_secuencia,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 3.e reclamo.sp_auto_mantener_secuencia
+
+   Orquestador. Es lo que llama el boton del dashboard: el usuario no corre
+   EXEC en la base de datos. Primero rellena secuencias huerfanas (modulos
+   CONGELADOS de antes de esta automatizacion que nunca llegaron a tener
+   fila en secuencia_rotopala), despues cierra y avanza (libera cupo),
+   despues congela lo nuevo y precongela lo que viene (y abre lo que ya
+   tiene movimiento si quedo cupo). Deja todo en reclamo.log_automatizacion
+   y devuelve esa bitacora, ordenada con las alertas primero.
+
+   Backfill de secuencia (agregado 2026-07-30): reclamo.sp_definir_secuencia
+   ya se llamaba automaticamente para cada modulo recien congelado (dentro
+   de sp_auto_congelar_modulos_nuevos), pero eso no alcanza a los modulos
+   que quedaron CONGELADOS antes de que existiera esta automatizacion --
+   confirmado en los modulos 125 a 140 de rotopala 2 / campaña 8, todos
+   congelados en bloque el 2026-07-29 sin pasar por el flujo automatico, y
+   por lo tanto sin fila en secuencia_rotopala. Sin este backfill, cuando el
+   modulo 124 se cerraba por avance de secuencia, sp_auto_cerrar_y_avanzar_
+   secuencia no encontraba un modulo 125 al cual abrir (porque no existia
+   como PENDIENTE) y quedaba en ALERTA_FIN_DE_CAMPANA con un mensaje
+   enganoso (""no hay mas modulos congelados""), cuando en realidad si los
+   habia, solo que nunca se habian secuenciado. sp_definir_secuencia es
+   idempotente: solo agrega los modulos que faltan, nunca reordena ni borra
+   los que ya estan.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_auto_mantener_secuencia]
+(
+    @VentanaDias int = 90,
+    @Siguientes  int = 5
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    INSERT INTO [reclamo].[log_ejecucion] (procedimiento, estado)
+    VALUES ('reclamo.sp_auto_mantener_secuencia', 'EN_CURSO');
+    DECLARE @EjecucionId int = SCOPE_IDENTITY();
+
+    BEGIN TRY
+        IF EXISTS
+        (
+            SELECT 1
+            FROM [reclamo].[modulo_congelado] mc
+            WHERE mc.estado = 'CONGELADO'
+              AND NOT EXISTS
+              (
+                  SELECT 1 FROM [reclamo].[secuencia_rotopala] s
+                  WHERE s.[campaña_id] = mc.[campaña_id] AND s.modulo_id = mc.modulo_id
+              )
+        )
+        BEGIN
+            DECLARE @CampDef int, @PadDef int;
+            DECLARE campañas_def CURSOR LOCAL FAST_FORWARD FOR
+                SELECT DISTINCT mc.[campaña_id], mc.pad_id
+                FROM [reclamo].[modulo_congelado] mc
+                WHERE mc.estado = 'CONGELADO'
+                  AND NOT EXISTS
+                  (
+                      SELECT 1 FROM [reclamo].[secuencia_rotopala] s
+                      WHERE s.[campaña_id] = mc.[campaña_id] AND s.modulo_id = mc.modulo_id
+                  );
+            OPEN campañas_def;
+            FETCH NEXT FROM campañas_def INTO @CampDef, @PadDef;
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                BEGIN TRY
+                    EXEC [reclamo].[sp_definir_secuencia]
+                         @CampañaId = @CampDef, @PadId = @PadDef;
+
+                    INSERT INTO [reclamo].[log_automatizacion]
+                        (ejecucion_id, accion, pad_id, [campaña_id], detalle)
+                    VALUES
+                        (@EjecucionId, 'SECUENCIADO_AUTOMATICO', @PadDef, @CampDef,
+                         N'Backfill: se agregaron a secuencia_rotopala los modulos '
+                            + N'CONGELADOS de esta campana/pad que no tenian fila.');
+                END TRY
+                BEGIN CATCH
+                    INSERT INTO [reclamo].[log_automatizacion]
+                        (ejecucion_id, accion, pad_id, [campaña_id], detalle)
+                    VALUES
+                        (@EjecucionId, 'ALERTA_SIN_BASE', @PadDef, @CampDef,
+                         N'Error en backfill de secuencia: ' + ERROR_MESSAGE());
+                END CATCH;
+                FETCH NEXT FROM campañas_def INTO @CampDef, @PadDef;
+            END;
+            CLOSE campañas_def;
+            DEALLOCATE campañas_def;
+        END;
+
+        EXEC [reclamo].[sp_auto_cerrar_y_avanzar_secuencia] @EjecucionId = @EjecucionId;
+
+        EXEC [reclamo].[sp_auto_congelar_modulos_nuevos]
+             @VentanaDias = @VentanaDias, @Siguientes = @Siguientes, @EjecucionId = @EjecucionId;
+
+        /* -------------------------------------------------------------
+           Relleno de cupo huerfano (agregado 2026-07-30, corregido el
+           mismo dia): si una rotopala/campaña queda con CERO modulos
+           ABIERTO pero SI tiene al menos un CERRADO (caso del modulo 124:
+           se cerro en una corrida anterior a que existiera el backfill de
+           secuencia de mas arriba, asi que su sucesor nunca se abrio
+           porque el paso ""abrir el siguiente"" solo se dispara como efecto
+           inmediato de cerrar dentro de la MISMA corrida), abre el
+           siguiente PENDIENTE por orden_secuencia.
+
+           Version anterior (incorrecta, descartada): exigia solo que
+           existiera ALGUNA medicion VIGENTE en topografia_avance, sin
+           mirar la fecha. Se comprobo en la rotopala 2 / campaña 8 que
+           eso abre el modulo equivocado: los modulos 103 a 123 llevaban
+           meses (abril a julio) ya extraidos casi al 100 % por camiones,
+           congelados en bloque el 2026-07-29 sin nunca pasar por
+           secuencia, y el 123 en particular tenia 4 mediciones VIGENTE
+           pero todas de 2026-07-01 a 2026-07-04 -- anteriores incluso al
+           124 (que midio hasta el 07-08). Al ordenar por orden_secuencia,
+           que sp_definir_secuencia asigna por modulo_numero ascendente,
+           123 quedaba antes que 125 y se abria primero aunque su ultima
+           actividad real fuera mas vieja que la del propio modulo que se
+           acababa de cerrar.
+
+           Fix: la evidencia ahora exige que la medicion VIGENTE sea
+           POSTERIOR a la ultima medicion real de los modulos ya CERRADOS
+           de esa misma rotopala/campaña (mismo principio de ""solo cola""
+           que v_preliminar_cv25 y AVANCE_DE_SECUENCIA). Con esto, 123
+           queda descartado (su ultima medicion, 07-04, es anterior al
+           07-08 del 124) y el candidato correcto pasa a ser 125 (mide
+           desde el 07-09, despues del 124).
+        ------------------------------------------------------------- */
+        DECLARE @RotRell tinyint, @CampRell int;
+        DECLARE @SecRell int, @ModRell int, @PadRell int, @ModNumRell int;
+        DECLARE @UltimaMedicionCerrado date;
+
+        DECLARE grupos_relleno CURSOR LOCAL FAST_FORWARD FOR
+            SELECT DISTINCT s.rotopala_id, s.[campaña_id]
+            FROM [reclamo].[secuencia_rotopala] s
+            WHERE NOT EXISTS
+            (
+                SELECT 1 FROM [reclamo].[secuencia_rotopala] s2
+                WHERE s2.rotopala_id = s.rotopala_id AND s2.[campaña_id] = s.[campaña_id]
+                  AND s2.estado = 'ABIERTO'
+            )
+            AND EXISTS
+            (
+                SELECT 1 FROM [reclamo].[secuencia_rotopala] s3
+                WHERE s3.rotopala_id = s.rotopala_id AND s3.[campaña_id] = s.[campaña_id]
+                  AND s3.estado = 'CERRADO'
+            );
+        OPEN grupos_relleno;
+        FETCH NEXT FROM grupos_relleno INTO @RotRell, @CampRell;
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            SET @SecRell = NULL;
+
+            SET @UltimaMedicionCerrado =
+            (
+                SELECT MAX(t.fecha_medicion)
+                FROM [reclamo].[secuencia_rotopala] s4
+                INNER JOIN [reclamo].[topografia_avance] t
+                        ON t.modulo_id = s4.modulo_id AND t.estado = 'VIGENTE'
+                WHERE s4.rotopala_id = @RotRell AND s4.[campaña_id] = @CampRell
+                  AND s4.estado = 'CERRADO'
+            );
+
+            SELECT TOP (1)
+                @SecRell = s.secuencia_id, @ModRell = s.modulo_id,
+                @PadRell = s.pad_id, @ModNumRell = s.modulo_numero
+            FROM [reclamo].[secuencia_rotopala] s
+            WHERE s.rotopala_id = @RotRell AND s.[campaña_id] = @CampRell
+              AND s.estado = 'PENDIENTE'
+              AND EXISTS
+              (
+                  SELECT 1 FROM [reclamo].[topografia_avance] t
+                  WHERE t.modulo_id = s.modulo_id AND t.estado = 'VIGENTE'
+                    AND
+                    (
+                        @UltimaMedicionCerrado IS NULL
+                        OR t.fecha_medicion > @UltimaMedicionCerrado
+                    )
+              )
+            ORDER BY s.orden_secuencia ASC;
+
+            IF @SecRell IS NOT NULL
+            BEGIN
+                UPDATE [reclamo].[secuencia_rotopala]
+                SET estado = 'ABIERTO', fecha_apertura = CAST(SYSDATETIME() AS date)
+                WHERE secuencia_id = @SecRell;
+
+                INSERT INTO [reclamo].[log_automatizacion]
+                    (ejecucion_id, accion, pad_id, [campaña_id], modulo_id, modulo_numero, detalle)
+                VALUES
+                    (@EjecucionId, 'ABIERTO_AUTOMATICO', @PadRell, @CampRell, @ModRell, @ModNumRell,
+                     N'Rotopala sin modulo ABIERTO tras el backfill de secuencia. Se abre el '
+                        + N'siguiente PENDIENTE con medicion real de topografia POSTERIOR a la '
+                        + N'ultima medicion de los modulos ya cerrados (evidencia fisica de '
+                        + N'actividad reciente, no se abre solo por haber cupo ni por tener '
+                        + N'cualquier medicion historica).');
+            END;
+
+            FETCH NEXT FROM grupos_relleno INTO @RotRell, @CampRell;
+        END;
+        CLOSE grupos_relleno;
+        DEALLOCATE grupos_relleno;
+
+        DECLARE @Congelados int, @Abiertos int, @Cerrados int, @Alertas int;
+        SELECT
+            @Congelados = SUM(CASE WHEN accion = 'CONGELADO_AUTOMATICO' THEN 1 ELSE 0 END),
+            @Abiertos   = SUM(CASE WHEN accion = 'ABIERTO_AUTOMATICO'   THEN 1 ELSE 0 END),
+            @Cerrados   = SUM(CASE WHEN accion = 'CERRADO_AUTOMATICO'   THEN 1 ELSE 0 END),
+            @Alertas    = SUM(CASE WHEN accion LIKE 'ALERTA%'           THEN 1 ELSE 0 END)
+        FROM [reclamo].[log_automatizacion]
+        WHERE ejecucion_id = @EjecucionId;
+
+        PRINT 'Congelados automaticamente : ' + CAST(COALESCE(@Congelados,0) AS varchar);
+        PRINT 'Abiertos automaticamente   : ' + CAST(COALESCE(@Abiertos,0) AS varchar);
+        PRINT 'Cerrados automaticamente   : ' + CAST(COALESCE(@Cerrados,0) AS varchar);
+        PRINT 'Alertas para revisar       : ' + CAST(COALESCE(@Alertas,0) AS varchar);
+
+        UPDATE [reclamo].[log_ejecucion]
+        SET fecha_fin       = SYSDATETIME(),
+            filas_afectadas = COALESCE(@Congelados,0) + COALESCE(@Abiertos,0) + COALESCE(@Cerrados,0),
+            estado          = 'OK'
+        WHERE ejecucion_id = @EjecucionId;
+
+        SELECT
+            l.log_id, l.accion, l.pad_id, l.[campaña_id], l.modulo_id, l.modulo_numero,
+            l.detalle, l.fecha_evento
+        FROM [reclamo].[log_automatizacion] l
+        WHERE l.ejecucion_id = @EjecucionId
+        ORDER BY CASE WHEN l.accion LIKE 'ALERTA%' THEN 0 ELSE 1 END, l.log_id;
+    END TRY
+    BEGIN CATCH
+        UPDATE [reclamo].[log_ejecucion]
+        SET fecha_fin = SYSDATETIME(), estado = 'ERROR', mensaje = ERROR_MESSAGE()
+        WHERE ejecucion_id = @EjecucionId;
+        THROW;
+    END CATCH
+END;"
+reclamo,sp_calcular_reclamo_diario,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 6. reclamo.sp_calcular_reclamo_diario
+
+   Materializa reclamo.calculo_diario a partir de reclamo.v_reclamo_diario, y
+   deja constancia de la corrida en reclamo.log_ejecucion.
+
+   El calculo es idempotente: reprocesar el mismo rango produce el mismo
+   resultado, y una fila PRELIMINAR_CV25 se convierte sola en TOPOGRAFIA en
+   cuanto llega la medicion.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_calcular_reclamo_diario]
+(
+    @FechaInicio    date,
+    @FechaFin       date,
+    @DiasReproceso  int = 7
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @EjecucionId int;
+    DECLARE @Desde date;
+
+    BEGIN TRY
+        IF @FechaInicio IS NULL OR @FechaFin IS NULL
+            THROW 60501, 'Debe informar el rango de fechas.', 1;
+        IF @FechaInicio > @FechaFin
+            THROW 60502, 'La fecha inicial no puede ser mayor que la final.', 1;
+
+        SET @Desde =
+            CASE
+                WHEN DATEADD(DAY, -@DiasReproceso, @FechaFin) < @FechaInicio
+                    THEN DATEADD(DAY, -@DiasReproceso, @FechaFin)
+                ELSE @FechaInicio
+            END;
+
+        /* El sistema no calcula hacia atras de la fecha de corte. Lo anterior
+           vive como linea base en modulo_congelado y no se recalcula. */
+        DECLARE @Corte date = [reclamo].[fn_fecha_corte]();
+
+        IF @Corte IS NULL
+            THROW 60503,
+                  'No hay FECHA_CORTE_SISTEMA en reclamo.configuracion.', 1;
+
+        IF @Desde < @Corte
+        BEGIN
+            PRINT '-- El rango solicitado comienza antes de la fecha de corte ('
+                + CONVERT(varchar(10), @Corte, 120) + ').';
+            PRINT '-- Se recorta al corte. Lo anterior es linea base y no se recalcula.';
+            SET @Desde = @Corte;
+        END;
+
+        IF @FechaFin < @Corte
+            THROW 60504,
+                  'Todo el rango solicitado es anterior a la fecha de corte del sistema.', 1;
+
+        INSERT INTO [reclamo].[log_ejecucion]
+            (procedimiento, rango_desde, rango_hasta, estado)
+        VALUES
+            ('reclamo.sp_calcular_reclamo_diario', @Desde, @FechaFin, 'EN_CURSO');
+
+        SET @EjecucionId = SCOPE_IDENTITY();
+
+        PRINT '-- Rango efectivo: ' + CONVERT(varchar(10), @Desde, 120)
+            + ' a ' + CONVERT(varchar(10), @FechaFin, 120);
+
+        /* Se borra y recarga el rango completo: mas simple y seguro que un
+           MERGE con muchas columnas, y el volumen diario es pequeno. */
+        DELETE FROM [reclamo].[calculo_diario]
+        WHERE fecha_operacion >= @Desde
+          AND fecha_operacion <= @FechaFin;
+
+        INSERT INTO [reclamo].[calculo_diario]
+        (
+            fecha_operacion, [campaña_id], pad_id, modulo_id, modulo_numero, rotopala_id,
+            tms_conformado, m3_totales, densidad_oficial,
+            m3_camiones_dia, tms_camiones_dia,
+            m3_camiones_acum, tms_camiones_acum,
+            m3_disponible_roto, tms_disponible_roto,
+            m3_rotopala_dia, tms_rotopala_dia,
+            m3_rotopala_acum, tms_rotopala_acum,
+            avance_total_pct, avance_roto_pct, avance_camiones_pct,
+            ajuste_m3, ajuste_tms, ajustes_aplicados,
+            fuente_reclamo, metodo_calculo, flag_calculo, flag_cuadratura,
+            ejecucion_id
+        )
+        SELECT
+            rd.fecha_operacion,
+            rd.[campaña_id],
+            rd.pad_id,
+            rd.modulo_id,
+            rd.modulo_numero,
+            rd.rotopala_id,
+
+            rd.tms_conformado,
+            rd.m3_totales,
+            rd.densidad_oficial,
+
+            rd.m3_camiones_dia,
+            rd.tms_camiones_dia,
+
+            rd.m3_camiones_acum,
+            rd.tms_camiones_acum,
+
+            rd.m3_disponible_roto,
+            rd.tms_disponible_roto,
+
+            rd.m3_rotopala_dia,
+            rd.tms_rotopala_dia,
+            rd.m3_rotopala_acum_topografia,
+            rd.m3_rotopala_acum_topografia * rd.densidad_oficial,
+
+            rd.avance_total_pct_calculado,
+            rd.avance_roto_pct,
+            rd.avance_camiones_pct,
+
+            rd.ajuste_m3,
+            rd.ajuste_tms,
+            rd.ajustes_aplicados,
+
+            rd.fuente_reclamo,
+            rd.metodo_calculo,
+            rd.flag_calculo,
+            cm.flag_cuadratura,
+
+            @EjecucionId
+        FROM [reclamo].[v_reclamo_diario] rd
+        LEFT JOIN [reclamo].[v_cuadratura_modulo] cm
+            ON  cm.[campaña_id] = rd.[campaña_id]
+            AND cm.modulo_id    = rd.modulo_id
+        WHERE rd.fecha_operacion >= @Desde
+          AND rd.fecha_operacion <= @FechaFin;
+
+        DECLARE @Filas int = @@ROWCOUNT;
+
+        DECLARE @Topo  int = (SELECT COUNT(*) FROM [reclamo].[calculo_diario]
+                              WHERE ejecucion_id = @EjecucionId AND fuente_reclamo = 'TOPOGRAFIA');
+        DECLARE @Prel  int = (SELECT COUNT(*) FROM [reclamo].[calculo_diario]
+                              WHERE ejecucion_id = @EjecucionId AND fuente_reclamo = 'PRELIMINAR_CV25');
+        DECLARE @Sin   int = (SELECT COUNT(*) FROM [reclamo].[calculo_diario]
+                              WHERE ejecucion_id = @EjecucionId AND fuente_reclamo = 'SIN_DATO');
+
+        UPDATE [reclamo].[log_ejecucion]
+        SET fecha_fin        = SYSDATETIME(),
+            filas_afectadas  = @Filas,
+            filas_topografia = @Topo,
+            filas_preliminar = @Prel,
+            filas_sin_dato   = @Sin,
+            estado           = 'OK'
+        WHERE ejecucion_id = @EjecucionId;
+
+        PRINT 'Filas calculadas      : ' + CAST(@Filas AS varchar);
+        PRINT '  Fuente TOPOGRAFIA   : ' + CAST(@Topo AS varchar) + ' (OFICIAL)';
+        PRINT '  Fuente PRELIMINAR   : ' + CAST(@Prel AS varchar) + ' (se reemplaza al llegar topografia)';
+        PRINT '  Sin dato            : ' + CAST(@Sin  AS varchar);
+
+        IF @Prel > 0
+        BEGIN
+            PRINT '';
+            PRINT 'ATENCION: hay reclamo publicado con fuente PRELIMINAR_CV25.';
+            PRINT 'Estas fechas y modulos se corregiran solos al reprocesar el rango';
+            PRINT 'una vez cargada la medicion topografica:';
+
+            SELECT DISTINCT
+                cd.fecha_operacion,
+                cd.pad_id,
+                cd.modulo_numero,
+                cd.tms_rotopala_dia,
+                cd.flag_calculo
+            FROM [reclamo].[calculo_diario] cd
+            WHERE cd.ejecucion_id = @EjecucionId
+              AND cd.fuente_reclamo = 'PRELIMINAR_CV25'
+            ORDER BY cd.fecha_operacion, cd.pad_id, cd.modulo_numero;
+        END;
+
+        /* Modulos que superaron el 100 por ciento. */
+        IF EXISTS (SELECT 1 FROM [reclamo].[v_cuadratura_modulo]
+                   WHERE flag_cuadratura = 'SOBRE_100_PROPONER_TRASPASO')
+        BEGIN
+            PRINT '';
+            PRINT 'ATENCION: modulos con extraccion sobre 100 por ciento.';
+            PRINT 'Requieren un ajuste TRASPASO_MODULO documentado.';
+
+            SELECT
+                cm.[campaña_id],
+                cm.modulo_numero,
+                cm.porcentaje_extraido,
+                cm.m3_excedente,
+                cm.tms_excedente,
+                cm.modulo_siguiente_propuesto
+            FROM [reclamo].[v_cuadratura_modulo] cm
+            WHERE cm.flag_cuadratura = 'SOBRE_100_PROPONER_TRASPASO'
+            ORDER BY cm.porcentaje_extraido DESC;
+        END;
+    END TRY
+    BEGIN CATCH
+        IF @EjecucionId IS NOT NULL
+            UPDATE [reclamo].[log_ejecucion]
+            SET fecha_fin = SYSDATETIME(),
+                estado    = 'ERROR',
+                mensaje   = ERROR_MESSAGE()
+            WHERE ejecucion_id = @EjecucionId;
+        THROW;
+    END CATCH
+END;"
+reclamo,sp_cargar_cv25_horas,SQL_STORED_PROCEDURE,"/* ================================================================
+   Error al correr ""Recalcular"" (rango 01 al 05-ago-2026):
+
+   IntegrityError: The MERGE statement conflicted with the CHECK
+   constraint ""CK_cv_tmh"". Column 'tmh_dia'. Tabla reclamo.cv25_diario.
+
+   Causa: CK_cv_tmh exige tmh_dia IS NULL OR tmh_dia >= 0. El SP ya
+   detecta un delta negativo del totalizador CV25 y lo marca con
+   flag='DELTA_NEGATIVO_REVISAR', pero el mismo MERGE seguia
+   escribiendo ese valor negativo tal cual en tmh_dia/tms_dia -- el
+   flag diagnosticaba el problema, pero no evitaba el valor invalido.
+   Debe haber aparecido un delta negativo nuevo (probable reinicio o
+   caida del totalizador CV25 sin corregir) en alguna fecha del rango
+   01-05 agosto, algo que antes no se topaba porque este SP solo se
+   corria a mano en rangos ya revisados.
+
+   Fix: cuando el delta elegido (segun @TagOficial) es negativo,
+   tmh_dia y tms_dia quedan NULL (pasa el CHECK) en vez de escribir el
+   valor negativo. Las columnas crudas tmh_cv025tot/tmh_cv025_tot NO
+   se tocan -- se conserva el dato de origen intacto para diagnostico
+   -- y el flag sigue en DELTA_NEGATIVO_REVISAR para que quede visible
+   en el dashboard. Resto del procedimiento sin cambios.
+================================================================ */
+
+CREATE PROCEDURE [reclamo].[sp_cargar_cv25_horas]
+(
+    @FechaInicio date,
+    @FechaFin    date,
+    @HumedadPct  decimal(9,6) = NULL,
+    @TagOficial  varchar(40)  = 'cv025tot'
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF @FechaInicio IS NULL OR @FechaFin IS NULL
+        THROW 60201, 'Debe informar el rango de fechas.', 1;
+
+    IF @TagOficial NOT IN ('cv025tot','cv025_tot')
+        THROW 60202, 'El tag oficial debe ser cv025tot o cv025_tot.', 1;
+
+    /* ---- 3.a  Totalizador CV25 diario ---------------------------------- */
+    MERGE [reclamo].[cv25_diario] AS tgt
+    USING
+    (
+        SELECT
+            CAST(v.fecha_turno AS date)               AS fecha,
+            CAST(v.[cv025tot]  AS decimal(30,12))     AS tmh_cv025tot,
+            CAST(v.[cv025_tot] AS decimal(30,12))     AS tmh_cv025_tot,
+            CAST(v.rc_001 AS int)                     AS horas_con_dato_r1,
+            CAST(v.rc_002 AS int)                     AS horas_con_dato_r2
+        FROM [inventar_SpcHidr].[vista_resumen_datos_filtrados] v
+        WHERE CAST(v.fecha_turno AS date) >= @FechaInicio
+          AND CAST(v.fecha_turno AS date) <= @FechaFin
+    ) AS src
+        ON tgt.fecha = src.fecha
+    WHEN MATCHED THEN UPDATE SET
+        tmh_cv025tot      = src.tmh_cv025tot,
+        tmh_cv025_tot     = src.tmh_cv025_tot,
+        horas_con_dato_r1 = src.horas_con_dato_r1,
+        horas_con_dato_r2 = src.horas_con_dato_r2,
+        tag_utilizado     = @TagOficial,
+        tmh_dia           = CASE
+                               WHEN (CASE WHEN @TagOficial = 'cv025tot'
+                                          THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END) < 0
+                                   THEN NULL
+                               ELSE CASE WHEN @TagOficial = 'cv025tot'
+                                         THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END
+                            END,
+        humedad_pct       = COALESCE(@HumedadPct, tgt.humedad_pct),
+        tms_dia           = CASE
+                               WHEN (CASE WHEN @TagOficial = 'cv025tot'
+                                          THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END) < 0
+                                   THEN NULL
+                               WHEN COALESCE(@HumedadPct, tgt.humedad_pct) IS NULL
+                                   THEN CASE WHEN @TagOficial = 'cv025tot'
+                                             THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END
+                               ELSE (CASE WHEN @TagOficial = 'cv025tot'
+                                          THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END)
+                                    * (1.0 - COALESCE(@HumedadPct, tgt.humedad_pct) / 100.0)
+                            END,
+        flag              = CASE
+                               WHEN src.tmh_cv025tot IS NULL AND src.tmh_cv025_tot IS NULL
+                                   THEN 'SIN_TOTALIZADOR'
+                               WHEN COALESCE(src.tmh_cv025tot, src.tmh_cv025_tot) < 0
+                                   THEN 'DELTA_NEGATIVO_REVISAR'
+                               WHEN COALESCE(src.tmh_cv025tot, 0) = 0
+                                AND COALESCE(src.horas_con_dato_r1, 0)
+                                  + COALESCE(src.horas_con_dato_r2, 0) = 0
+                                   THEN 'SIN_OPERACION'
+                               ELSE 'OK'
+                            END,
+        fecha_registro    = SYSDATETIME()
+    WHEN NOT MATCHED BY TARGET THEN INSERT
+    (
+        fecha, tmh_cv025tot, tmh_cv025_tot, tmh_dia, humedad_pct, tms_dia,
+        horas_con_dato_r1, horas_con_dato_r2, tag_utilizado, flag
+    )
+    VALUES
+    (
+        src.fecha, src.tmh_cv025tot, src.tmh_cv025_tot,
+        CASE
+            WHEN (CASE WHEN @TagOficial = 'cv025tot'
+                       THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END) < 0
+                THEN NULL
+            ELSE CASE WHEN @TagOficial = 'cv025tot' THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END
+        END,
+        @HumedadPct,
+        CASE
+            WHEN (CASE WHEN @TagOficial = 'cv025tot'
+                       THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END) < 0
+                THEN NULL
+            WHEN @HumedadPct IS NULL
+                THEN CASE WHEN @TagOficial = 'cv025tot' THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END
+            ELSE (CASE WHEN @TagOficial = 'cv025tot' THEN src.tmh_cv025tot ELSE src.tmh_cv025_tot END)
+                 * (1.0 - @HumedadPct / 100.0)
+        END,
+        src.horas_con_dato_r1, src.horas_con_dato_r2, @TagOficial,
+        CASE
+            WHEN src.tmh_cv025tot IS NULL AND src.tmh_cv025_tot IS NULL
+                THEN 'SIN_TOTALIZADOR'
+            WHEN COALESCE(src.tmh_cv025tot, src.tmh_cv025_tot) < 0
+                THEN 'DELTA_NEGATIVO_REVISAR'
+            WHEN COALESCE(src.tmh_cv025tot, 0) = 0
+             AND COALESCE(src.horas_con_dato_r1, 0) + COALESCE(src.horas_con_dato_r2, 0) = 0
+                THEN 'SIN_OPERACION'
+            ELSE 'OK'
+        END
+    );
+
+    PRINT 'CV25 diario cargado      : ' + CAST(@@ROWCOUNT AS varchar) + ' filas afectadas';
+
+    /* ---- 3.b  Horas de operacion por rotopala y turno -------------------
+       datos_filtrados es horaria y trae su propia columna turno. */
+    DECLARE @Umbral1 decimal(18,6) = (SELECT umbral_corriente  FROM [reclamo].[rotopala] WHERE rotopala_id = 1);
+    DECLARE @Hpm1    decimal(9,6)  = (SELECT horas_por_muestra FROM [reclamo].[rotopala] WHERE rotopala_id = 1);
+    DECLARE @Umbral2 decimal(18,6) = (SELECT umbral_corriente  FROM [reclamo].[rotopala] WHERE rotopala_id = 2);
+    DECLARE @Hpm2    decimal(9,6)  = (SELECT horas_por_muestra FROM [reclamo].[rotopala] WHERE rotopala_id = 2);
+
+    ;WITH muestras AS
+    (
+        SELECT
+            CAST(df.fecha_turno AS date)                  AS fecha_turno,
+            CAST(UPPER(LTRIM(RTRIM(df.turno))) AS char(1)) AS turno,
+            SUM(CASE WHEN df.rc001corr > @Umbral1 THEN 1 ELSE 0 END) AS n_r1,
+            SUM(CASE WHEN df.rc002corr > @Umbral2 THEN 1 ELSE 0 END) AS n_r2
+        FROM [inventar_SpcHidr].[datos_filtrados] df
+        WHERE CAST(df.fecha_turno AS date) >= @FechaInicio
+          AND CAST(df.fecha_turno AS date) <= @FechaFin
+          AND df.turno IS NOT NULL
+          AND UPPER(LTRIM(RTRIM(df.turno))) IN ('A','B')
+        GROUP BY
+            CAST(df.fecha_turno AS date),
+            CAST(UPPER(LTRIM(RTRIM(df.turno))) AS char(1))
+    ),
+    desglose AS
+    (
+        SELECT fecha_turno, turno, CAST(1 AS tinyint) AS rotopala_id,
+               n_r1 AS muestras, @Hpm1 AS hpm
+        FROM muestras
+        UNION ALL
+        SELECT fecha_turno, turno, CAST(2 AS tinyint),
+               n_r2, @Hpm2
+        FROM muestras
+    )
+    MERGE [reclamo].[rotopala_horas_turno] AS tgt
+    USING desglose AS src
+        ON  tgt.fecha_turno = src.fecha_turno
+        AND tgt.turno       = src.turno
+        AND tgt.rotopala_id = src.rotopala_id
+    WHEN MATCHED THEN UPDATE SET
+        muestras_sobre_umbral = src.muestras,
+        horas_por_muestra     = src.hpm,
+        horas_operacion       = CAST(src.muestras * src.hpm AS decimal(18,6)),
+        flag                  = CASE
+                                    WHEN src.muestras * src.hpm > 12.5
+                                        THEN 'HORAS_SOBRE_TURNO_REVISAR'
+                                    WHEN src.muestras = 0
+                                        THEN 'SIN_OPERACION'
+                                    ELSE 'OK'
+                                END,
+        fecha_registro        = SYSDATETIME()
+    WHEN NOT MATCHED BY TARGET THEN INSERT
+    (
+        fecha_turno, turno, rotopala_id,
+        muestras_sobre_umbral, horas_por_muestra, horas_operacion, flag
+    )
+    VALUES
+    (
+        src.fecha_turno, src.turno, src.rotopala_id,
+        src.muestras, src.hpm,
+        CAST(src.muestras * src.hpm AS decimal(18,6)),
+        CASE
+            WHEN src.muestras * src.hpm > 12.5 THEN 'HORAS_SOBRE_TURNO_REVISAR'
+            WHEN src.muestras = 0              THEN 'SIN_OPERACION'
+            ELSE 'OK'
+        END
+    );
+
+    PRINT 'Horas de rotopala cargadas: ' + CAST(@@ROWCOUNT AS varchar) + ' filas afectadas';
+
+    /* ---- 3.c  Contraste entre los dos tags del totalizador -------------- */
+    IF EXISTS
+    (
+        SELECT 1 FROM [reclamo].[cv25_diario]
+        WHERE fecha BETWEEN @FechaInicio AND @FechaFin
+          AND tmh_cv025tot IS NOT NULL AND tmh_cv025_tot IS NOT NULL
+          AND tmh_cv025_tot <> 0
+          AND ABS(tmh_cv025tot - tmh_cv025_tot) * 100.0 / tmh_cv025_tot > 1
+    )
+    BEGIN
+        PRINT '';
+        PRINT 'ATENCION: los dos tags del totalizador CV25 difieren en mas de 1 %';
+        PRINT 'en las siguientes fechas. Se publico el tag ' + @TagOficial + '.';
+
+        SELECT
+            fecha, tmh_cv025tot, tmh_cv025_tot,
+            tmh_cv025tot - tmh_cv025_tot AS diferencia,
+            (tmh_cv025tot - tmh_cv025_tot) * 100.0 / NULLIF(tmh_cv025_tot,0) AS diferencia_pct
+        FROM [reclamo].[cv25_diario]
+        WHERE fecha BETWEEN @FechaInicio AND @FechaFin
+          AND tmh_cv025tot IS NOT NULL AND tmh_cv025_tot IS NOT NULL
+          AND tmh_cv025_tot <> 0
+          AND ABS(tmh_cv025tot - tmh_cv025_tot) * 100.0 / tmh_cv025_tot > 1
+        ORDER BY fecha;
+    END;
+
+    /* ---- 3.d  Alerta explicita de deltas negativos en el rango ---------
+       Nuevo en v1.1: antes el negativo solo se veia si alguien miraba el
+       flag columna por columna. Ahora sale como aviso directo, ya que con
+       el fix tmh_dia/tms_dia quedan en NULL y el dato podria pasar
+       desapercibido si nadie revisa reclamo.cv25_diario. */
+    IF EXISTS
+    (
+        SELECT 1 FROM [reclamo].[cv25_diario]
+        WHERE fecha BETWEEN @FechaInicio AND @FechaFin
+          AND flag = 'DELTA_NEGATIVO_REVISAR'
+    )
+    BEGIN
+        PRINT '';
+        PRINT 'ATENCION: delta negativo del totalizador CV25 en las siguientes';
+        PRINT 'fechas. tmh_dia/tms_dia quedaron en NULL (no se publica un';
+        PRINT 'valor negativo). Revisar el totalizador de origen.';
+
+        SELECT fecha, tmh_cv025tot, tmh_cv025_tot, tmh_dia, tms_dia, flag
+        FROM [reclamo].[cv25_diario]
+        WHERE fecha BETWEEN @FechaInicio AND @FechaFin
+          AND flag = 'DELTA_NEGATIVO_REVISAR'
+        ORDER BY fecha;
+    END;
+
+    SELECT * FROM [reclamo].[v_cv25_diario]
+    WHERE fecha >= @FechaInicio AND fecha <= @FechaFin
+    ORDER BY fecha;
+END;"
+reclamo,sp_congelar_modulo,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 1. reclamo.sp_congelar_modulo
+
+   Regla R1. Toma el tonelaje conformado desde modulos_turnos y el volumen y
+   densidad desde disponible_rotopalas, y los congela.
+
+   Un modulo ya congelado NO se puede volver a congelar sin @Forzar = 1, y esa
+   accion queda registrada en la observacion.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_congelar_modulo]
+(
+    @CampañaId          int,
+    @ModuloId           int,
+    @PadId              int,
+    @ParcelaId          int          = NULL,
+    @FechaConformacion  date         = NULL,
+    @Forzar             bit          = 0,
+    @Observacion        nvarchar(1000) = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF @CampañaId IS NULL OR @ModuloId IS NULL OR @PadId IS NULL
+        THROW 60001, 'Debe informar campana, modulo y PAD.', 1;
+
+    DECLARE @Existe int =
+    (
+        SELECT COUNT(*)
+        FROM [reclamo].[modulo_congelado]
+        WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId
+    );
+
+    IF @Existe > 0 AND @Forzar = 0
+        THROW 60002,
+              'El modulo ya esta congelado. Use @Forzar = 1 y explique el motivo en @Observacion.', 1;
+
+    IF @Existe > 0 AND @Forzar = 1 AND @Observacion IS NULL
+        THROW 60003,
+              'Recongelar un modulo exige @Observacion con el motivo.', 1;
+
+    /* ---- Base oficial: disponible_rotopalas -------------------------------
+       CORRECCION 30-07-2026. El diseno original tomaba el TMS de la suma de
+       modulos_turnos. El script 00 mostro que esa suma esta un orden por
+       encima del valor de disponible_rotopalas, que es ademas el que usa la
+       hoja ""Disponible para rotopalas"" del libro de ripios.
+       disponible_rotopalas manda; modulos_turnos queda como contraste. */
+    DECLARE @Tms      decimal(30,12);
+    DECLARE @M3       decimal(30,12);
+    DECLARE @Densidad decimal(30,12);
+
+    SELECT TOP (1)
+        @Tms      = CAST(dr.[tms]        AS decimal(30,12)),
+        @M3       = CAST(dr.[m3_totales] AS decimal(30,12)),
+        @Densidad = CAST(dr.[densidad]   AS decimal(30,12))
+    FROM [inventar_SpcHidr].[disponible_rotopalas] dr
+    WHERE dr.[campaña_id] = @CampañaId
+      AND dr.[modulo_id]  = @ModuloId;
+
+    IF @Tms IS NULL OR @Tms <= 0
+        THROW 60004,
+              'disponible_rotopalas no tiene tms para esa campana y modulo.', 1;
+
+    IF @M3 IS NULL OR @M3 <= 0
+        THROW 60005,
+              'disponible_rotopalas no tiene m3_totales para esa campana y modulo.', 1;
+
+    /* Si la densidad declarada no viene o es cero, se deriva del cociente. */
+    IF COALESCE(@Densidad, 0) <= 0
+        SET @Densidad = @Tms / @M3;
+
+    /* Contraste con modulos_turnos, solo informativo. */
+    DECLARE @TmsTurnos decimal(30,12) =
+    (
+        SELECT SUM(COALESCE(mt.[TMS], 0))
+        FROM [inventar_SpcHidr].[modulos_turnos] mt
+        WHERE mt.[campaña_id] = @CampañaId
+          AND mt.[modulo_id]  = @ModuloId
+    );
+
+    IF @TmsTurnos IS NOT NULL AND @Tms > 0
+       AND ABS(@TmsTurnos - @Tms) * 100.0 / @Tms > 10
+        PRINT '        AVISO: modulos_turnos suma ' + CAST(@TmsTurnos AS varchar(40))
+            + ' TMS y disponible_rotopalas informa ' + CAST(@Tms AS varchar(40))
+            + '. Se congela con disponible_rotopalas.';
+
+    /* Parcela y PAD se derivan de la jerarquia real pad > parcela > modulo,
+       confirmada en el script 00 seccion 4. */
+    IF @ParcelaId IS NULL
+        SELECT @ParcelaId = md.id_parcela
+        FROM [inventar_SpcHidr].[modulo] md
+        WHERE md.id_modulo = @ModuloId;
+
+    DECLARE @ModuloNumero int =
+    (
+        SELECT TOP (1) md.numero
+        FROM [inventar_SpcHidr].[modulo] md
+        WHERE md.id_modulo = @ModuloId
+    );
+
+    /* El numero de modulo debe caer dentro del rango fisico del PAD.
+       Oxido: 32 parcelas x 2 modulos = 1 a 64.
+       Sulfuro: 28 parcelas x 5 modulos = 1 a 140. */
+    DECLARE @Min int, @Max int, @PadNombre varchar(40);
+    SELECT @Min = tp.modulo_numero_min,
+           @Max = tp.modulo_numero_max,
+           @PadNombre = tp.nombre
+    FROM [reclamo].[topologia_pad] tp
+    WHERE tp.pad_id = @PadId;
+
+    IF @Min IS NULL
+        THROW 60006,
+              'No hay topologia definida para ese PAD. Revise reclamo.topologia_pad.', 1;
+
+    IF @ModuloNumero IS NOT NULL AND @ModuloNumero NOT BETWEEN @Min AND @Max
+    BEGIN
+        DECLARE @Msg nvarchar(300) =
+            N'El modulo ' + CAST(@ModuloNumero AS nvarchar(10))
+            + N' esta fuera del rango del ' + @PadNombre
+            + N' (' + CAST(@Min AS nvarchar(10)) + N' a ' + CAST(@Max AS nvarchar(10)) + N').';
+        THROW 60007, @Msg, 1;
+    END;
+
+    IF @Existe > 0
+    BEGIN
+        UPDATE [reclamo].[modulo_congelado]
+        SET pad_id              = @PadId,
+            parcela_id          = @ParcelaId,
+            modulo_numero       = @ModuloNumero,
+            fecha_conformacion  = COALESCE(@FechaConformacion, fecha_conformacion),
+            fecha_congelamiento = CAST(SYSDATETIME() AS date),
+            tms_conformado      = @Tms,
+            m3_totales          = @M3,
+            densidad_oficial    = @Densidad,
+            fuente              = 'DISPONIBLE_ROTOPALAS',
+            metodo              = 'RECONGELADO_FORZADO',
+            usuario_registro    = SUSER_SNAME(),
+            fecha_registro      = SYSDATETIME(),
+            observacion         = @Observacion
+        WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId;
+
+        PRINT 'Modulo RECONGELADO. Campana ' + CAST(@CampañaId AS varchar)
+            + ' modulo ' + CAST(@ModuloId AS varchar);
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [reclamo].[modulo_congelado]
+        (
+            [campaña_id], pad_id, parcela_id, modulo_id, modulo_numero,
+            fecha_conformacion, fecha_congelamiento,
+            tms_conformado, m3_totales, densidad_oficial,
+            fuente, metodo, estado, observacion
+        )
+        VALUES
+        (
+            @CampañaId, @PadId, @ParcelaId, @ModuloId, @ModuloNumero,
+            COALESCE(@FechaConformacion, CAST(SYSDATETIME() AS date)),
+            CAST(SYSDATETIME() AS date),
+            @Tms, @M3, @Densidad,
+            'DISPONIBLE_ROTOPALAS',
+            'TMS_Y_VOLUMEN_DE_DISPONIBLE_ROTOPALAS',
+            'CONGELADO', @Observacion
+        );
+
+        PRINT 'Modulo CONGELADO. Campana ' + CAST(@CampañaId AS varchar)
+            + ' modulo ' + CAST(@ModuloId AS varchar)
+            + ' TMS ' + CAST(@Tms AS varchar(40))
+            + ' m3 '  + CAST(@M3 AS varchar(40));
+    END;
+
+    SELECT *
+    FROM [reclamo].[modulo_congelado]
+    WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId;
+END;"
+reclamo,sp_definir_secuencia,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 2. reclamo.sp_definir_secuencia
+
+   Regla R5 y R6. Asigna a cada modulo congelado de un PAD su posicion en la
+   secuencia de la rotopala correspondiente, ordenando por numero de modulo
+   creciente.
+
+   No borra secuencias existentes: solo agrega los modulos que faltan, para no
+   alterar el orden ya en uso.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_definir_secuencia]
+(
+    @CampañaId int,
+    @PadId     int
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @RotopalaId tinyint =
+    (
+        SELECT TOP (1) r.rotopala_id
+        FROM [reclamo].[rotopala] r
+        WHERE r.pad_id = @PadId AND r.activa = 1
+    );
+
+    IF @RotopalaId IS NULL
+        THROW 60101, 'No hay rotopala activa asociada a ese PAD. Revise reclamo.rotopala.', 1;
+
+    DECLARE @OrdenBase int =
+    (
+        SELECT COALESCE(MAX(s.orden_secuencia), 0)
+        FROM [reclamo].[secuencia_rotopala] s
+        WHERE s.rotopala_id = @RotopalaId AND s.[campaña_id] = @CampañaId
+    );
+
+    INSERT INTO [reclamo].[secuencia_rotopala]
+    (
+        rotopala_id, [campaña_id], pad_id, modulo_id, modulo_numero,
+        orden_secuencia, estado
+    )
+    SELECT
+        @RotopalaId,
+        mc.[campaña_id],
+        mc.pad_id,
+        mc.modulo_id,
+        mc.modulo_numero,
+        @OrdenBase + ROW_NUMBER() OVER (ORDER BY mc.modulo_numero, mc.modulo_id),
+        'PENDIENTE'
+    FROM [reclamo].[modulo_congelado] mc
+    WHERE mc.[campaña_id] = @CampañaId
+      AND mc.pad_id       = @PadId
+      AND mc.estado       = 'CONGELADO'
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM [reclamo].[secuencia_rotopala] s
+          WHERE s.[campaña_id] = mc.[campaña_id]
+            AND s.modulo_id    = mc.modulo_id
+      );
+
+    PRINT 'Modulos agregados a la secuencia: ' + CAST(@@ROWCOUNT AS varchar);
+
+    SELECT
+        s.orden_secuencia,
+        s.modulo_id,
+        s.modulo_numero,
+        s.estado,
+        s.fecha_apertura,
+        s.fecha_cierre
+    FROM [reclamo].[secuencia_rotopala] s
+    WHERE s.rotopala_id = @RotopalaId AND s.[campaña_id] = @CampañaId
+    ORDER BY s.orden_secuencia;
+END;"
+reclamo,sp_establecer_linea_base,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 3.b reclamo.sp_establecer_linea_base
+
+   Fija, de una sola vez, cuanto se habia extraido de cada modulo ANTES de la
+   fecha de corte del sistema.
+
+   Es la pieza que hace viable la decision de no operar retroactivamente. El
+   sistema arranca el 1 de julio de 2026 y no recalcula el pasado, pero
+   tampoco puede ignorarlo: un modulo que venia reclamandose desde mayo
+   apareceria como intacto y la cuadratura daria cualquier cosa.
+
+   La linea base se toma de las tablas historicas, con fecha ESTRICTAMENTE
+   ANTERIOR al corte, y queda congelada en modulo_congelado. No se vuelve a
+   calcular salvo que se ejecute este procedimiento otra vez.
+
+   @SoloSiVacio (agregado 2026-07-30, default 1 = seguro): solo establece
+   linea base en modulos donde fecha_linea_base todavia esta NULL. Nunca
+   toca un modulo que ya tiene linea base establecida. Esto es lo que hace
+   seguro llamarlo repetidas veces -- en particular, desde
+   sp_auto_congelar_modulos_nuevos cada vez que congela un modulo nuevo,
+   sin riesgo de pisar la linea base ya buena de otro modulo de la misma
+   campaña. Antes de este cambio, cualquier modulo que se congelara despues
+   de la corrida manual original quedaba con m3_rotopala_previo = 0 para
+   siempre, porque nadie volvia a correr este procedimiento para el
+   (confirmado en los modulos 33, 34, 35, 36 y 38 de PAD1, campaña 4).
+
+   Para forzar un recalculo deliberado de una linea base ya existente
+   (recalibracion manual, no el uso normal), pasar @SoloSiVacio = 0. En ese
+   caso sigue aplicando la advertencia original: sobrescribe lo que haya.
+
+   IMPORTANTE: en su uso normal (@SoloSiVacio = 1) es seguro y esperable
+   ejecutarlo muchas veces; cada modulo solo recibe su linea base una vez,
+   la primera vez que sp_establecer_linea_base lo ve con fecha_linea_base
+   NULL.
+
+   @Silencioso (agregado 2026-07-30, default 0): cuando esta en 1, no emite
+   los SELECT de vista previa ni de ""ATENCION sobre 100 % al corte"". Es
+   para el llamado automatico desde sp_auto_congelar_modulos_nuevos: ese
+   procedimiento es invocado, a su vez, desde sp_auto_mantener_secuencia y
+   desde ahi desde el dashboard, que espera UN SOLO result set (el resumen
+   final de cambios/alertas). Si sp_establecer_linea_base devolviera sus
+   propios SELECT en medio de esa cadena, el dashboard leeria el result set
+   equivocado. En uso manual interactivo se deja en 0 (default) para ver la
+   vista previa como siempre.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_establecer_linea_base]
+(
+    @CampañaId    int = NULL,
+    @PadId        int = NULL,
+    @Confirmar    bit = 0,
+    @SoloSiVacio  bit = 1,
+    @Silencioso   bit = 0
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @Corte date = [reclamo].[fn_fecha_corte]();
+
+    IF @Corte IS NULL
+        THROW 60601,
+              'No hay FECHA_CORTE_SISTEMA en reclamo.configuracion.', 1;
+
+    PRINT '-- Fecha de corte del sistema: ' + CONVERT(varchar(10), @Corte, 120);
+    PRINT '-- Se acumula todo lo anterior a esa fecha como linea base.';
+    PRINT CASE WHEN @SoloSiVacio = 1
+               THEN '-- Modo seguro: solo modulos sin linea base todavia.'
+               ELSE '-- Modo forzado: recalcula y pisa la linea base existente.'
+          END;
+
+    IF OBJECT_ID('tempdb..#LineaBase') IS NOT NULL DROP TABLE #LineaBase;
+
+    SELECT
+        mc.[campaña_id],
+        mc.modulo_id,
+        mc.modulo_numero,
+        mc.pad_id,
+        mc.m3_totales,
+        COALESCE(
+        (
+            SELECT SUM(COALESCE(crc.volumen_diario_m3, 0))
+            FROM [inventar_SpcHidr].[control_reclamo_sulfuro_camiones_thm_diario] crc
+            WHERE crc.[campaña_id] = mc.[campaña_id]
+              AND crc.modulo_id    = mc.modulo_id
+              AND CAST(crc.fecha AS date) < @Corte
+        ), 0)                                       AS m3_camiones_previo,
+        COALESCE(
+        (
+            SELECT SUM(COALESCE(cr.volumen_diario_m3, 0))
+            FROM [inventar_SpcHidr].[control_reclamo_diario] cr
+            WHERE cr.[campaña_id] = mc.[campaña_id]
+              AND cr.modulo_id    = mc.modulo_id
+              AND CAST(cr.fecha AS date) < @Corte
+        ), 0)                                       AS m3_rotopala_previo
+    INTO #LineaBase
+    FROM [reclamo].[modulo_congelado] mc
+    WHERE mc.estado = 'CONGELADO'
+      AND (@CampañaId   IS NULL OR mc.[campaña_id] = @CampañaId)
+      AND (@PadId       IS NULL OR mc.pad_id       = @PadId)
+      AND (@SoloSiVacio = 0    OR mc.fecha_linea_base IS NULL);
+
+    /* Vista previa antes de escribir. Se omite en modo silencioso. */
+    IF @Silencioso = 0
+    BEGIN
+        SELECT
+            lb.[campaña_id],
+            lb.pad_id,
+            lb.modulo_numero,
+            lb.m3_totales,
+            lb.m3_camiones_previo,
+            lb.m3_rotopala_previo,
+            lb.m3_camiones_previo + lb.m3_rotopala_previo AS m3_extraido_previo,
+            CASE
+                WHEN lb.m3_totales = 0 THEN NULL
+                ELSE (lb.m3_camiones_previo + lb.m3_rotopala_previo) * 100.0 / lb.m3_totales
+            END                                           AS pct_previo,
+            lb.m3_totales - (lb.m3_camiones_previo + lb.m3_rotopala_previo)
+                                                          AS m3_saldo_al_corte,
+            CASE
+                WHEN lb.m3_totales = 0
+                    THEN 'SIN_VOLUMEN'
+                WHEN lb.m3_camiones_previo + lb.m3_rotopala_previo > lb.m3_totales
+                    THEN 'YA_SOBRE_100_AL_CORTE'
+                WHEN (lb.m3_camiones_previo + lb.m3_rotopala_previo) * 100.0 / lb.m3_totales > 99
+                    THEN 'AGOTADO_AL_CORTE'
+                WHEN lb.m3_camiones_previo + lb.m3_rotopala_previo = 0
+                    THEN 'SIN_MOVIMIENTO_PREVIO'
+                ELSE 'CON_SALDO'
+            END                                           AS situacion_al_corte
+        FROM #LineaBase lb
+        ORDER BY lb.pad_id, lb.modulo_numero;
+    END;
+
+    IF @Confirmar = 0
+    BEGIN
+        PRINT '';
+        PRINT 'MODO VISTA PREVIA. No se escribio nada.';
+        PRINT 'Revise el resultado y vuelva a ejecutar con @Confirmar = 1.';
+        DROP TABLE #LineaBase;
+        RETURN;
+    END;
+
+    /* Se usa MERGE y no UPDATE ... FROM con alias.
+
+       Motivo: UPDATE <alias> SET ... FROM <tabla> AS <alias> hace que SQL
+       Server registre el ALIAS como entidad referenciada en
+       sys.sql_expression_dependencies, con referenced_id NULL. La validacion
+       1.2 del script 05, que busca referencias no resueltas, lo reportaba
+       como si fuera un objeto inexistente. Era un falso positivo, pero
+       ensuciaba un control que debe quedar en cero. MERGE no lo produce. */
+    MERGE [reclamo].[modulo_congelado] AS tgt
+    USING #LineaBase AS src
+        ON  src.[campaña_id] = tgt.[campaña_id]
+        AND src.modulo_id    = tgt.modulo_id
+    WHEN MATCHED THEN UPDATE SET
+        m3_camiones_previo = src.m3_camiones_previo,
+        m3_rotopala_previo = src.m3_rotopala_previo,
+        fecha_linea_base   = @Corte;
+
+    PRINT '';
+    PRINT 'Linea base establecida en ' + CAST(@@ROWCOUNT AS varchar) + ' modulos.';
+    PRINT 'Corte: ' + CONVERT(varchar(10), @Corte, 120);
+
+    /* Modulos que ya llegaban sobre 100 % antes del corte. Son el pasivo
+       historico: quedan documentados, pero el sistema no los recalcula. */
+    IF EXISTS (SELECT 1 FROM #LineaBase
+               WHERE m3_totales > 0
+                 AND m3_camiones_previo + m3_rotopala_previo > m3_totales)
+    BEGIN
+        PRINT '';
+        PRINT 'ATENCION: los siguientes modulos ya superaban el 100 % ANTES del';
+        PRINT 'corte. Se registran tal cual. No corresponde ajustarlos con el';
+        PRINT 'sistema nuevo: son parte del pasivo historico.';
+
+        IF @Silencioso = 0
+        SELECT
+            lb.pad_id, lb.modulo_numero, lb.m3_totales,
+            lb.m3_camiones_previo, lb.m3_rotopala_previo,
+            (lb.m3_camiones_previo + lb.m3_rotopala_previo) * 100.0 / lb.m3_totales AS pct
+        FROM #LineaBase lb
+        WHERE lb.m3_totales > 0
+          AND lb.m3_camiones_previo + lb.m3_rotopala_previo > lb.m3_totales
+        ORDER BY pct DESC;
+    END;
+
+    DROP TABLE #LineaBase;
+END;"
+reclamo,sp_insertar_disponible_rotopala,SQL_STORED_PROCEDURE,"CREATE   PROCEDURE [reclamo].[sp_insertar_disponible_rotopala]
+(
+    @PadId           bigint,
+    @ModuloId        bigint,
+    @CampañaId       bigint,
+    @Campaña         int            = NULL,
+    @Tms             decimal(30,12) = NULL,
+    @M3Totales       decimal(30,12) = NULL,
+    @Densidad        decimal(30,12) = NULL,
+    @M3Apilado       decimal(30,12) = NULL,
+    @TmhApilado      decimal(30,12) = NULL,
+    @RemanenteM3     decimal(30,12) = NULL,
+    @RemanenteTms    decimal(30,12) = NULL,
+    @Observacion     nvarchar(500) = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @ModuloNumero int =
+        (SELECT numero FROM [inventar_SpcHidr].[modulo] WHERE id_modulo = @ModuloId);
+
+    IF @ModuloNumero IS NULL
+        THROW 61011, 'modulo_id no existe en inventar_SpcHidr.modulo.', 1;
+
+    IF EXISTS
+    (
+        SELECT 1 FROM [inventar_SpcHidr].[disponible_rotopalas]
+        WHERE pad_id = @PadId AND modulo_id = @ModuloId AND [campaña_id] = @CampañaId
+    )
+        THROW 61012,
+              'Ya existe un registro para ese pad_id, modulo_id y campaña_id. Use sp_actualizar_disponible_rotopala.', 1;
+
+    IF @Campaña IS NULL
+        SELECT TOP (1) @Campaña = dr.[campaña]
+        FROM [inventar_SpcHidr].[disponible_rotopalas] dr
+        WHERE dr.[campaña_id] = @CampañaId;
+
+    IF @Campaña IS NULL
+        THROW 61013,
+              'No se pudo determinar el numero de campaña visible (@Campaña). Informelo explicitamente.', 1;
+
+    IF @Densidad IS NOT NULL AND @Densidad <= 0
+        THROW 61014, 'La densidad debe ser mayor a 0.', 1;
+
+    IF @Tms IS NOT NULL AND @Tms < 0
+        THROW 61015, 'El TMS no puede ser negativo.', 1;
+
+    IF @M3Totales IS NOT NULL AND @M3Totales < 0
+        THROW 61016, 'El m3_totales no puede ser negativo.', 1;
+
+    /* Densidad automatica, igual criterio que en la actualizacion. */
+    IF @Densidad IS NULL AND @Tms IS NOT NULL AND COALESCE(@M3Totales, 0) > 0
+        SET @Densidad = @Tms / @M3Totales;
+
+    BEGIN TRANSACTION;
+
+    INSERT INTO [inventar_SpcHidr].[disponible_rotopalas]
+    (
+        pad_id, modulo, modulo_id, [campaña], [campaña_id],
+        tms, m3_totales, densidad, m3_apilado, tmh_apilado,
+        remanente_m3, remanente_tms
+    )
+    VALUES
+    (
+        @PadId, @ModuloNumero, @ModuloId, @Campaña, @CampañaId,
+        @Tms, @M3Totales, @Densidad, @M3Apilado, @TmhApilado,
+        @RemanenteM3, @RemanenteTms
+    );
+
+    /* Caso borde: si por alguna razon ya existia una linea base congelada
+       para este modulo/campaña (por ejemplo, se recreo una fila borrada),
+       se propaga y se deja registro igual que en la actualizacion. */
+    IF EXISTS
+    (
+        SELECT 1 FROM [reclamo].[modulo_congelado]
+        WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId AND estado = 'CONGELADO'
+    )
+    BEGIN
+        DECLARE @TmsCongPrevio2 decimal(30,12), @M3CongPrevio2 decimal(30,12), @DensCongPrevia2 decimal(30,12);
+
+        SELECT @TmsCongPrevio2 = tms_conformado, @M3CongPrevio2 = m3_totales, @DensCongPrevia2 = densidad_oficial
+        FROM [reclamo].[modulo_congelado]
+        WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId AND estado = 'CONGELADO';
+
+        UPDATE [reclamo].[modulo_congelado]
+        SET tms_conformado   = COALESCE(@Tms, tms_conformado),
+            m3_totales       = COALESCE(@M3Totales, m3_totales),
+            densidad_oficial = COALESCE(@Densidad, densidad_oficial)
+        WHERE [campaña_id] = @CampañaId AND modulo_id = @ModuloId AND estado = 'CONGELADO';
+
+        INSERT INTO [reclamo].[log_sincronizacion]
+            (tabla_destino, tabla_origen, accion, fecha_dato,
+             [campaña_id], modulo_id, campo, valor_anterior, valor_nuevo, observacion)
+        SELECT
+            'modulo_congelado', 'disponible_rotopalas (dashboard)', 'ACTUALIZADO',
+            CAST(SYSDATETIME() AS date),
+            @CampañaId, @ModuloId, cambios.campo, cambios.valor_anterior, cambios.valor_nuevo,
+            COALESCE(@Observacion, N'Insertado en disponible_rotopalas; el modulo ya estaba congelado.')
+        FROM
+        (
+            VALUES
+                ('tms_conformado',   @TmsCongPrevio2,  COALESCE(@Tms, @TmsCongPrevio2)),
+                ('m3_totales',       @M3CongPrevio2,   COALESCE(@M3Totales, @M3CongPrevio2)),
+                ('densidad_oficial', @DensCongPrevia2, COALESCE(@Densidad, @DensCongPrevia2))
+        ) AS cambios(campo, valor_anterior, valor_nuevo)
+        WHERE NOT
+        (
+            (cambios.valor_anterior IS NULL AND cambios.valor_nuevo IS NULL)
+            OR (cambios.valor_anterior IS NOT NULL AND cambios.valor_nuevo IS NOT NULL
+                AND cambios.valor_anterior = cambios.valor_nuevo)
+        );
+    END;
+
+    COMMIT TRANSACTION;
+
+    SELECT dr.*,
+           CASE WHEN EXISTS
+           (
+               SELECT 1 FROM [reclamo].[modulo_congelado] mc
+               WHERE mc.[campaña_id] = @CampañaId AND mc.modulo_id = @ModuloId AND mc.estado = 'CONGELADO'
+           ) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS propagado_a_modulo_congelado
+    FROM [inventar_SpcHidr].[disponible_rotopalas] dr
+    WHERE dr.pad_id = @PadId AND dr.modulo_id = @ModuloId AND dr.[campaña_id] = @CampañaId;
+END;"
+reclamo,sp_registrar_ajuste_manual,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 4. reclamo.sp_registrar_ajuste_manual
+
+   Regla R10. El ajuste nace en estado PROPUESTO y no afecta ninguna cifra
+   hasta que se apruebe. Exige motivo y antecedente: la restriccion no es
+   opcional y esta ademas en el modelo.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_registrar_ajuste_manual]
+(
+    @FechaOperacion   date,
+    @CampañaId        int,
+    @PadId            int,
+    @ModuloId         int,
+    @TipoAjuste       varchar(30),
+    @Motivo           nvarchar(500),
+    @AntecedenteTipo  varchar(40),
+    @AntecedenteRef   nvarchar(500),
+    @DeltaM3          decimal(30,12) = NULL,
+    @DeltaTms         decimal(30,12) = NULL,
+    @ModuloDestinoId  int            = NULL,
+    @Observacion      nvarchar(1000) = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF @Motivo IS NULL OR LTRIM(RTRIM(@Motivo)) = ''
+        THROW 60301, 'Todo ajuste manual exige un motivo.', 1;
+
+    IF @AntecedenteRef IS NULL OR LTRIM(RTRIM(@AntecedenteRef)) = ''
+        THROW 60302,
+              'Todo ajuste manual exige la referencia del antecedente que lo respalda.', 1;
+
+    IF @DeltaM3 IS NULL AND @DeltaTms IS NULL
+        THROW 60303, 'Debe informar al menos delta en m3 o en TMS.', 1;
+
+    IF @TipoAjuste = 'TRASPASO_MODULO' AND @ModuloDestinoId IS NULL
+        THROW 60304, 'Un traspaso exige el modulo destino.', 1;
+
+    /* Si viene solo uno de los dos deltas, se deriva el otro con la densidad
+       oficial del modulo. Deja constancia en la observacion. */
+    DECLARE @Densidad decimal(30,12) =
+    (
+        SELECT TOP (1) mc.densidad_oficial
+        FROM [reclamo].[modulo_congelado] mc
+        WHERE mc.[campaña_id] = @CampañaId AND mc.modulo_id = @ModuloId
+    );
+
+    DECLARE @Derivado nvarchar(200) = NULL;
+
+    IF @DeltaM3 IS NULL AND @DeltaTms IS NOT NULL AND COALESCE(@Densidad,0) > 0
+    BEGIN
+        SET @DeltaM3 = @DeltaTms / @Densidad;
+        SET @Derivado = N'delta_m3 derivado de delta_tms con densidad oficial '
+                      + CAST(@Densidad AS nvarchar(40));
+    END;
+
+    IF @DeltaTms IS NULL AND @DeltaM3 IS NOT NULL AND COALESCE(@Densidad,0) > 0
+    BEGIN
+        SET @DeltaTms = @DeltaM3 * @Densidad;
+        SET @Derivado = N'delta_tms derivado de delta_m3 con densidad oficial '
+                      + CAST(@Densidad AS nvarchar(40));
+    END;
+
+    INSERT INTO [reclamo].[ajuste_manual]
+    (
+        fecha_operacion, [campaña_id], pad_id, modulo_id, modulo_destino_id,
+        tipo_ajuste, delta_m3, delta_tms,
+        motivo, antecedente_tipo, antecedente_ref,
+        estado, observacion
+    )
+    VALUES
+    (
+        @FechaOperacion, @CampañaId, @PadId, @ModuloId, @ModuloDestinoId,
+        @TipoAjuste, @DeltaM3, @DeltaTms,
+        @Motivo, @AntecedenteTipo, @AntecedenteRef,
+        'PROPUESTO',
+        LTRIM(RTRIM(COALESCE(@Observacion, N'') + N' ' + COALESCE(@Derivado, N'')))
+    );
+
+    DECLARE @Id int = SCOPE_IDENTITY();
+
+    PRINT 'Ajuste registrado en estado PROPUESTO. ajuste_id = ' + CAST(@Id AS varchar);
+    PRINT 'No afecta ninguna cifra hasta que se apruebe con sp_aprobar_ajuste_manual.';
+
+    SELECT * FROM [reclamo].[ajuste_manual] WHERE ajuste_id = @Id;
+END;"
+reclamo,sp_sincronizar_desde_etl,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 3.a reclamo.sp_sincronizar_desde_etl
+
+   PUNTO DE ENTRADA DE LOS DATOS OPERACIONALES.
+
+   La integracion se hace mediante un template y un ETL que llena
+   inventar_SpcHidr.control_apilado_diario y control_reclamo_diario. Este
+   procedimiento trae esos datos al esquema [reclamo]. No hay carga manual.
+
+   QUE HACE
+     1. Deduplica control_reclamo_diario conservando el id mas alto por
+        fecha + pad + campana + modulo. El ETL puede reprocesar y dejar mas de
+        una fila por clave; es el mismo criterio que usaba la vista vigente.
+     2. Resuelve medicion_valida cruzando con
+        control_medicion_topografia_diaria, solo excepciones APROBADAS.
+     3. Sincroniza hacia reclamo.topografia_avance, respetando la fecha de
+        corte del sistema.
+     4. Sincroniza el reclamo por camiones desde
+        control_reclamo_sulfuro_camiones_thm_diario.
+     5. Deja en reclamo.log_sincronizacion todo lo insertado, actualizado u
+        omitido, con valor anterior y nuevo cuando el ETL cambio algo.
+
+   POR QUE IMPORTA EL LOG
+   Si el ETL reprocesa un dia ya publicado y cambia un volumen, la cifra del
+   reporte cambia. Sin bitacora eso ocurriria en silencio. Con ella queda la
+   evidencia de que cambio, cuanto y cuando.
+
+   QUE NO HACE
+   No congela modulos ni abre la secuencia. Un modulo que no este congelado se
+   OMITE y se reporta: es deliberado, porque reclamar sobre una base no fijada
+   viola la regla R1.
+
+   control_apilado_diario se lee para resolver la fecha de conformacion, no
+   para calcular reclamo. Su estructura debe confirmarse antes con la seccion
+   11 del script 00; mientras tanto ese bloque queda desactivado por el
+   parametro @SincronizarApilado.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_sincronizar_desde_etl]
+(
+    @FechaInicio         date,
+    @FechaFin            date,
+    @SincronizarApilado  bit = 0,
+    @Confirmar           bit = 1
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @EjecucionId int;
+    DECLARE @Corte date = [reclamo].[fn_fecha_corte]();
+
+    BEGIN TRY
+        IF @FechaInicio IS NULL OR @FechaFin IS NULL
+            THROW 60701, 'Debe informar el rango de fechas.', 1;
+
+        IF @Corte IS NULL
+            THROW 60702, 'No hay FECHA_CORTE_SISTEMA en reclamo.configuracion.', 1;
+
+        IF @FechaInicio < @Corte
+        BEGIN
+            PRINT '-- El rango comienza antes del corte (' + CONVERT(varchar(10), @Corte, 120)
+                + '). Se recorta.';
+            SET @FechaInicio = @Corte;
+        END;
+
+        IF @FechaFin < @Corte
+            THROW 60703, 'Todo el rango es anterior a la fecha de corte del sistema.', 1;
+
+        INSERT INTO [reclamo].[log_ejecucion]
+            (procedimiento, rango_desde, rango_hasta, estado)
+        VALUES
+            ('reclamo.sp_sincronizar_desde_etl', @FechaInicio, @FechaFin, 'EN_CURSO');
+        SET @EjecucionId = SCOPE_IDENTITY();
+
+        PRINT '-- Sincronizacion desde el ETL';
+        PRINT '-- Rango: ' + CONVERT(varchar(10), @FechaInicio, 120)
+            + ' a ' + CONVERT(varchar(10), @FechaFin, 120);
+
+        /* ================================================================
+           A. TOPOGRAFIA, desde control_reclamo_diario
+        ================================================================ */
+        IF OBJECT_ID('tempdb..#Topo') IS NOT NULL DROP TABLE #Topo;
+
+        ;WITH dedup AS
+        (
+            SELECT
+                CAST(cr.fecha AS date)      AS fecha_medicion,
+                cr.pad_id,
+                cr.[campaña_id],
+                cr.modulo_id,
+                cr.volumen_final_reclamado  AS m3_reclamado_acum,
+                cr.avance_porcentaje,
+                cr.id                       AS id_origen,
+                ROW_NUMBER() OVER
+                (
+                    PARTITION BY CAST(cr.fecha AS date), cr.pad_id,
+                                 cr.[campaña_id], cr.modulo_id
+                    ORDER BY cr.id DESC
+                ) AS rn
+            FROM [inventar_SpcHidr].[control_reclamo_diario] cr
+            WHERE CAST(cr.fecha AS date) >= @FechaInicio
+              AND CAST(cr.fecha AS date) <= @FechaFin
+              AND cr.[campaña_id] IS NOT NULL
+              AND cr.modulo_id    IS NOT NULL
+        )
+        SELECT
+            d.fecha_medicion,
+            d.pad_id,
+            d.[campaña_id],
+            d.modulo_id,
+            CAST(COALESCE(d.m3_reclamado_acum, 0) AS decimal(30,12)) AS m3_reclamado_acum,
+            CAST(d.avance_porcentaje AS decimal(18,12))              AS avance_total_pct,
+            d.id_origen,
+            /* Excepcion de medicion, solo si esta APROBADA. */
+            COALESCE(cm.[medicion_valida], CAST(1 AS bit))           AS medicion_valida,
+            CAST(cm.[motivo] AS nvarchar(400))                       AS motivo_no_medicion,
+            CASE WHEN mc.modulo_id IS NULL THEN 0 ELSE 1 END         AS modulo_congelado
+        INTO #Topo
+        FROM dedup d
+        LEFT JOIN [inventar_SpcHidr].[control_medicion_topografia_diaria] cm
+            ON  cm.[fecha_operacion] = d.fecha_medicion
+            AND cm.[pad_id]          = d.pad_id
+            AND cm.[estado]          = 'APROBADO'
+        LEFT JOIN [reclamo].[modulo_congelado] mc
+            ON  mc.[campaña_id] = d.[campaña_id]
+            AND mc.modulo_id    = d.modulo_id
+            AND mc.estado       = 'CONGELADO'
+        WHERE d.rn = 1;
+
+        /* Bitacora de lo que va a cambiar, ANTES de tocar nada. */
+        INSERT INTO [reclamo].[log_sincronizacion]
+            (ejecucion_id, tabla_destino, tabla_origen, accion,
+             fecha_dato, [campaña_id], modulo_id, campo,
+             valor_anterior, valor_nuevo, observacion)
+        SELECT
+            @EjecucionId, 'topografia_avance', 'control_reclamo_diario',
+            CASE
+                WHEN t.modulo_congelado = 0 THEN 'OMITIDO'
+                WHEN ta.topografia_id IS NULL THEN 'INSERTADO'
+                ELSE 'ACTUALIZADO'
+            END,
+            t.fecha_medicion, t.[campaña_id], t.modulo_id, 'm3_reclamado_acum',
+            ta.m3_reclamado_acum, t.m3_reclamado_acum,
+            CASE
+                WHEN t.modulo_congelado = 0
+                    THEN N'Modulo no congelado. No se sincroniza: violaria la regla R1.'
+                WHEN ta.topografia_id IS NOT NULL
+                 AND ABS(COALESCE(ta.m3_reclamado_acum,0) - t.m3_reclamado_acum) > 0.001
+                    THEN N'El ETL cambio un valor ya sincronizado. Reprocesar el rango.'
+                ELSE NULL
+            END
+        FROM #Topo t
+        LEFT JOIN [reclamo].[topografia_avance] ta
+            ON  ta.fecha_medicion = t.fecha_medicion
+            AND ta.[campaña_id]   = t.[campaña_id]
+            AND ta.modulo_id      = t.modulo_id
+        WHERE t.modulo_congelado = 0
+           OR ta.topografia_id IS NULL
+           OR ABS(COALESCE(ta.m3_reclamado_acum,0) - t.m3_reclamado_acum) > 0.001
+           OR COALESCE(ta.medicion_valida, 1) <> t.medicion_valida;
+
+        IF @Confirmar = 1
+        BEGIN
+            MERGE [reclamo].[topografia_avance] AS tgt
+            USING (SELECT * FROM #Topo WHERE modulo_congelado = 1) AS src
+                ON  tgt.fecha_medicion = src.fecha_medicion
+                AND tgt.[campaña_id]   = src.[campaña_id]
+                AND tgt.modulo_id      = src.modulo_id
+            WHEN MATCHED THEN UPDATE SET
+                m3_reclamado_acum  = src.m3_reclamado_acum,
+                avance_total_pct   = src.avance_total_pct,
+                medicion_valida    = src.medicion_valida,
+                motivo_no_medicion = CASE
+                                        WHEN src.medicion_valida = 0
+                                            THEN COALESCE(src.motivo_no_medicion,
+                                                 N'Excepcion aprobada sin motivo declarado')
+                                        ELSE NULL
+                                     END,
+                fuente             = 'ETL_CONTROL_RECLAMO_DIARIO',
+                metodo             = 'SINCRONIZACION_DEDUPLICADA_ID_MAX',
+                fecha_registro     = SYSDATETIME()
+            WHEN NOT MATCHED BY TARGET THEN INSERT
+            (
+                fecha_medicion, [campaña_id], pad_id, modulo_id,
+                m3_reclamado_acum, avance_total_pct,
+                medicion_valida, motivo_no_medicion,
+                fuente, metodo, estado
+            )
+            VALUES
+            (
+                src.fecha_medicion, src.[campaña_id], src.pad_id, src.modulo_id,
+                src.m3_reclamado_acum, src.avance_total_pct,
+                src.medicion_valida,
+                CASE
+                    WHEN src.medicion_valida = 0
+                        THEN COALESCE(src.motivo_no_medicion,
+                             N'Excepcion aprobada sin motivo declarado')
+                    ELSE NULL
+                END,
+                'ETL_CONTROL_RECLAMO_DIARIO',
+                'SINCRONIZACION_DEDUPLICADA_ID_MAX',
+                'VIGENTE'
+            );
+
+            PRINT 'Topografia sincronizada  : ' + CAST(@@ROWCOUNT AS varchar) + ' filas';
+        END;
+
+        /* ================================================================
+           B. CAMIONES, desde control_reclamo_sulfuro_camiones_thm_diario
+        ================================================================ */
+        IF OBJECT_ID('tempdb..#Cam') IS NOT NULL DROP TABLE #Cam;
+
+        SELECT
+            CAST(crc.fecha AS date)                          AS fecha,
+            CAST(crc.pad_id AS int)                          AS pad_id,
+            CAST(crc.[campaña_id] AS int)                    AS [campaña_id],
+            CAST(crc.modulo_id AS int)                       AS modulo_id,
+            CAST(SUM(COALESCE(crc.volumen_diario_m3,0)) AS decimal(30,12)) AS m3_thm,
+            CASE WHEN MAX(CASE WHEN mc.modulo_id IS NULL THEN 0 ELSE 1 END) = 1
+                 THEN 1 ELSE 0 END                           AS modulo_congelado
+        INTO #Cam
+        FROM [inventar_SpcHidr].[control_reclamo_sulfuro_camiones_thm_diario] crc
+        LEFT JOIN [reclamo].[modulo_congelado] mc
+            ON  mc.[campaña_id] = crc.[campaña_id]
+            AND mc.modulo_id    = crc.modulo_id
+            AND mc.estado       = 'CONGELADO'
+        WHERE CAST(crc.fecha AS date) >= @FechaInicio
+          AND CAST(crc.fecha AS date) <= @FechaFin
+        GROUP BY
+            CAST(crc.fecha AS date), CAST(crc.pad_id AS int),
+            CAST(crc.[campaña_id] AS int), CAST(crc.modulo_id AS int);
+
+        INSERT INTO [reclamo].[log_sincronizacion]
+            (ejecucion_id, tabla_destino, tabla_origen, accion,
+             fecha_dato, [campaña_id], modulo_id, campo,
+             valor_anterior, valor_nuevo, observacion)
+        SELECT
+            @EjecucionId, 'camiones_reclamo',
+            'control_reclamo_sulfuro_camiones_thm_diario',
+            CASE
+                WHEN c.modulo_congelado = 0 THEN 'OMITIDO'
+                WHEN cr.camiones_id IS NULL THEN 'INSERTADO'
+                ELSE 'ACTUALIZADO'
+            END,
+            c.fecha, c.[campaña_id], c.modulo_id, 'm3_thm',
+            cr.m3_thm, c.m3_thm,
+            CASE
+                WHEN c.modulo_congelado = 0
+                    THEN N'Modulo no congelado. No se sincroniza.'
+                WHEN cr.camiones_id IS NOT NULL
+                 AND ABS(COALESCE(cr.m3_thm,0) - c.m3_thm) > 0.001
+                    THEN N'El ETL cambio un valor ya sincronizado.'
+                ELSE NULL
+            END
+        FROM #Cam c
+        LEFT JOIN [reclamo].[camiones_reclamo] cr
+            ON  cr.fecha        = c.fecha
+            AND cr.[campaña_id] = c.[campaña_id]
+            AND cr.modulo_id    = c.modulo_id
+        WHERE c.modulo_congelado = 0
+           OR cr.camiones_id IS NULL
+           OR ABS(COALESCE(cr.m3_thm,0) - c.m3_thm) > 0.001;
+
+        IF @Confirmar = 1
+        BEGIN
+            MERGE [reclamo].[camiones_reclamo] AS tgt
+            USING (SELECT * FROM #Cam WHERE modulo_congelado = 1) AS src
+                ON  tgt.fecha        = src.fecha
+                AND tgt.[campaña_id] = src.[campaña_id]
+                AND tgt.modulo_id    = src.modulo_id
+            WHEN MATCHED THEN UPDATE SET
+                m3_thm         = src.m3_thm,
+                tms_thm        = src.m3_thm *
+                                 (SELECT mc.densidad_oficial
+                                  FROM [reclamo].[modulo_congelado] mc
+                                  WHERE mc.[campaña_id] = src.[campaña_id]
+                                    AND mc.modulo_id    = src.modulo_id),
+                fecha_registro = SYSDATETIME()
+            WHEN NOT MATCHED BY TARGET THEN INSERT
+                (fecha, [campaña_id], pad_id, modulo_id, m3_thm, tms_thm,
+                 fuente_oficial, estado)
+            VALUES
+                (src.fecha, src.[campaña_id], src.pad_id, src.modulo_id,
+                 src.m3_thm,
+                 src.m3_thm * (SELECT mc.densidad_oficial
+                               FROM [reclamo].[modulo_congelado] mc
+                               WHERE mc.[campaña_id] = src.[campaña_id]
+                                 AND mc.modulo_id    = src.modulo_id),
+                 'THM', 'VIGENTE');
+
+            PRINT 'Camiones sincronizados   : ' + CAST(@@ROWCOUNT AS varchar) + ' filas';
+        END;
+
+        /* ================================================================
+           C. APILADO, desde control_apilado_diario
+
+           Desactivado por defecto. La estructura de esa tabla debe
+           confirmarse con la seccion 11 del script 00 antes de habilitarlo.
+           Su rol es resolver la fecha de conformacion del modulo, que es el
+           inicio de la campana, no calcular reclamo.
+        ================================================================ */
+        IF @SincronizarApilado = 1
+        BEGIN
+            PRINT '';
+            PRINT 'ATENCION: la sincronizacion de apilado esta declarada pero no';
+            PRINT 'implementada, porque la estructura de control_apilado_diario';
+            PRINT 'aun no fue verificada. Ejecute la seccion 11 del script 00 y';
+            PRINT 'complete este bloque antes de usarlo.';
+        END;
+
+        /* ================================================================
+           D. RESUMEN
+        ================================================================ */
+        DECLARE @Ins int, @Act int, @Omi int;
+        SELECT
+            @Ins = SUM(CASE WHEN accion = 'INSERTADO'   THEN 1 ELSE 0 END),
+            @Act = SUM(CASE WHEN accion = 'ACTUALIZADO' THEN 1 ELSE 0 END),
+            @Omi = SUM(CASE WHEN accion = 'OMITIDO'     THEN 1 ELSE 0 END)
+        FROM [reclamo].[log_sincronizacion]
+        WHERE ejecucion_id = @EjecucionId;
+
+        PRINT '';
+        PRINT 'Insertados   : ' + CAST(COALESCE(@Ins,0) AS varchar);
+        PRINT 'Actualizados : ' + CAST(COALESCE(@Act,0) AS varchar);
+        PRINT 'Omitidos     : ' + CAST(COALESCE(@Omi,0) AS varchar);
+
+        IF COALESCE(@Act,0) > 0
+        BEGIN
+            PRINT '';
+            PRINT 'ATENCION: el ETL cambio valores ya sincronizados. Si esas fechas';
+            PRINT 'ya fueron publicadas, hay que reprocesar el reporte.';
+
+            SELECT
+                l.fecha_dato, l.[campaña_id], l.modulo_id, l.campo,
+                l.valor_anterior, l.valor_nuevo,
+                l.valor_nuevo - l.valor_anterior AS diferencia,
+                l.observacion
+            FROM [reclamo].[log_sincronizacion] l
+            WHERE l.ejecucion_id = @EjecucionId
+              AND l.accion = 'ACTUALIZADO'
+            ORDER BY ABS(COALESCE(l.valor_nuevo,0) - COALESCE(l.valor_anterior,0)) DESC;
+        END;
+
+        IF COALESCE(@Omi,0) > 0
+        BEGIN
+            PRINT '';
+            PRINT 'Los siguientes datos NO entraron porque su modulo no esta';
+            PRINT 'congelado. Congelelos con sp_congelar_modulo y vuelva a';
+            PRINT 'sincronizar.';
+
+            SELECT DISTINCT
+                l.[campaña_id], l.modulo_id, l.tabla_destino,
+                MIN(l.fecha_dato) OVER (PARTITION BY l.[campaña_id], l.modulo_id) AS desde,
+                MAX(l.fecha_dato) OVER (PARTITION BY l.[campaña_id], l.modulo_id) AS hasta
+            FROM [reclamo].[log_sincronizacion] l
+            WHERE l.ejecucion_id = @EjecucionId
+              AND l.accion = 'OMITIDO';
+        END;
+
+        IF @Confirmar = 0
+            PRINT 'MODO VISTA PREVIA. Se registro el diagnostico pero no se escribio.';
+
+        UPDATE [reclamo].[log_ejecucion]
+        SET fecha_fin       = SYSDATETIME(),
+            filas_afectadas = COALESCE(@Ins,0) + COALESCE(@Act,0),
+            estado          = 'OK'
+        WHERE ejecucion_id = @EjecucionId;
+
+        DROP TABLE IF EXISTS #Topo;
+        DROP TABLE IF EXISTS #Cam;
+    END TRY
+    BEGIN CATCH
+        IF @EjecucionId IS NOT NULL
+            UPDATE [reclamo].[log_ejecucion]
+            SET fecha_fin = SYSDATETIME(), estado = 'ERROR', mensaje = ERROR_MESSAGE()
+            WHERE ejecucion_id = @EjecucionId;
+        THROW;
+    END CATCH
+END;"
+reclamo,sp_validar_reglas_negocio,SQL_STORED_PROCEDURE,"/* ============================================================================
+   SP 7. reclamo.sp_validar_reglas_negocio
+
+   Verifica las reglas que el modelo no puede imponer por constraint porque
+   dependen de varias filas a la vez. Devuelve un conjunto de hallazgos.
+
+   Cero filas significa que la data cumple todas las reglas.
+   ============================================================================ */
+CREATE   PROCEDURE [reclamo].[sp_validar_reglas_negocio]
+(
+    @FechaInicio date = NULL,
+    @FechaFin    date = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @FechaInicio = COALESCE(@FechaInicio, '1900-01-01');
+    SET @FechaFin    = COALESCE(@FechaFin,    '2999-12-31');
+
+    IF OBJECT_ID('tempdb..#Hallazgos') IS NOT NULL DROP TABLE #Hallazgos;
+    CREATE TABLE #Hallazgos
+    (
+        regla       varchar(10),
+        severidad   varchar(12),
+        descripcion nvarchar(300),
+        detalle     nvarchar(500)
+    );
+
+    /* R5 - mas de dos modulos abiertos por rotopala */
+    INSERT INTO #Hallazgos
+    SELECT
+        'R5', 'CRITICO',
+        N'Mas de dos modulos ABIERTOS para la misma rotopala',
+        N'Rotopala ' + CAST(s.rotopala_id AS nvarchar(3))
+            + N', campana ' + CAST(s.[campaña_id] AS nvarchar(10))
+            + N', modulos abiertos: ' + CAST(COUNT(*) AS nvarchar(10))
+    FROM [reclamo].[secuencia_rotopala] s
+    WHERE s.estado = 'ABIERTO'
+    GROUP BY s.rotopala_id, s.[campaña_id]
+    HAVING COUNT(*) > 2;
+
+    /* R5 - retroceso en la secuencia */
+    /* CORRECCION 30-07-2026: la particion incluye la campana. El script 00
+       mostro que al iniciar una campana nueva la numeracion se reinicia (por
+       ejemplo, en el PAD 1 el 15-07-2025 se pasa de M64 a M1). Sin particionar
+       por campana ese reinicio se contaba como retroceso. */
+    ;WITH mov AS
+    (
+        SELECT
+            cd.fecha_operacion,
+            cd.rotopala_id,
+            cd.[campaña_id],
+            MAX(cd.modulo_numero) AS modulo_max
+        FROM [reclamo].[calculo_diario] cd
+        WHERE cd.tms_rotopala_dia > 0
+          AND cd.rotopala_id IS NOT NULL
+          AND cd.fecha_operacion BETWEEN @FechaInicio AND @FechaFin
+        GROUP BY cd.fecha_operacion, cd.rotopala_id, cd.[campaña_id]
+    ),
+    sec AS
+    (
+        SELECT
+            m.*,
+            LAG(m.modulo_max) OVER
+            (
+                PARTITION BY m.rotopala_id, m.[campaña_id]
+                ORDER BY m.fecha_operacion
+            ) AS modulo_max_ant
+        FROM mov m
+    )
+    INSERT INTO #Hallazgos
+    SELECT
+        'R5', 'ADVERTENCIA',
+        N'La rotopala retrocedio a un modulo de numero menor dentro de la misma campana',
+        N'Fecha ' + CONVERT(nvarchar(10), s.fecha_operacion, 120)
+            + N', rotopala ' + CAST(s.rotopala_id AS nvarchar(3))
+            + N', campana ' + CAST(s.[campaña_id] AS nvarchar(10))
+            + N', de M' + CAST(s.modulo_max_ant AS nvarchar(10))
+            + N' a M'  + CAST(s.modulo_max AS nvarchar(10))
+    FROM sec s
+    WHERE s.modulo_max_ant IS NOT NULL
+      AND s.modulo_max < s.modulo_max_ant;
+
+    /* R6 - rotopala reclamando de un PAD que no le corresponde */
+    INSERT INTO #Hallazgos
+    SELECT
+        'R6', 'CRITICO',
+        N'Reclamo de rotopala en un PAD que no le corresponde',
+        N'Fecha ' + CONVERT(nvarchar(10), cd.fecha_operacion, 120)
+            + N', rotopala ' + CAST(cd.rotopala_id AS nvarchar(3))
+            + N', pad ' + CAST(cd.pad_id AS nvarchar(10))
+    FROM [reclamo].[calculo_diario] cd
+    INNER JOIN [reclamo].[rotopala] r ON r.rotopala_id = cd.rotopala_id
+    WHERE cd.pad_id <> r.pad_id
+      AND cd.fecha_operacion BETWEEN @FechaInicio AND @FechaFin;
+
+    /* R3 - rotopala antes de cerrar camiones en el mismo modulo.
+       DEGRADADO A ALERTA el 30-07-2026 por decision del usuario: el
+       solapamiento ocurre en la practica y no invalida el dato. Se reporta
+       para que alguien lo mire, no para impedir la publicacion. */
+    ;WITH prim AS
+    (
+        SELECT
+            cd.[campaña_id], cd.modulo_id,
+            MIN(cd.fecha_operacion) AS primera_roto
+        FROM [reclamo].[calculo_diario] cd
+        WHERE cd.tms_rotopala_dia > 0
+        GROUP BY cd.[campaña_id], cd.modulo_id
+    ),
+    ult AS
+    (
+        SELECT
+            c.[campaña_id], c.modulo_id,
+            MAX(c.fecha) AS ultimo_camion
+        FROM [reclamo].[camiones_reclamo] c
+        WHERE c.estado = 'VIGENTE' AND COALESCE(c.m3_oficial,0) > 0
+        GROUP BY c.[campaña_id], c.modulo_id
+    )
+    INSERT INTO #Hallazgos
+    SELECT
+        'R3', 'ALERTA',
+        N'La rotopala comenzo antes de cerrar el reclamo por camiones',
+        N'Campana ' + CAST(p.[campaña_id] AS nvarchar(10))
+            + N', modulo ' + CAST(p.modulo_id AS nvarchar(10))
+            + N', roto ' + CONVERT(nvarchar(10), p.primera_roto, 120)
+            + N' vs ultimo camion ' + CONVERT(nvarchar(10), u.ultimo_camion, 120)
+    FROM prim p
+    INNER JOIN ult u
+        ON u.[campaña_id] = p.[campaña_id] AND u.modulo_id = p.modulo_id
+    WHERE p.primera_roto < u.ultimo_camion;
+
+    /* R9 - cuadratura sobre 100 por ciento */
+    INSERT INTO #Hallazgos
+    SELECT
+        'R9', 'CRITICO',
+        N'Extraccion acumulada sobre el 100 por ciento del volumen del modulo',
+        N'Modulo M' + CAST(cm.modulo_numero AS nvarchar(10))
+            + N', ' + CAST(CAST(cm.porcentaje_extraido AS decimal(9,2)) AS nvarchar(20)) + N' %'
+            + N', excedente ' + CAST(CAST(cm.m3_excedente AS decimal(18,1)) AS nvarchar(30)) + N' m3'
+            + N'. Modulo siguiente propuesto: ' + COALESCE(CAST(cm.modulo_siguiente_propuesto AS nvarchar(10)), N'ninguno')
+    FROM [reclamo].[v_cuadratura_modulo] cm
+    WHERE cm.flag_cuadratura = 'SOBRE_100_PROPONER_TRASPASO';
+
+    /* R10 - ajustes aprobados sin antecedente util */
+    INSERT INTO #Hallazgos
+    SELECT
+        'R10', 'CRITICO',
+        N'Ajuste aprobado con antecedente vacio o generico',
+        N'ajuste_id ' + CAST(a.ajuste_id AS nvarchar(10))
+            + N', tipo ' + a.tipo_ajuste
+            + N', ref: ' + COALESCE(a.antecedente_ref, N'(vacio)')
+    FROM [reclamo].[ajuste_manual] a
+    WHERE a.estado = 'APROBADO'
+      AND (a.antecedente_ref IS NULL OR LEN(LTRIM(RTRIM(a.antecedente_ref))) < 10);
+
+    /* R2 - modulo fuera del rango fisico de su PAD.
+       Oxido 1 a 64 (32 parcelas x 2), sulfuro 1 a 140 (28 parcelas x 5). */
+    INSERT INTO #Hallazgos
+    SELECT
+        'R2', 'CRITICO',
+        N'Modulo fuera del rango fisico del PAD',
+        N'Campana ' + CAST(mb.[campaña_id] AS nvarchar(10))
+            + N', PAD ' + CAST(mb.pad_id AS nvarchar(10))
+            + N', modulo M' + CAST(mb.modulo_numero AS nvarchar(10))
+            + N'. Rango valido: 1 a ' + CAST(mb.modulo_numero_max AS nvarchar(10))
+    FROM [reclamo].[v_modulo_base] mb
+    WHERE mb.flag_topologia = 'MODULO_FUERA_DEL_RANGO_DEL_PAD';
+
+    /* R1 - reclamo sobre modulos no congelados */
+    INSERT INTO #Hallazgos
+    SELECT
+        'R1', 'CRITICO',
+        N'Existe reclamo sobre un modulo que no esta congelado',
+        N'Campana ' + CAST(cd.[campaña_id] AS nvarchar(10))
+            + N', modulo ' + CAST(cd.modulo_id AS nvarchar(10))
+    FROM [reclamo].[calculo_diario] cd
+    WHERE cd.tms_conformado IS NULL
+      AND cd.fecha_operacion BETWEEN @FechaInicio AND @FechaFin
+    GROUP BY cd.[campaña_id], cd.modulo_id;
+
+    SELECT
+        h.regla,
+        h.severidad,
+        h.descripcion,
+        h.detalle
+    FROM #Hallazgos h
+    ORDER BY
+        CASE h.severidad WHEN 'CRITICO' THEN 1 ELSE 2 END,
+        h.regla,
+        h.detalle;
+
+    DECLARE @N int = (SELECT COUNT(*) FROM #Hallazgos);
+    IF @N = 0
+        PRINT 'Sin hallazgos. La data cumple todas las reglas verificables.';
+    ELSE
+        PRINT 'Hallazgos encontrados: ' + CAST(@N AS varchar);
+
+    DROP TABLE #Hallazgos;
+END;"
+reclamo,v_ajustes_aplicables,VIEW,"/* ============================================================================
+   V6. reclamo.v_ajustes_aplicables
+
+   Regla R10. Solo los ajustes APROBADOS afectan el calculo. Los PROPUESTOS
+   quedan visibles en el dashboard pero con delta cero.
+
+   TRASPASO_MODULO genera DOS efectos: descuenta del modulo origen y abona al
+   modulo destino. Por eso la vista devuelve dos filas por ajuste de ese tipo.
+   ============================================================================ */
+CREATE   VIEW [reclamo].[v_ajustes_aplicables]
+AS
+SELECT
+    a.fecha_operacion,
+    a.[campaña_id],
+    a.pad_id,
+    a.modulo_id,
+    a.tipo_ajuste,
+    a.delta_m3,
+    a.delta_tms,
+    a.motivo,
+    a.antecedente_tipo,
+    a.antecedente_ref,
+    a.usuario_solicita,
+    a.usuario_aprueba,
+    a.fecha_aprobacion,
+    a.ajuste_id,
+    CAST('ORIGEN' AS varchar(10))           AS rol_en_ajuste
+FROM [reclamo].[ajuste_manual] a
+WHERE a.estado = 'APROBADO'
+
+UNION ALL
+
+/* Contrapartida del traspaso: lo que sale del origen entra al destino. */
+SELECT
+    a.fecha_operacion,
+    a.[campaña_id],
+    a.pad_id,
+    a.modulo_destino_id                     AS modulo_id,
+    a.tipo_ajuste,
+    -a.delta_m3                             AS delta_m3,
+    -a.delta_tms                            AS delta_tms,
+    a.motivo,
+    a.antecedente_tipo,
+    a.antecedente_ref,
+    a.usuario_solicita,
+    a.usuario_aprueba,
+    a.fecha_aprobacion,
+    a.ajuste_id,
+    CAST('DESTINO' AS varchar(10))          AS rol_en_ajuste
+FROM [reclamo].[ajuste_manual] a
+WHERE a.estado = 'APROBADO'
+  AND a.tipo_ajuste = 'TRASPASO_MODULO'
+  AND a.modulo_destino_id IS NOT NULL;"
+reclamo,v_camiones_acumulado,VIEW,"/* ============================================================================
+   V2. reclamo.v_camiones_acumulado
+
+   Regla R4. El acumulado NO se limita al mes: parte del inicio de la campana,
+   porque un modulo puede haber sido reclamado por camiones mucho antes.
+
+   El contraste geomensura contra THM es el control que el Excel hacia a mano
+   y que aca queda permanente.
+   ============================================================================ */
+CREATE   VIEW [reclamo].[v_camiones_acumulado]
+AS
+SELECT
+    cr.fecha,
+    cr.[campaña_id],
+    cr.pad_id,
+    cr.modulo_id,
+
+    cr.m3_oficial                           AS m3_camiones_dia,
+    cr.tms_oficial                          AS tms_camiones_dia,
+
+    SUM(cr.m3_oficial) OVER
+    (
+        PARTITION BY cr.[campaña_id], cr.modulo_id
+        ORDER BY cr.fecha
+        ROWS UNBOUNDED PRECEDING
+    )                                       AS m3_camiones_acum,
+
+    SUM(cr.tms_oficial) OVER
+    (
+        PARTITION BY cr.[campaña_id], cr.modulo_id
+        ORDER BY cr.fecha
+        ROWS UNBOUNDED PRECEDING
+    )                                       AS tms_camiones_acum,
+
+    cr.m3_geomensura,
+    cr.m3_thm,
+    cr.vueltas,
+    cr.capacidad_camion_m3,
+    cr.fuente_oficial,
+
+    /* Brecha relativa entre las dos mediciones, solo cuando ambas existen. */
+    CASE
+        WHEN cr.m3_geomensura IS NULL OR cr.m3_thm IS NULL THEN NULL
+        WHEN cr.m3_thm = 0 THEN NULL
+        ELSE (cr.m3_geomensura - cr.m3_thm) * 100.0 / cr.m3_thm
+    END                                     AS brecha_geomensura_thm_pct,
+
+    CASE
+        WHEN cr.m3_geomensura IS NULL OR cr.m3_thm IS NULL
+            THEN 'SIN_CONTRASTE'
+        WHEN cr.m3_thm = 0
+            THEN 'THM_CERO'
+        WHEN ABS((cr.m3_geomensura - cr.m3_thm) * 100.0 / cr.m3_thm) > 10
+            THEN 'BRECHA_SOBRE_10_PCT'
+        ELSE 'OK'
+    END                                     AS flag_contraste_camiones
+FROM [reclamo].[camiones_reclamo] cr
+WHERE cr.estado = 'VIGENTE';"
+reclamo,v_cuadratura_modulo,VIEW,"/* ============================================================================
+   V8. reclamo.v_cuadratura_modulo
+
+   Regla R9. Es el control que detecta los casos que el Excel mostraba a mano:
+   modulos 115 y 118 al 104 % y 107 % de extraccion.
+
+   Cuando el porcentaje supera 100 mas la tolerancia configurada, la vista
+   calcula el excedente y propone el modulo siguiente de la secuencia como
+   destino del traspaso. La propuesta NO se aplica sola: hay que registrarla
+   como ajuste manual APROBADO.
+
+   INCLUYE LA LINEA BASE. El acumulado suma lo extraido antes de la fecha de
+   corte del sistema (m3_camiones_previo y m3_rotopala_previo, fijados una vez
+   con sp_establecer_linea_base) mas lo registrado desde el corte. Sin eso, un
+   modulo que venia reclamandose desde antes apareceria como intacto.
+   ============================================================================ */
+CREATE   VIEW [reclamo].[v_cuadratura_modulo]
+AS
+WITH ult AS
+(
+    SELECT
+        mb.[campaña_id],
+        mb.pad_id,
+        mb.modulo_id,
+        mb.modulo_numero,
+        mb.rotopala_id,
+        mb.orden_secuencia,
+        mb.estado_secuencia,
+        mb.m3_totales,
+        mb.tms_conformado,
+        mb.densidad_oficial,
+        mb.m3_camiones_previo,
+        mb.m3_rotopala_previo,
+        (
+            SELECT MAX(c.m3_camiones_acum)
+            FROM [reclamo].[v_camiones_acumulado] c
+            WHERE c.[campaña_id] = mb.[campaña_id] AND c.modulo_id = mb.modulo_id
+        ) AS m3_camiones_sistema,
+        (
+            SELECT MAX(t.m3_reclamado_acum)
+            FROM [reclamo].[v_topografia_resuelta] t
+            WHERE t.[campaña_id] = mb.[campaña_id] AND t.modulo_id = mb.modulo_id
+        ) AS m3_rotopala_sistema,
+        (
+            SELECT SUM(COALESCE(a.delta_m3,0))
+            FROM [reclamo].[v_ajustes_aplicables] a
+            WHERE a.[campaña_id] = mb.[campaña_id] AND a.modulo_id = mb.modulo_id
+        ) AS m3_ajustes
+    FROM [reclamo].[v_modulo_base] mb
+)
+SELECT
+    u.[campaña_id],
+    u.pad_id,
+    u.modulo_id,
+    u.modulo_numero,
+    u.rotopala_id,
+    u.orden_secuencia,
+    u.estado_secuencia,
+
+    u.m3_totales,
+
+    /* Extraido antes de la fecha de corte del sistema. No se recalcula. */
+    u.m3_camiones_previo,
+    u.m3_rotopala_previo,
+
+    /* Extraido registrado por el sistema, desde la fecha de corte. */
+    COALESCE(u.m3_camiones_sistema, 0)      AS m3_camiones_sistema,
+    COALESCE(u.m3_rotopala_sistema, 0)      AS m3_rotopala_sistema,
+
+    /* Totales del modulo.
+       Camiones: la linea base SI se suma al acumulado propio del sistema,
+       porque camiones_reclamo solo tiene filas desde el corte y su
+       acumulado se recalcula desde cero dentro del esquema (no duplica).
+       Rotopala/topografia: la linea base NO se suma cuando ya existe una
+       lectura de topografia, porque m3_reclamado_acum llega desde la fuente
+       como acumulado corrido desde el inicio real del modulo (nunca se
+       reinicia en el corte) y ya incluye lo previo. Sumar previo encima
+       duplicaba el tonelaje (bug confirmado en modulo_id 187, campaña 8:
+       90.113,502 + 101.363,707 = 191.477 m3 contra 102.709,9 m3 de
+       capacidad, 186% del modulo). La linea base solo se usa como
+       reemplazo cuando el modulo aun no tiene ninguna lectura de
+       topografia sincronizada. */
+    u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema, 0)
+                                            AS m3_camiones_total,
+    COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+                                            AS m3_rotopala_total,
+    COALESCE(u.m3_ajustes, 0)               AS m3_ajustes,
+    u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+        + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+        + COALESCE(u.m3_ajustes,0)          AS m3_extraido_total,
+
+    CASE
+        WHEN u.m3_totales = 0 THEN NULL
+        ELSE (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales
+    END                                     AS porcentaje_extraido,
+
+    /* Excedente por sobre el volumen del modulo. */
+    CASE
+        WHEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+             + COALESCE(u.m3_ajustes,0) > u.m3_totales
+        THEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+             + COALESCE(u.m3_ajustes,0) - u.m3_totales
+        ELSE 0
+    END                                     AS m3_excedente,
+
+    CASE
+        WHEN u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+             + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+             + COALESCE(u.m3_ajustes,0) > u.m3_totales
+        THEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+              + COALESCE(u.m3_ajustes,0) - u.m3_totales) * u.densidad_oficial
+        ELSE 0
+    END                                     AS tms_excedente,
+
+    /* Modulo siguiente de la secuencia, propuesto como destino del traspaso. */
+    (
+        SELECT TOP (1) s.modulo_id
+        FROM [reclamo].[secuencia_rotopala] s
+        WHERE s.rotopala_id     = u.rotopala_id
+          AND s.[campaña_id]    = u.[campaña_id]
+          AND s.orden_secuencia > u.orden_secuencia
+        ORDER BY s.orden_secuencia
+    )                                       AS modulo_siguiente_propuesto,
+
+    CASE
+        WHEN u.m3_totales = 0
+            THEN 'SIN_VOLUMEN_TOTAL'
+        WHEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales
+             > 100 + (SELECT TRY_CONVERT(decimal(9,4), valor)
+                      FROM [reclamo].[configuracion]
+                      WHERE clave = 'TOLERANCIA_CUADRATURA_PCT')
+            THEN 'SOBRE_100_PROPONER_TRASPASO'
+        WHEN (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+              + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+              + COALESCE(u.m3_ajustes,0)) * 100.0 / u.m3_totales > 99
+            THEN 'MODULO_PRACTICAMENTE_AGOTADO'
+        ELSE 'OK'
+    END                                     AS flag_cuadratura,
+
+    /* Saldo disponible para seguir reclamando. */
+    u.m3_totales
+        - (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+           + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+           + COALESCE(u.m3_ajustes,0))      AS m3_saldo_disponible,
+
+    /* Los mismos totales en TMS, para el resumen por modulo del dashboard.
+       La densidad es la oficial del modulo, constante desde el congelamiento
+       (supuesto S8), por lo que convertir m3 a TMS aca es directo. */
+    u.densidad_oficial,
+    u.tms_conformado,
+
+    (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)) * u.densidad_oficial
+                                            AS tms_camiones_total,
+    (COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)) * u.densidad_oficial
+                                            AS tms_rotopala_total,
+    (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+        + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+        + COALESCE(u.m3_ajustes,0)) * u.densidad_oficial
+                                            AS tms_extraido_total,
+
+    (u.m3_totales
+        - (u.m3_camiones_previo + COALESCE(u.m3_camiones_sistema,0)
+           + COALESCE(u.m3_rotopala_sistema, u.m3_rotopala_previo, 0)
+           + COALESCE(u.m3_ajustes,0))) * u.densidad_oficial
+                                            AS tms_saldo_disponible
+FROM ult u;"
+reclamo,v_cv25_diario,VIEW,"/* ============================================================================
+   V4. reclamo.v_cv25_diario
+
+   Consolida el totalizador CV25 y las horas de rotopala a grano diario.
+   Es la base del preliminar y del control de rendimiento.
+
+   Regla R7: el tonelaje CV25 corresponde a rotopala 1 mas rotopala 2.
+
+   CORRECCION 30-07-2026: la fuente es diaria, no por turno. Las horas si
+   conservan el desglose por turno, porque datos_filtrados tiene su propia
+   columna turno.
+   ============================================================================ */
+CREATE   VIEW [reclamo].[v_cv25_diario]
+AS
+WITH hr AS
+(
+    SELECT
+        h.fecha_turno                       AS fecha,
+        SUM(CASE WHEN h.rotopala_id = 1 THEN h.horas_operacion ELSE 0 END) AS horas_r1,
+        SUM(CASE WHEN h.rotopala_id = 2 THEN h.horas_operacion ELSE 0 END) AS horas_r2,
+        SUM(h.horas_operacion)              AS horas_total,
+        COUNT(DISTINCT h.turno)             AS turnos_con_dato
+    FROM [reclamo].[rotopala_horas_turno] h
+    GROUP BY h.fecha_turno
+)
+SELECT
+    COALESCE(cv.fecha, hr.fecha)            AS fecha,
+    cv.tmh_dia,
+    cv.tms_dia,
+    cv.tmh_cv025tot,
+    cv.tmh_cv025_tot,
+    cv.tag_utilizado,
+    cv.flag                                 AS flag_cv25,
+
+    /* Contraste entre los dos tags del mismo totalizador. */
+    cv.tmh_cv025tot - cv.tmh_cv025_tot      AS diferencia_entre_tags,
+    CASE
+        WHEN cv.tmh_cv025tot IS NULL OR cv.tmh_cv025_tot IS NULL
+            THEN 'SIN_CONTRASTE'
+        WHEN cv.tmh_cv025_tot = 0
+            THEN 'TAG_SECUNDARIO_CERO'
+        WHEN ABS(cv.tmh_cv025tot - cv.tmh_cv025_tot) * 100.0 / cv.tmh_cv025_tot > 1
+            THEN 'TAGS_DIFIEREN_SOBRE_1_PCT'
+        ELSE 'OK'
+    END                                     AS flag_tags,
+
+    hr.horas_r1,
+    hr.horas_r2,
+    hr.horas_total,
+    hr.turnos_con_dato,
+
+    /* Reparto proporcional del tonelaje CV25 entre ambas rotopalas.
+       Si no hay horas, no se puede repartir y el preliminar no aplica. */
+    CASE
+        WHEN COALESCE(hr.horas_total,0) = 0 THEN NULL
+        ELSE cv.tms_dia * hr.horas_r1 / hr.horas_total
+    END                                     AS tms_estimado_r1,
+    CASE
+        WHEN COALESCE(hr.horas_total,0) = 0 THEN NULL
+        ELSE cv.tms_dia * hr.horas_r2 / hr.horas_total
+    END                                     AS tms_estimado_r2,
+
+    CASE
+        WHEN cv.fecha IS NULL                     THEN 'SIN_CV25'
+        WHEN COALESCE(hr.horas_total,0) = 0       THEN 'SIN_HORAS_NO_REPARTIBLE'
+        WHEN COALESCE(cv.tms_dia,0) = 0           THEN 'CV25_CERO_SIN_OPERACION'
+        ELSE 'OK'
+    END                                     AS flag_preliminar
+FROM [reclamo].[cv25_diario] cv
+FULL OUTER JOIN hr
+    ON hr.fecha = cv.fecha;"
+reclamo,v_diferencia_cv25,VIEW,"/* ============================================================================
+   V10. reclamo.v_diferencia_cv25
+
+   Agregado diario a nivel planta del contraste entre el totalizador y la
+   topografia. Es la vista que alimenta el grafico principal del dashboard.
+
+   Regla R7: CV25 recibe la carga conjunta de ambas rotopalas y NO recibe
+   camiones. Por eso la comparacion se hace contra el reclamo de rotopala
+   solamente, sin sumar camiones.
+   ============================================================================ */
+CREATE   VIEW [reclamo].[v_diferencia_cv25]
+AS
+WITH topo AS
+(
+    SELECT
+        rd.fecha_operacion                  AS fecha,
+        SUM(CASE WHEN rd.fuente_reclamo = 'TOPOGRAFIA'
+                 THEN rd.tms_rotopala_dia ELSE 0 END) AS tms_topografia,
+        SUM(CASE WHEN rd.fuente_reclamo = 'PRELIMINAR_CV25'
+                 THEN rd.tms_rotopala_dia ELSE 0 END) AS tms_preliminar,
+        SUM(rd.tms_rotopala_dia)            AS tms_publicado,
+        SUM(rd.tms_camiones_dia)            AS tms_camiones,
+        SUM(CASE WHEN rd.fuente_reclamo = 'TOPOGRAFIA' THEN 1 ELSE 0 END)
+                                            AS modulos_topografia,
+        SUM(CASE WHEN rd.fuente_reclamo = 'PRELIMINAR_CV25' THEN 1 ELSE 0 END)
+                                            AS modulos_preliminar
+    FROM [reclamo].[v_reclamo_diario] rd
+    GROUP BY rd.fecha_operacion
+)
+SELECT
+    COALESCE(cv.fecha, t.fecha)             AS fecha,
+    cv.tms_dia                              AS tms_cv25,
+    cv.tmh_dia                              AS tmh_cv25,
+    cv.horas_r1,
+    cv.horas_r2,
+    cv.horas_total,
+
+    t.tms_topografia,
+    t.tms_preliminar,
+    t.tms_publicado,
+    t.tms_camiones,
+    t.modulos_topografia,
+    t.modulos_preliminar,
+
+    t.tms_topografia - cv.tms_dia           AS diferencia_topografia_cv25,
+    CASE
+        WHEN COALESCE(cv.tms_dia,0) = 0 THEN NULL
+        ELSE (t.tms_topografia - cv.tms_dia) * 100.0 / cv.tms_dia
+    END                                     AS diferencia_pct,
+
+    CASE
+        WHEN cv.fecha IS NULL
+            THEN 'SIN_CV25'
+        WHEN COALESCE(t.modulos_topografia,0) = 0
+            THEN 'SIN_TOPOGRAFIA_SOLO_PRELIMINAR'
+        WHEN COALESCE(cv.tms_dia,0) = 0
+            THEN 'CV25_CERO'
+        WHEN ABS((t.tms_topografia - cv.tms_dia) * 100.0 / cv.tms_dia) > 10
+            THEN 'BRECHA_SOBRE_10_PCT'
+        ELSE 'OK'
+    END                                     AS flag_diferencia
+FROM [reclamo].[v_cv25_diario] cv
+FULL OUTER JOIN topo t
+    ON t.fecha = cv.fecha;"
+reclamo,v_modulo_base,VIEW,"/* ============================================================================
+   V1. reclamo.v_modulo_base
+
+   Une el modulo congelado con su posicion en la secuencia de la rotopala.
+   Es el punto de entrada de todas las demas vistas: si un modulo no esta
+   congelado, no aparece aca y por lo tanto no puede reclamarse.
+   ============================================================================ */
+CREATE   VIEW [reclamo].[v_modulo_base]
+AS
+SELECT
+    mc.[campaña_id],
+    mc.pad_id,
+    mc.parcela_id,
+    mc.modulo_id,
+    COALESCE(mc.modulo_numero, md.numero)   AS modulo_numero,
+
+    mc.fecha_conformacion,
+    mc.fecha_congelamiento,
+
+    mc.tms_conformado,
+    mc.m3_totales,
+    mc.densidad_oficial,
+    mc.humedad_conformacion,
+
+    /* Linea base: lo extraido antes de la fecha de corte del sistema. */
+    mc.m3_camiones_previo,
+    mc.m3_rotopala_previo,
+    mc.fecha_linea_base,
+
+    /* Topologia fija del PAD. */
+    tp.nombre                               AS pad_nombre,
+    tp.material,
+    tp.parcelas,
+    tp.modulos_por_parcela,
+    tp.modulos_totales,
+    tp.modulo_numero_max,
+
+    sr.rotopala_id,
+    sr.orden_secuencia,
+    sr.estado                               AS estado_secuencia,
+    sr.fecha_apertura,
+    sr.fecha_cierre,
+
+    mc.fuente                               AS fuente_base,
+    mc.metodo                               AS metodo_base,
+    mc.estado                               AS estado_congelamiento,
+
+    /* Coherencia interna de la base congelada. La densidad declarada deberia
+       reproducir el TMS al multiplicarla por el volumen. */
+    CASE
+        WHEN mc.m3_totales = 0 THEN NULL
+        ELSE mc.tms_conformado / mc.m3_totales
+    END                                     AS densidad_implicita,
+    CASE
+        WHEN mc.m3_totales = 0 THEN 'SIN_VOLUMEN'
+        WHEN ABS(mc.tms_conformado / mc.m3_totales - mc.densidad_oficial)
+             > 0.01 THEN 'DENSIDAD_DECLARADA_DIFIERE'
+        ELSE 'OK'
+    END                                     AS flag_densidad,
+
+    /* El numero de modulo debe caer dentro del rango fisico de su PAD.
+       Oxido 1 a 64, sulfuro 1 a 140. */
+    CASE
+        WHEN tp.pad_id IS NULL
+            THEN 'PAD_SIN_TOPOLOGIA_DEFINIDA'
+        WHEN COALESCE(mc.modulo_numero, md.numero) IS NULL
+            THEN 'SIN_NUMERO_DE_MODULO'
+        WHEN COALESCE(mc.modulo_numero, md.numero)
+             NOT BETWEEN tp.modulo_numero_min AND tp.modulo_numero_max
+            THEN 'MODULO_FUERA_DEL_RANGO_DEL_PAD'
+        ELSE 'OK'
+    END                                     AS flag_topologia
+FROM [reclamo].[modulo_congelado] mc
+LEFT JOIN [reclamo].[secuencia_rotopala] sr
+    ON  sr.[campaña_id] = mc.[campaña_id]
+    AND sr.modulo_id    = mc.modulo_id
+LEFT JOIN [inventar_SpcHidr].[modulo] md
+    ON md.id_modulo = mc.modulo_id
+LEFT JOIN [reclamo].[topologia_pad] tp
+    ON tp.pad_id = mc.pad_id
+WHERE mc.estado = 'CONGELADO';"
+reclamo,v_preliminar_cv25,VIEW,"CREATE   VIEW [reclamo].[v_preliminar_cv25]
+AS
+WITH abiertos AS
+(
+    SELECT
+        mb.[campaña_id],
+        mb.pad_id,
+        mb.modulo_id,
+        mb.modulo_numero,
+        mb.rotopala_id,
+        mb.orden_secuencia,
+        mb.m3_totales,
+        mb.densidad_oficial,
+        mb.fecha_apertura,
+        mb.fecha_cierre,
+        (
+            SELECT MAX(ta.fecha_medicion)
+            FROM [reclamo].[topografia_avance] ta
+            WHERE ta.[campaña_id] = mb.[campaña_id]
+              AND ta.modulo_id    = mb.modulo_id
+              AND ta.estado       = 'VIGENTE'
+        ) AS ultima_medicion_topografica
+    FROM [reclamo].[v_modulo_base] mb
+    WHERE mb.estado_secuencia = 'ABIERTO'
+      AND mb.rotopala_id IS NOT NULL
+),
+cv AS
+(
+    SELECT
+        d.fecha,
+        d.tms_estimado_r1,
+        d.tms_estimado_r2,
+        d.horas_r1,
+        d.horas_r2,
+        d.flag_preliminar
+    FROM [reclamo].[v_cv25_diario] d
+),
+base AS
+(
+    SELECT
+        cv.fecha,
+        a.[campaña_id],
+        a.pad_id,
+        a.modulo_id,
+        a.modulo_numero,
+        a.rotopala_id,
+        a.m3_totales,
+        a.densidad_oficial,
+        a.ultima_medicion_topografica,
+        CASE WHEN a.rotopala_id = 1 THEN cv.tms_estimado_r1 ELSE cv.tms_estimado_r2 END
+            AS tms_rotopala_dia_total,
+        CASE WHEN a.rotopala_id = 1 THEN cv.horas_r1 ELSE cv.horas_r2 END
+            AS horas_rotopala,
+        cv.flag_preliminar,
+        COUNT(*) OVER (PARTITION BY cv.fecha, a.rotopala_id) AS modulos_abiertos
+    FROM cv
+    CROSS JOIN abiertos a
+    WHERE (a.fecha_apertura IS NULL OR cv.fecha >= a.fecha_apertura)
+      AND (a.fecha_cierre   IS NULL OR cv.fecha <= a.fecha_cierre)
+      AND (a.ultima_medicion_topografica IS NULL
+           OR cv.fecha > a.ultima_medicion_topografica)
+),
+con_acumulado AS
+(
+    SELECT
+        b.fecha                                 AS fecha_operacion,
+        b.[campaña_id],
+        b.pad_id,
+        b.modulo_id,
+        b.modulo_numero,
+        b.rotopala_id,
+        b.horas_rotopala,
+        b.modulos_abiertos,
+        b.m3_totales,
+        b.densidad_oficial,
+
+        /* DIARIO */
+        CAST(b.tms_rotopala_dia_total / b.modulos_abiertos AS decimal(30,12))
+                                            AS tms_preliminar_dia,
+        CAST
+        (
+            CASE
+                WHEN b.densidad_oficial = 0 THEN NULL
+                ELSE (b.tms_rotopala_dia_total / b.modulos_abiertos) / b.densidad_oficial
+            END AS decimal(30,12)
+        )                                       AS m3_preliminar_dia,
+
+        /* NUEVO: ACUMULADO */
+        SUM
+        (
+            CAST(b.tms_rotopala_dia_total / b.modulos_abiertos AS decimal(30,12))
+        ) OVER
+        (
+            PARTITION BY b.[campaña_id], b.modulo_id
+            ORDER BY b.fecha
+            ROWS UNBOUNDED PRECEDING
+        )                                       AS tms_preliminar_acum,
+
+        SUM
+        (
+            CAST
+            (
+                CASE
+                    WHEN b.densidad_oficial = 0 THEN 0
+                    ELSE (b.tms_rotopala_dia_total / b.modulos_abiertos) / b.densidad_oficial
+                END AS decimal(30,12)
+            )
+        ) OVER
+        (
+            PARTITION BY b.[campaña_id], b.modulo_id
+            ORDER BY b.fecha
+            ROWS UNBOUNDED PRECEDING
+        )                                       AS m3_preliminar_acum,
+
+        CAST('PRELIMINAR_CV25' AS varchar(40))  AS fuente_reclamo,
+        CAST('CV25_REPARTIDO_POR_HORAS_ROTOPALA' AS varchar(80)) AS metodo_calculo,
+        b.flag_preliminar
+    FROM base b
+    WHERE b.tms_rotopala_dia_total IS NOT NULL
+)
+SELECT
+    ca.fecha_operacion,
+    ca.[campaña_id],
+    ca.pad_id,
+    ca.modulo_id,
+    ca.modulo_numero,
+    ca.rotopala_id,
+    ca.horas_rotopala,
+    ca.modulos_abiertos,
+
+    /* DIARIO (compatible con versión anterior) */
+    ca.tms_preliminar_dia,
+    ca.m3_preliminar_dia,
+
+    /* NUEVO: ACUMULADO */
+    ca.tms_preliminar_acum,
+    ca.m3_preliminar_acum,
+
+    /* NUEVO: Porcentaje respecto del volumen total del módulo */
+    CASE
+        WHEN ca.m3_totales = 0 THEN NULL
+        ELSE CAST(ca.m3_preliminar_acum / ca.m3_totales AS float)
+    END                                     AS avance_preliminar_pct_total,
+
+    ca.fuente_reclamo,
+    ca.metodo_calculo,
+    ca.flag_preliminar
+FROM con_acumulado ca;"
+reclamo,v_reclamo_diario,VIEW,"CREATE   VIEW [reclamo].[v_reclamo_diario]
+AS
+WITH universo AS
+(
+    SELECT fecha_medicion AS fecha_operacion, [campaña_id], pad_id, modulo_id
+    FROM [reclamo].[v_topografia_resuelta]
+    UNION
+    SELECT fecha_operacion, [campaña_id], pad_id, modulo_id
+    FROM [reclamo].[v_preliminar_cv25]
+    UNION
+    SELECT fecha, [campaña_id], pad_id, modulo_id
+    FROM [reclamo].[v_camiones_acumulado]
+    UNION
+    SELECT fecha_operacion, [campaña_id], pad_id, modulo_id
+    FROM [reclamo].[v_ajustes_aplicables]
+),
+corte AS
+(
+    SELECT [reclamo].[fn_fecha_corte]() AS fecha_corte
+),
+cam AS
+(
+    SELECT
+        u.fecha_operacion,
+        u.[campaña_id],
+        u.modulo_id,
+        (
+            SELECT TOP (1) c.m3_camiones_acum
+            FROM [reclamo].[v_camiones_acumulado] c
+            WHERE c.[campaña_id] = u.[campaña_id]
+              AND c.modulo_id    = u.modulo_id
+              AND c.fecha       <= u.fecha_operacion
+            ORDER BY c.fecha DESC
+        ) AS m3_camiones_acum,
+        (
+            SELECT TOP (1) c.tms_camiones_acum
+            FROM [reclamo].[v_camiones_acumulado] c
+            WHERE c.[campaña_id] = u.[campaña_id]
+              AND c.modulo_id    = u.modulo_id
+              AND c.fecha       <= u.fecha_operacion
+            ORDER BY c.fecha DESC
+        ) AS tms_camiones_acum,
+        (
+            SELECT TOP (1) c.m3_camiones_dia
+            FROM [reclamo].[v_camiones_acumulado] c
+            WHERE c.[campaña_id] = u.[campaña_id]
+              AND c.modulo_id    = u.modulo_id
+              AND c.fecha        = u.fecha_operacion
+        ) AS m3_camiones_dia,
+        (
+            SELECT TOP (1) c.tms_camiones_dia
+            FROM [reclamo].[v_camiones_acumulado] c
+            WHERE c.[campaña_id] = u.[campaña_id]
+              AND c.modulo_id    = u.modulo_id
+              AND c.fecha        = u.fecha_operacion
+        ) AS tms_camiones_dia
+    FROM universo u
+),
+aju AS
+(
+    SELECT
+        a.fecha_operacion,
+        a.[campaña_id],
+        a.modulo_id,
+        SUM(COALESCE(a.delta_m3, 0))  AS ajuste_m3,
+        SUM(COALESCE(a.delta_tms, 0)) AS ajuste_tms,
+        COUNT(*)                      AS ajustes_aplicados
+    FROM [reclamo].[v_ajustes_aplicables] a
+    GROUP BY a.fecha_operacion, a.[campaña_id], a.modulo_id
+)
+SELECT
+    u.fecha_operacion,
+    u.[campaña_id],
+    u.pad_id,
+    u.modulo_id,
+    mb.modulo_numero,
+    mb.rotopala_id,
+    mb.orden_secuencia,
+
+    /* base congelada */
+    mb.tms_conformado,
+    mb.m3_totales,
+    mb.densidad_oficial,
+
+    /* camiones */
+    COALESCE(cam.m3_camiones_dia, 0)        AS m3_camiones_dia,
+    COALESCE(cam.tms_camiones_dia, 0)       AS tms_camiones_dia,
+    COALESCE(cam.m3_camiones_acum, 0)       AS m3_camiones_acum,
+    COALESCE(cam.tms_camiones_acum, 0)      AS tms_camiones_acum,
+
+    /* base disponible para la rotopala, neta de camiones. Piso en cero. */
+    CASE
+        WHEN mb.m3_totales - COALESCE(cam.m3_camiones_acum,0) < 0 THEN 0
+        ELSE mb.m3_totales - COALESCE(cam.m3_camiones_acum,0)
+    END                                     AS m3_disponible_roto,
+    CASE
+        WHEN mb.tms_conformado - COALESCE(cam.tms_camiones_acum,0) < 0 THEN 0
+        ELSE mb.tms_conformado - COALESCE(cam.tms_camiones_acum,0)
+    END                                     AS tms_disponible_roto,
+
+    /* reclamo de rotopala del dia: topografia manda, preliminar rellena */
+    COALESCE(tr.m3_incremento, pc.m3_preliminar_dia, 0)
+        + COALESCE(aju.ajuste_m3, 0)        AS m3_rotopala_dia,
+
+    CASE
+        WHEN tr.m3_incremento IS NOT NULL
+            THEN tr.m3_incremento * mb.densidad_oficial
+        ELSE COALESCE(pc.tms_preliminar_dia, 0)
+    END + COALESCE(aju.ajuste_tms, 0)       AS tms_rotopala_dia,
+
+    tr.m3_reclamado_acum                    AS m3_rotopala_acum_topografia,
+    tr.avance_total_pct,
+
+    /* ajustes */
+    COALESCE(aju.ajuste_m3, 0)              AS ajuste_m3,
+    COALESCE(aju.ajuste_tms, 0)             AS ajuste_tms,
+    COALESCE(aju.ajustes_aplicados, 0)      AS ajustes_aplicados,
+
+    /* porcentajes */
+    CASE
+        WHEN COALESCE(mb.m3_totales,0) = 0 THEN NULL
+        ELSE COALESCE(cam.m3_camiones_acum,0) / mb.m3_totales
+    END                                     AS avance_camiones_pct,
+
+    CASE
+        WHEN COALESCE(mb.m3_totales,0) = 0 THEN NULL
+        ELSE (COALESCE(cam.m3_camiones_acum,0) + COALESCE(tr.m3_reclamado_acum,0))
+             / mb.m3_totales
+    END                                     AS avance_total_pct_calculado,
+
+    /* MODIFICADO: EL PORCENTAJE DE AVANCE POST-CAMIONES
+       Prioridad: TOPOGRAFIA REAL → PRELIMINAR_ACUM → NULL */
+    CASE
+        WHEN mb.m3_totales - COALESCE(cam.m3_camiones_acum,0) <= 0 THEN NULL
+        WHEN tr.m3_reclamado_acum IS NOT NULL
+            THEN CAST(
+                    tr.m3_reclamado_acum
+                    / (mb.m3_totales - COALESCE(cam.m3_camiones_acum,0))
+                 AS decimal(9,4))
+        WHEN pc.m3_preliminar_acum IS NOT NULL
+            THEN CAST(
+                    pc.m3_preliminar_acum
+                    / (mb.m3_totales - COALESCE(cam.m3_camiones_acum,0))
+                 AS decimal(9,4))
+        ELSE NULL
+    END                                     AS avance_roto_pct,
+
+    /* trazabilidad */
+    CASE
+        WHEN tr.m3_incremento IS NOT NULL AND COALESCE(aju.ajustes_aplicados,0) > 0
+            THEN 'TOPOGRAFIA'
+        WHEN tr.m3_incremento IS NOT NULL
+            THEN 'TOPOGRAFIA'
+        WHEN pc.tms_preliminar_dia IS NOT NULL
+            THEN 'PRELIMINAR_CV25'
+        WHEN COALESCE(aju.ajustes_aplicados,0) > 0
+            THEN 'AJUSTE_MANUAL'
+        ELSE 'SIN_DATO'
+    END                                     AS fuente_reclamo,
+
+    COALESCE(tr.metodo, pc.metodo_calculo, 'SIN_METODO')
+                                            AS metodo_calculo,
+
+    CASE
+        WHEN mb.modulo_id IS NULL
+            THEN 'MODULO_NO_CONGELADO'
+        WHEN tr.flag_topografia IS NOT NULL
+            THEN tr.flag_topografia
+        WHEN pc.flag_preliminar IS NOT NULL
+            THEN pc.flag_preliminar
+        WHEN COALESCE(aju.ajustes_aplicados,0) > 0
+            THEN 'SOLO_AJUSTE_MANUAL'
+        ELSE 'SIN_DATO'
+    END                                     AS flag_calculo,
+
+    COALESCE(aju.ajustes_aplicados,0)       AS n_ajustes
+FROM universo u
+CROSS JOIN corte
+LEFT JOIN [reclamo].[v_modulo_base] mb
+    ON  mb.[campaña_id] = u.[campaña_id]
+    AND mb.modulo_id    = u.modulo_id
+LEFT JOIN [reclamo].[v_topografia_resuelta] tr
+    ON  tr.[campaña_id]    = u.[campaña_id]
+    AND tr.modulo_id       = u.modulo_id
+    AND tr.fecha_medicion  = u.fecha_operacion
+LEFT JOIN [reclamo].[v_preliminar_cv25] pc
+    ON  pc.[campaña_id]     = u.[campaña_id]
+    AND pc.modulo_id        = u.modulo_id
+    AND pc.fecha_operacion  = u.fecha_operacion
+LEFT JOIN cam
+    ON  cam.[campaña_id]     = u.[campaña_id]
+    AND cam.modulo_id        = u.modulo_id
+    AND cam.fecha_operacion  = u.fecha_operacion
+LEFT JOIN aju
+    ON  aju.[campaña_id]     = u.[campaña_id]
+    AND aju.modulo_id        = u.modulo_id
+    AND aju.fecha_operacion  = u.fecha_operacion
+WHERE u.fecha_operacion >= corte.fecha_corte;"
+reclamo,v_reclamo_para_conciliados,VIEW,"/* ================================================================
+   FIX: reclamo.v_reclamo_para_conciliados descarta camiones de
+   modulos que ese dia solo tuvieron camiones y ninguna medicion de
+   rotopala (topografia, preliminar o ajuste).
+
+   Causa raiz: el filtro WHERE rd.fuente_reclamo <> 'SIN_DATO' usa
+   fuente_reclamo (que solo describe el origen del dato de ROTOPALA)
+   como filtro de fila completa. Cuando fuente_reclamo = SIN_DATO
+   por falta de rotopala ese dia, se pierde tambien el
+   tms_camiones_dia de esa fila aunque sea distinto de cero.
+
+   Evidencia 2026-07-01 PAD 2: modulos 192, 193, 194, 199, 200, 201
+   tienen tms_camiones_dia > 0 y fuente_reclamo = SIN_DATO. Suma de
+   esos seis modulos = 17995.070451, exactamente la diferencia que
+   se observaba ese dia entre el dashboard (reclamo.calculo_diario)
+   y la fuente del SP (reclamo.v_reclamo_para_conciliados).
+
+   Fix: conservar la fila si hay fuente de rotopala valida O si hay
+   camiones distintos de cero ese dia. Los modulos realmente vacios
+   (sin rotopala y sin camiones) se siguen excluyendo igual que
+   antes.
+
+   No se toca reclamo.v_reclamo_diario (esa vista ya calcula bien
+   tms_camiones_dia; el problema es solo el filtro de esta vista).
+================================================================ */
+
+CREATE VIEW [reclamo].[v_reclamo_para_conciliados]
+AS
+SELECT
+    rd.fecha_operacion,
+    rd.pad_id,
+    rd.[campaña_id],
+    rd.modulo_id,
+    rd.modulo_numero,
+    rd.rotopala_id,
+    CAST(rd.avance_roto_pct AS float)              AS avance_porcentaje,
+    CAST(rd.avance_total_pct_calculado AS float)   AS avance_total_porcentaje,
+    CAST(rd.avance_camiones_pct AS float)          AS avance_camiones_porcentaje,
+    CAST(rd.tms_rotopala_dia AS float)             AS tonelaje_reclamado_diario,
+    CAST(rd.m3_rotopala_dia AS float)              AS volumen_diario_m3,
+    CAST(rd.tms_camiones_dia AS float)             AS tonelaje_camiones_diario,
+    CAST(rd.tms_disponible_roto AS float)          AS tms_disponible_roto,
+    CAST(rd.tms_conformado AS float)               AS tms_conformado,
+    CAST(rd.densidad_oficial AS float)             AS densidad_oficial,
+    rd.fuente_reclamo,
+    rd.metodo_calculo,
+    rd.flag_calculo,
+    rd.ajustes_aplicados
+FROM [reclamo].[v_reclamo_diario] rd
+WHERE rd.fuente_reclamo <> 'SIN_DATO'
+   OR COALESCE(rd.tms_camiones_dia, 0) <> 0;"
+reclamo,v_rendimiento_rotopala,VIEW,"/* ============================================================================
+   V9. reclamo.v_rendimiento_rotopala
+
+   Replica la hoja Rendimiento del libro de ripios: tms/hr por pesometro y por
+   topografia, y su diferencia.
+
+   Es el control de rendimiento que el usuario pidio: permite ver si una
+   rotopala esta rindiendo por debajo de su tasa horaria habitual.
+   ============================================================================ */
+CREATE   VIEW [reclamo].[v_rendimiento_rotopala]
+AS
+WITH topo_dia AS
+(
+    SELECT
+        rd.fecha_operacion                  AS fecha,
+        rd.rotopala_id,
+        SUM(CASE WHEN rd.fuente_reclamo = 'TOPOGRAFIA'
+                 THEN rd.tms_rotopala_dia ELSE 0 END) AS tms_topografia,
+        SUM(rd.tms_rotopala_dia)            AS tms_publicado,
+        COUNT(*)                            AS modulos_con_movimiento
+    FROM [reclamo].[v_reclamo_diario] rd
+    WHERE rd.rotopala_id IS NOT NULL
+    GROUP BY rd.fecha_operacion, rd.rotopala_id
+)
+SELECT
+    d.fecha,
+    r.rotopala_id,
+    r.nombre                                AS rotopala,
+    r.material,
+
+    CASE WHEN r.rotopala_id = 1 THEN d.horas_r1 ELSE d.horas_r2 END AS horas_operacion,
+    d.horas_total,
+    d.tms_dia                               AS tms_cv25_dia_ambas,
+    CASE WHEN r.rotopala_id = 1 THEN d.tms_estimado_r1 ELSE d.tms_estimado_r2 END
+                                            AS tms_cv25_asignado,
+
+    td.tms_topografia,
+    td.tms_publicado,
+    td.modulos_con_movimiento,
+
+    /* Rendimiento en toneladas secas por hora. */
+    CASE
+        WHEN COALESCE(CASE WHEN r.rotopala_id = 1 THEN d.horas_r1 ELSE d.horas_r2 END,0) = 0
+            THEN NULL
+        ELSE (CASE WHEN r.rotopala_id = 1 THEN d.tms_estimado_r1 ELSE d.tms_estimado_r2 END)
+             / (CASE WHEN r.rotopala_id = 1 THEN d.horas_r1 ELSE d.horas_r2 END)
+    END                                     AS rendimiento_pesometro_tms_hr,
+
+    CASE
+        WHEN COALESCE(CASE WHEN r.rotopala_id = 1 THEN d.horas_r1 ELSE d.horas_r2 END,0) = 0
+            THEN NULL
+        ELSE td.tms_topografia
+             / (CASE WHEN r.rotopala_id = 1 THEN d.horas_r1 ELSE d.horas_r2 END)
+    END                                     AS rendimiento_topografia_tms_hr,
+
+    /* Diferencia entre lo que dice la correa y lo que dice la topografia. */
+    td.tms_topografia
+        - (CASE WHEN r.rotopala_id = 1 THEN d.tms_estimado_r1 ELSE d.tms_estimado_r2 END)
+                                            AS diferencia_tms,
+
+    CASE
+        WHEN COALESCE(CASE WHEN r.rotopala_id = 1 THEN d.tms_estimado_r1
+                           ELSE d.tms_estimado_r2 END, 0) = 0 THEN NULL
+        ELSE (td.tms_topografia
+              - (CASE WHEN r.rotopala_id = 1 THEN d.tms_estimado_r1 ELSE d.tms_estimado_r2 END))
+             * 100.0
+             / (CASE WHEN r.rotopala_id = 1 THEN d.tms_estimado_r1 ELSE d.tms_estimado_r2 END)
+    END                                     AS diferencia_pct,
+
+    d.flag_preliminar                       AS flag_cv25
+FROM [reclamo].[v_cv25_diario] d
+CROSS JOIN [reclamo].[rotopala] r
+LEFT JOIN topo_dia td
+    ON  td.fecha       = d.fecha
+    AND td.rotopala_id = r.rotopala_id
+WHERE r.activa = 1;"
+reclamo,v_topografia_resuelta,VIEW,"/* ============================================================================
+   V3. reclamo.v_topografia_resuelta
+
+   Deriva el incremento diario a partir del acumulado, comparando cada
+   medicion contra la anterior del MISMO modulo. Nunca compara entre modulos.
+
+   El incremento se acota en cero: un retroceso topografico no produce
+   tonelaje negativo, pero queda marcado en flag_topografia para que alguien
+   lo revise.
+
+   CASO DE LA PRIMERA MEDICION DE CADA MODULO (sin fila anterior via LAG):
+   el acumulado que llega desde la fuente (m3_reclamado_acum) NO se reinicia
+   en la fecha de corte -- es el mismo acumulado corrido desde el inicio real
+   del modulo. Si el modulo ya tenia extraccion previa capturada como linea
+   base (modulo_congelado.m3_rotopala_previo, via sp_establecer_linea_base),
+   esa porcion YA esta incluida dentro del primer acumulado sincronizado y
+   debe descontarse antes de tratarlo como el incremento de ese dia. De lo
+   contrario el modulo recibe de golpe todo lo que llevaba desde antes del
+   corte como si fuera tonelaje de un solo dia (bug confirmado en modulo_id
+   187, campaña 8, 2026-07-01: 100.439,216 m3 tratados como incremento del
+   dia en vez de 10.325,714 m3, el incremento real).
+   ============================================================================ */
+CREATE   VIEW [reclamo].[v_topografia_resuelta]
+AS
+WITH sec AS
+(
+    SELECT
+        ta.fecha_medicion,
+        ta.[campaña_id],
+        ta.pad_id,
+        ta.modulo_id,
+        ta.m3_reclamado_acum,
+        ta.avance_total_pct,
+        ta.medicion_valida,
+        ta.motivo_no_medicion,
+        ta.fuente,
+        ta.metodo,
+        mc.m3_rotopala_previo,
+
+        LAG(ta.fecha_medicion) OVER
+        (
+            PARTITION BY ta.[campaña_id], ta.modulo_id
+            ORDER BY ta.fecha_medicion
+        ) AS fecha_medicion_anterior,
+
+        LAG(ta.m3_reclamado_acum) OVER
+        (
+            PARTITION BY ta.[campaña_id], ta.modulo_id
+            ORDER BY ta.fecha_medicion
+        ) AS m3_acum_anterior
+    FROM [reclamo].[topografia_avance] ta
+    LEFT JOIN [reclamo].[modulo_congelado] mc
+        ON mc.[campaña_id] = ta.[campaña_id] AND mc.modulo_id = ta.modulo_id
+    WHERE ta.estado = 'VIGENTE'
+)
+SELECT
+    s.fecha_medicion,
+    s.[campaña_id],
+    s.pad_id,
+    s.modulo_id,
+
+    s.m3_reclamado_acum,
+    s.m3_acum_anterior,
+    s.fecha_medicion_anterior,
+    DATEDIFF(day, s.fecha_medicion_anterior, s.fecha_medicion) AS dias_entre_mediciones,
+
+    CAST
+    (
+        CASE
+            WHEN s.medicion_valida = 0 THEN 0
+            WHEN s.m3_acum_anterior IS NULL
+                 AND s.m3_reclamado_acum - COALESCE(s.m3_rotopala_previo, 0) < 0 THEN 0
+            WHEN s.m3_acum_anterior IS NULL
+                 THEN s.m3_reclamado_acum - COALESCE(s.m3_rotopala_previo, 0)
+            WHEN s.m3_reclamado_acum - s.m3_acum_anterior < 0 THEN 0
+            ELSE s.m3_reclamado_acum - s.m3_acum_anterior
+        END AS decimal(30,12)
+    )                                       AS m3_incremento,
+
+    s.avance_total_pct,
+    s.medicion_valida,
+    s.motivo_no_medicion,
+    s.fuente,
+    s.metodo,
+
+    CASE
+        WHEN s.medicion_valida = 0
+            THEN 'SIN_MEDICION'
+        WHEN s.m3_acum_anterior IS NULL
+             AND s.m3_reclamado_acum - COALESCE(s.m3_rotopala_previo, 0) < 0
+            THEN 'PRIMERA_MEDICION_BAJO_LINEA_BASE_REVISAR'
+        WHEN s.m3_acum_anterior IS NULL
+            THEN 'PRIMERA_MEDICION_DEL_MODULO'
+        WHEN s.m3_reclamado_acum < s.m3_acum_anterior
+            THEN 'RETROCESO_ACUMULADO_REVISAR'
+        WHEN DATEDIFF(day, s.fecha_medicion_anterior, s.fecha_medicion) > 1
+            THEN 'INCREMENTO_ACUMULA_VARIOS_DIAS'
+        ELSE 'OK'
+    END                                     AS flag_topografia
+FROM sec s;"

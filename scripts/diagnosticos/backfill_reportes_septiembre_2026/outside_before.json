@@ -1,0 +1,46 @@
+{
+  "Resumen_Intervalo_TotTM": {
+    "count": 1662,
+    "sha256": "f907d426823172776002ac0d977559706102909e890cce75e6e24f6e379a5fa5"
+  },
+  "BD_Ton": {
+    "count": 1497,
+    "sha256": "169928d279bec4c1ac9b8b5cc4b5d2b79f1ec11cf116b8c4b79263f0d73d1cab"
+  },
+  "representatividad_torres_resultado": {
+    "count": 279,
+    "sha256": "1cfe6bd7d5ac54130bf1f98a9197db3f62fe3ab26658a280434ad821574e6b7e"
+  },
+  "Control_Apilado_TMH_v2_test": {
+    "count": 77,
+    "sha256": "0cdd39e9069dfe729bbe0c54c69fd968f9faf31722f7026d63c9159da58cc905"
+  },
+  "Control_Factor_Ajuste_Camiones_v2_test": {
+    "count": 63,
+    "sha256": "98c5972a78b816a14982d61faed44b9bde75046c31833dae702a196efade4577"
+  },
+  "Historico_Apilado_Diario": {
+    "count": 233,
+    "sha256": "ce408db1b59763eddcfb35d506722a9bc418abf8c3c0ef209ac4cd9f0fc35a03"
+  },
+  "Clays_CuFe": {
+    "count": 4992,
+    "sha256": "8044292ed6581108c037a894734c6b8dfdddcdc8466c85ebfb2a27a4a2d5c7d3"
+  },
+  "Clays_CuFe_trazabilidad": {
+    "count": 308,
+    "sha256": "4fa0a3e41961cde44d0a00eb28c93d7c0e47cb44f68a40cf500cef0656310395"
+  },
+  "trazabilidad_analitos_tm_emision_test": {
+    "count": 2520,
+    "sha256": "bc9dca842cb4ee043e0e844e1ca7b250089639a509289c3249391e7470c53a4a"
+  },
+  "reporte_turno_cache_emision_test": {
+    "count": 132,
+    "sha256": "04bb4645ddb08148f13012ffdc0c1cf2032145acdafb686eecd3a09799508651"
+  },
+  "Datos_conciliados_of": {
+    "count": 1334,
+    "sha256": "70a139e17b7c4eadd38c4072cc263df0c7a02736027d1b310bc6c1dcd0a3a68e"
+  }
+}

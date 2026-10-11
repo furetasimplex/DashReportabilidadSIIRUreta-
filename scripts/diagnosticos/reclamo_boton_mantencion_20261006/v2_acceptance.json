@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "checks": {
+    "same_guarded_dev": true,
+    "operational_dates_idempotent": true,
+    "m14_close_m15_open_same_day": true,
+    "m16_without_invented_dates": true,
+    "no_04oct_topography": true,
+    "topography_days_retained": true,
+    "preliminary_m15_r2": true,
+    "daily_04oct_preliminary": true,
+    "cv25_04oct_not_lost": true
+  },
+  "before": "migration_persisted.json",
+  "after": "post_reprocess_v2.json",
+  "expected": "timeline_76_80_expected.json"
+}

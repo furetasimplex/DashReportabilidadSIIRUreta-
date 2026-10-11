@@ -1,0 +1,19 @@
+{
+  "report_export/report_export.py": [
+    "fetch_generador_reporte_diario_emision",
+    "preparar_paquete_reporte_turno_emision",
+    "fetch_reconstitucion_srr_report",
+    "fetch_reporte_turno_cache_emision",
+    "fetch_trazabilidad_analitos_report",
+    "fetch_clays_cufe_report",
+    "fetch_curva_granulometrica_report"
+  ],
+  "report_export/callbacks/reportabilidad_cb.py": [
+    "exportar_excel",
+    "generar_pdf",
+    "generar_reporte"
+  ],
+  "report_export/tests/test_orquestacion_reporte_turno.py": [
+    "OrquestacionTurnoTests"
+  ]
+}

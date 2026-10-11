@@ -1,0 +1,45 @@
+====================================================================================================
+Definiciones de SPs de apoyo (periodo, log_start, log_end, sync_schema)
+====================================================================================================
+
+====================================================================================================
+Columnas de Data_balance_rec
+====================================================================================================
+Empty DataFrame
+Columns: [COLUMN_NAME, DATA_TYPE, IS_NULLABLE]
+Index: []
+
+====================================================================================================
+Columnas de rep_prod_ajustado_stg
+====================================================================================================
+Empty DataFrame
+Columns: [COLUMN_NAME, DATA_TYPE, IS_NULLABLE]
+Index: []
+
+====================================================================================================
+Columnas de rep_prod_ajustado
+====================================================================================================
+Empty DataFrame
+Columns: [COLUMN_NAME, DATA_TYPE, IS_NULLABLE]
+Index: []
+
+====================================================================================================
+Columnas de Datos_conciliados_of
+====================================================================================================
+Empty DataFrame
+Columns: [COLUMN_NAME, DATA_TYPE, IS_NULLABLE]
+Index: []
+
+====================================================================================================
+Muestra Data_balance_rec para caso_id=70
+====================================================================================================
+ERROR: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'Data_balance_rec'. (208) (SQLExecDirectW)")
+[SQL: SELECT * FROM Data_balance_rec WHERE caso_id = 70 ORDER BY Flujo]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+====================================================================================================
+rep_prod_ajustado: filas existentes para caso_id=70 (TOP 5 mas recientes)
+====================================================================================================
+ERROR: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'rep_prod_ajustado'. (208) (SQLExecDirectW)")
+[SQL: SELECT TOP 5 * FROM rep_prod_ajustado WHERE caso_id = 70 ORDER BY Fecha DESC]
+(Background on this error at: https://sqlalche.me/e/20/f405)

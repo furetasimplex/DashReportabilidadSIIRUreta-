@@ -1,0 +1,210 @@
+[
+  {
+    "name": "Fecha",
+    "tipo": "date"
+  },
+  {
+    "name": "Limite_KOM_TMH_Viaje",
+    "tipo": "float"
+  },
+  {
+    "name": "Limite_CAT_TMH_Viaje",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMH_Bruto_Original",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMH_Neto_Original",
+    "tipo": "float"
+  },
+  {
+    "name": "Sal_TMH_Dia",
+    "tipo": "float"
+  },
+  {
+    "name": "Humedad_Pct",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMS_Bruto_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMS_Neto_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Inventario_Chancado_TMS_Actual",
+    "tipo": "float"
+  },
+  {
+    "name": "Inventario_Chancado_TMS_Anterior",
+    "tipo": "float"
+  },
+  {
+    "name": "Delta_Inventario_Chancado_TMS",
+    "tipo": "float"
+  },
+  {
+    "name": "Flag_Continuidad_Diaria",
+    "tipo": "bit"
+  },
+  {
+    "name": "Flag_Inventario_Valido",
+    "tipo": "bit"
+  },
+  {
+    "name": "Flag_Humedad_Valida",
+    "tipo": "bit"
+  },
+  {
+    "name": "SRR_TMS_Turno_A",
+    "tipo": "float"
+  },
+  {
+    "name": "SRR_TMS_Turno_B",
+    "tipo": "float"
+  },
+  {
+    "name": "SRR_TMS_Dia",
+    "tipo": "float"
+  },
+  {
+    "name": "Mineral_Chancado_TMS_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Chancado_TMS_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Chancado_TMH_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Produccion_KOM_TMH",
+    "tipo": "float"
+  },
+  {
+    "name": "Produccion_CAT_TMH",
+    "tipo": "float"
+  },
+  {
+    "name": "Dato_Mina_TMH",
+    "tipo": "float"
+  },
+  {
+    "name": "Vueltas_KOM",
+    "tipo": "float"
+  },
+  {
+    "name": "Vueltas_CAT",
+    "tipo": "float"
+  },
+  {
+    "name": "Participacion_KOM",
+    "tipo": "float"
+  },
+  {
+    "name": "Participacion_CAT",
+    "tipo": "float"
+  },
+  {
+    "name": "Chancado_KOM_TMH_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Chancado_CAT_TMH_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Carga_CAT_TMH_Viaje_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "KOM_TMH_Corregido",
+    "tipo": "float"
+  },
+  {
+    "name": "CAT_TMH_Corregido",
+    "tipo": "float"
+  },
+  {
+    "name": "Chancado_TMH_Corregido_Total",
+    "tipo": "float"
+  },
+  {
+    "name": "Factor_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Flag_Factor_Ajuste_Valido",
+    "tipo": "bit"
+  },
+  {
+    "name": "Estado_Calculo",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Apilado_TMH_Bruto_Ajustado",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMS_Bruto_Ajustado",
+    "tipo": "float"
+  },
+  {
+    "name": "Mineral_Chancado_TMS_Ajustado",
+    "tipo": "float"
+  },
+  {
+    "name": "Chancado_TMS_Ajustado",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMH_Neto_Ajustado",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMS_Neto_Ajustado",
+    "tipo": "float"
+  },
+  {
+    "name": "Cantidad_Registros_Originales",
+    "tipo": "int"
+  },
+  {
+    "name": "Cantidad_Registros_Validos",
+    "tipo": "int"
+  },
+  {
+    "name": "Cantidad_Duplicados_Eliminados",
+    "tipo": "int"
+  },
+  {
+    "name": "Check_TMH_Bruto",
+    "tipo": "float"
+  },
+  {
+    "name": "Check_Produccion_Flotas",
+    "tipo": "float"
+  },
+  {
+    "name": "Metodo",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Fuente_Camiones",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Fecha_Calculo",
+    "tipo": "datetime2"
+  }
+]

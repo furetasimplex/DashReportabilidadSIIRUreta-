@@ -1,0 +1,22 @@
+--- sp_reporte_turno_emision_test.before.sql
++++ sp_reporte_turno_emision_test.after.sql
+@@ -1,4 +1,4 @@
+-CREATE PROCEDURE [inventar_SpcHidr].[sp_reporte_turno_emision_test]
++ALTER PROCEDURE [inventar_SpcHidr].[sp_reporte_turno_emision_test]
+     @fecha_inicio date,
+     @fecha_fin    date
+ AS
+@@ -1592,6 +1592,13 @@
+           CASE WHEN l.Fuente_Malla_Menos_100 LIKE '%TORRE%' THEN l.TM END)
+ ) AS a(Analito, Valor_Final, Fuente_Tecnica, Fecha_Origen, Turno_Origen, TM_Origen);
+ 
++/* La etiqueta técnica conserva explícitamente la compartición TM2 -> TM1. */
++UPDATE #trazabilidad_analitos
++SET Fuente_Base = 'TM2',
++    TM_Origen = 'TM2',
++    Resolucion = 'COMPARTIDO_TM2_A_TM1'
++WHERE Fuente_Tecnica LIKE '%COMPARTIDA%TM2%TM1%';
++
+ CREATE UNIQUE CLUSTERED INDEX IX_trazabilidad_analitos_clave
+ ON #trazabilidad_analitos (Fecha, Turno, TM_Destino, Analito);
+ 

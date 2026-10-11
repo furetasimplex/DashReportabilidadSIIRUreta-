@@ -1,0 +1,506 @@
+[
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_rep_publish_oficial_validado",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_ver",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "vw_datos_conciliados_reporte",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "vw_datos_conciliados_reporte",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_ver",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_factor_ajuste_camiones_srr_origen_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "vw_datos_conciliados_publicacion_base",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_factor_ajuste_camiones_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_base_m6",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_base_m6",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_base_m6",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_modelo6",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_modelo6",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_modelo6",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_copy1",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_copy1",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_copy1",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_emision_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_emision_test",
+    "referenced_database_name": "DEV_SIIR",
+    "referenced_schema_name": "hidro",
+    "referenced_entity_name": "imp_csv",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_emision_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_emision_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_reclamo_para_conciliados",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_datos_conciliados",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_datos_conciliados",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_modelo6_v2",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_modelo6_v2",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_modelo6_v2",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "vw_Reporte_preliminar",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_reporte_datos_conciliados_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_v2",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_v2",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "dbo",
+    "objeto": "v_imp_conciliacion_chancado",
+    "referenced_database_name": "DEV_SIIR",
+    "referenced_schema_name": "hidro",
+    "referenced_entity_name": "imp_csv",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "v_apilado_base_mina_stock_srr",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "resumen_mina",
+    "referenced_database_name": null,
+    "referenced_schema_name": null,
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v4_7_1_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_v4_7_1_test",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v4_7_1_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v4_8_1_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_v4_8_1_test",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v4_8_1_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_factor_ajuste_camiones_srr_tag_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of",
+    "referenced_database_name": "DEV_SIIR",
+    "referenced_schema_name": "hidro",
+    "referenced_entity_name": "imp_csv",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of",
+    "referenced_database_name": null,
+    "referenced_schema_name": "reclamo",
+    "referenced_entity_name": "v_reclamo_para_conciliados",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v4_9_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_v4_9_test",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v4_9_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "vw_Datos_conciliados_of_activo",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "vw_Datos_conciliados_of_activo",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_active_run",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "vw_Datos_conciliados_of_activo",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_ver",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_DatosConciliados_SetActiveRun",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_active_run",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_DatosConciliados_SetActiveRun",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_ver",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_DatosConciliados_ClearActiveRun",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_active_run",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_DatosConciliados_ClearActiveRun",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_ver",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_factor_ajuste_camiones_standalone_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v4_3_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_v4_3_test",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v4_3_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "vw_reconciliador_solver_input",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "modelo_reconciliador_flujos",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_contingencia_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_contingencia_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos_contingencia_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_calcular_balance_flujos",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam_powerbi",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_factor_ajuste_camiones_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v2_ajustado_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "Datos_conciliados_of_ajustado_test",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "sp_mantiene_datos_conciliados_of_v2_ajustado_test",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "mov_cam",
+    "referenced_minor_id": 0
+  },
+  {
+    "esquema": "inventar_SpcHidr",
+    "objeto": "CK_modelo_recon_matriz_signo",
+    "referenced_database_name": null,
+    "referenced_schema_name": "inventar_SpcHidr",
+    "referenced_entity_name": "modelo_reconciliador_matriz_solver",
+    "referenced_minor_id": 5
+  }
+]

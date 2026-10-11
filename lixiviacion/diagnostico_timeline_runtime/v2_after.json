@@ -1,0 +1,138 @@
+[
+  {
+    "pad": null,
+    "parcela_id": null,
+    "kpis": [
+      "12.168.556,400",
+      "30.395,261",
+      "1,180",
+      "2.062"
+    ],
+    "figures_sha256": [
+      "e48c8b201618ac1b5c487aeb261cffdb35be90342813f748e6d057921e7c5ff8",
+      "8cf3c285999227c8509796a9fa55f98fb0b77ffc1fd24d54a33ff2fa10d037ac",
+      "9e9f8ae3a4a36209110b105c716bf0b6160ebd71422ff09082a2f8ffce26b77a"
+    ],
+    "datatable_rows": 6120,
+    "datatable_sha256": "670762d876ab11d90462c627bcdd3c5a8cc61a4dacebd66dd4784c913755b9b4"
+  },
+  {
+    "pad": 1,
+    "parcela_id": 1,
+    "kpis": [
+      "90.784,004",
+      "89,964",
+      "1,092",
+      "0"
+    ],
+    "figures_sha256": [
+      "c2632c9b3f7c03a0165b4c22f2fb57c053d75b78ac7dde5efd2e8c7aadb2ef14",
+      "d3ee689953e43557a3731f237661201893a92d60cc89f02f78276331c0058185",
+      "acbc4de279e527c2538d5be938a14fae7d846095fe3daf8f8e47fdf5bf39d61b"
+    ],
+    "datatable_rows": 102,
+    "datatable_sha256": "47c6f4c4fd05990f3f67f971ca5b0ef729b5a8c762452d44b2a8d3107729cc7f"
+  },
+  {
+    "pad": 1,
+    "parcela_id": 17,
+    "kpis": [
+      "0,088",
+      "-0,000",
+      "-0,571",
+      "102"
+    ],
+    "figures_sha256": [
+      "9eef71543f0b65d0e212fa0d81b101885196ffce9e38bc2da6e727a8591d1eb2",
+      "8f6e61fb4425e9f76d111eb92127984d332240d71c919fb960ef86f0ba0fc5ca",
+      "2674cc57cdcbeecbe621515bc6f7feeb8afac9c1d051a1993fe153de662a3d41"
+    ],
+    "datatable_rows": 102,
+    "datatable_sha256": "c72d3151121fe7ed45a945447c8ed799b6131fc91e176f4c548a657b50056974"
+  },
+  {
+    "pad": 1,
+    "parcela_id": 29,
+    "kpis": [
+      "55.922,766",
+      "10,185",
+      "-0,096",
+      "20"
+    ],
+    "figures_sha256": [
+      "2069c27b8e5c80e9b82b825e3e3abffd99436b615a19205c869bcb01f082c117",
+      "a7376074788404a1e9362c052b97bbde46d16ae9f851d208c0cd2f0a4c025866",
+      "1e31d3fb32aac1bd0f38f081da53dc47b27563fc56eb92e76e7abd4e240c9fb0"
+    ],
+    "datatable_rows": 102,
+    "datatable_sha256": "22a8be090e327456fc56fdc71249157d7b3196dc20beceb20d644988273304a8"
+  },
+  {
+    "pad": 2,
+    "parcela_id": 33,
+    "kpis": [
+      "29.138,623",
+      "9,708",
+      "-0,648",
+      "90"
+    ],
+    "figures_sha256": [
+      "8061ce3b7db35f6e5ab2f07888a2a697cdf7dc355b13b7eebaefe10555b4f6ca",
+      "b6a7482b131e044d02cd3d052043e163b235beebadd0d80d92c0bd95b6438181",
+      "d4b0900f8de3b0cf1dded8f2240e79c04af77a5b00006e3ee879700f91ef88d8"
+    ],
+    "datatable_rows": 102,
+    "datatable_sha256": "48e4aee3c3fbe6b8e78cffb46f15881dfa3329e9a8461860dc9d4fe5a3b63d28"
+  },
+  {
+    "pad": 2,
+    "parcela_id": 39,
+    "kpis": [
+      "252.219,344",
+      "122,554",
+      "0,277",
+      "0"
+    ],
+    "figures_sha256": [
+      "d57b5927446729a9bcfbd155833638f2ebfe55ff590b5c7da1b3defecdb89412",
+      "8a4d307241d5b8d471b941a28ff4097afe8315d618895a4e5b7195076e9e74af",
+      "4a9b54456c99703640519a3e78fa1a2952976df13922acc8b0d8ea4f849e312a"
+    ],
+    "datatable_rows": 102,
+    "datatable_sha256": "2b75d5726eacb955386b9b8e6dc551e1776a664b292ce1cc72b30d2b9c9a0781"
+  },
+  {
+    "pad": 2,
+    "parcela_id": 41,
+    "kpis": [
+      "302.946,241",
+      "151,488",
+      "0,313",
+      "27"
+    ],
+    "figures_sha256": [
+      "ce821d4f0ba7a5d5086cc329791adb43f1244de264e1ee47024f7d9765e5146f",
+      "0fa25e4f55cc28def96387da0220704e4891f1138e01fbbc88604ba41691e706",
+      "90f437a0ab5cb041f779910feb350843392110d0ad081854f22e3f55425c6b29"
+    ],
+    "datatable_rows": 102,
+    "datatable_sha256": "2b1a617e8b8d0412b015d8f6ed677e74fec3f4bbcf47c700724f82d830da3de3"
+  },
+  {
+    "pad": 2,
+    "parcela_id": 60,
+    "kpis": [
+      "0,000",
+      "0,000",
+      "-0,797",
+      "102"
+    ],
+    "figures_sha256": [
+      "96c8ce5c83737d9af961430a27c8c781865378568e54f83133bc4091c252e1a6",
+      "4141fb0577995c56e24ec2db7cbff0555229b56ae287c44cf3a18dd9007a2f5a",
+      "304dfaa7e4fe3773f39c8e31df63775f8f54f896d38058530182c87b57477175"
+    ],
+    "datatable_rows": 102,
+    "datatable_sha256": "4d9d157cb4526f5916792f96e676a248e62081a70c4bf15063bcd520918c6956"
+  }
+]

@@ -1,0 +1,130 @@
+[
+  {
+    "name": "Fecha",
+    "column_id": 1,
+    "tipo": "date",
+    "max_length": 3,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Turno",
+    "column_id": 2,
+    "tipo": "varchar",
+    "max_length": 1,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Fuente_SRR",
+    "column_id": 3,
+    "tipo": "varchar",
+    "max_length": 10,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Ton_SRR_Oficial",
+    "column_id": 4,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Ton_SRR_IMP",
+    "column_id": 5,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Ton_SRR_Origen_Raw",
+    "column_id": 6,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Ton_SRR_Usado_Actual",
+    "column_id": 7,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Flag_SRR_Capeado_Por_Apilado",
+    "column_id": 8,
+    "tipo": "bit",
+    "max_length": 1,
+    "precision": 1,
+    "scale": 0
+  },
+  {
+    "name": "Flag_SRR_Valido",
+    "column_id": 9,
+    "tipo": "bit",
+    "max_length": 1,
+    "precision": 1,
+    "scale": 0
+  },
+  {
+    "name": "Estado_SRR",
+    "column_id": 10,
+    "tipo": "varchar",
+    "max_length": 40,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Apilado_TMS_Real",
+    "column_id": 11,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Apilado_TMS_Referencia_Cap",
+    "column_id": 12,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Ton_Stock_Oficial",
+    "column_id": 13,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Ton_Mina_Oficial",
+    "column_id": 14,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Ton_IMP_Total",
+    "column_id": 15,
+    "tipo": "decimal",
+    "max_length": 17,
+    "precision": 38,
+    "scale": 10
+  },
+  {
+    "name": "Fuente_Dato_Conciliacion",
+    "column_id": 16,
+    "tipo": "varchar",
+    "max_length": 20,
+    "precision": 0,
+    "scale": 0
+  }
+]

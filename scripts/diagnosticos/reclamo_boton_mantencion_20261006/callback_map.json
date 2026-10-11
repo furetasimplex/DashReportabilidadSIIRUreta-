@@ -1,0 +1,21 @@
+{
+  "runtime_live": "NO DETERMINADO",
+  "local_source": {
+    "automatizacion": {
+      "file": "reclamo/panel.py",
+      "decorator": "@callback(Output('resultado-automatizacion','children'), Output('mensaje-accion','children', allow_duplicate=True), Input('btn-automatizacion','n_clicks'), prevent_initial_call=True)",
+      "function": "cb_automatizacion",
+      "calls": "db.mantener_secuencia()"
+    },
+    "recalcular": {
+      "file": "reclamo/panel.py",
+      "decorator": "@callback(Output('mensaje-accion','children'), Input('btn-recalcular','n_clicks'), State('rango','start_date'), State('rango','end_date'), prevent_initial_call=True)",
+      "function": "cb_recalcular",
+      "calls": "db.recalcular(desde, hasta)"
+    }
+  },
+  "callback_map_actual_dash": "No capturado: importar main ejecuta guardia de DB y la conexión falló.",
+  "suppress_callback_exceptions": true,
+  "duplicate_or_overwrite": "No se observa duplicado en las búsquedas del repositorio; estado del proceso servido no determinado.",
+  "layout_components": ["btn-automatizacion", "resultado-automatizacion", "btn-recalcular", "mensaje-accion"]
+}

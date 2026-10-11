@@ -72,8 +72,7 @@ grid_children = [top_row, bottom_row]
 # =========================
 #  Layout del tab
 # =========================
-def layout():
- return html.Div([
+layout = html.Div([
     # Fila 1: fechas + reset
     html.Div([
         html.Div([
@@ -85,7 +84,7 @@ def layout():
                 display_format='YYYY-MM-DD'
             ),
         ], style={'display': 'flex', 'alignItems': 'center'}),
-        html.Div([html.Button('Reiniciar selección', id='oxido-reset-button', className='btn btn-primary', n_clicks=0)])
+        html.Div([html.Button('Reiniciar selección', id='oxido-reset-button', n_clicks=0)])
     ], style={
         'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center',
         'marginBottom': '8px', 'padding': '0 20px'
@@ -94,7 +93,7 @@ def layout():
     # Fila 2: Detectar campañas + selector campañas
     html.Div([
         html.Div([
-            html.Button('Detectar campañas por fecha', id='oxido-detect-camp-btn', className='btn btn-primary', n_clicks=0),
+            html.Button('Detectar campañas por fecha', id='oxido-detect-camp-btn', n_clicks=0),
             dcc.Dropdown(
                 id='oxido-campanias',
                 options=[],
@@ -151,21 +150,10 @@ def _query_df(sql, params):
     """ Ejecuta SQL usando get_connection() y retorna DataFrame. """
     conn = get_connection()
     try:
-        #cur = conn.cursor(dictionary=True)
-        cur = conn.cursor()
-        if conn.__class__.__module__.startswith("pyodbc"):
-            sql = sql.replace('%s',"?")
-        print(f'{sql} and parameters {params}')
+        cur = conn.cursor(dictionary=True)
         cur.execute(sql, params)
-        print(cur.description)
-        columns = [desc[0] for desc in cur.description]
         rows = cur.fetchall()
-  
-        #print(f"rows: {rows}")
-        #df = pd.DataFrame(rows,columns=cols)
-        df = pd.DataFrame([dict(zip(columns,r)) for r in rows])
-        print(df)
-        return df
+        return pd.DataFrame(rows)
     finally:
         try: cur.close()
         except Exception: pass
@@ -196,7 +184,7 @@ def _detect_campanias(pad, parcelas, start_date, end_date):
     # 1) control_ley_ripio_diario (por drenaje)
     sql1 = f"""
         SELECT DISTINCT Campana
-        FROM inventar_SpcHidr.control_ley_ripio_diario
+        FROM control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Fecha_drenaje BETWEEN %s AND %s
@@ -210,7 +198,7 @@ def _detect_campanias(pad, parcelas, start_date, end_date):
     # 2) fallback: res_parcelas_apilado (por apilado)
     sql2 = f"""
         SELECT DISTINCT Campana
-        FROM inventar_SpcHidr.res_parcelas_apilado
+        FROM res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Fecha_apilado BETWEEN %s AND %s
@@ -234,7 +222,7 @@ def _load_kinetics_total(pad, parcelas, campanias, start_date, end_date):
     # Denominador
     sql_den = f"""
         SELECT SUM(fino_apilado_cu) AS fino_apilado_total
-        FROM inventar_SpcHidr.res_parcelas_apilado
+        FROM res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -248,7 +236,7 @@ def _load_kinetics_total(pad, parcelas, campanias, start_date, end_date):
     # Aporte diario total
     sql_day = f"""
         SELECT Fecha_drenaje AS fecha, SUM(fino_dia) AS fino_dia_sel
-        FROM inventar_SpcHidr.control_ley_ripio_diario
+        FROM control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -280,7 +268,7 @@ def _load_kinetics_by_parcela(pad, parcelas, campanias, start_date, end_date):
     # Denominador por parcela
     sql_den = f"""
         SELECT Parcela, SUM(fino_apilado_cu) AS fino_apilado_total
-        FROM inventar_SpcHidr.res_parcelas_apilado
+        FROM res_parcelas_apilado
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -296,7 +284,7 @@ def _load_kinetics_by_parcela(pad, parcelas, campanias, start_date, end_date):
     # Aporte diario por parcela
     sql_day = f"""
         SELECT Fecha_drenaje AS fecha, Parcela, SUM(fino_dia) AS fino_dia
-        FROM inventar_SpcHidr.control_ley_ripio_diario
+        FROM control_ley_ripio_diario
         WHERE PAD = %s
           AND Parcela IN {_in_clause(len(parcelas))}
           AND Campana IN {_in_clause(len(campanias))}
@@ -326,7 +314,7 @@ def register_callbacks(app):
     # 1) Redibuja grilla con coloreo de celdas seleccionadas
     @app.callback(
         Output('oxido-grid-main-container', 'children'),
-        Input('selected-cells-oxido', 'data')
+        Input('selected-cells', 'data')
     )
     def update_grid_layout(selected_cells):
         def create_zoomed_cell(cell_index):
@@ -368,10 +356,10 @@ def register_callbacks(app):
 
     # 2) Toggle de selección de celdas (robusto con timestamps)
     @app.callback(
-        Output('selected-cells-oxido', 'data', allow_duplicate=True),
+        Output('selected-cells', 'data', allow_duplicate=True),
         Input({'type': 'oxido-inner-cell', 'index': ALL}, 'n_clicks_timestamp'),
         Input('oxido-reset-button', 'n_clicks'),
-        State('selected-cells-oxido', 'data'),
+        State('selected-cells', 'data'),
         prevent_initial_call=True
     )
     def update_selected_cells(ts_list, reset_clicks, selected_cells):
@@ -402,7 +390,7 @@ def register_callbacks(app):
         Output('oxido-campanias', 'options'),
         Output('oxido-campanias', 'value'),
         Input('oxido-detect-camp-btn', 'n_clicks'),
-        State('selected-cells-oxido', 'data'),
+        State('selected-cells', 'data'),
         State('oxido-date-picker-range', 'start_date'),
         State('oxido-date-picker-range', 'end_date'),
         prevent_initial_call=True
@@ -419,7 +407,7 @@ def register_callbacks(app):
         Output('oxido-cell-table', 'data'),
         Output('oxido-cell-graph', 'figure'),            # total ponderado
         Output('oxido-cell-graph-parcelas', 'figure'),   # por parcela
-        Input('selected-cells-oxido', 'data'),
+        Input('selected-cells', 'data'),
         Input('oxido-date-picker-range', 'start_date'),
         Input('oxido-date-picker-range', 'end_date'),
         Input('oxido-campanias', 'value')

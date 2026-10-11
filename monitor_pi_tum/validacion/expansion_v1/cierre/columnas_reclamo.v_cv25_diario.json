@@ -1,0 +1,50 @@
+[
+  {
+    "name": "fecha"
+  },
+  {
+    "name": "tmh_dia"
+  },
+  {
+    "name": "tms_dia"
+  },
+  {
+    "name": "tmh_cv025tot"
+  },
+  {
+    "name": "tmh_cv025_tot"
+  },
+  {
+    "name": "tag_utilizado"
+  },
+  {
+    "name": "flag_cv25"
+  },
+  {
+    "name": "diferencia_entre_tags"
+  },
+  {
+    "name": "flag_tags"
+  },
+  {
+    "name": "horas_r1"
+  },
+  {
+    "name": "horas_r2"
+  },
+  {
+    "name": "horas_total"
+  },
+  {
+    "name": "turnos_con_dato"
+  },
+  {
+    "name": "tms_estimado_r1"
+  },
+  {
+    "name": "tms_estimado_r2"
+  },
+  {
+    "name": "flag_preliminar"
+  }
+]

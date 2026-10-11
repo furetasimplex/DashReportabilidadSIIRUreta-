@@ -7,7 +7,12 @@ from datetime import datetime
 
 from tabs import tab_report
 import report_export.callbacks.reportabilidad_cb
-import report_export.callbacks.report_cb
+import callbacks.reportabilidad_callbacks
+from reclamo import panel as reclamo_panel  # registra sus @callback al importarse
+from powerbi_camiones import panel as powerbi_panel  # registra sus @callback al importarse
+from monitor_pi_tum import panel as monitor_pitum_panel
+from lixiviacion import panel as lixiviacion_panel
+from polinomio_acido import panel as polinomio_acido_panel
 
 # === Utilidades ===
 project_folder = os.path.dirname(os.path.realpath(__file__))
@@ -55,7 +60,27 @@ def render_sidebar():
                 dbc.NavLink([
                     html.I(className="bi bi-file-earmark-text me-2"),
                     "Reportabilidad",
-                ], href="#", id="nav-reportabilidad", className="siir-nav-link"),
+                ], href="#", id="nav-reportabilidad", className="siir-nav-link active", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-truck me-2"),
+                    "Administración de Reclamo",
+                ], href="#", id="nav-reclamo", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-cloud-upload me-2"),
+                    "Carga PowerBI Camiones",
+                ], href="#", id="nav-powerbi", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-activity me-2"),
+                    "Monitoreo Correas Área Seca",
+                ], href="#", id="nav-monitor-pitum", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-droplet me-2"),
+                    "Lixiviación",
+                ], href="#", id="nav-lixiviacion", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-calculator me-2"),
+                    "Polinomio Ácido",
+                ], href="#", id="nav-polinomio-acido", className="siir-nav-link", n_clicks=0),
             ], vertical=True, pills=False),
         ]
     )
@@ -67,7 +92,7 @@ def render_main_header():
         html.Div([
             html.Span("SIIR", className="siir-bc-item"),
             html.Span(" / ", className="siir-bc-sep"),
-            html.Span("CONCENTRADORA", className="siir-bc-item"),
+            html.Span("HIDROMETALURGIA", className="siir-bc-item"),
             html.Span(" / ", className="siir-bc-sep"),
             html.Span("REPORTES", className="siir-bc-active"),
         ], className="siir-breadcrumb"),
@@ -124,6 +149,25 @@ subtabs = html.Div(
     className="tab-anim",
     children=[
         html.Div(id="subtabs-report", children=tab_report.layout()),
+        html.Div(
+            id="subtabs-reclamo",
+            style={"display": "none"},
+            children=reclamo_panel.layout(),
+        ),
+        html.Div(
+            id="subtabs-powerbi",
+            style={"display": "none"},
+            children=powerbi_panel.layout(),
+        ),
+        html.Div(
+            id="subtabs-monitor-pitum",
+            style={"display": "none"},
+            children=monitor_pitum_panel.layout(),
+        ),
+        html.Div(id="subtabs-lixiviacion", style={"display": "none"},
+                 children=lixiviacion_panel.layout()),
+        html.Div(id="subtabs-polinomio-acido", style={"display": "none"},
+                 children=polinomio_acido_panel.layout()),
     ]
 )
 
@@ -142,11 +186,60 @@ def create_layout(app):
 def register_callbacks(app):
     @app.callback(
         Output("subtabs-report", "style"),
+        Output("subtabs-reclamo", "style"),
+        Output("subtabs-powerbi", "style"),
+        Output("subtabs-monitor-pitum", "style"),
+        Output("subtabs-lixiviacion", "style"),
+        Output("subtabs-polinomio-acido", "style"),
+        Output("nav-reportabilidad", "className"),
+        Output("nav-reclamo", "className"),
+        Output("nav-powerbi", "className"),
+        Output("nav-monitor-pitum", "className"),
+        Output("nav-lixiviacion", "className"),
+        Output("nav-polinomio-acido", "className"),
         Input("nav-reportabilidad", "n_clicks"),
+        Input("nav-reclamo", "n_clicks"),
+        Input("nav-powerbi", "n_clicks"),
+        Input("nav-monitor-pitum", "n_clicks"),
+        Input("nav-lixiviacion", "n_clicks"),
+        Input("nav-polinomio-acido", "n_clicks"),
         prevent_initial_call=False,
     )
-    def toggle_subtabs(rep):
-        return {"display": "block"}
+    def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum, n_lix, n_polinomio):
+        # dash.ctx.triggered_id es None en la carga inicial -> por defecto
+        # se muestra Reportabilidad, igual que antes.
+        triggered = dash.ctx.triggered_id
+
+        secciones = {
+            "nav-reportabilidad": "reportabilidad",
+            "nav-reclamo": "reclamo",
+            "nav-powerbi": "powerbi",
+            "nav-monitor-pitum": "monitor-pitum",
+            "nav-lixiviacion": "lixiviacion",
+            "nav-polinomio-acido": "polinomio-acido",
+        }
+        activa = secciones.get(triggered, "reportabilidad")
+
+        def estilo(nombre):
+            return {"display": "block"} if nombre == activa else {"display": "none"}
+
+        def clase(nombre):
+            return "siir-nav-link active" if nombre == activa else "siir-nav-link"
+
+        return (
+            estilo("reportabilidad"),
+            estilo("reclamo"),
+            estilo("powerbi"),
+            estilo("monitor-pitum"),
+            estilo("lixiviacion"),
+            estilo("polinomio-acido"),
+            clase("reportabilidad"),
+            clase("reclamo"),
+            clase("powerbi"),
+            clase("monitor-pitum"),
+            clase("lixiviacion"),
+            clase("polinomio-acido"),
+        )
 
     @app.callback(
         Output("siir-username", "children"),

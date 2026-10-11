@@ -1,0 +1,359 @@
+[
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "id_campana_parcela_control",
+    "DATA_TYPE": "int",
+    "ORDINAL_POSITION": 1
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "campana_id",
+    "DATA_TYPE": "int",
+    "ORDINAL_POSITION": 2
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "pad_id",
+    "DATA_TYPE": "int",
+    "ORDINAL_POSITION": 3
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "parcela_id",
+    "DATA_TYPE": "int",
+    "ORDINAL_POSITION": 4
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "modulo_id",
+    "DATA_TYPE": "int",
+    "ORDINAL_POSITION": 5
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "numero_campana",
+    "DATA_TYPE": "varchar",
+    "ORDINAL_POSITION": 6
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "nombre_pad",
+    "DATA_TYPE": "varchar",
+    "ORDINAL_POSITION": 7
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "nombre_parcela",
+    "DATA_TYPE": "varchar",
+    "ORDINAL_POSITION": 8
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "nombre_modulo",
+    "DATA_TYPE": "varchar",
+    "ORDINAL_POSITION": 9
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 10
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "secuencia_carguio",
+    "DATA_TYPE": "int",
+    "ORDINAL_POSITION": 11
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "secuencia_retiro",
+    "DATA_TYPE": "int",
+    "ORDINAL_POSITION": 12
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_ini_carguio",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 13
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_fin_carguio",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 14
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_ini_reposo",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 15
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_fin_reposo",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 16
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_ini_operacion",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 17
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_fin_operacion",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 18
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_ini_drenaje",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 19
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_fin_drenaje",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 20
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_ini_retiro",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 21
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fecha_fin_retiro",
+    "DATA_TYPE": "date",
+    "ORDINAL_POSITION": 22
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "flujo_m3_h",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 23
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "flujo_m3_d",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 24
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "cu_drenaje_ppm",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 25
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "h_drenaje",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 26
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "ph_drenaje",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 27
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "cl_drenaje",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 28
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fet_drenaje",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 29
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fe2_drenaje",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 30
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "eh_drenaje",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 31
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "cu_refino_ppm",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 32
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "h_refino",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 33
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "ph_refino",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 34
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "cl_refino",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 35
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fet_refino",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 36
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fe2_refino",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 37
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "eh_refino",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 38
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "delta_cu_ppm",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 39
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "delta_h",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 40
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "transferencia_cu_kg_d",
+    "DATA_TYPE": "numeric",
+    "ORDINAL_POSITION": 41
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "dia_relativo_campana",
+    "DATA_TYPE": "int",
+    "ORDINAL_POSITION": 42
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "fase_operacional",
+    "DATA_TYPE": "varchar",
+    "ORDINAL_POSITION": 43
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "tmh_cargado",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 44
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "tms_cargado",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 45
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "humedad_promedio",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 46
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "sal_promedio",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 47
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "cut_tm_total",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 48
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "cus_tm_total",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 49
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "cu_insoluble_total",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 50
+  },
+  {
+    "TABLE_SCHEMA": "inventar_SpcHidr",
+    "TABLE_NAME": "vw_tablero_lixiviacion_final",
+    "COLUMN_NAME": "altura_modulo_max",
+    "DATA_TYPE": "decimal",
+    "ORDINAL_POSITION": 51
+  }
+]

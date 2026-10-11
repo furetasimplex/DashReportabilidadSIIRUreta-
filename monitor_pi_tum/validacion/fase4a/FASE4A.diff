@@ -1,0 +1,183 @@
+--- antes/monitor_pi_tum/db.py
++++ despues/monitor_pi_tum/db.py
+@@ -156,6 +156,16 @@
+         return _preview_rango(conn,inicio,turno_inicio,fin,turno_fin)
+ 
+ 
++def _adquirir_lock_contingencia(conn):
++    """Serializa PI/TUM hasta el COMMIT/ROLLBACK de la transacción del caller."""
++    lock = conn.execute(text('''DECLARE @resultado int;
++        EXEC @resultado=sys.sp_getapplock @Resource='SIIR_CONTINGENCIA_PI_APILADO_DEV',
++            @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000;
++        SELECT @resultado;''')).scalar()
++    if lock is None or lock < 0:
++        raise ValueError('Hay otra acción en proceso. Actualice el estado antes de reintentar.')
++
++
+ def registrar_contingencia_rango(inicio, turno_inicio, fin, turno_fin, motivo, comentario, usuario):
+     inicio, fin = validar_rango(inicio, turno_inicio, fin, turno_fin)
+     _validar_accion(inicio,turno_inicio,'ACTIVAR_CONTINGENCIA',motivo,comentario,usuario)
+@@ -166,12 +176,7 @@
+         _assert_dev_connection(conn)
+         _validar_materializable(conn, inicio, turno_inicio)
+         _validar_materializable(conn, fin, turno_fin)
+-        lock = conn.execute(text('''DECLARE @resultado int;
+-            EXEC @resultado=sys.sp_getapplock @Resource='SIIR_CONTINGENCIA_PI_APILADO_DEV',
+-                @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000;
+-            SELECT @resultado;''')).scalar()
+-        if lock is None or lock < 0:
+-            raise ValueError('Hay otra acción en proceso. Actualice el estado antes de reintentar.')
++        _adquirir_lock_contingencia(conn)
+         _validar_solapamiento(conn,inicio,turno_inicio,fin,turno_fin,bloquear=True)
+         ids = []
+         for fecha, turno, accion, razon, nota in [
+@@ -464,12 +469,7 @@
+     _assert_dev_connection(conn)
+     fecha = _validar_accion(fecha, turno, accion, motivo, comentario, usuario)
+     _validar_materializable(conn, fecha, turno)
+-    lock = conn.execute(text('''DECLARE @resultado int;
+-        EXEC @resultado=sys.sp_getapplock @Resource='SIIR_CONTINGENCIA_PI_APILADO_DEV',
+-            @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000;
+-        SELECT @resultado;''')).scalar()
+-    if lock < 0:
+-        raise ValueError("Hay otra acción en proceso. Actualice el estado antes de reintentar.")
++    _adquirir_lock_contingencia(conn)
+     estado = _estado(conn, fecha, turno)
+     if accion_vigente_esperada is not None and (estado['accion_vigente_id'] or 0) != accion_vigente_esperada:
+         raise ValueError("El estado cambió desde la confirmación. Actualice y revise la acción.")
+--- antes/monitor_pi_tum/postprocesar_tum_contingencia.py
++++ despues/monitor_pi_tum/postprocesar_tum_contingencia.py
+@@ -121,6 +121,7 @@
+         try:
+             with engine.begin() as conn:
+                 db._assert_dev_connection(conn)
++                db._adquirir_lock_contingencia(conn)
+                 plan = planificar(conn,batch_id)
+                 for inicio, fin in agrupar_fechas(plan.fechas):
+                     reproceso_iniciado = True
+--- antes/monitor_pi_tum/test_postprocesar_tum_contingencia.py
++++ despues/monitor_pi_tum/test_postprocesar_tum_contingencia.py
+@@ -22,12 +22,17 @@
+     def scalar_one_or_none(self):
+         return self._scalar
+ 
++    def scalar(self):
++        return self._scalar
++
+ 
+ def conexion(*, estado='committed', template=post.TEMPLATE, cambios=(), contingencia=()):
+     conn = MagicMock()
+     bajo = set(contingencia)
+-    def ejecutar(sql, params):
++    def ejecutar(sql, params=None):
+         sql = str(sql)
++        if 'sp_getapplock' in sql:
++            return Resultado(scalar=0)
+         if 'import_batch' in sql:
+             return Resultado(first=None if estado is None else
+                              {'id':params['batch_id'],'estado':estado,'template_code':template})
+@@ -46,6 +51,104 @@
+ 
+ 
+ class PostprocesarTumTests(unittest.TestCase):
++    def test_commit_lock_antes_del_plan_y_hasta_salida_transaccional(self):
++        eventos = []
++        conn, engine = MagicMock(), MagicMock()
++        contexto = engine.begin.return_value
++        contexto.__enter__.side_effect = lambda: eventos.append('begin') or conn
++        contexto.__exit__.side_effect = lambda *args: eventos.append('salida') or False
++        conn.execute.side_effect = lambda sql: eventos.append('lock') or Resultado(scalar=0)
++        dia = date(2026, 9, 10)
++        plan = post.Plan(150, 'committed', post.TEMPLATE, 1, (), (), (), (dia,))
++        def planificar(c, batch):
++            self.assertEqual(eventos, ['begin', 'guard', 'lock'])
++            self.assertIs(c, conn)
++            self.assertEqual(batch, 150)
++            eventos.append('planificar')
++            return plan
++        with patch.object(post.db, '_assert_dev_connection', side_effect=lambda c: eventos.append('guard')) as guard, \
++             patch.object(post, 'planificar', side_effect=planificar), \
++             patch.object(post.db, 'reprocesar_apilado', side_effect=lambda *a: eventos.append('reprocesar')) as reproceso, \
++             patch.object(post, 'verificar_resultado', side_effect=lambda *a: eventos.append('verificar') or (['resuelto'], ['apilado'])) as verificar:
++            resultado = post.ejecutar(150, True, engine)
++        self.assertEqual(eventos, ['begin', 'guard', 'lock', 'planificar', 'reprocesar', 'verificar', 'salida'])
++        self.assertEqual(resultado, (plan, ['resuelto'], ['apilado']))
++        guard.assert_called_once_with(conn)
++        reproceso.assert_called_once_with(conn, dia, dia)
++        verificar.assert_called_once_with(conn, plan)
++        contexto.__exit__.assert_called_once_with(None, None, None)
++        engine.begin.assert_called_once_with()
++        engine.connect.assert_not_called()
++        conn.commit.assert_not_called()
++        conn.rollback.assert_not_called()
++        # El helper real no abre conexiones, no libera el lock ni confirma.
++        conn.execute.assert_called_once()
++        sql = str(conn.execute.call_args.args[0])
++        for contrato in ("@Resource='SIIR_CONTINGENCIA_PI_APILADO_DEV'", "@LockMode='Exclusive'",
++                         "@LockOwner='Transaction'", '@LockTimeout=10000'):
++            self.assertIn(contrato, sql)
++        self.assertNotIn('sp_releaseapplock', sql)
++
++    def test_lock_rechazado_impide_plan_y_reproceso_sin_reintentar(self):
++        for rc in (-1, -2, -3, -999, None):
++            with self.subTest(resultado_lock=rc):
++                conn, engine = MagicMock(), MagicMock()
++                engine.begin.return_value.__enter__.return_value = conn
++                conn.execute.return_value = Resultado(scalar=rc)
++                with patch.object(post.db, '_assert_dev_connection'), \
++                     patch.object(post, 'planificar') as planificar, \
++                     patch.object(post.db, 'reprocesar_apilado') as reproceso, \
++                     patch.object(post, 'verificar_resultado') as verificar:
++                    with self.assertRaisesRegex(ValueError, 'Hay otra acción en proceso') as error:
++                        post.ejecutar(150, True, engine)
++                planificar.assert_not_called()
++                reproceso.assert_not_called()
++                verificar.assert_not_called()
++                conn.execute.assert_called_once()
++                engine.begin.assert_called_once()
++                salida = engine.begin.return_value.__exit__.call_args.args
++                self.assertIs(salida[0], ValueError)
++                self.assertIs(salida[1], error.exception)
++
++    def test_error_sql_del_lock_se_propaga_sin_planificar(self):
++        conn, engine = MagicMock(), MagicMock()
++        engine.begin.return_value.__enter__.return_value = conn
++        error = RuntimeError('error SQL adquiriendo lock')
++        conn.execute.side_effect = error
++        with patch.object(post.db, '_assert_dev_connection'), \
++             patch.object(post, 'planificar') as planificar, \
++             patch.object(post.db, 'reprocesar_apilado') as reproceso:
++            with self.assertRaises(RuntimeError) as capturado:
++                post.ejecutar(150, True, engine)
++        self.assertIs(capturado.exception, error)
++        self.assertIs(engine.begin.return_value.__exit__.call_args.args[1], error)
++        planificar.assert_not_called()
++        reproceso.assert_not_called()
++
++    def test_dry_run_no_adquiere_lock_y_conserva_plan(self):
++        conn = conexion(cambios=[('2026-09-10', 'A', 'PRINCIPAL_CV008')],
++                        contingencia={(date(2026, 9, 10), 'A')})
++        engine = MagicMock()
++        engine.connect.return_value.__enter__.return_value = conn
++        esperado = post.planificar(conn, 150)
++        conn.reset_mock()
++        with patch.object(post.db, '_assert_dev_connection'), \
++             patch.object(post.db, '_adquirir_lock_contingencia') as lock, \
++             patch.object(post.db, 'reprocesar_apilado') as reproceso:
++            self.assertEqual(post.ejecutar(150, False, engine), (esperado, [], []))
++        lock.assert_not_called()
++        reproceso.assert_not_called()
++        engine.begin.assert_not_called()
++        self.assertTrue(all(str(c.args[0]).lstrip().startswith('SELECT') for c in conn.execute.call_args_list))
++
++    def test_helper_admite_lock_inmediato_o_tras_esperar(self):
++        for rc in (0, 1):
++            with self.subTest(resultado_lock=rc):
++                conn = MagicMock()
++                conn.execute.return_value = Resultado(scalar=rc)
++                post.db._adquirir_lock_contingencia(conn)
++                conn.execute.assert_called_once()
++
+     def test_batch_inexistente_y_no_committed_bloquean(self):
+         for estado in (None,'error','preview'):
+             with self.subTest(estado=estado), self.assertRaises(ValueError):

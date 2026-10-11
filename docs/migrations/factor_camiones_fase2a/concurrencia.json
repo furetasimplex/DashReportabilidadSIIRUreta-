@@ -1,0 +1,12 @@
+{
+  "spid": 55,
+  "applock_espera_observada": true,
+  "resultado": {
+    "Es_Retroactivo": false,
+    "Fecha_Inicio_Afectada": "2027-11-02",
+    "Fecha_Fin_Afectada": "2026-09-22",
+    "Valor_Anterior": "380.000000",
+    "Valor_Nuevo": "365.000000"
+  },
+  "rollback_ambas_sesiones_sin_filas_residuales": true
+}

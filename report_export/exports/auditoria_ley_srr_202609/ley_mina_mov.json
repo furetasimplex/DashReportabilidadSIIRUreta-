@@ -1,0 +1,110 @@
+[
+  {
+    "Fecha": "2026-09-01",
+    "Tonelaje_Mina_Stock": 3132.235188225,
+    "Ley_CuT_Mina_Stock": 0.5179992477045461,
+    "Cantidad_Registros_Validos": 2
+  },
+  {
+    "Fecha": "2026-09-03",
+    "Tonelaje_Mina_Stock": 10092.757828725,
+    "Ley_CuT_Mina_Stock": 0.5876007614163649,
+    "Cantidad_Registros_Validos": 3
+  },
+  {
+    "Fecha": "2026-09-04",
+    "Tonelaje_Mina_Stock": 64036.808292600006,
+    "Ley_CuT_Mina_Stock": 0.7254539201544766,
+    "Cantidad_Registros_Validos": 11
+  },
+  {
+    "Fecha": "2026-09-05",
+    "Tonelaje_Mina_Stock": 43155.2403711,
+    "Ley_CuT_Mina_Stock": 0.6048967975223107,
+    "Cantidad_Registros_Validos": 9
+  },
+  {
+    "Fecha": "2026-09-06",
+    "Tonelaje_Mina_Stock": 45939.4494273,
+    "Ley_CuT_Mina_Stock": 0.6326409951118789,
+    "Cantidad_Registros_Validos": 9
+  },
+  {
+    "Fecha": "2026-09-07",
+    "Tonelaje_Mina_Stock": 24013.803109724995,
+    "Ley_CuT_Mina_Stock": 0.5741847489683157,
+    "Cantidad_Registros_Validos": 8
+  },
+  {
+    "Fecha": "2026-09-08",
+    "Tonelaje_Mina_Stock": 41415.109710975,
+    "Ley_CuT_Mina_Stock": 0.4743870351479846,
+    "Cantidad_Registros_Validos": 7
+  },
+  {
+    "Fecha": "2026-09-09",
+    "Tonelaje_Mina_Stock": 45591.423295275,
+    "Ley_CuT_Mina_Stock": 0.552871509816782,
+    "Cantidad_Registros_Validos": 8
+  },
+  {
+    "Fecha": "2026-09-10",
+    "Tonelaje_Mina_Stock": 52551.94593577501,
+    "Ley_CuT_Mina_Stock": 0.5435866374950388,
+    "Cantidad_Registros_Validos": 9
+  },
+  {
+    "Fecha": "2026-09-11",
+    "Tonelaje_Mina_Stock": 53247.998199825,
+    "Ley_CuT_Mina_Stock": 0.5127810888373125,
+    "Cantidad_Registros_Validos": 8
+  },
+  {
+    "Fecha": "2026-09-12",
+    "Tonelaje_Mina_Stock": 54640.102727925,
+    "Ley_CuT_Mina_Stock": 0.5238131843821812,
+    "Cantidad_Registros_Validos": 9
+  },
+  {
+    "Fecha": "2026-09-13",
+    "Tonelaje_Mina_Stock": 41067.08357895,
+    "Ley_CuT_Mina_Stock": 0.5211578253381467,
+    "Cantidad_Registros_Validos": 7
+  },
+  {
+    "Fecha": "2026-09-14",
+    "Tonelaje_Mina_Stock": 48375.632351475004,
+    "Ley_CuT_Mina_Stock": 0.5102652105817881,
+    "Cantidad_Registros_Validos": 9
+  },
+  {
+    "Fecha": "2026-09-15",
+    "Tonelaje_Mina_Stock": 51942.181142475005,
+    "Ley_CuT_Mina_Stock": 0.4618495380159797,
+    "Cantidad_Registros_Validos": 14
+  },
+  {
+    "Fecha": "2026-09-16",
+    "Tonelaje_Mina_Stock": 348.026132025,
+    "Ley_CuT_Mina_Stock": 0.4936442508735858,
+    "Cantidad_Registros_Validos": 1
+  },
+  {
+    "Fecha": "2026-09-17",
+    "Tonelaje_Mina_Stock": 42111.161975024996,
+    "Ley_CuT_Mina_Stock": 0.5168918550008561,
+    "Cantidad_Registros_Validos": 4
+  },
+  {
+    "Fecha": "2026-09-18",
+    "Tonelaje_Mina_Stock": 34802.6132025,
+    "Ley_CuT_Mina_Stock": 0.5486384809394332,
+    "Cantidad_Registros_Validos": 14
+  },
+  {
+    "Fecha": "2026-09-19",
+    "Tonelaje_Mina_Stock": 38630.900654774996,
+    "Ley_CuT_Mina_Stock": 0.6316563303076351,
+    "Cantidad_Registros_Validos": 8
+  }
+]

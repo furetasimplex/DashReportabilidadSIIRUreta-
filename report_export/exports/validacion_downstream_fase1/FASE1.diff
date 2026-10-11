@@ -1,0 +1,401 @@
+--- antes/report_export/report_export.py
++++ despues/report_export/report_export.py
+@@ -2081,11 +2081,12 @@
+ def refrescar_dependencias_reporte_turno_emision(
+     start_date: date, end_date: date, dias_reproceso: int = 7,
+ ) -> dict:
+-    """Preparación común de preview y Excel; fechas solicitadas inclusivas.
+-
+-    Sólo el fin del mantenedor de apilado se ancla al corte. Factor conserva
+-    su rango inclusivo y Clays/cache el rango solicitado, con fin exclusivo
+-    para cache. No recorta plantilla, generador ni exportación.
++    """Preparación común de Preview, Excel y PDF; fechas inclusivas.
++
++    Apilado -> Histórico -> Factor -> Clays -> Cache, hasta el corte operacional.
++    Histórico copia únicamente los días recalculados, sin ampliar su rango.
++    Cada wrapper conserva su transacción independiente; un fallo detiene la
++    secuencia, pero no revierte los pasos previamente confirmados.
+     """
+     if start_date is None or end_date is None or start_date > end_date:
+         raise ValueError("Rango inclusivo inválido para Reporte por Turno.")
+@@ -2098,7 +2099,7 @@
+     if fin_efectiva < start_date:
+         raise RuntimeError("La fecha de corte de apilado está fuera del rango solicitado.")
+     ventana = max(start_date, fin_efectiva - timedelta(days=dias_reproceso - 1))
+-    fin_exclusivo = end_date + timedelta(days=1)
++    fin_exclusivo = fin_efectiva + timedelta(days=1)
+     print(f"[RTO] Periodo solicitado: {start_date} -> {end_date}")
+     print(f"[RTO] Fecha corte apilado: {fin_efectiva}")
+     print(f"[RTO] Dias reproceso: {dias_reproceso}")
+@@ -2107,8 +2108,33 @@
+         desde = conn.execute(_sa_text("SELECT SYSDATETIME()")).scalar()
+     actualizar_apilado_tmh_v2_report(start_date, fin_efectiva, dias_reproceso)
+     print(f"[RTO] Apilado TMH actualizado: {start_date} -> {fin_efectiva}")
+-    actualizar_factor_ajuste_camiones_v2_report(start_date, end_date, dias_reproceso=0)
+-    print(f"[RTO] Factor ajuste actualizado: {start_date} -> {end_date}")
++    with _get_engine().connect() as conn:
++        apilado = conn.execute(_sa_text("""
++            SELECT Fecha, Fecha_Calculo
++            FROM inventar_SpcHidr.Control_Apilado_TMH_v2_test
++            WHERE Fecha >= :inicio AND Fecha <= :fin
++        """), {"inicio": start_date, "fin": fin_efectiva}).mappings().all()
++    if not any(pd.Timestamp(f["Fecha"]).date() == fin_efectiva for f in apilado):
++        raise RuntimeError("El apilado actualizado no contiene el último día operacional.")
++    if any((f["Fecha_Calculo"] is None or f["Fecha_Calculo"] < desde)
++           for f in apilado if pd.Timestamp(f["Fecha"]).date() >= ventana):
++        raise RuntimeError("El apilado conserva filas obsoletas en la ventana de reproceso.")
++    # El mantenedor también inserta días faltantes anteriores a su ventana.
++    # Agrupar las fechas realmente materializadas evita ampliar huecos o siete
++    # días adicionales al ejecutar el refrescador de Histórico.
++    fechas = sorted({pd.Timestamp(f["Fecha"]).date() for f in apilado
++                     if f["Fecha_Calculo"] is not None and f["Fecha_Calculo"] >= desde})
++    rangos = []
++    for fecha in fechas:
++        if rangos and fecha == rangos[-1][1] + timedelta(days=1):
++            rangos[-1] = (rangos[-1][0], fecha)
++        else:
++            rangos.append((fecha, fecha))
++    for inicio_historico, fin_historico in rangos:
++        refrescar_historico_apilado_report(inicio_historico, fin_historico, dias_reproceso=0)
++        print(f"[RTO] Histórico actualizado: {inicio_historico} -> {fin_historico}")
++    actualizar_factor_ajuste_camiones_v2_report(start_date, fin_efectiva, dias_reproceso=0)
++    print(f"[RTO] Factor ajuste actualizado: {start_date} -> {fin_efectiva}")
+     actualizar_reporte_turno_cache_emision(start_date, fin_exclusivo)
+     with _get_engine().connect() as conn:
+         filas = conn.execute(_sa_text(f"""
+@@ -2116,20 +2142,12 @@
+             FROM {TABLE_REPORTE_TURNO_CACHE_EMISION}
+             WHERE Fecha >= :inicio AND Fecha < :fin
+         """), {"inicio": start_date, "fin": fin_exclusivo}).mappings().all()
+-        apilado = conn.execute(_sa_text("""
+-            SELECT Fecha, Fecha_Calculo
+-            FROM inventar_SpcHidr.Control_Apilado_TMH_v2_test
+-            WHERE Fecha >= :inicio AND Fecha <= :fin
+-        """), {"inicio": ventana, "fin": fin_efectiva}).mappings().all()
+-    if not any(pd.Timestamp(f["Fecha"]).date() == fin_efectiva for f in apilado):
+-        raise RuntimeError("El apilado actualizado no contiene el último día operacional.")
+-    if any(f["Fecha_Calculo"] is None or f["Fecha_Calculo"] < desde for f in apilado):
+-        raise RuntimeError("El apilado conserva filas obsoletas en la ventana de reproceso.")
+     _validar_frescura_cache_turno(filas, start_date, fin_exclusivo, fin_efectiva, desde)
+     print(f"[RTO] Validación cache: OK; filas={len(filas)}; corte={fin_efectiva}; A/B presentes")
+     return {"inicio": start_date, "fin_solicitada": end_date,
+             "fecha_corte_operacional": fin_efectiva, "inicio_ventana": ventana,
+-            "fin_sql_exclusivo": fin_exclusivo, "filas_cache": len(filas)}
++            "fin_sql_exclusivo": fin_exclusivo, "filas_cache": len(filas),
++            "rangos_historico": rangos}
+ 
+ 
+ def actualizar_apilado_tmh_v2_report(
+--- antes/report_export/callbacks/reportabilidad_cb.py
++++ despues/report_export/callbacks/reportabilidad_cb.py
+@@ -7465,12 +7465,12 @@
+         print("ENTRÓ A REPORTE TURNO")
+         print("fecha fin SQL exclusiva:", fin_sql_exclusivo)
+         try:
+-            refrescar_dependencias_reporte_turno_emision(
++            refresco_turno = refrescar_dependencias_reporte_turno_emision(
+                 start_date=ini, end_date=fin,
+             )
+             df_turno = fetch_reporte_turno_cache_emision(
+                 start_date=ini,
+-                end_date=fin_sql_exclusivo
++                end_date=refresco_turno["fin_sql_exclusivo"]
+             )
+             print("Columnas reporte turno:", df_turno.columns.tolist())
+             print("Filas reporte turno:", len(df_turno))
+@@ -7778,14 +7778,16 @@
+             _t_export_ini = time.perf_counter()
+ 
+             _t0 = time.perf_counter()
+-            refrescar_dependencias_reporte_turno_emision(
++            refresco_turno = refrescar_dependencias_reporte_turno_emision(
+                 start_date=ini_d, end_date=fin_d,
+             )
+             print(f"[EXCEL-T] Preparacion Reporte por Turno: {time.perf_counter() - _t0:.2f}s")
+ 
+             print(f"[EXCEL] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
+             _t0 = time.perf_counter()
+-            df_turno = fetch_reporte_turno_cache_emision(start_date=ini_d, end_date=fin_sql_exclusivo)
++            df_turno = fetch_reporte_turno_cache_emision(
++                start_date=ini_d, end_date=refresco_turno["fin_sql_exclusivo"],
++            )
+             print(f"[EXCEL-T] SELECT reporte_turno_cache_emision_test: {time.perf_counter() - _t0:.2f}s")
+             print(f"[EXCEL] reporte_turno rows={len(df_turno)}")
+ 
+@@ -8203,13 +8205,13 @@
+ 
+         # ── REPORTE POR TURNO ─────────────────────────────────────────
+         if tipo in {"reporte_turno", "reporte_turno_turno", "reporte_turno_generador"}:
+-            refrescar_dependencias_reporte_turno_emision(
++            refresco_turno = refrescar_dependencias_reporte_turno_emision(
+                 start_date=ini_d, end_date=fin_d,
+             )
+             print(f"[PDF] Fetching reporte_turno {ini_d} -> {fin_sql_exclusivo}")
+             df_turno = fetch_reporte_turno_cache_emision(
+                 start_date=ini_d,
+-                end_date=fin_sql_exclusivo,
++                end_date=refresco_turno["fin_sql_exclusivo"],
+             )
+             print(f"[PDF] reporte_turno rows={len(df_turno)}")
+             if df_turno.empty:
+--- antes/report_export/tests/test_orquestacion_reporte_turno.py
++++ despues/report_export/tests/test_orquestacion_reporte_turno.py
+@@ -23,8 +23,9 @@
+                 conn = engine.connect.return_value.__enter__.return_value
+                 conn.execute.return_value.scalar.return_value = momento
+                 conn.execute.return_value.mappings.return_value.all.side_effect = [
++                    [{"Fecha": ventana + timedelta(days=i), "Fecha_Calculo": momento}
++                     for i in range((corte - ventana).days + 1)],
+                     [{"Fecha": corte, "Turno": t, "Fecha_Actualizacion": momento} for t in ("A", "B")],
+-                    [{"Fecha": corte, "Fecha_Calculo": momento}],
+                 ]
+                 llamadas = []
+                 def registrar(nombre):
+@@ -32,6 +33,7 @@
+                 with patch.object(repo, "_get_engine", return_value=engine), \
+                      patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=corte), \
+                      patch.object(repo, "actualizar_apilado_tmh_v2_report", side_effect=registrar("apilado")), \
++                     patch.object(repo, "refrescar_historico_apilado_report", side_effect=registrar("historico")), \
+                      patch.object(repo, "actualizar_factor_ajuste_camiones_v2_report", side_effect=registrar("factor")), \
+                      patch.object(repo, "actualizar_reporte_turno_cache_emision", side_effect=registrar("cache")):
+                     resultado = repo.refrescar_dependencias_reporte_turno_emision(inicio, fin)
+@@ -39,9 +41,68 @@
+                 self.assertEqual(resultado["fin_solicitada"], fin)
+                 self.assertEqual(llamadas, [
+                     ("apilado", (inicio, corte, 7), {}),
+-                    ("factor", (inicio, fin), {"dias_reproceso": 0}),
+-                    ("cache", (inicio, fin + timedelta(days=1)), {}),
++                    ("historico", (ventana, corte), {"dias_reproceso": 0}),
++                    ("factor", (inicio, corte), {"dias_reproceso": 0}),
++                    ("cache", (inicio, corte + timedelta(days=1)), {}),
+                 ])
++                self.assertEqual(resultado["fin_sql_exclusivo"], corte + timedelta(days=1))
++
++    def test_historico_incluye_faltantes_antiguos_sin_ampliar_huecos(self):
++        momento = datetime(2026, 9, 19)
++        engine = MagicMock()
++        conn = engine.connect.return_value.__enter__.return_value
++        conn.execute.return_value.scalar.return_value = momento
++        conn.execute.return_value.mappings.return_value.all.side_effect = [
++            [{"Fecha": date(2026, 9, d), "Fecha_Calculo": momento if d in (1, 9, 10)
++              else momento - timedelta(days=1)} for d in (1, 2, 9, 10)],
++            [{"Fecha": date(2026, 9, 10), "Turno": t, "Fecha_Actualizacion": momento} for t in ("A", "B")],
++        ]
++        with patch.object(repo, "_get_engine", return_value=engine), \
++             patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=date(2026, 9, 10)), \
++             patch.object(repo, "actualizar_apilado_tmh_v2_report"), \
++             patch.object(repo, "refrescar_historico_apilado_report") as historico, \
++             patch.object(repo, "actualizar_factor_ajuste_camiones_v2_report"), \
++             patch.object(repo, "actualizar_reporte_turno_cache_emision"):
++            repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 1), date(2026, 9, 10), 2)
++        self.assertEqual([(c.args, c.kwargs) for c in historico.call_args_list], [
++            ((date(2026, 9, 1), date(2026, 9, 1)), {"dias_reproceso": 0}),
++            ((date(2026, 9, 9), date(2026, 9, 10)), {"dias_reproceso": 0}),
++        ])
++
++    def test_fallos_conservan_commits_previos_y_detienen_downstream(self):
++        from contextlib import contextmanager
++        nombres = ["sp_mantiene_apilado_tmh_v2_test", "sp_refrescar_historico_apilado_test",
++                   "sp_mantiene_factor_ajuste_camiones_v2_test", "sp_refrescar_clays_cufe",
++                   "sp_actualizar_reporte_turno_cache_emision_test"]
++        for falla in range(1, 5):
++            with self.subTest(falla=nombres[falla]):
++                confirmados = []
++                engine = MagicMock()
++                lectura = engine.connect.return_value.__enter__.return_value
++                momento = datetime(2026, 9, 19)
++                lectura.execute.return_value.scalar.return_value = momento
++                lectura.execute.return_value.mappings.return_value.all.return_value = [
++                    {"Fecha": date(2026, 9, 10), "Fecha_Calculo": momento}]
++
++                @contextmanager
++                def transaccion():
++                    pendientes = []
++                    conexion = MagicMock()
++                    def ejecutar(sql, params):
++                        nombre = next(n for n in nombres if n in str(sql))
++                        if nombre == nombres[falla]:
++                            raise RuntimeError("fallo inyectado")
++                        pendientes.append(nombre)
++                    conexion.execute.side_effect = ejecutar
++                    yield conexion
++                    confirmados.extend(pendientes)
++
++                engine.begin.side_effect = transaccion
++                with patch.object(repo, "_get_engine", return_value=engine), \
++                     patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=date(2026, 9, 10)):
++                    with self.assertRaises(RuntimeError):
++                        repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 10), date(2026, 9, 10))
++                self.assertEqual(confirmados, nombres[:falla])
+ 
+     def test_sin_corte_no_escribe(self):
+         with patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=None), \
+@@ -49,6 +110,32 @@
+             with self.assertRaisesRegex(RuntimeError, "No existe una fecha operacional"):
+                 repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 1), date(2026, 9, 30))
+             apilado.assert_not_called()
++
++    def test_apilado_no_actualizado_detiene_antes_de_historico(self):
++        momento = datetime(2026, 9, 19)
++        engine = MagicMock()
++        conn = engine.connect.return_value.__enter__.return_value
++        conn.execute.return_value.scalar.return_value = momento
++        conn.execute.return_value.mappings.return_value.all.return_value = [
++            {"Fecha": date(2026, 9, 10), "Fecha_Calculo": momento - timedelta(days=1)}]
++        with patch.object(repo, "_get_engine", return_value=engine), \
++             patch.object(repo, "fetch_fecha_corte_apilado_tmh_report", return_value=date(2026, 9, 10)), \
++             patch.object(repo, "actualizar_apilado_tmh_v2_report"), \
++             patch.object(repo, "refrescar_historico_apilado_report") as historico, \
++             patch.object(repo, "actualizar_factor_ajuste_camiones_v2_report") as factor:
++            with self.assertRaisesRegex(RuntimeError, "filas obsoletas"):
++                repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 10), date(2026, 9, 10))
++        historico.assert_not_called()
++        factor.assert_not_called()
++
++    def test_historico_rango_explicito_sin_ampliacion(self):
++        engine = MagicMock()
++        with patch.object(repo, "_get_engine", return_value=engine):
++            repo.refrescar_historico_apilado_report(date(2026, 9, 4), date(2026, 9, 10), dias_reproceso=0)
++        call = engine.begin.return_value.__enter__.return_value.execute.call_args
++        self.assertIn("sp_refrescar_historico_apilado_test", str(call.args[0]))
++        self.assertEqual(call.args[1], {"fecha_inicio": date(2026, 9, 4),
++                                      "fecha_fin": date(2026, 9, 10), "dias_reproceso": 0})
+ 
+     def test_cache_incompleto_obsoleto_y_duplicado(self):
+         corte = date(2026, 9, 13)
+@@ -85,8 +172,14 @@
+                 consumidores.append(fn.name)
+                 self.assertNotIn("actualizar_apilado_tmh_v2_report", calls)
+                 self.assertNotIn("actualizar_factor_ajuste_camiones_v2_report", calls)
++                fetches = [n for n in ast.walk(fn) if isinstance(n, ast.Call)
++                           and isinstance(n.func, ast.Name) and n.func.id == "fetch_reporte_turno_cache_emision"]
++                for fetch in fetches:
++                    end = next(k.value for k in fetch.keywords if k.arg == "end_date")
++                    self.assertEqual(ast.unparse(end), "refresco_turno['fin_sql_exclusivo']")
+         self.assertIn("generar_reporte", consumidores)
+         self.assertIn("exportar_excel", consumidores)
++        self.assertIn("generar_pdf", consumidores)
+         self.assertEqual(len(consumidores), 3)  # Preview, Excel y PDF.
+ 
+ 
+--- /dev/null
++++ report_export/tests/validate_downstream_fase1_dev.py
+@@ -0,0 +1,118 @@
++"""Validación manual autorizada: refresca 04–10 septiembre SOLO en DEV.
++
++Ejecutar como módulo. Usa el coordinador real y sus transacciones vigentes.
++Guarda antes/después y ejecuta el directo con trazabilidad temporal.
++"""
++from contextlib import contextmanager
++from datetime import date
++from pathlib import Path
++from unittest.mock import patch
++import hashlib
++import json
++import re
++
++from sqlalchemy import text
++from monitor_pi_tum.db import _engine_dev, _assert_dev_connection
++from monitor_pi_tum.validacion.downstream.comparar import body, run
++from report_export import report_export as repo
++
++OUT = Path('report_export/exports/validacion_downstream_fase1')
++TABLES = ('Control_Apilado_TMH_v2_test', 'Historico_Apilado_Diario',
++          'Control_Factor_Ajuste_Camiones_v2_test', 'v_ajuste_camiones_emision_test',
++          'reporte_turno_cache_emision_test', 'v_srr_tms_origen_turno_emision_test')
++
++
++def save(name, value):
++    (OUT / (name + '.json')).write_text(json.dumps(value, default=str, ensure_ascii=False, indent=2), encoding='utf-8')
++
++
++class GuardedEngine:
++    def __init__(self, engine):
++        self.engine = engine
++
++    @contextmanager
++    def connect(self):
++        with self.engine.connect() as conn:
++            _assert_dev_connection(conn)
++            yield conn
++
++    @contextmanager
++    def begin(self):
++        with self.engine.begin() as conn:
++            _assert_dev_connection(conn)
++            yield conn
++
++
++def snapshot(engine):
++    with engine.connect() as conn:
++        result = {n: [dict(r) for r in conn.execute(text(
++            'SELECT * FROM inventar_SpcHidr.' + n + " WHERE Fecha BETWEEN '20260904' AND '20260910'"
++        )).mappings()] for n in TABLES}
++        mods = [dict(r) for r in conn.execute(text(
++            'SELECT object_id, definition FROM sys.sql_modules ORDER BY object_id')).mappings()]
++        result['sql_definitions_sha256'] = hashlib.sha256(json.dumps(mods, default=str).encode()).hexdigest()
++        original = conn.execute(text("SELECT OBJECT_DEFINITION(OBJECT_ID('inventar_SpcHidr.sp_reporte_turno_emision_test'))")).scalar_one()
++        report = re.sub(r'\[?inventar_SpcHidr\]?\s*\.\s*\[?trazabilidad_analitos_tm_emision_test\]?',
++                        '#traza', body(original), flags=re.I)
++        assert '#traza' in report
++        direct = "DECLARE @fecha_inicio date='20260904',@fecha_fin date='20260911';\n" + report
++        (OUT / 'directo_trazabilidad_temporal.sql').write_text(direct, encoding='utf-8')
++        run(conn, 'SELECT TOP (0) * INTO #traza FROM inventar_SpcHidr.trazabilidad_analitos_tm_emision_test;')
++        result['directo'] = run(conn, direct)
++        return result
++
++
++def main():
++    OUT.mkdir(parents=True, exist_ok=True)
++    # No sobrescribir el baseline de una ejecución anterior.
++    if (OUT / 'antes.json').exists():
++        raise RuntimeError('Ya existe antes.json; conservar la evidencia antes de otra ejecución.')
++    engine = GuardedEngine(_engine_dev())
++    before = snapshot(engine)
++    save('antes', before)
++    print('Baseline DEV guardado; iniciando coordinador real 04-10.', flush=True)
++    with patch.object(repo, '_get_engine', return_value=engine):
++        result = repo.refrescar_dependencias_reporte_turno_emision(date(2026, 9, 4), date(2026, 9, 10))
++    save('coordinador', result)
++    after = snapshot(engine)
++    save('despues', after)
++    checks = {'definiciones_sql_sin_cambios': before['sql_definitions_sha256'] == after['sql_definitions_sha256']}
++    idx = lambda rows: {(str(r['Fecha'])[:10], str(r.get('Turno', '')).strip()): r for r in rows}
++    controls = idx(after[TABLES[0]])
++    histories = idx(after[TABLES[1]])
++    oldf, newf = idx(before[TABLES[2]]), idx(after[TABLES[2]])
++    cache, direct = idx(after[TABLES[4]]), idx(after['directo'])
++    oldcache, olddirect = idx(before[TABLES[4]]), idx(before['directo'])
++    checks['14_turnos_directo_cache'] = len(cache) == len(direct) == 14 and cache.keys() == direct.keys()
++    rows = []
++    for (d, t), c in sorted(cache.items()):
++        key = (d, '')
++        co, h, f, prev = controls[key], histories[key], newf[key], oldf[key]
++        delta = float(direct[(d, t)]['Apilado_TMS_Real']) - float(c['Apilado_TMS_Real'])
++        repairs = abs(float(oldcache[(d,t)]['Apilado_TMS_Real']) - float(olddirect[(d,t)]['Apilado_TMS_Real'])) > 1e-6
++        changed = abs(float(f['Factor_Ajuste']) - float(prev['Factor_Ajuste'])) > 1e-12
++        classification = ('nuevo factor' if changed else 'factor sin cambio') + (' + reparación cache stale' if repairs else ' + cache previo coherente con factor anterior')
++        rows.append([d, t, co['TMH_Apilado_Total_'+t], h['TMH_Bruto_'+t], h['Fecha_Calculo'],
++                     prev['Factor_Ajuste'], f['Factor_Ajuste'], f['Estado_Calculo'],
++                     direct[(d,t)]['Apilado_TMS_Real'], c['Apilado_TMS_Real'], c['Fecha_Actualizacion'], delta, classification])
++        checks[d+'_'+t+'_directo_cache'] = abs(delta) < 1e-6
++        checks[d+'_'+t+'_historico_control'] = abs(float(co['TMH_Apilado_Total_'+t]) - float(h['TMH_Bruto_'+t])) < 1e-6
++        checks[d+'_factor_historico'] = abs(float(f['Apilado_TMH_Bruto_Original']) - float(h['TMH_Bruto_Dia'])) < 1e-6
++    f10 = newf[('2026-09-10','')]
++    checks['factor_10'] = abs(float(f10['Factor_Ajuste']) - 0.9983502509529375) < 1e-10
++    checks['estado_10'] = f10['Estado_Calculo'] == 'OK_AJUSTE_KOM'
++    applied = idx(after[TABLES[3]])[('2026-09-10','')]['Factor_Aplicacion_Reportes']
++    checks['factor_realmente_aplicado_10'] = abs(float(applied) - 0.9983502509529375) < 1e-10
++    for turno, expected in [('A',39408.079368), ('B',40089.655081)]:
++        checks['tms_10_'+turno] = abs(float(cache[('2026-09-10',turno)]['Apilado_TMS_Real']) - expected) < 1e-6
++    save('checks', checks)
++    headers = ['Fecha','Turno','TMH Control','TMH Histórico','Cálculo Histórico','Factor anterior','Factor nuevo','Estado','TMS directo','TMS cache','Actualización cache','Directo−cache','Clasificación']
++    table = '|'+ '|'.join(headers)+'|\n|'+'|'.join(['---']*len(headers))+'|\n'
++    table += '\n'.join('|'+ '|'.join(map(str,r))+'|' for r in rows)
++    (OUT/'COMPARACION.md').write_text('# Validación DEV persistida 04–10 septiembre\n\n'+table+'\n\nChecks: '+str(sum(checks.values()))+'/'+str(len(checks))+'\n',encoding='utf-8')
++    print(json.dumps(checks, indent=2), flush=True)
++    assert all(checks.values()), 'Revisar checks.json; no se revierte automáticamente el refresco autorizado.'
++
++
++if __name__ == '__main__':
++    main()

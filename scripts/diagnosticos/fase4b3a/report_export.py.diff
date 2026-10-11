@@ -1,0 +1,161 @@
+--- report_export/report_export.py (antes F4B3A)
++++ report_export/report_export.py
+@@ -2446,6 +2446,54 @@
+         )
+ 
+         return refresco_turno
++def preparar_paquete_reporte_turno_emision(
++    start_date: date,
++    end_date: date,
++    *, salida: str = "preview",
++) -> dict:
++    """Materializa RTO bajo una transacción y el global de su coordinador.
++
++    Protege frente a writers F4 cooperativos. El caller construye el artefacto
++    después del retorno, cuando ya terminó la transacción. Los auxiliares
++    conservan el fin solicitado y el cache el corte operacional del refresco.
++    """
++    if start_date is None or end_date is None or start_date > end_date:
++        raise ValueError("Se requiere un rango válido para preparar Reporte por Turno.")
++    if salida not in {"preview", "excel", "pdf"}:
++        raise ValueError("Salida RTO no válida: use preview, excel o pdf.")
++    fin_auxiliar = end_date + timedelta(days=1)
++    with _get_engine().begin() as conn:
++        refresco = refrescar_dependencias_reporte_turno_emision(
++            start_date=start_date, end_date=end_date, conn=conn,
++        )
++        paquete = {"refresco": refresco, "salida": salida}
++        paquete["df_turno"] = fetch_reporte_turno_cache_emision(
++            start_date=start_date, end_date=refresco["fin_sql_exclusivo"], conn=conn,
++        )
++        if salida != "preview" and not paquete["df_turno"].empty:
++            if salida == "excel":
++                for clave, fetch in (
++                    ("df_clays_cufe", fetch_clays_cufe_report),
++                    ("df_trazabilidad_analitos", fetch_trazabilidad_analitos_report),
++                    ("df_curva_granulometrica", fetch_curva_granulometrica_report),
++                ):
++                    paquete[clave] = fetch(start_date=start_date, end_date=fin_auxiliar, conn=conn)
++            paquete["df_generador"] = fetch_generador_reporte_diario_emision(
++                start_date=start_date, end_date=fin_auxiliar, conn=conn,
++            )
++            if salida == "excel":
++                paquete["df_reconst_srr"] = fetch_reconstitucion_srr_report(
++                    start_date=start_date, end_date=fin_auxiliar, conn=conn,
++                )
++                inicio_mes = start_date.replace(day=1)
++                paquete["df_generador_resumen"] = (
++                    fetch_generador_reporte_diario_emision(
++                        start_date=inicio_mes, end_date=fin_auxiliar, conn=conn,
++                    ) if inicio_mes < start_date else paquete["df_generador"]
++                )
++    return paquete
++
++
+ def actualizar_apilado_tmh_v2_report(
+     start_date: date,
+     end_date: date,
+@@ -2583,6 +2631,7 @@
+ def fetch_clays_cufe_report(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """Consulta Clays/CuFe y su fuente real; ``end_date`` es exclusiva.
+ 
+@@ -2721,7 +2770,7 @@
+             CASE c.Torre WHEN 'TM1' THEN 1 WHEN 'TM2' THEN 2 ELSE 3 END,
+             CASE c.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
+     """)
+-    with _get_engine().connect() as conn:
++    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+         return pd.read_sql(
+             sql,
+             conn,
+@@ -2732,6 +2781,7 @@
+ def fetch_trazabilidad_analitos_report(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """Lee la trazabilidad final persistida por el SP; fin exclusivo."""
+     if start_date is None or end_date is None or start_date >= end_date:
+@@ -2757,7 +2807,7 @@
+           CASE t.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END,
+           t.Analito;
+     """)
+-    with _get_engine().connect() as conn:
++    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+         return pd.read_sql(
+             sql, conn, params={"start_date": start_date, "end_date": end_date}
+         )
+@@ -2766,6 +2816,7 @@
+ def fetch_curva_granulometrica_report(
+     start_date: date,
+     end_date: date,
++    *, conn=None,
+ ) -> pd.DataFrame:
+     """Lee la curva granulometrica oficial ya ponderada; fin exclusivo."""
+     if start_date is None or end_date is None or start_date >= end_date:
+@@ -2780,7 +2831,7 @@
+         WHERE Fecha >= :start_date AND Fecha < :end_date
+         ORDER BY Fecha, CASE Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
+     """)
+-    with _get_engine().connect() as conn:
++    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+         return pd.read_sql(
+             sql, conn, params={"start_date": start_date, "end_date": end_date}
+         )
+@@ -2853,7 +2904,7 @@
+     return df
+ 
+ 
+-def fetch_reporte_turno_cache_emision(start_date: date, end_date: date) -> pd.DataFrame:
++def fetch_reporte_turno_cache_emision(start_date: date, end_date: date, *, conn=None) -> pd.DataFrame:
+     """Lee exclusivamente el cache de emision; ``end_date`` es exclusivo."""
+     sql = f"""
+     SELECT
+@@ -2875,7 +2926,7 @@
+     WHERE Fecha >= :start AND Fecha < :end
+     ORDER BY Fecha, Turno;
+     """
+-    with _get_engine().connect() as conn:
++    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+         return pd.read_sql(
+             _sa_text(sql), conn, params={"start": start_date, "end": end_date}
+         )
+@@ -2898,14 +2949,14 @@
+         raise RuntimeError(f"Error al ejecutar sp_generador_reporte_diario: {exc}") from exc
+ 
+ 
+-def fetch_generador_reporte_diario_emision(start_date: date, end_date: date) -> pd.DataFrame:
++def fetch_generador_reporte_diario_emision(start_date: date, end_date: date, *, conn=None) -> pd.DataFrame:
+     """Ejecuta exclusivamente el generador diario de emision."""
+     sql = _sa_text(f"""
+         EXEC {SP_GENERADOR_REPORTE_DIARIO_EMISION}
+             @fecha_inicio = :start,
+             @fecha_fin = :end;
+     """)
+-    with _get_engine().connect() as conn:
++    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+         return pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
+ 
+ 
+@@ -2924,7 +2975,7 @@
+     return datos.sort_values(["Fecha", "Turno"], kind="stable").reset_index(drop=True)
+ 
+ 
+-def fetch_reconstitucion_srr_report(start_date: date, end_date: date) -> pd.DataFrame:
++def fetch_reconstitucion_srr_report(start_date: date, end_date: date, *, conn=None) -> pd.DataFrame:
+     """Insumos SRR independientes; inicio inclusivo y fin exclusivo."""
+     if start_date is None or end_date is None or start_date >= end_date:
+         raise ValueError("Reconst Mod SRR requiere inicio anterior al fin exclusivo.")
+@@ -2957,7 +3008,7 @@
+         LEFT JOIN inventar_SpcHidr.v_ajuste_camiones_emision_test AS f ON f.Fecha = t.Fecha
+         ORDER BY t.Fecha, CASE t.Turno WHEN 'A' THEN 1 WHEN 'B' THEN 2 ELSE 3 END;
+     """)
+-    with _get_engine().connect() as conn:
++    with (nullcontext(conn) if conn is not None else _get_engine().connect()) as conn:
+         datos = pd.read_sql(sql, conn, params={"start": start_date, "end": end_date})
+     return _normalizar_claves_reconst_srr(datos)
+ 

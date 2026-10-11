@@ -1,0 +1,1202 @@
+[
+  {
+    "Flujo": "F1",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "42400.800000",
+    "Ley_Cu": "0.513143",
+    "FCu": "217.576737144000"
+  },
+  {
+    "Flujo": "F2",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F3",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "42400.800000",
+    "Ley_Cu": "0.513143",
+    "FCu": "217.576737144000"
+  },
+  {
+    "Flujo": "F4",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "35287.200000",
+    "Ley_Cu": "0.513143",
+    "FCu": "181.073796696000"
+  },
+  {
+    "Flujo": "F5",
+    "TMS_Inicial": "7443.521939",
+    "Ley_Cu_1": "0.513143",
+    "TMS_Final": "6672.371948",
+    "Ley_Cu_2": "0.513143",
+    "Tonelaje": "-771.149991",
+    "Ley_Cu": "0.513143",
+    "FCu": "-3.957102198317"
+  },
+  {
+    "Flujo": "F6",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "2550.391586",
+    "Ley_Cu": "1.715295",
+    "FCu": "43.746739355078"
+  },
+  {
+    "Flujo": "F7",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "37078.832414",
+    "Ley_Cu": "0.455943",
+    "FCu": "169.058340873364"
+  },
+  {
+    "Flujo": "F8",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "31784.960000",
+    "Ley_Cu": "0.355726",
+    "FCu": "113.067366809600"
+  },
+  {
+    "Flujo": "F9",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.355726",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F10",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "625.566414",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F11",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "719.263586",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F12",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "34960.918000",
+    "Ley_Cu": "0.448541",
+    "FCu": "156.814051206380"
+  },
+  {
+    "Flujo": "F13",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "37798.096000",
+    "Ley_Cu": "0.447267",
+    "FCu": "169.058410036320"
+  },
+  {
+    "Flujo": "F14",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "72759.014000",
+    "Ley_Cu": "0.447879",
+    "FCu": "325.872344313060"
+  },
+  {
+    "Flujo": "F15",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F16",
+    "TMS_Inicial": "72759.014000",
+    "Ley_Cu_1": "0.447879",
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "68524.539282",
+    "Ley_Cu": "0.220946",
+    "FCu": "151.402228562007"
+  },
+  {
+    "Flujo": "F17",
+    "TMS_Inicial": "-31584.936505",
+    "Ley_Cu_1": "0.286445",
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "-31584.936505",
+    "Ley_Cu": "0.350846",
+    "FCu": "-110.814486330332"
+  },
+  {
+    "Flujo": "F18",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F19",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "31584.936505",
+    "Ley_Cu": "0.286445",
+    "FCu": "90.473471371747"
+  },
+  {
+    "Flujo": "F20",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "31581.000000",
+    "Ley_Cu": "0.286445",
+    "FCu": "90.462195450000"
+  },
+  {
+    "Flujo": "F21",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "4234.474718",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F22",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.286445",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F23",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "20.341019",
+    "Ley_Cu": "100.000000",
+    "FCu": "20.341019000000"
+  },
+  {
+    "Flujo": "F24",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "174.469549",
+    "Ley_Cu": "100.000000",
+    "FCu": "174.469549000000"
+  },
+  {
+    "Flujo": "F25",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "30191.688494",
+    "Ley_Cu": "0.355726",
+    "FCu": "107.399685812166"
+  },
+  {
+    "Flujo": "F26",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "20.341019",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F27",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "174.469549",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F28",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "479.849270",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F29",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "507.015962",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F30",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F31",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F32",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F33",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "431.578298",
+    "Ley_Cu": "100.000000",
+    "FCu": "431.578298000000"
+  },
+  {
+    "Flujo": "F34",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F35",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "-155885.444109",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F36",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "-431.578298",
+    "Ley_Cu": "100.000000",
+    "FCu": "-431.578298000000"
+  },
+  {
+    "Flujo": "F37",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "187520.000000",
+    "Ley_Cu": "0.242880",
+    "FCu": "455.448576000000"
+  },
+  {
+    "Flujo": "F38",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "31202.977593",
+    "Ley_Cu": "0.076500",
+    "FCu": "23.870277858645"
+  },
+  {
+    "Flujo": "F39",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "25319.040342",
+    "Ley_Cu": "0.038500",
+    "FCu": "9.747830531670"
+  },
+  {
+    "Flujo": "F40",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.037500",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F41",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F42",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "2005.600537",
+    "Ley_Cu": "0.037500",
+    "FCu": "0.752100201375"
+  },
+  {
+    "Flujo": "F43",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F44",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "112561.211110",
+    "Ley_Cu": "0.044500",
+    "FCu": "50.089738943950"
+  },
+  {
+    "Flujo": "F45",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F46",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "1000.158041",
+    "Ley_Cu": "0.166500",
+    "FCu": "1.665263138265"
+  },
+  {
+    "Flujo": "F47",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "861.726489",
+    "Ley_Cu": "0.073114",
+    "FCu": "0.630042705167"
+  },
+  {
+    "Flujo": "F48",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "25003.238464",
+    "Ley_Cu": "0.127000",
+    "FCu": "31.754112849280"
+  },
+  {
+    "Flujo": "F49",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "55843.360000",
+    "Ley_Cu": "0.280788",
+    "FCu": "156.801453676800"
+  },
+  {
+    "Flujo": "F50",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "51089.790554",
+    "Ley_Cu": "0.132625",
+    "FCu": "67.757834722242"
+  },
+  {
+    "Flujo": "F51",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "-1616.751954",
+    "Ley_Cu": "0.743889",
+    "FCu": "-12.026839943091"
+  },
+  {
+    "Flujo": "F52",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "25741.958946",
+    "Ley_Cu": "0.038500",
+    "FCu": "9.910654194210"
+  },
+  {
+    "Flujo": "F53",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "186434.147237",
+    "Ley_Cu": "0.243371",
+    "FCu": "453.726648472159"
+  },
+  {
+    "Flujo": "F54",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "55025.546732",
+    "Ley_Cu": "0.038500",
+    "FCu": "21.184835491820"
+  },
+  {
+    "Flujo": "F55",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "106587.618660",
+    "Ley_Cu": "0.044500",
+    "FCu": "47.431490303700"
+  },
+  {
+    "Flujo": "F56",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F57",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F58",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "5628.060556",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F59",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "2204.481113",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F60",
+    "TMS_Inicial": "45737.290538",
+    "Ley_Cu_1": "0.044500",
+    "TMS_Final": "41879.479201",
+    "Ley_Cu_2": "0.041958",
+    "Tonelaje": "-3857.811337",
+    "Ley_Cu": "0.072091",
+    "FCu": "-2.781134770956"
+  },
+  {
+    "Flujo": "F61",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "88.700000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F62",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "205.500000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F63",
+    "TMS_Inicial": "65490.570713",
+    "Ley_Cu_1": "0.660000",
+    "TMS_Final": "63668.318759",
+    "Ley_Cu_2": "0.660000",
+    "Tonelaje": "-1822.251954",
+    "Ley_Cu": "0.659999",
+    "FCu": "-12.026844673880"
+  },
+  {
+    "Flujo": "F64",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "248.900000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F65",
+    "TMS_Inicial": "119273.405058",
+    "Ley_Cu_1": "0.132625",
+    "TMS_Final": "117878.567369",
+    "Ley_Cu_2": "0.129208",
+    "Tonelaje": "-1394.837689",
+    "Ley_Cu": "0.421369",
+    "FCu": "-5.877413621762"
+  },
+  {
+    "Flujo": "F66",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F67",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "2210.945555",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F68",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "1315.959919",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F69",
+    "TMS_Inicial": "1087.128929",
+    "Ley_Cu_1": "0.166500",
+    "TMS_Final": "1124.823652",
+    "Ley_Cu_2": "0.166000",
+    "Tonelaje": "37.694722",
+    "Ley_Cu": "0.151580",
+    "FCu": "0.057137659607"
+  },
+  {
+    "Flujo": "F70",
+    "TMS_Inicial": "3409.149870",
+    "Ley_Cu_1": "0.076500",
+    "TMS_Final": "3766.442961",
+    "Ley_Cu_2": "0.075000",
+    "Tonelaje": "357.293090",
+    "Ley_Cu": "0.060687",
+    "FCu": "0.216830457528"
+  },
+  {
+    "Flujo": "F71",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "48.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F72",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "21.300000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F73",
+    "TMS_Inicial": "21942.003307",
+    "Ley_Cu_1": "0.038500",
+    "TMS_Final": "23852.650214",
+    "Ley_Cu_2": "0.035750",
+    "Tonelaje": "1910.646907",
+    "Ley_Cu": "0.037125",
+    "FCu": "0.709327664223"
+  },
+  {
+    "Flujo": "F74",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "48.300000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F75",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "64.200000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F76",
+    "TMS_Inicial": "16094.021934",
+    "Ley_Cu_1": "0.079000",
+    "TMS_Final": "16891.548423",
+    "Ley_Cu_2": "0.079000",
+    "Tonelaje": "797.526489",
+    "Ley_Cu": "0.079000",
+    "FCu": "0.630045926310"
+  },
+  {
+    "Flujo": "F77",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "78.900000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F78",
+    "TMS_Inicial": "16902.521698",
+    "Ley_Cu_1": "0.204125",
+    "TMS_Final": "16707.444922",
+    "Ley_Cu_2": "0.202417",
+    "Tonelaje": "-195.076776",
+    "Ley_Cu": "0.350436",
+    "FCu": "-0.683619250743"
+  },
+  {
+    "Flujo": "F79",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "21589.108145",
+    "Ley_Cu": "0.204125",
+    "FCu": "44.068767000981"
+  },
+  {
+    "Flujo": "F80",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "21240.073353",
+    "Ley_Cu": "0.204125",
+    "FCu": "43.356299731811"
+  },
+  {
+    "Flujo": "F81",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "19210.931031",
+    "Ley_Cu": "0.204125",
+    "FCu": "39.214312967028"
+  },
+  {
+    "Flujo": "F82",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "19199.906295",
+    "Ley_Cu": "0.204125",
+    "FCu": "39.191808724668"
+  },
+  {
+    "Flujo": "F83",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "19798.787656",
+    "Ley_Cu": "0.132625",
+    "FCu": "26.258142128770"
+  },
+  {
+    "Flujo": "F84",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "19800.414543",
+    "Ley_Cu": "0.132625",
+    "FCu": "26.260299787653"
+  },
+  {
+    "Flujo": "F85",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "19672.338145",
+    "Ley_Cu": "0.132625",
+    "FCu": "26.090438464806"
+  },
+  {
+    "Flujo": "F86",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "19799.501869",
+    "Ley_Cu": "0.132625",
+    "FCu": "26.259089353761"
+  },
+  {
+    "Flujo": "F87",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F88",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "43.065071",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F89",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "43.129382",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F90",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "43.097109",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F91",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "43.100629",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F92",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "360.014757",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F93",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "352.188921",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F94",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "600.023590",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F95",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "480.015357",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F96",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "8204.086883",
+    "Ley_Cu": "3.927083",
+    "FCu": "322.181301287522"
+  },
+  {
+    "Flujo": "F97",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "8470.905877",
+    "Ley_Cu": "3.927083",
+    "FCu": "332.659504641667"
+  },
+  {
+    "Flujo": "F98",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "5254.234908",
+    "Ley_Cu": "3.927083",
+    "FCu": "206.338165852133"
+  },
+  {
+    "Flujo": "F99",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "8272.732276",
+    "Ley_Cu": "3.927083",
+    "FCu": "324.877062846309"
+  },
+  {
+    "Flujo": "F100",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "115200.954665",
+    "Ley_Cu": "4.047500",
+    "FCu": "4662.758640065875"
+  },
+  {
+    "Flujo": "F101",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F102",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F103",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F104",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F105",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F106",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F107",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "243.197858",
+    "Ley_Cu": "100.000000",
+    "FCu": "243.197858000000"
+  },
+  {
+    "Flujo": "F108",
+    "TMS_Inicial": "1200.826882",
+    "Ley_Cu_1": "100.000000",
+    "TMS_Final": "1191.106740",
+    "Ley_Cu_2": "100.000000",
+    "Tonelaje": "-9.720142",
+    "Ley_Cu": "100.000000",
+    "FCu": "-9.720142000000"
+  },
+  {
+    "Flujo": "F109",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "252.918000",
+    "Ley_Cu": "100.000000",
+    "FCu": "252.918000000000"
+  },
+  {
+    "Flujo": "F110",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F111",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F112",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F113",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F114",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F115",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "252.918000",
+    "Ley_Cu": "100.000000",
+    "FCu": "252.918000000000"
+  },
+  {
+    "Flujo": "F116",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "115200.954665",
+    "Ley_Cu": "3.855625",
+    "FCu": "4441.716808302406"
+  },
+  {
+    "Flujo": "F117",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "30201.959944",
+    "Ley_Cu": "4.550312",
+    "FCu": "1374.283407567025"
+  },
+  {
+    "Flujo": "F118",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "2160.197878",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F119",
+    "TMS_Inicial": "0.000000",
+    "Ley_Cu_1": "0.000000",
+    "TMS_Final": "0.000000",
+    "Ley_Cu_2": "0.000000",
+    "Tonelaje": "0.000000",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  },
+  {
+    "Flujo": "F120",
+    "TMS_Inicial": null,
+    "Ley_Cu_1": null,
+    "TMS_Final": null,
+    "Ley_Cu_2": null,
+    "Tonelaje": "5839.611737",
+    "Ley_Cu": "0.000000",
+    "FCu": "0E-12"
+  }
+]

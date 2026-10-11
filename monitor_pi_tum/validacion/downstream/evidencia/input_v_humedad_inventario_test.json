@@ -1,0 +1,21 @@
+[
+  {
+    "Fecha": "2026-09-10",
+    "Humedad_Inventario": 3.3,
+    "Regla_Humedad_Inventario": "HUMEDAD_DIARIA_PONDERADA",
+    "Flag_Humedad_Inventario_Valida": 1,
+    "Humedad_Turno_A": 3.300000000000003,
+    "Humedad_Turno_B": 3.300000000000003,
+    "Humedad_Promedio_Dia": 3.3,
+    "Humedad_TM1": 3.3,
+    "Fecha_Humedad_TM1": "2026-08-31",
+    "Torre_Humedad_TM1": "T1",
+    "Turno_Humedad_TM1": "A",
+    "Fuente_Humedad_TM1": "PROPIA_TM1",
+    "Humedad_TM2": 3.3,
+    "Fecha_Humedad_TM2": "2026-08-31",
+    "Torre_Humedad_TM2": "T1",
+    "Turno_Humedad_TM2": "A",
+    "Fuente_Humedad_TM2": "COMPARTIDA_DESDE_TM1"
+  }
+]

@@ -49,24 +49,8 @@ layout = html.Div([
     html.H4("Carga de datos Recuperaciones (rec)"),
     dcc.Upload(
         id='upload-rec',
-        #children=html.Div(['Arrastra o selecciona el archivo Excel con hoja Base_Datos']),
-        children=html.Div([
-                html.I(className="bi bi-file-earmark-arrow-up fs-1 text-primary"),  # ícono Bootstrap
-                html.H5("Subir archivo Excel", className="mt-2 mb-1 fw-semibold"),
-                html.P(
-                    "Arrastra o selecciona un archivo Excel (.xlsx) ",
-                ),
-                html.H5("'Base_Datos'",className="mt-2 mb-1 fw-semibold")
-            ]),
-            className=(
-                "border-dashed border-primary text-center "
-                "py-4 rounded-3 bg-light-subtle"
-            ),
-            style={
-                "cursor": "pointer",
-                "transition": "all 0.25s ease-in-out",
-                "border":"1px dashed #aaa"
-            },
+        children=html.Div(['Arrastra o selecciona el archivo Excel con hoja Base_Datos']),
+        style={'width': '80%', 'padding': '20px', 'border': '1px dashed #aaa', 'textAlign': 'center'},
         multiple=False
     ),
     html.Div(id='status-rec', style={'marginTop': 20})
@@ -130,7 +114,7 @@ def register_callbacks(app):
                 df = df.melt(id_vars="Parcela")
                 df.columns = ["Fecha_drenaje", "Parcela", "Recuperacion_parcela"]
 
-                df["PAD"] = "OXIDOS"
+                df["PAD"] = "OXIDO"
                 df["pad_id"] = 1
                 df["Parcela"] = pd.to_numeric(df["Parcela"], errors="coerce").astype("Int64")
                 df = df.dropna(subset=["Parcela"]).copy()
@@ -147,7 +131,7 @@ def register_callbacks(app):
             # --- Lectura Sulfuros ---
             def read_sulf(path):
                 re = pd.read_excel(path, sheet_name="Recuperaciones Sulfuros")
-                raw = re.iloc[2:, 1:31]
+                raw = re.iloc[2:, 1:20]
                 headers = raw.iloc[0, :]
                 df = raw.iloc[1:, :].copy()
                 df.columns = headers
@@ -180,8 +164,8 @@ def register_callbacks(app):
             # --- Persistencia en BD ---
             engine = get_engine()
             with engine.begin() as conn:
-                df.to_sql("Recuperaciones_pad", con=conn,schema="inventar_SpcHidr", if_exists="append", index=False,
-                          method="multi", chunksize=20)
+                df.to_sql("Recuperaciones_pad", con=conn, if_exists="append", index=False,
+                          method="multi", chunksize=1000)
 
             return dbc.Alert(
                 f"Archivo '{nombre_archivo}' cargado correctamente. Registros cargados: {len(df)}",

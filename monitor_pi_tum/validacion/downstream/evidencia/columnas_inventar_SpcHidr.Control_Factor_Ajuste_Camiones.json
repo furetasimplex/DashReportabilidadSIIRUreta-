@@ -1,0 +1,126 @@
+[
+  {
+    "name": "Fecha",
+    "tipo": "date"
+  },
+  {
+    "name": "Constante_KOM_TMH_Viaje",
+    "tipo": "float"
+  },
+  {
+    "name": "Constante_CAT_TMH_Viaje",
+    "tipo": "float"
+  },
+  {
+    "name": "Limite_Factor_Carga_KOM",
+    "tipo": "float"
+  },
+  {
+    "name": "Limite_Factor_Carga_CAT",
+    "tipo": "float"
+  },
+  {
+    "name": "KOM_Num_Viajes",
+    "tipo": "int"
+  },
+  {
+    "name": "CAT_Num_Viajes",
+    "tipo": "int"
+  },
+  {
+    "name": "KOM_TMH_Mina",
+    "tipo": "float"
+  },
+  {
+    "name": "CAT_TMH_Mina",
+    "tipo": "float"
+  },
+  {
+    "name": "Dato_Mina_TMH",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMH_Dia",
+    "tipo": "float"
+  },
+  {
+    "name": "Sal_TMH_Dia",
+    "tipo": "float"
+  },
+  {
+    "name": "SRR_TMH_Dia",
+    "tipo": "float"
+  },
+  {
+    "name": "Referencia_Real_TMH",
+    "tipo": "float"
+  },
+  {
+    "name": "Factor_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Flag_Factor_Ajuste",
+    "tipo": "varchar"
+  },
+  {
+    "name": "KOM_TMH_Corregido",
+    "tipo": "float"
+  },
+  {
+    "name": "CAT_TMH_Corregido",
+    "tipo": "float"
+  },
+  {
+    "name": "Factor_Carga_KOM_TMH_Viaje",
+    "tipo": "float"
+  },
+  {
+    "name": "Factor_Carga_CAT_TMH_Viaje",
+    "tipo": "float"
+  },
+  {
+    "name": "Flag_Factor_Carga_KOM",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Flag_Factor_Carga_CAT",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Humedad_promedio_dia",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMH_Ajustado_OpcionB",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMS_Ajustado_OpcionB",
+    "tipo": "float"
+  },
+  {
+    "name": "Apilado_TMS_Sin_Ajuste",
+    "tipo": "float"
+  },
+  {
+    "name": "Diferencia_TMS_OpcionB",
+    "tipo": "float"
+  },
+  {
+    "name": "Metodo",
+    "tipo": "varchar"
+  },
+  {
+    "name": "Fecha_Calculo",
+    "tipo": "datetime2"
+  },
+  {
+    "name": "Otros_Num_Viajes",
+    "tipo": "int"
+  },
+  {
+    "name": "Flag_Datos_Incompletos",
+    "tipo": "varchar"
+  }
+]

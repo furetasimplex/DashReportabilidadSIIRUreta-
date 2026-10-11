@@ -1,0 +1,14 @@
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]SQL Server parse and compile time: 
+   CPU time = 0 ms, elapsed time = 0 ms.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'Workfile'. Scan count 0, logical reads 0, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'Worktable'. Scan count 133547, logical reads 659005, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'parcela'. Scan count 1012, logical reads 366344, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'campana_parcela_control'. Scan count 77924, logical reads 2842888, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'pad'. Scan count 253, logical reads 63250, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'flujos_reales_oxido'. Scan count 16446, logical reads 6724234, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'flujos_reales_sulfuro'. Scan count 14422, logical reads 5161200, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'drena_concentrados_oxido'. Scan count 16446, logical reads 34087449, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'drena_concentrados_sulfuro'. Scan count 14422, logical reads 30967200, physical reads 0, read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob read-ahead reads 0.
+[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]
+ SQL Server Execution Times:
+   CPU time = 196515 ms,  elapsed time = 196661 ms.

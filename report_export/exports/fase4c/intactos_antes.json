@@ -1,0 +1,17 @@
+﻿[
+    {
+        "Algorithm":  "SHA256",
+        "Hash":  "84EFF833009F5BF36408AB236AD47D6758A845F122236702FF6A11FA364F9930",
+        "Path":  "C:\\Users\\nimun\\OneDrive\\Documentos\\GitHub\\DashReportabilidadSIIR\\report_export\\callbacks\\reportabilidad_cb.py"
+    },
+    {
+        "Algorithm":  "SHA256",
+        "Hash":  "1A68790DD1FDAD3D0B9F33EFEF167B891B3CD6F186A417373A0C6BE45929B19B",
+        "Path":  "C:\\Users\\nimun\\OneDrive\\Documentos\\GitHub\\DashReportabilidadSIIR\\monitor_pi_tum\\db.py"
+    },
+    {
+        "Algorithm":  "SHA256",
+        "Hash":  "45104668A44D32FCEFD8975BC7C07887DB316514373998E3A8541D95C6EAFB06",
+        "Path":  "C:\\Users\\nimun\\OneDrive\\Documentos\\GitHub\\DashReportabilidadSIIR\\monitor_pi_tum\\postprocesar_tum_contingencia.py"
+    }
+]

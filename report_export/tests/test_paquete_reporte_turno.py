@@ -1,0 +1,243 @@
+"""Contrato prepare/read sin SQL real ni construcción de archivos."""
+import ast
+from contextlib import contextmanager, ExitStack
+from datetime import date
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pandas as pd
+import pytest
+from report_export import report_export as repo
+
+FETCHES = ["fetch_reporte_turno_cache_emision", "fetch_clays_cufe_report",
+           "fetch_trazabilidad_analitos_report", "fetch_curva_granulometrica_report",
+           "fetch_generador_reporte_diario_emision", "fetch_reconstitucion_srr_report"]
+
+
+class Harness:
+    def __init__(self, fail=None, empty=False):
+        self.conn = object()
+        self.active = self.lock = False
+        self.events = []
+        self.calls = []
+        self.dc_calls = []
+        self.fail, self.empty = fail, empty
+
+    @contextmanager
+    def begin(self):
+        self.active = True
+        self.events.append("BEGIN")
+        try:
+            yield self.conn
+        except BaseException:
+            self.events.append("ROLLBACK")
+            raise
+        else:
+            self.events.append("COMMIT")
+        finally:
+            self.active = self.lock = False
+
+    def refresh(self, **kw):
+        assert self.active and kw['conn'] is self.conn
+        self.lock = True
+        self.events.append('RTO')
+        return {'fin_sql_exclusivo': date(2026, 9, 11),
+                'fecha_corte_operacional': date(2026, 9, 10)}
+
+    def fetch(self, name, **kw):
+        assert self.active and self.lock and kw['conn'] is self.conn
+        self.events.append(name)
+        self.calls.append((name, kw))
+        if len(self.calls) == self.fail:
+            raise RuntimeError('fetch deliberado')
+        return pd.DataFrame() if self.empty else pd.DataFrame(
+            {'valor': [123], 'Fecha': [date(2026, 9, 10)], 'Turno': ['A']})
+
+    @contextmanager
+    def patched(self):
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(repo, '_get_engine', return_value=self))
+            stack.enter_context(patch.object(repo, 'refrescar_dependencias_reporte_turno_emision', self.refresh))
+            stack.enter_context(patch.object(repo, 'actualizar_datos_conciliados_emision_report', self.update_dc))
+            stack.enter_context(patch.object(repo, 'refrescar_dependencias_datos_conciliados_emision',
+                                            side_effect=AssertionError('coordinador DC duplicaría RTO')))
+            for name in FETCHES:
+                stack.enter_context(patch.object(repo, name, lambda _name=name, **kw: self.fetch(_name, **kw)))
+            yield
+
+    def update_dc(self, **kw):
+        assert self.active and self.lock and kw['conn'] is self.conn
+        self.events.append('DC')
+        self.dc_calls.append(kw)
+        if self.fail == 'DC':
+            raise RuntimeError('DC deliberado')
+
+
+@pytest.mark.parametrize('salida,names', [('preview', FETCHES[:1]), ('pdf', [FETCHES[0], FETCHES[4]]),
+                                        ('excel', FETCHES + [FETCHES[4]])])
+def test_variantes_rangos_misma_conexion(salida, names):
+    h = Harness()
+    with h.patched():
+        package = repo.preparar_paquete_reporte_turno_emision(date(2026, 9, 4), date(2026, 9, 30), salida=salida)
+    assert not h.active and not h.lock
+    expected = ['BEGIN', 'RTO'] + names + ['COMMIT']
+    if salida == 'excel':
+        expected.insert(expected.index('fetch_reconstitucion_srr_report'), 'DC')
+        assert h.dc_calls == [dict(start_date=date(2026, 9, 4), end_date=date(2026, 9, 30),
+                                   dias_reproceso=0, refrescar_factor=False, conn=h.conn)]
+    else:
+        assert h.dc_calls == []
+    assert h.events == expected
+    assert [x[0] for x in h.calls] == names
+    for i, (_, kw) in enumerate(h.calls):
+        assert kw['end_date'] == (date(2026, 9, 11) if i == 0 else date(2026, 10, 1))
+        assert kw['start_date'] == (date(2026, 9, 1) if i == 6 else date(2026, 9, 4))
+    assert package['df_turno'].iloc[0, 0] == 123
+
+
+def test_mes_completo_no_repite_generador():
+    h = Harness()
+    with h.patched():
+        p = repo.preparar_paquete_reporte_turno_emision(date(2026, 9, 1), date(2026, 9, 10), salida='excel')
+    assert len(h.calls) == 6
+    assert p['df_generador_resumen'] is p['df_generador']
+
+
+@pytest.mark.parametrize('salida', ['preview', 'excel', 'pdf'])
+def test_cache_vacio_no_lee_auxiliares(salida):
+    h = Harness(empty=True)
+    with h.patched():
+        repo.preparar_paquete_reporte_turno_emision(date(2026, 9, 10), date(2026, 9, 10), salida=salida)
+    assert len(h.calls) == 1
+    assert h.dc_calls == []
+
+
+def test_fallo_dc_revierte_sin_leer_reconst_ni_construir_excel():
+    import io
+    import time
+    h = Harness(fail='DC')
+    builder = MagicMock()
+    env = dict(time=time, io=io, ini_d=date(2026, 9, 16), fin_d=date(2026, 9, 16),
+               preparar_paquete_reporte_turno_emision=repo.preparar_paquete_reporte_turno_emision,
+               export_reporte_turno_estilo_leyes_finos=builder)
+    exec(callback_prefix('exportar_excel'), env)
+    with h.patched(), pytest.raises(RuntimeError, match='DC deliberado'):
+        env['run']()
+    assert h.events[-2:] == ['DC', 'ROLLBACK']
+    assert h.events.count('RTO') == 1
+    assert 'fetch_reconstitucion_srr_report' not in h.events
+    assert 'COMMIT' not in h.events
+    builder.assert_not_called()
+
+
+def test_excel_coordinador_real_factor_una_vez_y_dc_sin_refrescar_factor():
+    from report_export.tests.test_orquestacion_reporte_turno import motor_simulado, PASOS
+    engine, conn, events, _ = motor_simulado()
+    execute = conn.execute.side_effect
+    dc_calls = []
+
+    def ejecutar(sql, params=None):
+        if repo.SP_MANTIENE_DATOS_CONCILIADOS_EMISION in str(sql):
+            events.append('DC')
+            dc_calls.append(params)
+            return MagicMock()
+        return execute(sql, params)
+
+    conn.execute.side_effect = ejecutar
+    with ExitStack() as stack:
+        stack.enter_context(patch.object(repo, '_get_engine', return_value=engine))
+        refresh = stack.enter_context(patch.object(repo, 'refrescar_dependencias_reporte_turno_emision',
+                                                  wraps=repo.refrescar_dependencias_reporte_turno_emision))
+        for name in FETCHES:
+            def fetch(_name=name, **kw):
+                assert kw['conn'] is conn
+                events.append(_name)
+                return pd.DataFrame({'Fecha': [date(2026, 9, 10)], 'Turno': ['A']})
+            stack.enter_context(patch.object(repo, name, side_effect=fetch))
+        repo.preparar_paquete_reporte_turno_emision(date(2026, 9, 1), date(2026, 9, 30), salida='excel')
+    refresh.assert_called_once()
+    assert events.count(PASOS[2]) == 1
+    assert dc_calls == [dict(fecha_inicio=date(2026, 9, 1), fecha_fin=date(2026, 9, 30),
+                             dias_reproceso=0, refrescar_factor=0)]
+    assert events.index('validacion') < events.index(FETCHES[0]) < events.index('DC') < events.index(FETCHES[-1])
+    assert events[-1] == 'commit'
+    engine.begin.assert_called_once()
+    engine.connect.assert_not_called()
+    conn.commit.assert_not_called()
+
+
+@pytest.mark.parametrize('name', FETCHES)
+def test_fetch_externo_y_standalone_equivalentes(name):
+    engine, external = MagicMock(), MagicMock()
+    records = []
+    def read(sql, conn, **kw):
+        records.append((str(sql), conn, kw))
+        return pd.DataFrame({'Fecha': [date(2026, 9, 10)], 'Turno': ['A'], 'valor': [123]})
+    with patch.object(repo, '_get_engine', return_value=engine) as get, patch.object(repo.pd, 'read_sql', side_effect=read):
+        a = getattr(repo, name)(date(2026, 9, 4), date(2026, 9, 11), conn=external)
+        get.assert_not_called()
+        external.assert_not_called()
+        assert not external.method_calls
+        b = getattr(repo, name)(date(2026, 9, 4), date(2026, 9, 11))
+    pd.testing.assert_frame_equal(a, b)
+    assert records[0][0] == records[1][0] and records[0][2] == records[1][2]
+    assert records[0][1] is external
+    assert records[1][1] is engine.connect.return_value.__enter__.return_value
+
+
+def callback_prefix(name):
+    """Ejecuta las sentencias reales RTO hasta el constructor inclusive."""
+    tree = ast.parse((Path(repo.__file__).parent / 'callbacks/reportabilidad_cb.py').read_text(encoding='utf-8'))
+    fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name)
+    branch = next(n for n in ast.walk(fn) if isinstance(n, ast.If) and any(
+        isinstance(x, ast.Call) and isinstance(x.func, ast.Name) and
+        x.func.id == 'preparar_paquete_reporte_turno_emision' for s in n.body for x in ast.walk(s))
+        and 'tipo' in ast.unparse(n.test) and 'reporte_turno' in ast.unparse(n.test))
+    statements = []
+    for s in branch.body:
+        statements.append(s)
+        if any(isinstance(x, ast.Call) and isinstance(x.func, ast.Name) and x.func.id ==
+               'export_reporte_turno_estilo_leyes_finos' for x in ast.walk(s)):
+            break
+    wrapper = ast.parse('def run():\n    pass').body[0]
+    wrapper.body = statements
+    return compile(ast.fix_missing_locations(ast.Module(body=[wrapper], type_ignores=[])), '<callback RTO real>', 'exec')
+
+
+@pytest.mark.parametrize('callback,fail', [('exportar_excel', n) for n in [None,1,2,3,4,5,6,7]] + [('generar_pdf', n) for n in [None,1,2]])
+def test_constructor_fuera_y_fallo_fetch_aborta(callback, fail):
+    import io
+    import time
+    h = Harness(fail=fail)
+    builder = MagicMock(side_effect=lambda **kw: h.events.append('BUILD') if not h.active and not h.lock else pytest.fail('constructor en SQL'))
+    env = dict(time=time, io=io, ini_d=date(2026, 9, 4), fin_d=date(2026, 9, 30),
+               preparar_paquete_reporte_turno_emision=repo.preparar_paquete_reporte_turno_emision,
+               export_reporte_turno_estilo_leyes_finos=builder)
+    exec(callback_prefix(callback), env)
+    with h.patched():
+        if fail:
+            with pytest.raises(RuntimeError, match='fetch deliberado'):
+                env['run']()
+            builder.assert_not_called()
+            assert h.events[-1] == 'ROLLBACK'
+        else:
+            env['run']()
+            assert h.events[-2:] == ['COMMIT', 'BUILD']
+
+
+@pytest.mark.parametrize('args', [(None, date(2026,9,1)), (date(2026,9,2),date(2026,9,1))])
+def test_fechas_invalidas_sin_conexion(args):
+    with patch.object(repo, '_get_engine') as engine, pytest.raises(ValueError):
+        repo.preparar_paquete_reporte_turno_emision(*args)
+    engine.assert_not_called()
+
+
+def test_script_manual_default_no_importa_sql():
+    import importlib.util
+    import sys
+    path = Path(repo.__file__).parents[1] / 'scripts/validate_export_rto_read_coherence_dev.py'
+    spec = importlib.util.spec_from_file_location('manual_rto', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with patch.dict(sys.modules, {'sqlalchemy': None, 'monitor_pi_tum.db': None}):
+        assert module.main([]) == 0

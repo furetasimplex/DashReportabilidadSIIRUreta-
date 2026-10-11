@@ -1,0 +1,73 @@
+{
+  "identity": {
+    "database_name": "inventar_SpcHidr"
+  },
+  "pad_status": {
+    "1": [
+      {
+        "Fecha": "01-10-2026",
+        "Estado del cálculo": "Topografía real"
+      },
+      {
+        "Fecha": "02-10-2026",
+        "Estado del cálculo": "Topografía real"
+      },
+      {
+        "Fecha": "03-10-2026",
+        "Estado del cálculo": "Topografía real"
+      },
+      {
+        "Fecha": "04-10-2026",
+        "Estado del cálculo": "Topografía real"
+      },
+      {
+        "Fecha": "05-10-2026",
+        "Estado del cálculo": "Sin información de corriente"
+      },
+      {
+        "Fecha": "06-10-2026",
+        "Estado del cálculo": "CV25 sin información suficiente / Sin información de corriente"
+      },
+      {
+        "Fecha": "07-10-2026",
+        "Estado del cálculo": "Día en curso"
+      }
+    ],
+    "2": [
+      {
+        "Fecha": "01-10-2026",
+        "Estado del cálculo": "Topografía real"
+      },
+      {
+        "Fecha": "02-10-2026",
+        "Estado del cálculo": "Topografía real"
+      },
+      {
+        "Fecha": "03-10-2026",
+        "Estado del cálculo": "Topografía real"
+      },
+      {
+        "Fecha": "04-10-2026",
+        "Estado del cálculo": "Topografía real"
+      },
+      {
+        "Fecha": "05-10-2026",
+        "Estado del cálculo": "Estimación CV25"
+      },
+      {
+        "Fecha": "06-10-2026",
+        "Estado del cálculo": "CV25 sin información suficiente"
+      },
+      {
+        "Fecha": "07-10-2026",
+        "Estado del cálculo": "Día en curso"
+      }
+    ]
+  },
+  "protected_logic_and_backend_calls_unchanged": true,
+  "preview_checked": true,
+  "source_dataframe_unchanged": true,
+  "table_tooltips_pass": true,
+  "no_visible_technical_codes": true,
+  "sql_write_executed": false
+}

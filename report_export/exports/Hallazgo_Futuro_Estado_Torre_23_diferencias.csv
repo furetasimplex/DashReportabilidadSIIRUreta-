@@ -1,0 +1,24 @@
+﻿Fecha,Turno,Torre,Campo,Valor_actual,Valor_si_Estado_Torre,Decision
+2026-08-05,B,TM1,Resumen Físico,T1; T2; MB,T1; MB,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Estado,EVALUABLE,NO EVALUABLE,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,CuT,0.4783851972098014,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente CuT,MB,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,CuS,0.07238453871561631,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente CuS,MB,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,FeT,2.889258281631528,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente FeT,MB,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,FeS,0.14,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente FeS,TM2,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,CO3,0.09376855368161481,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente CO3,MB,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,ConsH,16,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente ConsH,TM2,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,CuFe,0.3439667810677663,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente CuFe,MB,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,CaolBeta,6.86,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente CaolBeta,MB,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Malla -1/2,65.403,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente Malla -1/2,TM2,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Malla -100,25.96070232098257,,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Fuente Malla -100,MB,-,NO IMPLEMENTAR - evaluar futuro Estado Torre
+2026-08-05,B,TM2,Resumen Físico,T1; T2; MB,T1; MB,NO IMPLEMENTAR - evaluar futuro Estado Torre

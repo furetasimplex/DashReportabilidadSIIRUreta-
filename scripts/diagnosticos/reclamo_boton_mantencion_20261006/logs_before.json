@@ -1,0 +1,7 @@
+{
+  "source": "Evidencia descrita por el usuario en la solicitud; no consultada directamente en esta sesión",
+  "sp_auto_mantener_secuencia_last_reported": "3570 / 2026-09-23 16:43:03; 3568 / 2026-09-23 16:43:02",
+  "sync_reported": ["3592 / 2026-10-06 09:43:46", "3582 / 2026-10-06 09:42:25", "3576 / 2026-10-06 09:12:30"],
+  "button_click": "Usuario reporta clic explícito al botón verde sin nueva fila de sp_auto_mantener_secuencia.",
+  "verification": "No disponible sin acceso read-only al SQL Server DEV y logs web/runtime."
+}

@@ -1,0 +1,30 @@
+{
+  "estado": "OK_ROLLBACK_VERIFICADO",
+  "fin": "2026-09-27",
+  "resolver": [
+    "prioridad",
+    "fallback",
+    "ninguna",
+    "solo_ceros",
+    "null",
+    "negativo",
+    "sin_mezcla",
+    "solo_cat",
+    "cero_permitido",
+    "ambas_invalidas"
+  ],
+  "refresco": {
+    "inicio": "2026-07-01",
+    "fin_solicitada": "2026-09-27",
+    "fecha_corte_operacional": "2026-09-27",
+    "inicio_ventana": "2026-09-13",
+    "fin_sql_exclusivo": "2026-09-28",
+    "filas_cache": 178,
+    "rangos_historico": [
+      [
+        "2026-09-13",
+        "2026-09-27"
+      ]
+    ]
+  }
+}

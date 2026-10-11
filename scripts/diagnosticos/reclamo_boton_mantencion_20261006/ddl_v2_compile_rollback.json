@@ -1,0 +1,12 @@
+{
+  "identity": {
+    "server_name": "VPS-5347319-X",
+    "database_name": "inventar_SpcHidr",
+    "login_name": "sa"
+  },
+  "object": "reclamo.sp_auto_congelar_modulos_nuevos",
+  "compiled": true,
+  "rollback": true,
+  "hash_before": "d43cf1bb4dd6ff52d8a9b774df297370bb0aac97891fe9217c50e66f34bfd98e",
+  "hash_after": "d43cf1bb4dd6ff52d8a9b774df297370bb0aac97891fe9217c50e66f34bfd98e"
+}

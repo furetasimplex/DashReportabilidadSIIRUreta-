@@ -206,3 +206,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Sync DEV → PROD (herramienta local; no versionar)
+scripts/sync_web.py
+scripts/sync_modules_dev_to_prod.py
+backups/

@@ -1,0 +1,44 @@
+[
+  {
+    "fecha": "2026-09-10",
+    "pad_id": 1,
+    "parcela_id": 1,
+    "equal": true
+  },
+  {
+    "fecha": "2026-09-10",
+    "pad_id": 1,
+    "parcela_id": 17,
+    "equal": true
+  },
+  {
+    "fecha": "2026-09-10",
+    "pad_id": 1,
+    "parcela_id": 29,
+    "equal": true
+  },
+  {
+    "fecha": "2026-09-10",
+    "pad_id": 2,
+    "parcela_id": 33,
+    "equal": true
+  },
+  {
+    "fecha": "2026-09-10",
+    "pad_id": 2,
+    "parcela_id": 39,
+    "equal": true
+  },
+  {
+    "fecha": "2026-09-10",
+    "pad_id": 2,
+    "parcela_id": 41,
+    "equal": true
+  },
+  {
+    "fecha": "2026-09-10",
+    "pad_id": 2,
+    "parcela_id": 60,
+    "equal": true
+  }
+]

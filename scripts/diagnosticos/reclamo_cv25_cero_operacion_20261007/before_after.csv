@@ -1,0 +1,4 @@
+﻿fecha,tmh_crudo_before,tmh_crudo_after,tms_crudo_before,tms_crudo_after,cobertura_r1,cobertura_r2,horas_r1,horas_r2,tms_estimado_r1_before,tms_estimado_r1_after,tms_estimado_r2_before,tms_estimado_r2_after,flag_before,flag_after,prelim_r2_modulo_id,prelim_r2_tms,prelim_r2_m3,v_reclamo_fuente_r2
+2026-10-04,40157.437500000000,40157.437500000000,40157.437500000000,40157.437500000000,0,24,0.000000,20.000000,0.000000,,40157.437500,40157.437500,OK,OK,,,,
+2026-10-05,18.000000000000,18.000000000000,18.000000000000,18.000000000000,0,24,0.000000,0.000000,,,,0.000000,SIN_HORAS_NO_REPARTIBLE,CERO_OPERACION_CONFIRMADO,80,0E-12,0E-12,PRELIMINAR_CV25
+2026-10-06,,,,,0,19,0.000000,4.000000,,,,,SIN_RESOLVER_CV25,SIN_RESOLVER_CV25,,,,

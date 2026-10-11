@@ -1,0 +1,86 @@
+--- before/sp_factor_ajuste_camiones_test.sql
++++ after/sp_factor_ajuste_camiones_test.sql
+@@ -1,5 +1,3 @@
+--- Snapshot DEV previo a promocion SRR
+--- modify_date: 2026-08-03 22:31:57.337000
+ USE [inventar_SpcHidr];
+ GO
+ /* ================================================================
+@@ -64,7 +62,7 @@
+    cualquier fecha cambiando @FechaTest).
+ ================================================================ */
+ 
+-CREATE PROCEDURE [inventar_SpcHidr].[sp_factor_ajuste_camiones_test]
++CREATE   PROCEDURE [inventar_SpcHidr].[sp_factor_ajuste_camiones_test]
+     @FechaInicio date,
+     @FechaFin    date
+ AS
+@@ -85,61 +83,14 @@
+     ;WITH SRR_Diario AS
+     (
+         SELECT
+-            CAST(r.Fecha AS date) AS Fecha,
+-            SUM
+-            (
+-                CASE
+-                    WHEN UPPER(LTRIM(RTRIM(r.Turno))) = 'A'
+-                    THEN
+-                        COALESCE(
+-                            TRY_CONVERT(float, r.Apilado_TMS_Real),
+-                            0.0
+-                        )
+-                        *
+-                        COALESCE(
+-                            TRY_CONVERT(float, r.SRR),
+-                            0.0
+-                        )
+-                        / 100.0
+-                    ELSE 0.0
+-                END
+-            ) AS SRR_TMS_Turno_A,
+-            SUM
+-            (
+-                CASE
+-                    WHEN UPPER(LTRIM(RTRIM(r.Turno))) = 'B'
+-                    THEN
+-                        COALESCE(
+-                            TRY_CONVERT(float, r.Apilado_TMS_Real),
+-                            0.0
+-                        )
+-                        *
+-                        COALESCE(
+-                            TRY_CONVERT(float, r.SRR),
+-                            0.0
+-                        )
+-                        / 100.0
+-                    ELSE 0.0
+-                END
+-            ) AS SRR_TMS_Turno_B,
+-            SUM
+-            (
+-                COALESCE(
+-                    TRY_CONVERT(float, r.Apilado_TMS_Real),
+-                    0.0
+-                )
+-                *
+-                COALESCE(
+-                    TRY_CONVERT(float, r.SRR),
+-                    0.0
+-                )
+-                / 100.0
+-            ) AS SRR_TMS_Dia,
++            s.Fecha,
++            SUM(CASE WHEN UPPER(LTRIM(RTRIM(s.Turno))) = 'A' THEN COALESCE(TRY_CONVERT(float, s.Ton_SRR_Usado_Actual), 0.0) ELSE 0.0 END) AS SRR_TMS_Turno_A,
++            SUM(CASE WHEN UPPER(LTRIM(RTRIM(s.Turno))) = 'B' THEN COALESCE(TRY_CONVERT(float, s.Ton_SRR_Usado_Actual), 0.0) ELSE 0.0 END) AS SRR_TMS_Turno_B,
++            SUM(COALESCE(TRY_CONVERT(float, s.Ton_SRR_Usado_Actual), 0.0)) AS SRR_TMS_Dia,
+             COUNT(*) AS Cantidad_Registros_SRR
+-        FROM [inventar_SpcHidr].[reporte_turno_cache_emision_test] AS r
+-        WHERE CAST(r.Fecha AS date)
+-              BETWEEN @FechaInicio AND @FechaFin
+-        GROUP BY CAST(r.Fecha AS date)
++        FROM [inventar_SpcHidr].[v_srr_tms_origen_turno_emision_test] AS s
++        WHERE s.Fecha BETWEEN @FechaInicio AND @FechaFin
++        GROUP BY s.Fecha
+     ),
+     Base AS
+     (

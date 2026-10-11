@@ -1,0 +1,4 @@
+{
+  "status": "NOT_RUN",
+  "reason": "No se ejecutó sincronización ni se consultó SQL. La topografía de fuente aportada por el usuario no prueba estado de reclamo.topografia_avance."
+}

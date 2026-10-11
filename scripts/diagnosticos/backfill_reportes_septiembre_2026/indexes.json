@@ -1,0 +1,7103 @@
+[
+  {
+    "schema_name": "sys",
+    "table_name": "sysrscols",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "rsid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrscols",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "hbcolid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrowsets",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "rowsetid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclones",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclones",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclones",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "partid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclones",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "version",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclones",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "segid",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclones",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "cloneid",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysallocunits",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "auid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysallocunits",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "ownerid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysallocunits",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "type",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysallocunits",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "auid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysseobjvalues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "valclass",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysseobjvalues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysseobjvalues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysseobjvalues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "valnum",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syspriorities",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "priority_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syspriorities",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "service_contract_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syspriorities",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "local_service_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syspriorities",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "remote_service_name",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syspriorities",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "priority",
+    "key_ordinal": 0
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syspriorities",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbfrag",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dbid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbfrag",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fragid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbfrag",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dbid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbfrag",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "brickid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbfrag",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pruid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfgfrag",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fgid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfgfrag",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fgfragid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfgfrag",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dbfragid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfgfrag",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "phfgid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbfiles",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dbfragid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbfiles",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fileid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syspru",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dbid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syspru",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pruid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbrickfiles",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dbid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbrickfiles",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pruid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbrickfiles",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fileid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysphfg",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "phfgid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysprufiles",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fileid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftinds",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysowners",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysowners",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysowners",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "sid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysowners",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbreg",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbreg",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbreg",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "svcbrkrguid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdbreg",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "scope",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysprivs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysprivs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysprivs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysprivs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "grantee",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysprivs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "grantor",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysprivs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "type",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysschobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysschobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nsclass",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysschobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nsid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysschobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysschobjs",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysschobjs",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nsid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysschobjs",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nsclass",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscsrowgroups",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "hobt_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscsrowgroups",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "segment_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysextsources",
+    "name": "clidx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "data_source_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysextsources",
+    "name": "ncidx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysexttables",
+    "name": "clidx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "object_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysextfileformats",
+    "name": "clidx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "file_format_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysextfileformats",
+    "name": "ncidx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "valclass",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depsubid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepsubid",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "valnum",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "valclass",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepsubid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depsubid",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjvalues",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "valnum",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscolpars",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscolpars",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "number",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscolpars",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "colid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscolpars",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscolpars",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscolpars",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "number",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxlgns",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxlgns",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxlgns",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "sid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxsrvs",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxsrvs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysnsobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysnsobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysnsobjs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysnsobjs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nsid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysnsobjs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysusermsgs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysusermsgs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "msglangid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscerts",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscerts",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscerts",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "issuer",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscerts",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "snum",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscerts",
+    "name": "nc3",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "thumbprint",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrmtlgns",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "srvid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrmtlgns",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syslnklgns",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "srvid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syslnklgns",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "lgnid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxprops",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxprops",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxprops",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxprops",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysscalartypes",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysscalartypes",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "schid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysscalartypes",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysscalartypes",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysscalartypes",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "schid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "systypedsubobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "systypedsubobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "idmajor",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "systypedsubobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "systypedsubobjs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "systypedsubobjs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "idmajor",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "systypedsubobjs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysidxstats",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysidxstats",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysidxstats",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysidxstats",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysiscols",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "idmajor",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysiscols",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "idminor",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysiscols",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysiscols",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "idmajor",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysiscols",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "intprop",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysiscols",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysiscols",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "idminor",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysendpts",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysendpts",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syswebmethods",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syswebmethods",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nmspace",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syswebmethods",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "alias",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nsid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysaudacts",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysaudacts",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysaudacts",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysaudacts",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "grantee",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysaudacts",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "audit_spec_id",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysaudacts",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "type",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysobjvalues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "valclass",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysobjvalues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "objid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysobjvalues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subobjid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysobjvalues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "valnum",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscscolsegments",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "hobt_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscscolsegments",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "column_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscscolsegments",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "segment_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscsdictionaries",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "hobt_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscsdictionaries",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "column_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscsdictionaries",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dictionary_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclsobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclsobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclsobjs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysclsobjs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrowsetrefs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrowsetrefs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "objid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrowsetrefs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indexid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrowsetrefs",
+    "name": "clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "rowsetnum",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysremsvcbinds",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysremsvcbinds",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysremsvcbinds",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "scid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysremsvcbinds",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "remsvc",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmitqueue",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dlgid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmitqueue",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "finitiator",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmitqueue",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "msgseqnum",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrts",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrts",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "remsvc",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrts",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "brkrinst",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrts",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysrts",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysconvgroup",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdesend",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "handle",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdercv",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "diagid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysdercv",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "initiator",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssingleobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssingleobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssingleobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depsubid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssingleobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssingleobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssingleobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepsubid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssingleobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssingleobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depsubid",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depsubid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepsubid",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepsubid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysmultiobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depsubid",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysguidrefs",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysguidrefs",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysguidrefs",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysguidrefs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "guid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysguidrefs",
+    "name": "nc",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfoqueues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfoqueues",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "lsn",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syschildinsts",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "lsid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscompfragments",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "cprelid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscompfragments",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fragid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftsemanticsdb",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "database_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftstops",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "stoplistid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftstops",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "stopword",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftstops",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "lcid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftproperties",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "property_list_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftproperties",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "property_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftproperties",
+    "name": "nonclst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "property_list_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftproperties",
+    "name": "nonclst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "property_name",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftproperties",
+    "name": "nonclstgi",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "property_list_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftproperties",
+    "name": "nonclstgi",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "guid_identifier",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysftproperties",
+    "name": "nonclstgi",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "int_identifier",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmitbody",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "msgref",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfos",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfos",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "tgid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfos",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "low",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysfos",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "high",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysqnames",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "qid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysqnames",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "hash",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysqnames",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysqnames",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlcomponent",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlcomponent",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "xsdid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlcomponent",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "uriord",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlcomponent",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "qual",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlcomponent",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nameid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlcomponent",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "symspace",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlcomponent",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nmscope",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlfacet",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "compid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlfacet",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "ord",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlplacement",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "placingid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlplacement",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "ordinal",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlplacement",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "placedid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlplacement",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "placingid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysxmlplacement",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "ordinal",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysobjkeycrypts",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysobjkeycrypts",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysobjkeycrypts",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "thumbprint",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysasymkeys",
+    "name": "cl",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysasymkeys",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysasymkeys",
+    "name": "nc3",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "thumbprint",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssqlguides",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssqlguides",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssqlguides",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "scopetype",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssqlguides",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "scopeid",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssqlguides",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "hash",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssqlguides",
+    "name": "nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinsubobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinsubobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "idmajor",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinsubobjs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "subid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinsubobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinsubobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "idmajor",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sysbinsubobjs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "class",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depclass",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepclass",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepname",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepschema",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "clst",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "number",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepname",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepschema",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "indepclass",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "depclass",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syssoftobjrefs",
+    "name": "nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "number",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "coordenadas_mod",
+    "name": "PK__coordena__3214EC27F5D80855",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ID",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_user_groups",
+    "name": "PK__auth_use__3213E83F42245077",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_user_groups",
+    "name": "auth_user_groups_user_id_group_id_94350c0c_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "user_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_user_groups",
+    "name": "auth_user_groups_user_id_group_id_94350c0c_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "group_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana_base",
+    "name": "pk_parcela_campana_base",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_base",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana_base",
+    "name": "uq_base_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana_base",
+    "name": "uq_base_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana_base",
+    "name": "uq_base_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campana_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "estado_apilado_modulo",
+    "name": "PK__estado_a__3213E83FEF0EF7A8",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_concentrados_sulfuro",
+    "name": "PK_riego_concentrados_sulfuro",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_totalizador_turno",
+    "name": "PK_ctt",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_totalizador_turno",
+    "name": "UQ_ctt_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacional",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_totalizador_turno",
+    "name": "UQ_ctt_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_totalizador_turno",
+    "name": "UQ_ctt_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "equipo_codigo",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "estado_operativo",
+    "name": "PK__estado_o__86989FB220F60C9E",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_estado",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_user_user_permissions",
+    "name": "PK__auth_use__3213E83F824E0414",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_user_user_permissions",
+    "name": "auth_user_user_permissions_user_id_permission_id_14a6b632_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "user_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_user_user_permissions",
+    "name": "auth_user_user_permissions_user_id_permission_id_14a6b632_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "permission_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_pls_ep",
+    "name": "PK_sx_pls_ep_v2_20260622",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_pls_ep",
+    "name": "UQ_sx_pls_ep_fecha_registro_v2_20260622",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "flujo_coord",
+    "name": "PK__flujo_co__3214EC271301B8F3",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ID",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "rep_prod_validacion_log",
+    "name": "PK__rep_prod__8421B058567AFC09",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "validation_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "representatividad_torres_resultado",
+    "name": "PK__represen__C031222592234B69",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Dia",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana_cinetica",
+    "name": "pk_parcela_campana_cinetica",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_cinetica",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana_cinetica",
+    "name": "uq_cinetica_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana_cinetica",
+    "name": "uq_cinetica_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana_cinetica",
+    "name": "uq_cinetica_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campana_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sqlagent_jobs",
+    "name": "sqlagent_jobs_clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "job_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_balance",
+    "name": "PK__modelo_b__DBED976118B48BCE",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "modelo_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sqlagent_jobsteps",
+    "name": "sqlagent_jobsteps_clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "job_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sqlagent_jobsteps",
+    "name": "sqlagent_jobsteps_clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "step_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sqlagent_jobsteps",
+    "name": "sqlagent_jobsteps_nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "job_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sqlagent_jobsteps",
+    "name": "sqlagent_jobsteps_nc1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "step_name",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sqlagent_jobsteps",
+    "name": "sqlagent_jobsteps_nc2",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "step_uid",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modulos_turnos",
+    "name": "PK__modulos___65659BEE32FA69A9",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "mod_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "sqlagent_job_history",
+    "name": "sqlagent_job_history_clust",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "instance_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modulo",
+    "name": "PK__modulo__B2584DFC0F9CF128",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_modulo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "planta",
+    "name": "PK_planta",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_planta",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle",
+    "name": "pk_legacy_cobre_det",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle",
+    "name": "uq_legacy_cobre_det_per_cel",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_inicio_referencia",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle",
+    "name": "uq_legacy_cobre_det_per_cel",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_fin_referencia",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle",
+    "name": "uq_legacy_cobre_det_per_cel",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "circuito",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle",
+    "name": "uq_legacy_cobre_det_per_cel",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "numero_celda",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_query_text",
+    "name": "plan_persist_query_text_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "query_text_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_query_text",
+    "name": "plan_persist_query_text_idx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "statement_sql_handle",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "rotopala",
+    "name": "PK_rotopala",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "rotopala_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "rotopala",
+    "name": "UQ_rotopala_pad",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_estado_operacional_test",
+    "name": "PK_contingencia_estado_operacional_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "representatividad_diaria_cache",
+    "name": "PK_repr_cache",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Dia",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "pad",
+    "name": "PK__pad__6FCA2A7CCF7F4CCC",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_pad",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_query",
+    "name": "plan_persist_query_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "query_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "django_admin_log",
+    "name": "PK__django_a__3213E83F16E559F6",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "nodos",
+    "name": "PK_nodos",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_nodo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_plan",
+    "name": "plan_persist_plan_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "plan_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "tot_TM",
+    "name": "PK__tot_TM__95283FC253811C74",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_dato",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_runtime_stats",
+    "name": "plan_persist_runtime_stats_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "plan_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_runtime_stats",
+    "name": "plan_persist_runtime_stats_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "runtime_stats_interval_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_runtime_stats",
+    "name": "plan_persist_runtime_stats_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "execution_type",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_runtime_stats",
+    "name": "plan_persist_runtime_stats_idx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "runtime_stats_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "ripios",
+    "name": "PK__ripios__ABE79397C77EAD6F",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ripio_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_runtime_stats_interval",
+    "name": "plan_persist_runtime_stats_interval_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "runtime_stats_interval_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "log_automatizacion",
+    "name": "PK_log_automatizacion",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "log_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_context_settings",
+    "name": "plan_persist_context_settings_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "context_settings_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Representatividad_Diaria",
+    "name": "PK__Represen__3213E83FDB059FCD",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reclamos_tonelaje",
+    "name": "PK__reclamos__3213E83F0832196E",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reclamos_tonelaje",
+    "name": "UQ_reclamos_tonelaje_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_query_hints",
+    "name": "plan_persist_query_hints_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "query_hint_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_query_hints",
+    "name": "plan_persist_query_hints_idx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "query_hint_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "pila_pls_sx",
+    "name": "PK_pila_pls_sx",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sal_stock_diario",
+    "name": "PK_sal_stock_diario",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sal_stock_diario",
+    "name": "UX_sal_stock_diario_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_levantamiento",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_query_template_parameterization",
+    "name": "plan_persist_query_template_parameterization_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "query_template_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_query_template_parameterization",
+    "name": "plan_persist_query_template_parameterization_idx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "query_template_hash",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "configuracion",
+    "name": "PK_configuracion",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "clave",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_wait_stats",
+    "name": "plan_persist_wait_stats_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "runtime_stats_interval_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_wait_stats",
+    "name": "plan_persist_wait_stats_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "plan_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_wait_stats",
+    "name": "plan_persist_wait_stats_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "wait_category",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_wait_stats",
+    "name": "plan_persist_wait_stats_cidx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "execution_type",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "plan_persist_wait_stats",
+    "name": "plan_persist_wait_stats_idx1",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "wait_stats_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bm_desbalance_nodo",
+    "name": "PK__bm_desba__186E6045FC654688",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_desbalance",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_parcela_operacional",
+    "name": "pk_legacy_rpo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_parcela_operacional",
+    "name": "uq_legacy_rpo_scope_ini_par",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "scope",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_parcela_operacional",
+    "name": "uq_legacy_rpo_scope_ini_par",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "intervalo_inicio",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_parcela_operacional",
+    "name": "uq_legacy_rpo_scope_ini_par",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_numero",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "tags_sx_ew",
+    "name": "PK_tags_sx_ew",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_tag",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "tags_sx_ew",
+    "name": "UQ_tags_sx_ew_fecha_intervalo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_inicio",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "tags_sx_ew",
+    "name": "UQ_tags_sx_ew_fecha_intervalo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_fin",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "tags_sx_ew",
+    "name": "UQ_tags_sx_ew_fecha_inicio",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_inicio",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_pi_accion_test",
+    "name": "PK_contingencia_pi_accion_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sal_camiones",
+    "name": "PK_sal_camiones",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sal_camiones",
+    "name": "UX_sal_camiones_fecha_guia_pat",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sal_camiones",
+    "name": "UX_sal_camiones_fecha_guia_pat",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "numero_guia",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sal_camiones",
+    "name": "UX_sal_camiones_fecha_guia_pat",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "patente",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_circuito",
+    "name": "pk_legacy_cobre_cto",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_circuito",
+    "name": "uq_legacy_cobre_cto_per",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_inicio_referencia",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_circuito",
+    "name": "uq_legacy_cobre_cto_per",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_fin_referencia",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_circuito",
+    "name": "uq_legacy_cobre_cto_per",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "circuito",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reclamo_camiones_por_modulo",
+    "name": "PK__reclamo___3213E83F13484F60",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reclamo_camiones_por_modulo",
+    "name": "UQ_rcpm_campana_mod",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reclamo_camiones_por_modulo",
+    "name": "UQ_rcpm_campana_mod",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id_modulo",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_camiones_turno",
+    "name": "PK_cct",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_camiones_turno",
+    "name": "UQ_cct_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacional",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_camiones_turno",
+    "name": "UQ_cct_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_camiones_turno",
+    "name": "UQ_cct_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "contexto",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "tasa_evaporacion",
+    "name": "PK__tasa_eva__5D28D4B53523FC3B",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_tasa_evaporacion",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "tasa_evaporacion",
+    "name": "UQ__tasa_eva__785B4C879D8FB48D",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "codigo_flujo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "topologia_pad",
+    "name": "PK_topologia_pad",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "Diccionario_Flujos",
+    "name": "PK__Dicciona__E928BFB474F6ABF6",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Flujo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Control_Factor_Ajuste_Camiones_v2_test",
+    "name": "PK_Control_Factor_Ajuste_Camiones_v2_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "flujo_coord_hc",
+    "name": "PK__flujo_co__3214EC27AB3A04E2",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ID",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_sulfuro_camiones_thm",
+    "name": "PK_control_reclamo_sulfuro_camiones_thm",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_control_reclamo_sulfuro_camiones_thm",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_sulfuro_camiones_thm",
+    "name": "UX_control_reclamo_sulf_cam_thm_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_sulfuro_camiones_thm",
+    "name": "UX_control_reclamo_sulf_cam_thm_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_sulfuro_camiones_thm",
+    "name": "UX_control_reclamo_sulf_cam_thm_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_ew_corriente",
+    "name": "PK_sx_ew_corriente_v1_20260622",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_ew_corriente",
+    "name": "UQ_sx_ew_corriente_fecha_registro_v1_20260622",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "flujo_modelos",
+    "name": "PK__flujo_mo__7498FAC37032E115",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Id_flujo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_ep_flujos_niveles_old_20260620_pre_ep_tk",
+    "name": "PK_sx_ep_flujos_niveles",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_sulfuro_camiones_thm_diario",
+    "name": "PK_control_reclamo_sulfuro_camiones_thm_diario",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_control_reclamo_sulfuro_camiones_thm_diario",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_sulfuro_camiones_thm_diario",
+    "name": "UX_control_reclamo_sulf_cam_thm_d_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_sulfuro_camiones_thm_diario",
+    "name": "UX_control_reclamo_sulf_cam_thm_d_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_sulfuro_camiones_thm_diario",
+    "name": "UX_control_reclamo_sulf_cam_thm_d_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "modulo_congelado",
+    "name": "PK_modulo_congelado",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "modulo_congelado_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "modulo_congelado",
+    "name": "UQ_modulo_congelado",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "modulo_congelado",
+    "name": "UQ_modulo_congelado",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Diccionario_Flujos",
+    "name": "PK__Dicciona__E928BFB401B3D6EB",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Flujo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Data_balance_rec_hc",
+    "name": "PK__Data_bal__49BF004D5A64A983",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "bm_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modulos_turnos_copy1",
+    "name": "PK__modulos___65659BEE8FE0C850",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "mod_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "casos_balance_hc",
+    "name": "PK__casos_ba__52CA99D2A5A372C4",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "caso_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "area",
+    "name": "PK__area__8A8C837B554D89A7",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_area",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "PK__campana___65F0BA0DEC5C4E31",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_campana_parcela_control",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_campana_parcela_control",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campana_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_campana_parcela_control",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_campana_parcela_control",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_campana_parcela_control",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_campana_parcela_modulo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campana_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_campana_parcela_modulo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_campana_parcela_modulo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_cpc_campana_parcela_modulo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campana_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_cpc_campana_parcela_modulo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana_parcela_control",
+    "name": "UQ_cpc_campana_parcela_modulo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "areas",
+    "name": "PK__areas__8A8C837B92EA0051",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_area",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "BM_manual",
+    "table_name": "fujos_Manuales",
+    "name": "PK_fujos_Manuales",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_reg",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "topografia_sal",
+    "name": "PK_topografia_sal",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_topografia_sal",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "topografia_sal",
+    "name": "UQ_topografia_sal_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "siir_data_fix_log",
+    "name": "PK__siir_dat__424D5D75E9AB60F6",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fix_key",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_avance_modulo",
+    "name": "PK_cam",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_avance_modulo",
+    "name": "UQ_cam_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacional",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_avance_modulo",
+    "name": "UQ_cam_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_codigo",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bitacora_campana_parcela",
+    "name": "PK__bitacora__7E4268B0CCCFF866",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_bitacora",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "flujo_modelos_hc",
+    "name": "PK__flujo_mo__7498FAC3AA30078D",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Id_flujo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_ajuste_camiones",
+    "name": "PK__factor_a__FEAFF02434F8AA56",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_factor",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Datos_conciliados_of_emision_test",
+    "name": "CIX_Datos_conciliados_of_emision_test_Fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balances_flujos_resultados_hc",
+    "name": "PK__balances__DB245A1A516A03D7",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "caso_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balances_flujos_resultados_hc",
+    "name": "PK__balances__DB245A1A516A03D7",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha_inicio",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balances_flujos_resultados_hc",
+    "name": "PK__balances__DB245A1A516A03D7",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha_fin",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balances_flujos_resultados_hc",
+    "name": "PK__balances__DB245A1A516A03D7",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "codigo_flujo",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_periodo",
+    "name": "pk_legacy_cobre_per",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_periodo",
+    "name": "uq_legacy_cobre_per",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_inicio_referencia",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_periodo",
+    "name": "uq_legacy_cobre_per",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_fin_referencia",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "insumos_area_humeda_flujos",
+    "name": "PK_insumos_area_humeda_flujos",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "drena_concentrados_oxido",
+    "name": "PK_drena_concentrados_oxido",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "secuencia_rotopala",
+    "name": "PK_secuencia_rotopala",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "secuencia_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "secuencia_rotopala",
+    "name": "UQ_sr_orden",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "rotopala_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "secuencia_rotopala",
+    "name": "UQ_sr_orden",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "secuencia_rotopala",
+    "name": "UQ_sr_orden",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "orden_secuencia",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "secuencia_rotopala",
+    "name": "UQ_sr_modulo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "secuencia_rotopala",
+    "name": "UQ_sr_modulo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "semilla_inventario_chancado",
+    "name": "PK_semilla_inventario_chancado",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_semilla",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "semilla_inventario_chancado",
+    "name": "UQ_semilla_inventario_chancado_Fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "disponible_rotopalas",
+    "name": "PK__disponib__C212AB5FF669D2C9",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_disponible_rotopalas",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "disponible_rotopalas",
+    "name": "UX_disponible_rotopalas_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "disponible_rotopalas",
+    "name": "UX_disponible_rotopalas_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "disponible_rotopalas",
+    "name": "UX_disponible_rotopalas_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "trazabilidad_analitos_tm_emision_test",
+    "name": "PK_trazabilidad_analitos_tm_emision_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "trazabilidad_analitos_tm_emision_test",
+    "name": "PK_trazabilidad_analitos_tm_emision_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "trazabilidad_analitos_tm_emision_test",
+    "name": "PK_trazabilidad_analitos_tm_emision_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "TM_Destino",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "trazabilidad_analitos_tm_emision_test",
+    "name": "PK_trazabilidad_analitos_tm_emision_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Analito",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "imp_apilado_turno",
+    "name": "PK_legacy_imp_apilado_turno",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "imp_apilado_turno",
+    "name": "UQ_legacy_imp_fecha_turno",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "imp_apilado_turno",
+    "name": "UQ_legacy_imp_fecha_turno",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bitacora_turnos_consolidada",
+    "name": "PK__bitacora__48155C1F810E61F2",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bitacora_turnos_consolidada",
+    "name": "UX_bitacora_fecha_torre_turno",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_calendario",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bitacora_turnos_consolidada",
+    "name": "UX_bitacora_fecha_torre_turno",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "torre",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bitacora_turnos_consolidada",
+    "name": "UX_bitacora_fecha_torre_turno",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "turno",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "semilla_harnero_oficial_test",
+    "name": "PK_semilla_harnero_oficial_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha_Inicio_Periodo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "topografia_avance",
+    "name": "PK_topografia_avance",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "topografia_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "topografia_avance",
+    "name": "UQ_ta",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_medicion",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "topografia_avance",
+    "name": "UQ_ta",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "topografia_avance",
+    "name": "UQ_ta",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_bleed",
+    "name": "PK_riego_bleed",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "datos_flujometros",
+    "name": "PK_datos_flujometros_inventar",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_data",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_version",
+    "name": "PK_proyeccion_version",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_version",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_version",
+    "name": "UX_proyeccion_version_vigente_pad",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_version",
+    "name": "UX_proyeccion_version_vigente_global",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "estado",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "wpr_bucket_table",
+    "name": "wpr_bucket_clustered_idx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "bucket_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "datos_leyes",
+    "name": "PK_datos_leyes",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_data",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_pls_ep_old_20260622_pre_sx_ew_produccion",
+    "name": "PK_sx_pls_ep",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "drena_concentrados_sulfuro",
+    "name": "PK_drena_concentrados_sulfuro",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Clays_CuFe_trazabilidad",
+    "name": "PK_Clays_CuFe_trazabilidad",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_trazabilidad",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "planes_mensuales",
+    "name": "PK__planes_m__3213E83F31DA154E",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Resumen_Intervalo_TotTM",
+    "name": "PK_Resumen_Intervalo_TotTM",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha_turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Resumen_Intervalo_TotTM",
+    "name": "PK_Resumen_Intervalo_TotTM",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "torre_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Resumen_Intervalo_TotTM",
+    "name": "PK_Resumen_Intervalo_TotTM",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "turno_op",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_parametro",
+    "name": "PK_proyeccion_parametro",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_parametro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_parametro",
+    "name": "UQ_proyeccion_parametro",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id_version",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_parametro",
+    "name": "UQ_proyeccion_parametro",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_parametro",
+    "name": "UQ_proyeccion_parametro",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "param_peso_teorico",
+    "name": "PK_param_peso_teorico",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Torre",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "param_peso_teorico",
+    "name": "PK_param_peso_teorico",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Turno_op",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "PK__mov_cam___3213E83F0BF10A24",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "tipo_movimiento",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fase",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "banco",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "excavadora",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "destino_descarga",
+    "key_ordinal": 7
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "flota_cex_tc",
+    "key_ordinal": 8
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam_powerbi",
+    "name": "ux_mov_cam_powerbi_clave",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "grade",
+    "key_ordinal": 9
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_totalizadores_turno",
+    "name": "PK_tum_tot",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_totalizadores_turno",
+    "name": "UQ_tum_tot_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacional",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_totalizadores_turno",
+    "name": "UQ_tum_tot_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_totalizadores_turno",
+    "name": "UQ_tum_tot_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "equipo_codigo",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "BD_Ton",
+    "name": "PK__BD_Ton__137645C458B87176",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_bd_ton",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "BD_Ton",
+    "name": "UX_BD_Ton_Fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "procedimientos_reportabilidad",
+    "name": "PK_procedimientos_reportabilidad",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_procedimiento",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "procedimientos_reportabilidad",
+    "name": "UQ_proc_report_objeto",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "codigo_reporte",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "procedimientos_reportabilidad",
+    "name": "UQ_proc_report_objeto",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "base_datos",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "procedimientos_reportabilidad",
+    "name": "UQ_proc_report_objeto",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "esquema",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "procedimientos_reportabilidad",
+    "name": "UQ_proc_report_objeto",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nombre_procedimiento",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "procedimientos_reportabilidad",
+    "name": "UQ_proc_report_orden",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "codigo_reporte",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "procedimientos_reportabilidad",
+    "name": "UQ_proc_report_orden",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "orden_ejecucion",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "procedimientos_reportabilidad",
+    "name": "UQ_proc_report_codigo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "codigo_procedimiento",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_camiones_parametro_vigencia_test",
+    "name": "PK__factor_c__3213E83F0178330D",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_camiones_parametro_vigencia_test",
+    "name": "UQ_factor_vigencia_inicio",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "flota",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_camiones_parametro_vigencia_test",
+    "name": "UQ_factor_vigencia_inicio",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parametro",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_camiones_parametro_vigencia_test",
+    "name": "UQ_factor_vigencia_inicio",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "vigencia_desde",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_camiones_parametro_vigencia_test",
+    "name": "UX_factor_vigencia_abierta",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "flota",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_camiones_parametro_vigencia_test",
+    "name": "UX_factor_vigencia_abierta",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parametro",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "rep_prod_reglas",
+    "name": "PK__rep_prod__344A23554395933E",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "regla_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "camiones_reclamo",
+    "name": "PK_camiones_reclamo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "camiones_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "camiones_reclamo",
+    "name": "UQ_cam",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "camiones_reclamo",
+    "name": "UQ_cam",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "camiones_reclamo",
+    "name": "UQ_cam",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_serie",
+    "name": "PK_proyeccion_serie",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_version",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_serie",
+    "name": "PK_proyeccion_serie",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "campaña_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_serie",
+    "name": "PK_proyeccion_serie",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "parcela_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "proyeccion_serie",
+    "name": "PK_proyeccion_serie",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "aux_parcela_columna",
+    "name": "PK__aux_parc__075083DC8E3E0F10",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "parcela_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Control_Apilado_TMH_v2_test",
+    "name": "PK_Control_Apilado_TMH_v2_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "rep_prod_targets",
+    "name": "PK__rep_prod__B57482033A8CF0A2",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "caso_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "rep_prod_targets",
+    "name": "PK__rep_prod__B57482033A8CF0A2",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "target_code",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "plan_semanal_total_planta_diario",
+    "name": "PK__plan_sem__3213E83F990C2E0D",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "insumos_area_humeda_niveles",
+    "name": "PK_insumos_area_humeda_niveles",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "rep_prod_ajustado",
+    "name": "PK__rep_prod__B9FA51772100A24B",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "caso_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "rep_prod_ajustado",
+    "name": "PK__rep_prod__B9FA51772100A24B",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "rep_prod_ajustado",
+    "name": "IX_rep_prod_ajustado_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "Registro_Muestreo_Torres",
+    "name": "PK__Registro__8EC639F2F1D34F83",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ID_Registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_camiones_parametro_auditoria_test",
+    "name": "PK__factor_c__3213E83F8B99145B",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "plan_semanal_srr_lixiviacion_diario",
+    "name": "PK__plan_sem__3213E83F84665F6E",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "cv25_diario",
+    "name": "PK_cv25_diario",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "cv25_diario",
+    "name": "UQ_cv25_id",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "cv25_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "rep_prod_ajuste_log",
+    "name": "PK__rep_prod__7D3D901B64AB4490",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "run_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "plan_semanal_resumen_comparativo",
+    "name": "PK__plan_sem__3213E83FEC12468B",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balance_dump_leach_flujos",
+    "name": "PK_balance_dump_leach_flujos",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balance_dump_leach_flujos",
+    "name": "UQ_balance_dump_leach_flujos_fecha_registro",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inv_sol_sulfuros",
+    "name": "PK_inv_sol_sulfuros",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "usuarios",
+    "name": "PK__usuarios__3213E83F92E0EAF5",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "usuarios",
+    "name": "UQ__usuarios__F3DBC572F9A64DDA",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "username",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_grupo",
+    "name": "PK_parcela_grupo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_grupo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_grupo",
+    "name": "UQ_parcela_grupo_nombre",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_grupo",
+    "name": "UQ_parcela_grupo_nombre",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nombre",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_camiones_turno",
+    "name": "PK_tum_cam",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_camiones_turno",
+    "name": "UQ_tum_cam_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacional",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_camiones_turno",
+    "name": "UQ_tum_cam_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "param_peso_teorico_base",
+    "name": "PK_param_peso_teorico_base",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Torre",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Informe_TM_lab",
+    "name": "PK__Informe___8EC639F2587971D6",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ID_Registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_ep_flujos_niveles",
+    "name": "PK_sx_ep_flujos_niveles_v2_20260620",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_ep_flujos_niveles",
+    "name": "UQ_sx_ep_flujos_niveles_fecha_registro_v2_20260620",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "rotopala_horas_turno",
+    "name": "PK_rotopala_horas_turno",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "horas_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "rotopala_horas_turno",
+    "name": "UQ_hr",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_turno",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "rotopala_horas_turno",
+    "name": "UQ_hr",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "turno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "rotopala_horas_turno",
+    "name": "UQ_hr",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "rotopala_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "NIR",
+    "name": "PK__NIR__3213E83F5AC301C6",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "configuracion_reclamo_rotopala_periodo",
+    "name": "PK_configuracion_reclamo_rotopala_periodo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "periodo_reporte",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "configuracion_reclamo_rotopala_periodo",
+    "name": "PK_configuracion_reclamo_rotopala_periodo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "pad_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_grupo_detalle",
+    "name": "PK_parcela_grupo_detalle",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_grupo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_grupo_detalle",
+    "name": "PK_parcela_grupo_detalle",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_grupo_detalle",
+    "name": "UX_pgd_parcela_campana",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_grupo_detalle",
+    "name": "UX_pgd_parcela_campana",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "plan_mensual_reporte_turno",
+    "name": "PK__plan_men__3213E83FA2D05BC2",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "sysdiagrams",
+    "name": "PK__sysdiagr__C2B05B6110CB29BC",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "diagram_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "sysdiagrams",
+    "name": "UK_principal_name",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "principal_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "sysdiagrams",
+    "name": "UK_principal_name",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Datos_conciliados_of_ver",
+    "name": "UX_DCOFver_run_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "run_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Datos_conciliados_of_ver",
+    "name": "UX_DCOFver_run_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "Fecha",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "factor_camiones_override_aplicacion_test",
+    "name": "PK_factor_camiones_override_aplicacion_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_override",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "produccion_diaria_parcela",
+    "name": "PK_produccion_diaria_parcela",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "campaña_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "produccion_diaria_parcela",
+    "name": "PK_produccion_diaria_parcela",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "produccion_diaria_parcela",
+    "name": "PK_produccion_diaria_parcela",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "peso_real_torre_turno",
+    "name": "PK__peso_rea__8EC639F2BAF373D6",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ID_Registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inv_sol_oxidos",
+    "name": "PK_inv_sol_oxidos",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "plan_semanal_reporte_turno",
+    "name": "PK__plan_sem__3213E83F0BFDDBED",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "avance_rotopala_override",
+    "name": "PK_avance_rotopala_override",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha_operacion",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "avance_rotopala_override",
+    "name": "PK_avance_rotopala_override",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "pad_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "material",
+    "name": "PK__material__3213E83F8C1E1299",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "material",
+    "name": "UQ__material__72AFBCC63DD6DEED",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nombre",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reporte_torre_oficial_cab",
+    "name": "PK_reporte_torre_oficial_cab",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_reporte",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reporte_torre_oficial_cab",
+    "name": "UX_rto_cab_mes_activo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "periodo_mes",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mapa_campana_modulo_parcela",
+    "name": "PK__mapa_cam__6FA1882F4D60DDFD",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_mapa",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela",
+    "name": "PK__parcela__3213E83FD67044CB",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_parcela",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela",
+    "name": "UQ_parcela_material_nombre",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id_pad",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela",
+    "name": "UQ_parcela_material_nombre",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "nombre",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela",
+    "name": "UQ_parcela_material_numero",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "id_pad",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela",
+    "name": "UQ_parcela_material_numero",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "numero",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_apilado",
+    "name": "PK__control___3213E83F07E65616",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle_diario",
+    "name": "pk_icc_detalle_diario",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle_diario",
+    "name": "uq_icc_dd_fec_cto_cel",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacional",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle_diario",
+    "name": "uq_icc_dd_fec_cto_cel",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "circuito",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_detalle_diario",
+    "name": "uq_icc_dd_fec_cto_cel",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "numero_celda",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_medicion_topografia_diaria",
+    "name": "PK_control_medicion_topografia_diaria",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha_operacion",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_medicion_topografia_diaria",
+    "name": "PK_control_medicion_topografia_diaria",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "pad_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_flujos",
+    "name": "PK_modelo_reconciliador_flujos",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "modelo_recon_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_flujos",
+    "name": "PK_modelo_reconciliador_flujos",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_flujo",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_flujos",
+    "name": "UQ_modelo_reconciliador_flujos_codigo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modelo_recon_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_flujos",
+    "name": "UQ_modelo_reconciliador_flujos_codigo",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "codigo_flujo",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_topografia",
+    "name": "PK_tum_top",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_topografia",
+    "name": "UQ_tum_top_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacional",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "informe_tum_topografia",
+    "name": "UQ_tum_top_bk",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_codigo",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "humedad_inicial_tm_periodo",
+    "name": "PK__humedad___3213E83F1AD8D22B",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reporte_torre_oficial_snapshot",
+    "name": "PK_reporte_torre_oficial_snapshot",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_reporte",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reporte_torre_oficial_snapshot",
+    "name": "PK_reporte_torre_oficial_snapshot",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "bloque",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "ajuste_manual",
+    "name": "PK_ajuste_manual",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ajuste_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_apilado_diario",
+    "name": "PK__control___3213E83F6B58B88C",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_diario",
+    "name": "PK__riego_di__3213E83F580ABABA",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_diario",
+    "name": "UQ_riego_parcela_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_diario",
+    "name": "UQ_riego_parcela_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Camiones1",
+    "name": "PK__Camiones__B801FD11B3567FD1",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "cam_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reporte_torre_oficial_detalle",
+    "name": "PK_reporte_torre_oficial_detalle",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_reporte",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reporte_torre_oficial_detalle",
+    "name": "PK_reporte_torre_oficial_detalle",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reporte_torre_oficial_detalle",
+    "name": "PK_reporte_torre_oficial_detalle",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Turno",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bm_import_fuentes",
+    "name": "PK__bm_impor__42DDD217A43CBF4E",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_import",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reglas_negocio_reporte",
+    "name": "PK__reglas_n__46D1C192E8737D12",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_regla",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reglas_negocio_reporte",
+    "name": "UX_reglas_negocio_reporte_codigo_regla",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "codigo_regla",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "lectura_recuperacion",
+    "name": "PK__lectura___3213E83F1CCEDD68",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "lectura_recuperacion",
+    "name": "UQ_lectura_parcela_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "lectura_recuperacion",
+    "name": "UQ_lectura_parcela_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo",
+    "name": "PK__control___3213E83F18F5032E",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Historico_Apilado_Diario",
+    "name": "PK_Historico_Apilado_Diario",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Datos_conciliados_of",
+    "name": "UX_Datos_conciliados_of_Fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Datos_conciliados_of",
+    "name": "PK_Datos_conciliados_of_dc_id",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "dc_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_nodos",
+    "name": "PK_modelo_reconciliador_nodos",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "modelo_recon_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_nodos",
+    "name": "PK_modelo_reconciliador_nodos",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_nodo",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "analitos_semilla_reporte_turno",
+    "name": "PK__analitos__3213E83F8F2DB931",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_reclamo_diario",
+    "name": "PK__control___3213E83F57B59475",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Humedades_ripios",
+    "name": "PK__Humedade__62A72E3AB4EEA6B2",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "hum_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "drena_cu_diario",
+    "name": "PK__drena_cu__3213E83FA3C68842",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "drena_cu_diario",
+    "name": "UQ_drena_parcela_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "drena_cu_diario",
+    "name": "UQ_drena_parcela_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parametros_dosis_acido",
+    "name": "PK__parametr__DA51B58C45557F04",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ID_Parametro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parametros_dosis_acido",
+    "name": "UK_Fecha_Vigencia",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "Fecha_Vigencia",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Historico_SRR_Diario",
+    "name": "PK_Historico_SRR_Diario",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_diario",
+    "name": "pk_icc_diario",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado_diario",
+    "name": "uq_icc_diario_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacional",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "calculo_diario",
+    "name": "PK_calculo_diario",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "calculo_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "calculo_diario",
+    "name": "UQ_cd",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_operacion",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "calculo_diario",
+    "name": "UQ_cd",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campaña_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "calculo_diario",
+    "name": "UQ_cd",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "modulo_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "conc_cu",
+    "name": "PK_conc_cu",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "conc_cu",
+    "name": "UX_conc_cu_fecha_registro",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bm_import_fuentes_campos",
+    "name": "PK__bm_impor__3213E83FD6B04729",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "control_modulo_ruteado",
+    "name": "PK__control___3213E83F4CF08121",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inventario_cobre_colgado",
+    "name": "PK_inventario_cobre_colgado",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana",
+    "name": "PK__campana__3213E83F19E42C5D",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana",
+    "name": "UQ_campana_parcela_numero",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campana",
+    "name": "UQ_campana_parcela_numero",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "numero_campana",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "limite_aporte",
+    "name": "PK_limite_aporte",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_limite",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "limite_aporte",
+    "name": "UX_limite_aporte",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "limite_aporte",
+    "name": "UX_limite_aporte",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "numero_campana",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "limite_aporte",
+    "name": "UX_limite_aporte",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bm_import_fuentes_columnas",
+    "name": "PK__bm_impor__D696717017DAB78A",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_col",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Control_Factor_Ajuste_Camiones",
+    "name": "PK_Control_Factor_Ajuste_Camiones",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Reporte_Sal",
+    "name": "PK__Reporte___FEF11768B6A49FF2",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "sal_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "inv_solucion_ew",
+    "name": "PK_inv_solucion_ew",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_matriz_solver",
+    "name": "PK_modelo_reconciliador_matriz_solver",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "modelo_recon_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_matriz_solver",
+    "name": "PK_modelo_reconciliador_matriz_solver",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "solver_node_index",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_matriz_solver",
+    "name": "PK_modelo_reconciliador_matriz_solver",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "codigo_flujo",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "cu_riego_diario",
+    "name": "PK__cu_riego__3213E83FDD947419",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "cu_riego_diario",
+    "name": "UQ_curiego_material_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "material_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "cu_riego_diario",
+    "name": "UQ_curiego_material_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "SRR_Reporte",
+    "name": "PK__SRR_Repo__83E711B31E8242BA",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "srr_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "log_ejecucion",
+    "name": "PK_log_ejecucion",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "ejecucion_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "produccion_catodica",
+    "name": "PK_produccion_catodica",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "produccion_catodica",
+    "name": "UX_produccion_catodica_fecha_registro",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Datos_conciliados_of_ajustado_test",
+    "name": "PK_Datos_conciliados_of_ajustado_test",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_tk_niveles",
+    "name": "PK_sx_tk_niveles_v1_20260620",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "sx_tk_niveles",
+    "name": "UQ_sx_tk_niveles_fecha_registro_v1_20260620",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "django_migrations",
+    "name": "PK__django_m__3213E83F12ABCFF6",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "produccion_planta",
+    "name": "PK__producci__3213E83FB72A8D53",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "produccion_planta",
+    "name": "UQ__producci__E11413227209387D",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "casos_balance",
+    "name": "PK__casos_ba__52CA99D20C43F0B4",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "caso_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "curvas_por_ciclo",
+    "name": "PK_curvas_por_ciclo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "curvas_por_ciclo",
+    "name": "PK_curvas_por_ciclo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "numero_campana",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "curvas_por_ciclo",
+    "name": "PK_curvas_por_ciclo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "parcela_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "curvas_por_ciclo",
+    "name": "PK_curvas_por_ciclo",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "dia_lixiviacion",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "alembic_version",
+    "name": "PK__alembic___26393C98B672973D",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "version_num",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "flujos_reales_oxido",
+    "name": "PK_flujos_reales_oxido",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_flujo_real",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balances_flujos_resultados",
+    "name": "PK__balances__DB245A1A706F5038",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "caso_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balances_flujos_resultados",
+    "name": "PK__balances__DB245A1A706F5038",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha_inicio",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balances_flujos_resultados",
+    "name": "PK__balances__DB245A1A706F5038",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha_fin",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "balances_flujos_resultados",
+    "name": "PK__balances__DB245A1A706F5038",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "codigo_flujo",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "django_content_type",
+    "name": "PK__django_c__3213E83F35B02180",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "django_content_type",
+    "name": "django_content_type_app_label_model_76bd3d3b_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "app_label",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "django_content_type",
+    "name": "django_content_type_app_label_model_76bd3d3b_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "model",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Data_balance_rec",
+    "name": "PK__Data_bal__49BF004D1505C8CA",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "bm_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana",
+    "name": "PK_parcela_campana",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana",
+    "name": "PK_parcela_campana",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "numero_campana",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "parcela_campana",
+    "name": "PK_parcela_campana",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "parcela_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "reclamo",
+    "table_name": "log_sincronizacion",
+    "name": "PK_log_sincronizacion",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "sync_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "dim_torre",
+    "name": "PK__dim_torr__1B4EA1ED784CFC8B",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "Torre",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "flujos_reales_sulfuro",
+    "name": "PK_flujos_reales_sulfuro",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_flujo_real",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "parcela_campana_base",
+    "name": "pk_parcela_campana_base",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_base",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "parcela_campana_base",
+    "name": "uq_base_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "parcela_campana_base",
+    "name": "uq_base_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "parcela_campana_base",
+    "name": "uq_base_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campana_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "bitacora_operacion",
+    "name": "PK__bitacora__7E4268B05A2C96D3",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_bitacora",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "status",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "priority",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "queuing_order",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_group_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_handle",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "status",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "priority",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "queuing_order",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_group_id",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_handle",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_1977058079",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "service_id",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_permission",
+    "name": "PK__auth_per__3213E83F458F3C33",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_permission",
+    "name": "auth_permission_content_type_id_codename_01ab375a_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "content_type_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_permission",
+    "name": "auth_permission_content_type_id_codename_01ab375a_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "codename",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "data_produccion_catodica",
+    "name": "PK_data_produccion_catodica",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "data_produccion_catodica",
+    "name": "UX_data_produccion_catodica_numero_lote",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "numero_lote",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "mov_cam",
+    "name": "PK__mov_cam___D1BE75C7BD958B25",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "mov_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "calendario",
+    "name": "PK__calendar__E1141323EE1849A3",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "fecha",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "riego_concentrados_oxido",
+    "name": "PK_riego_concentrados_oxido",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reconciliacion_run",
+    "name": "PK__reconcil__3213E83F382C5693",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "campaña",
+    "name": "PK__campaña__CB5EF0B172403C6A",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_campaña",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "status",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "priority",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "queuing_order",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_group_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_handle",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "status",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "priority",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "queuing_order",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_group_id",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_handle",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2009058193",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "service_id",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_group",
+    "name": "PK__auth_gro__3213E83FD0277D95",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_group",
+    "name": "UQ__auth_gro__72E12F1B0E2EEE40",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "name",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "modelo_reconciliador_reglas_solver",
+    "name": "PK__modelo_r__344A2355EEF6A127",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "regla_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "status",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "priority",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "queuing_order",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_group_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_clustered_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_handle",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "status",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "priority",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "queuing_order",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_group_id",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "conversation_handle",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "queue_messages_2041058307",
+    "name": "queue_secondary_index",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "service_id",
+    "key_ordinal": 6
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "parcela_campana_cinetica",
+    "name": "pk_parcela_campana_cinetica",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_cinetica",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "parcela_campana_cinetica",
+    "name": "uq_cinetica_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "pad_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "parcela_campana_cinetica",
+    "name": "uq_cinetica_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "parcela_campana_cinetica",
+    "name": "uq_cinetica_key",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "campana_id",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "import_leyes_torres",
+    "name": "PK__import_l__3213E83F6ADA5C2D",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "filestream_tombstone_2073058421",
+    "name": "FSTSClusIdx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "oplsn_fseqno",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "filestream_tombstone_2073058421",
+    "name": "FSTSClusIdx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "oplsn_bOffset",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "filestream_tombstone_2073058421",
+    "name": "FSTSClusIdx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "oplsn_slotid",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_group_permissions",
+    "name": "PK__auth_gro__3213E83F4791856B",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_group_permissions",
+    "name": "auth_group_permissions_group_id_permission_id_0cd325b0_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "group_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_group_permissions",
+    "name": "auth_group_permissions_group_id_permission_id_0cd325b0_uniq",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "permission_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reconciliacion_detalle",
+    "name": "PK__reconcil__3213E83F04DE8C6D",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscommittab",
+    "name": "ci_commit_ts",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "commit_ts",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscommittab",
+    "name": "ci_commit_ts",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "xdes_id",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscommittab",
+    "name": "si_xdes_id",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "xdes_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "syscommittab",
+    "name": "si_xdes_id",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "dbfragid",
+    "key_ordinal": 0
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "data_calidad_catodica",
+    "name": "PK_data_calidad_catodica",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_registro",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "data_calidad_catodica",
+    "name": "UX_data_calidad_catodica_lote_muestra",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "lote_muestra",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "import_granulometria_torres",
+    "name": "PK__import_g__3213E83F6EE17332",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "filetable_updates_2105058535",
+    "name": "FFtUpdateIdx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "table_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "filetable_updates_2105058535",
+    "name": "FFtUpdateIdx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "oplsn_fseqno",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "filetable_updates_2105058535",
+    "name": "FFtUpdateIdx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "oplsn_bOffset",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "filetable_updates_2105058535",
+    "name": "FFtUpdateIdx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "oplsn_slotid",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "sys",
+    "table_name": "filetable_updates_2105058535",
+    "name": "FFtUpdateIdx",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "item_guid",
+    "key_ordinal": 5
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_user",
+    "name": "PK__auth_use__3213E83FC76D1C1D",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "dbo",
+    "table_name": "auth_user",
+    "name": "UQ__auth_use__F3DBC5725EDEEEB3",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "username",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_equipo",
+    "name": "PK_ce",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "equipo_codigo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_equipo",
+    "name": "UQ_ce_origen",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "informe_tipo",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "contingencia_equipo",
+    "name": "UQ_ce_origen",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "equipo_nombre",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "datos_filtrados",
+    "name": "PK__datos_fi__95283FF099D93431",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_data",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "reconciliacion_detalle_dia",
+    "name": "PK__reconcil__3213E83FB5300A9C",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "historial_desbalances",
+    "name": "PK__historia__3213E83F5FD39E0C",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "historial_desbalances",
+    "name": "UQ_hist",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "caso_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "historial_desbalances",
+    "name": "UQ_hist",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_inicio",
+    "key_ordinal": 2
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "historial_desbalances",
+    "name": "UQ_hist",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "fecha_fin",
+    "key_ordinal": 3
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "historial_desbalances",
+    "name": "UQ_hist",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "area",
+    "key_ordinal": 4
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Recuperaciones_pad",
+    "name": "PK__Recupera__6ABE6F083547BBA8",
+    "is_unique": true,
+    "is_primary_key": true,
+    "column_name": "id_rec",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Recuperaciones_pad",
+    "name": "UX_Recuperaciones_pad_parcela_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "parcela_id",
+    "key_ordinal": 1
+  },
+  {
+    "schema_name": "inventar_SpcHidr",
+    "table_name": "Recuperaciones_pad",
+    "name": "UX_Recuperaciones_pad_parcela_fecha",
+    "is_unique": true,
+    "is_primary_key": false,
+    "column_name": "Fecha_drenaje",
+    "key_ordinal": 2
+  }
+]

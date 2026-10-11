@@ -1,0 +1,46 @@
+{
+  "baseline": "C:\\Users\\nimun\\Downloads\\Analisis_Torres_de_Muestreo_20260801_20260831 (1).xlsx",
+  "baseline_sha256": "7dfc456e64a9bd711084fff58d7bc011d23238210815b66da58a48269e7e8c7d",
+  "existing_sheets": {
+    "Reporte por Turno": [
+      86,
+      42
+    ],
+    "Generador Reporte": [
+      54,
+      42
+    ],
+    "Malla #100": [
+      1,
+      1
+    ],
+    "Curva Granulométrica": [
+      70,
+      21
+    ],
+    "Clays-CuFe": [
+      126,
+      11
+    ],
+    "Trazabilidad Analitos": [
+      131,
+      31
+    ]
+  },
+  "rows_srr": 62,
+  "dates_srr": 31,
+  "fetch_seconds": 0.28821699999753037,
+  "controls": [
+    1,
+    8,
+    21,
+    22,
+    23,
+    31
+  ],
+  "regression": "OK",
+  "tmh": "VALIDADO",
+  "tmh_max_diferencia": 1.4551915228366852e-11,
+  "dias_factor_distinto_uno": 12,
+  "target": "C:\\Users\\nimun\\OneDrive\\Documentos\\GitHub\\DashReportabilidadSIIR\\report_export\\exports\\Analisis_Torres_de_Muestreo_20260801_20260831.xlsx"
+}

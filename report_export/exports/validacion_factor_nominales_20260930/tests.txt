@@ -1,0 +1,5 @@
+venv\Scripts\python.exe -B -m pytest -p no:cacheprovider monitor_pi_tum/test_parametros_camiones.py monitor_pi_tum/test_limites_camiones.py monitor_pi_tum/test_factor_camiones.py monitor_pi_tum/test_override_camiones.py scripts/test_factor_nominales_sql.py report_export/tests/test_rutas_factor_balance.py report_export/tests/test_datos_conciliados_excel.py report_export/tests/test_orquestacion_reporte_turno.py report_export/tests/test_paquete_reporte_turno.py -q
+114 passed, 50 subtests passed in 16.94s
+42840 DeprecationWarning preexistentes de openpyxl copy en export_to_excel.py.
+SQL: 10 escenarios del resolutor, 8 rechazos, temporalidad/independencia/seis decimales, pendiente/desaparicion, INSERT EXEC principal/standalone, casos reales, concurrencia pre/post, dos pruebas integrales ROLLBACK, COMMIT verificado y rollback-check verificado.
+UI: callbacks con lecturas reales DEV y modal sin escritura; no verificacion visual en navegador.

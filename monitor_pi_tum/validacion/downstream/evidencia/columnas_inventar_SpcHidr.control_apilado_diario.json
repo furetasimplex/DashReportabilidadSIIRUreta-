@@ -1,0 +1,54 @@
+[
+  {
+    "name": "id",
+    "tipo": "int"
+  },
+  {
+    "name": "campaña",
+    "tipo": "float"
+  },
+  {
+    "name": "modulo",
+    "tipo": "float"
+  },
+  {
+    "name": "volumen_total_estimado_m3",
+    "tipo": "float"
+  },
+  {
+    "name": "volumen_diario_m3",
+    "tipo": "float"
+  },
+  {
+    "name": "volumen_acumulado_final_apilado_m3",
+    "tipo": "float"
+  },
+  {
+    "name": "avance_porcentaje",
+    "tipo": "float"
+  },
+  {
+    "name": "altura_promedio_m",
+    "tipo": "float"
+  },
+  {
+    "name": "promedio_grado",
+    "tipo": "float"
+  },
+  {
+    "name": "fecha",
+    "tipo": "datetime"
+  },
+  {
+    "name": "pad_id",
+    "tipo": "int"
+  },
+  {
+    "name": "modulo_id",
+    "tipo": "int"
+  },
+  {
+    "name": "campaña_id",
+    "tipo": "int"
+  }
+]

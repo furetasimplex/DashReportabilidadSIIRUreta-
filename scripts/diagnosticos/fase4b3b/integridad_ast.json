@@ -1,0 +1,16 @@
+{
+  "report_export/report_export.py": [
+    "fetch_balance_chancado_report",
+    "fetch_datos_conciliados_emision_report",
+    "fetch_factor_ajuste_camiones_report",
+    "preparar_paquete_datos_conciliados_emision",
+    "refrescar_dependencias_datos_conciliados_emision"
+  ],
+  "report_export/callbacks/reportabilidad_cb.py": [
+    "exportar_excel",
+    "generar_reporte"
+  ],
+  "SQL_fetches_identico": true,
+  "callbacks_fuera_de_prod_identicos": true,
+  "generar_pdf_identico_pre_4b3b": true
+}

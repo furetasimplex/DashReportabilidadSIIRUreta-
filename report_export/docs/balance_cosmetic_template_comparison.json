@@ -1,0 +1,16 @@
+{
+  "before": "report_export/exports/cosmetic_baseline/Template_before.xlsx",
+  "after": "reporte/Template_Balance_Planta_Hidrometalurgia.xlsx",
+  "parts": 66,
+  "formula_count": 2774,
+  "business_formulas_changed": 0,
+  "data_values_changed": 0,
+  "drawingml_changed": 0,
+  "authorized_ref_errors": 3,
+  "changed_parts": [
+    "xl/worksheets/sheet7.xml",
+    "xl/worksheets/sheet8.xml",
+    "xl/worksheets/sheet9.xml",
+    "xl/sharedStrings.xml"
+  ]
+}

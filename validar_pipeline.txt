@@ -1,0 +1,35 @@
+====================================================================================================
+1) inventar_SpcHidr.casos_balance -- existe? cuantas filas? caso_id=70?
+====================================================================================================
+ERROR: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'inventar_SpcHidr.casos_balance'. (208) (SQLExecDirectW)")
+[SQL: SELECT * FROM inventar_SpcHidr.casos_balance]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+====================================================================================================
+2) DEV_SIIR.hidro.recon_caso -- para comparar caso_id=70 (existe alli?)
+====================================================================================================
+(no existe id=70 en recon_caso)
+
+====================================================================================================
+3) inventar_SpcHidr.rep_prod_ajuste_log -- historial de corridas
+====================================================================================================
+ERROR (probando sin ts_inicio): (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'inventar_SpcHidr.rep_prod_ajuste_log'. (208) (SQLExecDirectW)")
+[SQL: SELECT * FROM inventar_SpcHidr.rep_prod_ajuste_log ORDER BY ts_inicio DESC]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+ERROR: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'inventar_SpcHidr.rep_prod_ajuste_log'. (208) (SQLExecDirectW)")
+[SQL: SELECT * FROM inventar_SpcHidr.rep_prod_ajuste_log]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+====================================================================================================
+4) inventar_SpcHidr.Data_balance_rec para caso_id=70
+====================================================================================================
+ERROR: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'inventar_SpcHidr.Data_balance_rec'. (208) (SQLExecDirectW)")
+[SQL: SELECT * FROM inventar_SpcHidr.Data_balance_rec WHERE caso_id = 70 ORDER BY Flujo]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+====================================================================================================
+5) inventar_SpcHidr.rep_prod_ajustado para caso_id=70 (TOP 5 mas reciente)
+====================================================================================================
+ERROR: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'inventar_SpcHidr.rep_prod_ajustado'. (208) (SQLExecDirectW)")
+[SQL: SELECT TOP 5 * FROM inventar_SpcHidr.rep_prod_ajustado WHERE caso_id = 70 ORDER BY Fecha DESC]
+(Background on this error at: https://sqlalche.me/e/20/f405)

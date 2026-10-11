@@ -1,0 +1,45 @@
+ M definiciones_pipeline.txt
+ M monitor_pi_tum/db.py
+ M monitor_pi_tum/panel.py
+ M pipeline_completo.txt
+ M rastreo_escritor.txt
+ M reclamo/db.py
+ M report_export/export_to_excel.py
+ M report_export/report_export.py
+ M report_export/tests/test_datos_conciliados_excel.py
+ M report_export/tests/test_orquestacion_reporte_turno.py
+ M report_export/tests/test_paquete_reporte_turno.py
+ M report_export/tests/test_reconst_mod_srr.py
+ M test_definiciones_pipeline.py
+ M test_pipeline_completo.py
+ M validar_pipeline.txt
+?? docs/diagnosticos/
+?? docs/migrations/factor_camiones_fase2a/
+?? docs/migrations/srr_cap_prefactor_dev/
+?? monitor_pi_tum/ENTREGA_FACTOR_CAMIONES_FASE1.md
+?? monitor_pi_tum/factor_camiones_panel.py
+?? monitor_pi_tum/limites_camiones_panel.py
+?? monitor_pi_tum/override_camiones_panel.py
+?? monitor_pi_tum/test_factor_camiones.py
+?? monitor_pi_tum/test_limites_camiones.py
+?? monitor_pi_tum/test_override_camiones.py
+?? monitor_pi_tum/test_override_dev_reversible.py
+?? release/
+?? report_export/exports/auditoria_ley_srr_202609/
+?? report_export/exports/auditoria_rutas_factor_20260929/
+?? report_export/exports/balance_presentacion_20260929/
+?? report_export/exports/factor_encabezado_20260929/
+?? report_export/exports/factor_grupos_20260929/
+?? report_export/exports/factor_presentacion_20260929/
+?? report_export/tests/test_rutas_factor_balance.py
+?? "reporte/Datos Conciliados Septiembre 2026_RevPI SRR(3) (1).xlsm"
+?? scripts/deploy_srr_cap_prefactor_dev.py
+?? scripts/diagnosticos/calendario_rto_dev/evidencia_final/
+?? scripts/factor_camiones_fase2a.py
+?? scripts/inspect_factor_camiones_fase2a.py
+?? scripts/test_factor_camiones_fase2a.py
+?? scripts/validate_factor_camiones_fase2a_baseline.py
+?? scripts/validate_factor_camiones_fase2a_concurrency.py
+?? scripts/validate_limites_camiones_ui_dev.py
+?? scripts/validate_srr_cap_prefactor_dev.py
+?? test_factor_limites_dev_reversible.py

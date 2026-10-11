@@ -1,0 +1,442 @@
+[
+  {
+    "name": "Fecha",
+    "column_id": 1,
+    "tipo": "date",
+    "max_length": 3,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Flag_Apilado_Valido",
+    "column_id": 2,
+    "tipo": "int",
+    "max_length": 4,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Flag_TMS_Valido",
+    "column_id": 3,
+    "tipo": "int",
+    "max_length": 4,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Observacion_TMS",
+    "column_id": 4,
+    "tipo": "varchar",
+    "max_length": 34,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Factor_Ajuste_Camiones_Usado",
+    "column_id": 5,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Humedad_TM1",
+    "column_id": 6,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Humedad_TM2",
+    "column_id": 7,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Humedad_Equivalente_Dia",
+    "column_id": 8,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Fecha_Humedad_TM1",
+    "column_id": 9,
+    "tipo": "date",
+    "max_length": 3,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Torre_Humedad_TM1",
+    "column_id": 10,
+    "tipo": "varchar",
+    "max_length": 20,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Turno_Humedad_TM1",
+    "column_id": 11,
+    "tipo": "varchar",
+    "max_length": 10,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Fuente_Humedad_TM1",
+    "column_id": 12,
+    "tipo": "varchar",
+    "max_length": 23,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Fecha_Humedad_TM2",
+    "column_id": 13,
+    "tipo": "date",
+    "max_length": 3,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Torre_Humedad_TM2",
+    "column_id": 14,
+    "tipo": "varchar",
+    "max_length": 20,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Turno_Humedad_TM2",
+    "column_id": 15,
+    "tipo": "varchar",
+    "max_length": 10,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "Fuente_Humedad_TM2",
+    "column_id": 16,
+    "tipo": "varchar",
+    "max_length": 23,
+    "precision": 0,
+    "scale": 0
+  },
+  {
+    "name": "TMH_TM1_Con_Sal_SRR_A",
+    "column_id": 17,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMH_TM1_Con_Sal_SRR_B",
+    "column_id": 18,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMH_TM2_Con_Sal_SRR_A",
+    "column_id": 19,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMH_TM2_Con_Sal_SRR_B",
+    "column_id": 20,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMH_Total_Con_Sal_SRR_A",
+    "column_id": 21,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMH_Total_Con_Sal_SRR_B",
+    "column_id": 22,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMH_Total_Con_Sal_SRR_Dia",
+    "column_id": 23,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_TM1_Con_Sal_SRR_A",
+    "column_id": 24,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_TM1_Con_Sal_SRR_B",
+    "column_id": 25,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_TM2_Con_Sal_SRR_A",
+    "column_id": 26,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_TM2_Con_Sal_SRR_B",
+    "column_id": 27,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_Total_Con_Sal_SRR_A",
+    "column_id": 28,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_Total_Con_Sal_SRR_B",
+    "column_id": 29,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_Total_Con_Sal_SRR_Dia",
+    "column_id": 30,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Pesometros_TA",
+    "column_id": 31,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Pesometros_TB",
+    "column_id": 32,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Pesometros_Dia",
+    "column_id": 33,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Topografia_Dia",
+    "column_id": 34,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Flag_Sal_Basica_Valida",
+    "column_id": 35,
+    "tipo": "int",
+    "max_length": 4,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Flag_Sal_Ajuste_Valido",
+    "column_id": 36,
+    "tipo": "int",
+    "max_length": 4,
+    "precision": 10,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Ajustada_TA",
+    "column_id": 37,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Ajustada_TB",
+    "column_id": 38,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Ajustada_Dia",
+    "column_id": 39,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Asignada_TM1_A",
+    "column_id": 40,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Asignada_TM2_A",
+    "column_id": 41,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Asignada_TM1_B",
+    "column_id": 42,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Asignada_TM2_B",
+    "column_id": 43,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Distribuida_A",
+    "column_id": 44,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Sal_Distribuida_B",
+    "column_id": 45,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_TM1_Sin_Sal_Con_SRR_A",
+    "column_id": 46,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_TM1_Sin_Sal_Con_SRR_B",
+    "column_id": 47,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_TM2_Sin_Sal_Con_SRR_A",
+    "column_id": 48,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_TM2_Sin_Sal_Con_SRR_B",
+    "column_id": 49,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_Total_Sin_Sal_Con_SRR_A",
+    "column_id": 50,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_Total_Sin_Sal_Con_SRR_B",
+    "column_id": 51,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_Total_Sin_Sal_Con_SRR_Dia",
+    "column_id": 52,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "TMS_Total_Sin_Sal_Con_SRR_Dia_Check",
+    "column_id": 53,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Check_Sal_A",
+    "column_id": 54,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  },
+  {
+    "name": "Check_Sal_B",
+    "column_id": 55,
+    "tipo": "float",
+    "max_length": 8,
+    "precision": 53,
+    "scale": 0
+  }
+]

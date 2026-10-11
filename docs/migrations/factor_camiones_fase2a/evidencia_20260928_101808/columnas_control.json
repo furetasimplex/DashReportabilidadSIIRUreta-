@@ -1,0 +1,366 @@
+[
+  {
+    "name": "Fecha",
+    "tipo": "date",
+    "precision": 10,
+    "scale": 0,
+    "is_nullable": false
+  },
+  {
+    "name": "Limite_KOM_TMH_Viaje",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": false
+  },
+  {
+    "name": "Limite_CAT_TMH_Viaje",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": false
+  },
+  {
+    "name": "Apilado_TMH_Bruto_Original",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Apilado_TMH_Neto_Original",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Sal_TMH_Dia",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Humedad_Pct",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Apilado_TMS_Bruto_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Apilado_TMS_Neto_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Inventario_Chancado_TMS_Actual",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Inventario_Chancado_TMS_Anterior",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Delta_Inventario_Chancado_TMS",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Flag_Continuidad_Diaria",
+    "tipo": "bit",
+    "precision": 1,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Flag_Inventario_Valido",
+    "tipo": "bit",
+    "precision": 1,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Flag_Humedad_Valida",
+    "tipo": "bit",
+    "precision": 1,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "SRR_TMS_Turno_A",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "SRR_TMS_Turno_B",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "SRR_TMS_Dia",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Mineral_Chancado_TMS_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Chancado_TMS_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Chancado_TMH_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Produccion_KOM_TMH",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Produccion_CAT_TMH",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Dato_Mina_TMH",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Vueltas_KOM",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Vueltas_CAT",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Participacion_KOM",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Participacion_CAT",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Chancado_KOM_TMH_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Chancado_CAT_TMH_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Carga_CAT_TMH_Viaje_Sin_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "KOM_TMH_Corregido",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "CAT_TMH_Corregido",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Chancado_TMH_Corregido_Total",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Factor_Ajuste",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Flag_Factor_Ajuste_Valido",
+    "tipo": "bit",
+    "precision": 1,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Estado_Calculo",
+    "tipo": "varchar",
+    "precision": 0,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Apilado_TMH_Bruto_Ajustado",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Apilado_TMS_Bruto_Ajustado",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Mineral_Chancado_TMS_Ajustado",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Chancado_TMS_Ajustado",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Apilado_TMH_Neto_Ajustado",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Apilado_TMS_Neto_Ajustado",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Cantidad_Registros_Originales",
+    "tipo": "int",
+    "precision": 10,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Cantidad_Registros_Validos",
+    "tipo": "int",
+    "precision": 10,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Cantidad_Duplicados_Eliminados",
+    "tipo": "int",
+    "precision": 10,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Check_TMH_Bruto",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Check_Produccion_Flotas",
+    "tipo": "float",
+    "precision": 53,
+    "scale": 0,
+    "is_nullable": true
+  },
+  {
+    "name": "Metodo",
+    "tipo": "varchar",
+    "precision": 0,
+    "scale": 0,
+    "is_nullable": false
+  },
+  {
+    "name": "Fuente_Camiones",
+    "tipo": "varchar",
+    "precision": 0,
+    "scale": 0,
+    "is_nullable": false
+  },
+  {
+    "name": "Fecha_Calculo",
+    "tipo": "datetime2",
+    "precision": 27,
+    "scale": 7,
+    "is_nullable": false
+  }
+]

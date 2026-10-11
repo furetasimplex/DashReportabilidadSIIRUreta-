@@ -1,0 +1,195 @@
+{
+  "source": "C:\\Users\\nimun\\OneDrive\\Escritorio\\Simplex\\Balance Modelo Hidrometalurgia\\Template_Balance_Planta_Hidrometalurgia(3).xlsx",
+  "input_sha256": "f1b7e6073a386c3f26df1d55ae858acbefc041b190a0ac72b3bf8adffac64a44",
+  "output_sha256": "340B4CFD40B51E8D4E748BD1C2988F5D8BD2BDD68AF5FA13ACE99F513C273302",
+  "formulas": 2774,
+  "analysis_formulas": 1080,
+  "changed_parts": [
+    "xl/sharedStrings.xml",
+    "xl/drawings/drawing1.xml",
+    "xl/drawings/drawing2.xml",
+    "xl/drawings/drawing3.xml"
+  ],
+  "corrections": [
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Macro Proceso / Balance Planta Hidrometalurgia",
+      "after": "Macroproceso / Balance Planta Hidrometalurgia"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Transferencia neta Cu en PAD/ Produccion catodica",
+      "after": "Transferencia neta Cu en PAD/ Producción catódica"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Transferencia neta Cu en SX / Produccion catodica",
+      "after": "Transferencia neta Cu en SX / Producción catódica"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Transferencia neta Cu en EW/ Produccion catodica",
+      "after": "Transferencia neta Cu en EW/ Producción catódica"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Variacion",
+      "after": "Variación"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Balance Producción Cátodica",
+      "after": "Balance Producción Catódica"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Días del periodo",
+      "after": "Días del período"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Dias acumulados",
+      "after": "Días acumulados"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "dias",
+      "after": "días"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Acido Súlfurico Total",
+      "after": "Ácido Sulfúrico Total"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Perdidas por Humedad PAD Total",
+      "after": "Pérdidas por Humedad PAD Total"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Perdidas por Evaporación PAD Total",
+      "after": "Pérdidas por Evaporación PAD Total"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Perdidas por Evaporación Pisicinas ILS Total",
+      "after": "Pérdidas por Evaporación Piscinas ILS Total"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": " [dias]",
+      "after": " [días]"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Mineral Apilado al PAD Sulfúros",
+      "after": "Mineral Apilado al PAD Sulfuros"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Cobre Fino Apilado al PAD Sulfúros",
+      "after": "Cobre Fino Apilado al PAD Sulfuros"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Ley Cobre Apilado al PAD Sulfúros",
+      "after": "Ley Cobre Apilado al PAD Sulfuros"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Recuperación Lixiviacion PAD Óxidos",
+      "after": "Recuperación Lixiviación PAD Óxidos"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Recuperación Lixiviacion PAD Sulfúros",
+      "after": "Recuperación Lixiviación PAD Sulfuros"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Extracción de cobre en SX TA-TB-TC-TD Sulfúros",
+      "after": "Extracción de cobre en SX TA-TB-TC-TD Sulfuros"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Produccion Cátodica",
+      "after": "Producción Catódica"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "[kg/ton catodo]",
+      "after": "[kg/ton cátodo]"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": " [m3/ton catodo]",
+      "after": " [m3/ton cátodo]"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Recuperación Lixiviacion PAD Óxidos ",
+      "after": "Recuperación Lixiviación PAD Óxidos "
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Produccion Cátodico",
+      "after": "Producción Catódico"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Consumo de acido sulfúrico en SX",
+      "after": "Consumo de ácido sulfúrico en SX"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Consumo de acido sulfúrico en aglomerado por tonelada de mineral",
+      "after": "Consumo de ácido sulfúrico en aglomerado por tonelada de mineral"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Perdidas por Evaporación Pisicinas PLS-DPLS Total",
+      "after": "Pérdidas por Evaporación Piscinas PLS-DPLS Total"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Perdidas por Evaporación Pisicinas Refino-Feed DUMP Total",
+      "after": "Pérdidas por Evaporación Piscinas Refino-Feed DUMP Total"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Periodo 01 al 23 de Agosto",
+      "after": "Período 01 al 23 de Agosto"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Periodo 01 al 23",
+      "after": "Período 01 al 23"
+    },
+    {
+      "part": "xl/sharedStrings.xml",
+      "before": "Produccion catodica (tmf)",
+      "after": "Producción catódica (tmf)"
+    },
+    {
+      "part": "xl/drawings/drawing1.xml",
+      "before": "Periodo:",
+      "after": "Período:"
+    },
+    {
+      "part": "xl/drawings/drawing2.xml",
+      "before": "Periodo: 01 al 23",
+      "after": "Período: 01 al 23"
+    },
+    {
+      "part": "xl/drawings/drawing3.xml",
+      "before": "Periodo: 01 al ",
+      "after": "Período: 01 al "
+    },
+    {
+      "part": "xl/drawings/drawing3.xml",
+      "before": "Espaciado del cuadro de período",
+      "after": "Período: 01 al 23 de Agosto 2026."
+    }
+  ]
+}

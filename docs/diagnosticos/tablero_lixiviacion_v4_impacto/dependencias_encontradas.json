@@ -1,0 +1,249 @@
+[
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_riego_oxido_refino_base",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "riego_concentrados_oxido"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_riego_sulfuro_refino_base",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "riego_concentrados_sulfuro"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_tablero_lixiviacion_final",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "campana_parcela_control"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_tablero_lixiviacion_final",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "vw_drena_concentrados_oxido_long"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_tablero_lixiviacion_final",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "vw_drena_concentrados_sulfuro_long"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_tablero_lixiviacion_final",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "vw_flujos_reales_oxido_long"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_tablero_lixiviacion_final",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "vw_flujos_reales_sulfuro_long"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_tablero_lixiviacion_final",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "vw_riego_oxido_refino_base"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_tablero_lixiviacion_final",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "vw_riego_sulfuro_refino_base"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_drena_concentrados_oxido_long",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "drena_concentrados_oxido"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_drena_concentrados_sulfuro_long",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "drena_concentrados_sulfuro"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_drena_concentrados_oxido_parcela",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "vw_drena_concentrados_oxido_long"
+    }
+  },
+  {
+    "archivo": "report_export/exports/diagnostico_fase4/dependencias.json",
+    "registro": {
+      "esquema": "inventar_SpcHidr",
+      "consumidor": "vw_drena_concentrados_sulfuro_parcela",
+      "base": null,
+      "destino_esquema": "inventar_SpcHidr",
+      "destino": "vw_drena_concentrados_sulfuro_long"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_riego_oxido_refino_base",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "riego_concentrados_oxido"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_riego_sulfuro_refino_base",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "riego_concentrados_sulfuro"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_tablero_lixiviacion_final",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "campana_parcela_control"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_tablero_lixiviacion_final",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "vw_drena_concentrados_oxido_long"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_tablero_lixiviacion_final",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "vw_drena_concentrados_sulfuro_long"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_tablero_lixiviacion_final",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "vw_flujos_reales_oxido_long"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_tablero_lixiviacion_final",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "vw_flujos_reales_sulfuro_long"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_tablero_lixiviacion_final",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "vw_riego_oxido_refino_base"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_tablero_lixiviacion_final",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "vw_riego_sulfuro_refino_base"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_drena_concentrados_oxido_long",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "drena_concentrados_oxido"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_drena_concentrados_sulfuro_long",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "drena_concentrados_sulfuro"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_drena_concentrados_oxido_parcela",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "vw_drena_concentrados_oxido_long"
+    }
+  },
+  {
+    "archivo": "monitor_pi_tum/validacion/downstream/evidencia/dependencias.json",
+    "registro": {
+      "consumidor": "inventar_SpcHidr.vw_drena_concentrados_sulfuro_parcela",
+      "base": null,
+      "esquema": "inventar_SpcHidr",
+      "objeto": "vw_drena_concentrados_sulfuro_long"
+    }
+  }
+]

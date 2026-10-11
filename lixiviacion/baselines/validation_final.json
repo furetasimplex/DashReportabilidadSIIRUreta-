@@ -1,0 +1,43 @@
+{
+  "pytest": "67 PASS",
+  "changed_previous_files": [
+    "lixiviacion\\README.md"
+  ],
+  "evidence": [
+    {
+      "file": "lixiviacion\\test_evidence\\regression_diagnostic_20261006T010401150918Z_085692de.json",
+      "type": "REGRESSION_TEST",
+      "passed": true
+    },
+    {
+      "file": "lixiviacion\\test_evidence\\smoke_current_map_20261006T003859057327Z_4a883442.json",
+      "type": "CURRENT_SMOKE",
+      "passed": true
+    },
+    {
+      "file": "lixiviacion\\test_evidence\\smoke_current_map_20261006T011955885090Z_9c024c3e.json",
+      "type": "CURRENT_SMOKE",
+      "passed": true
+    },
+    {
+      "file": "lixiviacion\\test_evidence\\smoke_current_modules_20261006T005236015217Z_fccbc694.json",
+      "type": "CURRENT_SMOKE",
+      "passed": true
+    },
+    {
+      "file": "lixiviacion\\test_evidence\\smoke_current_modules_20261006T010732544400Z_06f0ccc8.json",
+      "type": "CURRENT_SMOKE",
+      "passed": false
+    },
+    {
+      "file": "lixiviacion\\test_evidence\\smoke_current_modules_20261006T011622690595Z_cefb2e3f.json",
+      "type": "CURRENT_SMOKE",
+      "passed": true
+    },
+    {
+      "file": "lixiviacion\\test_evidence\\smoke_current_v2_20261006T003835554310Z_42c524a6.json",
+      "type": "CURRENT_SMOKE",
+      "passed": true
+    }
+  ]
+}

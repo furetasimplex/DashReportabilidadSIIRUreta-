@@ -1,0 +1,7 @@
+[
+  {
+    "name": "inventar_SpcHidr",
+    "is_read_committed_snapshot_on": false,
+    "snapshot_isolation_state_desc": "OFF"
+  }
+]

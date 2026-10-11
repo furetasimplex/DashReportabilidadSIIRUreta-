@@ -1,0 +1,108 @@
+{
+  "checks": 726,
+  "zeros": 72,
+  "nulls": 102,
+  "old_zero_to_blank": 0,
+  "evidencia": [
+    {
+      "dia": 1,
+      "turno": "A",
+      "Apilado_TMS_Real": "3030.334",
+      "STOCK": "91.19",
+      "MINA": "0.0",
+      "SRR": "8.81",
+      "CuT_Real": "0.509936",
+      "FeS_Real": "0.09"
+    },
+    {
+      "dia": 1,
+      "turno": "B",
+      "Apilado_TMS_Real": "0.0",
+      "STOCK": "0.0",
+      "MINA": "0.0",
+      "SRR": "0.0",
+      "CuT_Real": "nan",
+      "FeS_Real": "nan"
+    },
+    {
+      "dia": 2,
+      "turno": "A",
+      "Apilado_TMS_Real": "0.0",
+      "STOCK": "0.0",
+      "MINA": "0.0",
+      "SRR": "0.0",
+      "CuT_Real": "nan",
+      "FeS_Real": "nan"
+    },
+    {
+      "dia": 2,
+      "turno": "B",
+      "Apilado_TMS_Real": "0.0",
+      "STOCK": "0.0",
+      "MINA": "0.0",
+      "SRR": "0.0",
+      "CuT_Real": "nan",
+      "FeS_Real": "nan"
+    },
+    {
+      "dia": 3,
+      "turno": "A",
+      "Apilado_TMS_Real": "0.0",
+      "STOCK": "0.0",
+      "MINA": "0.0",
+      "SRR": "0.0",
+      "CuT_Real": "nan",
+      "FeS_Real": "nan"
+    },
+    {
+      "dia": 3,
+      "turno": "B",
+      "Apilado_TMS_Real": "9569.214898",
+      "STOCK": "100.0",
+      "MINA": "0.0",
+      "SRR": "0.0",
+      "CuT_Real": "0.587601",
+      "FeS_Real": "0.078724"
+    },
+    {
+      "dia": 10,
+      "turno": "A",
+      "Apilado_TMS_Real": "34092.869",
+      "STOCK": "75.63",
+      "MINA": "0.0",
+      "SRR": "24.37",
+      "CuT_Real": "0.531817",
+      "FeS_Real": "0.079342"
+    },
+    {
+      "dia": 10,
+      "turno": "B",
+      "Apilado_TMS_Real": "34091.902",
+      "STOCK": "53.81",
+      "MINA": "0.0",
+      "SRR": "46.19",
+      "CuT_Real": "0.572627",
+      "FeS_Real": "0.079341"
+    },
+    {
+      "dia": 11,
+      "turno": "A",
+      "Apilado_TMS_Real": "0.0",
+      "STOCK": "0.0",
+      "MINA": "0.0",
+      "SRR": "0.0",
+      "CuT_Real": "nan",
+      "FeS_Real": "nan"
+    },
+    {
+      "dia": 11,
+      "turno": "B",
+      "Apilado_TMS_Real": "0.0",
+      "STOCK": "0.0",
+      "MINA": "0.0",
+      "SRR": "0.0",
+      "CuT_Real": "nan",
+      "FeS_Real": "nan"
+    }
+  ]
+}

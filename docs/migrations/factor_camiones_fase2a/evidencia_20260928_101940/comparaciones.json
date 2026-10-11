@@ -1,0 +1,2502 @@
+{
+  "O_vs_O_repetido": {
+    "filas_antes": 84,
+    "filas_despues": 84,
+    "diferencias": [
+      {
+        "Fecha": "2026-07-05",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 42251.057,
+        "despues": 42251.05700000001,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-05",
+        "columna": "Dato_Mina_TMH",
+        "antes": 42251.057,
+        "despues": 42251.05700000001,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-09",
+        "columna": "Check_Produccion_Flotas",
+        "antes": -3.637978807091713e-12,
+        "despues": 0.0,
+        "diferencia_absoluta": 3.637978807091713e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 49702.852000000006,
+        "despues": 49702.85200000001,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Dato_Mina_TMH",
+        "antes": 49702.852000000006,
+        "despues": 49702.85200000001,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Carga_KOM_Sin_Ajuste",
+        "antes": 368.12303640009605,
+        "despues": 368.1230364000961,
+        "diferencia_absoluta": 5.684341886080802e-14,
+        "cota_8_ULP": 4.547473508864641e-13,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Factor_Ajuste_Calculado",
+        "antes": 1.0,
+        "despues": 1.0000000000000002,
+        "diferencia_absoluta": 2.220446049250313e-16,
+        "cota_8_ULP": 1.7763568394002505e-15,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-31",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 43252.861000000004,
+        "despues": 43252.861,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-31",
+        "columna": "Dato_Mina_TMH",
+        "antes": 43252.861000000004,
+        "despues": 43252.861,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-03",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 61927.596000000005,
+        "despues": 61927.596,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-03",
+        "columna": "Dato_Mina_TMH",
+        "antes": 61927.596000000005,
+        "despues": 61927.596,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-04",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 60770.32800000001,
+        "despues": 60770.328,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-04",
+        "columna": "Dato_Mina_TMH",
+        "antes": 60770.32800000001,
+        "despues": 60770.328,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 12267.443999999998,
+        "despues": 12267.444,
+        "diferencia_absoluta": 1.8189894035458565e-12,
+        "cota_8_ULP": 1.4551915228366852e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Dato_Mina_TMH",
+        "antes": 18559.361999999997,
+        "despues": 18559.362,
+        "diferencia_absoluta": 3.637978807091713e-12,
+        "cota_8_ULP": 2.9103830456733704e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Participacion_CAT",
+        "antes": 0.33901585625626574,
+        "despues": 0.3390158562562657,
+        "diferencia_absoluta": 5.551115123125783e-17,
+        "cota_8_ULP": 4.440892098500626e-16,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 13158.748114436852,
+        "despues": 13158.748114436854,
+        "diferencia_absoluta": 1.8189894035458565e-12,
+        "cota_8_ULP": 1.4551915228366852e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": 6749.06395486226,
+        "despues": 6749.063954862259,
+        "diferencia_absoluta": 9.094947017729282e-13,
+        "cota_8_ULP": 7.275957614183426e-12,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Carga_KOM_Sin_Ajuste",
+        "antes": 375.96423184105294,
+        "despues": 375.964231841053,
+        "diferencia_absoluta": 5.684341886080802e-14,
+        "cota_8_ULP": 4.547473508864641e-13,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Carga_CAT_Sin_Ajuste",
+        "antes": 249.9653316615652,
+        "despues": 249.96533166156516,
+        "diferencia_absoluta": 2.842170943040401e-14,
+        "cota_8_ULP": 2.2737367544323206e-13,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 13158.748114436852,
+        "despues": 13158.748114436854,
+        "diferencia_absoluta": 1.8189894035458565e-12,
+        "cota_8_ULP": 1.4551915228366852e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "CAT_TMH_Corregido",
+        "antes": 6749.06395486226,
+        "despues": 6749.063954862259,
+        "diferencia_absoluta": 9.094947017729282e-13,
+        "cota_8_ULP": 7.275957614183426e-12,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-09",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 41608.08900000001,
+        "despues": 41608.089,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-09",
+        "columna": "Dato_Mina_TMH",
+        "antes": 41608.08900000001,
+        "despues": 41608.089,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      }
+    ],
+    "diferencia_maxima_numerica": {
+      "Apilado_TMH_Bruto": 0,
+      "Apilado_TMH_Neto": 0,
+      "Sal_Dia": 0,
+      "Humedad_Inventario": 0,
+      "Apilado_TMS_Sin_Ajuste": 0,
+      "Total_Inventario_Chancado_TMS": 0,
+      "Inventario_Chancado_TMS_Anterior": 0,
+      "Delta_Inventario_Chancado_TMS": 0,
+      "SRR_TMS_Dia": 0,
+      "Mineral_Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMH_Sin_Ajuste": 0,
+      "Produccion_KOM_TMH": 7.275957614183426e-12,
+      "Produccion_CAT_TMH": 0,
+      "Dato_Mina_TMH": 7.275957614183426e-12,
+      "Vueltas_KOM": 0,
+      "Vueltas_CAT": 0,
+      "Participacion_KOM": 0,
+      "Participacion_CAT": 5.551115123125783e-17,
+      "Chancado_KOM_TMH_Sin_Ajuste": 7.275957614183426e-12,
+      "Chancado_CAT_TMH_Sin_Ajuste": 9.094947017729282e-13,
+      "Carga_KOM_Sin_Ajuste": 5.684341886080802e-14,
+      "KOM_TMH_Corregido": 7.275957614183426e-12,
+      "CAT_TMH_Corregido": 9.094947017729282e-13,
+      "Chancado_TMH_Corregido_Total": 7.275957614183426e-12,
+      "Factor_Ajuste_Calculado": 2.220446049250313e-16,
+      "Flag_Factor_Ajuste_Valido": 0,
+      "Cantidad_Registros_Originales": 0,
+      "Cantidad_Registros_Validos": 0,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Check_TMH_Bruto": 0,
+      "Check_Produccion_Flotas": 3.637978807091713e-12,
+      "Flag_Continuidad_Diaria": 0,
+      "Flag_Inventario_Valido": 0,
+      "Flag_Humedad_Inventario_Valida": 0,
+      "Carga_CAT_Sin_Ajuste": 2.842170943040401e-14
+    },
+    "diferencias_funcionales": []
+  },
+  "H_vs_O": {
+    "filas_antes": 84,
+    "filas_despues": 84,
+    "diferencias": [
+      {
+        "Fecha": "2026-07-03",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 53746.25600000001,
+        "despues": 53746.256
+      },
+      {
+        "Fecha": "2026-07-03",
+        "columna": "Dato_Mina_TMH",
+        "antes": 53746.25600000001,
+        "despues": 53746.256
+      },
+      {
+        "Fecha": "2026-07-04",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 56877.291999999994,
+        "despues": 56877.292
+      },
+      {
+        "Fecha": "2026-07-04",
+        "columna": "Dato_Mina_TMH",
+        "antes": 56877.291999999994,
+        "despues": 56877.292
+      },
+      {
+        "Fecha": "2026-07-05",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 42251.057,
+        "despues": 42251.05700000001
+      },
+      {
+        "Fecha": "2026-07-05",
+        "columna": "Dato_Mina_TMH",
+        "antes": 42251.057,
+        "despues": 42251.05700000001
+      },
+      {
+        "Fecha": "2026-07-09",
+        "columna": "Check_Produccion_Flotas",
+        "antes": -3.637978807091713e-12,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-07-12",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 56131.64200000001,
+        "despues": 56131.64199999999
+      },
+      {
+        "Fecha": "2026-07-12",
+        "columna": "Dato_Mina_TMH",
+        "antes": 56131.64200000001,
+        "despues": 56131.64199999999
+      },
+      {
+        "Fecha": "2026-07-13",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 27141.627999999997,
+        "despues": 27141.628
+      },
+      {
+        "Fecha": "2026-07-13",
+        "columna": "Dato_Mina_TMH",
+        "antes": 27141.627999999997,
+        "despues": 27141.628
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 55880.005,
+        "despues": 55880.005000000005
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Dato_Mina_TMH",
+        "antes": 55880.005,
+        "despues": 55880.005000000005
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 60116.62823598746,
+        "despues": 60116.62823598747
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": 373.39520643470473,
+        "despues": 373.3952064347048
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 60116.62823598746,
+        "despues": 60116.62823598747
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 60116.62823598746,
+        "despues": 60116.62823598747
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Factor_Ajuste",
+        "antes": 1.0,
+        "despues": 1.0000000000000002
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": 97053.0,
+        "despues": 97053.00000000001
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": 92850.6051,
+        "despues": 92850.60510000002
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": 90817.7223772577,
+        "despues": 90817.72237725771
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": 57513.578233369204,
+        "despues": 57513.57823336922
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": 96133.74,
+        "despues": 96133.74000000002
+      },
+      {
+        "Fecha": "2026-07-14",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": 91931.3451,
+        "despues": 91931.34510000002
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 49702.852,
+        "despues": 49702.85200000001
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Dato_Mina_TMH",
+        "antes": 49702.852,
+        "despues": 49702.85200000001
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": 368.12303640009605,
+        "despues": 368.1230364000961
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Factor_Ajuste",
+        "antes": 1.0,
+        "despues": 1.0000000000000002
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": 84116.0,
+        "despues": 84116.00000000001
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": 80473.7772,
+        "despues": 80473.77720000001
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": 83440.88,
+        "despues": 83440.88000000002
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": 79798.6572,
+        "despues": 79798.65720000002
+      },
+      {
+        "Fecha": "2026-08-03",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 61927.596000000005,
+        "despues": 61927.596
+      },
+      {
+        "Fecha": "2026-08-03",
+        "columna": "Dato_Mina_TMH",
+        "antes": 61927.596000000005,
+        "despues": 61927.596
+      },
+      {
+        "Fecha": "2026-08-04",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 60770.327999999994,
+        "despues": 60770.328
+      },
+      {
+        "Fecha": "2026-08-04",
+        "columna": "Dato_Mina_TMH",
+        "antes": 60770.327999999994,
+        "despues": 60770.328
+      },
+      {
+        "Fecha": "2026-08-05",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 4222.9800000000005,
+        "despues": 4222.98
+      },
+      {
+        "Fecha": "2026-08-05",
+        "columna": "Dato_Mina_TMH",
+        "antes": 4222.9800000000005,
+        "despues": 4222.98
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Check_Produccion_Flotas",
+        "antes": -3.637978807091713e-12,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Produccion_CAT_TMH",
+        "antes": 36818.850000000006,
+        "despues": 36818.85
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Dato_Mina_TMH",
+        "antes": 42132.990000000005,
+        "despues": 42132.99
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Participacion_KOM",
+        "antes": 0.12612776828798525,
+        "despues": 0.12612776828798528
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 5413.159594469161,
+        "despues": 5413.159594469162
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": 37504.90411145,
+        "despues": 37504.90411144999
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": 360.8773062979441,
+        "despues": 360.87730629794413
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Carga_CAT_TMH_Viaje_Sin_Ajuste",
+        "antes": 237.37281083196203,
+        "despues": 237.37281083196197
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 5413.159594469161,
+        "despues": 5413.159594469162
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "CAT_TMH_Corregido",
+        "antes": 37504.90411145,
+        "despues": 37504.90411144999
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 42918.06370591916,
+        "despues": 42918.06370591915
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Factor_Ajuste",
+        "antes": 1.0,
+        "despues": 0.9999999999999998
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": 73087.0,
+        "despues": 73086.99999999999
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": 70718.9812,
+        "despues": 70718.98119999998
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": 72611.22278231618,
+        "despues": 72611.22278231617
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": 41527.51844184738,
+        "despues": 41527.518441847365
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": 72232.36,
+        "despues": 72232.35999999999
+      },
+      {
+        "Fecha": "2026-08-13",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": 69864.3412,
+        "despues": 69864.34119999998
+      },
+      {
+        "Fecha": "2026-09-01",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 3213.0,
+        "despues": 3328.3450000000003
+      },
+      {
+        "Fecha": "2026-09-01",
+        "columna": "Dato_Mina_TMH",
+        "antes": 3213.0,
+        "despues": 3328.3450000000003
+      },
+      {
+        "Fecha": "2026-09-03",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 10353.0,
+        "despues": 10348.773
+      },
+      {
+        "Fecha": "2026-09-03",
+        "columna": "Dato_Mina_TMH",
+        "antes": 10353.0,
+        "despues": 10348.773
+      },
+      {
+        "Fecha": "2026-09-04",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 65688.0,
+        "despues": 66884.902
+      },
+      {
+        "Fecha": "2026-09-04",
+        "columna": "Dato_Mina_TMH",
+        "antes": 65688.0,
+        "despues": 66884.902
+      },
+      {
+        "Fecha": "2026-09-05",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 44268.0,
+        "despues": 44953.695
+      },
+      {
+        "Fecha": "2026-09-05",
+        "columna": "Dato_Mina_TMH",
+        "antes": 44268.0,
+        "despues": 44953.695
+      },
+      {
+        "Fecha": "2026-09-06",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 47124.0,
+        "despues": 48384.373999999996
+      },
+      {
+        "Fecha": "2026-09-06",
+        "columna": "Dato_Mina_TMH",
+        "antes": 47124.0,
+        "despues": 48384.373999999996
+      },
+      {
+        "Fecha": "2026-09-06",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 50421.97806816351,
+        "despues": 50421.9780681635
+      },
+      {
+        "Fecha": "2026-09-06",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": 381.984682334572,
+        "despues": 381.98468233457197
+      },
+      {
+        "Fecha": "2026-09-07",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 24633.0,
+        "despues": 25270.06
+      },
+      {
+        "Fecha": "2026-09-07",
+        "columna": "Dato_Mina_TMH",
+        "antes": 24633.0,
+        "despues": 25270.06
+      },
+      {
+        "Fecha": "2026-09-08",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 42483.0,
+        "despues": 44127.028
+      },
+      {
+        "Fecha": "2026-09-08",
+        "columna": "Dato_Mina_TMH",
+        "antes": 42483.0,
+        "despues": 44127.028
+      },
+      {
+        "Fecha": "2026-09-09",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 46767.0,
+        "despues": 48426.72899999999
+      },
+      {
+        "Fecha": "2026-09-09",
+        "columna": "Dato_Mina_TMH",
+        "antes": 46767.0,
+        "despues": 48426.72899999999
+      },
+      {
+        "Fecha": "2026-09-09",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 49977.657704239915,
+        "despues": 49977.6577042399
+      },
+      {
+        "Fecha": "2026-09-09",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": 381.5088374369459,
+        "despues": 381.5088374369458
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 53907.0,
+        "despues": 55275.420999999995
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Dato_Mina_TMH",
+        "antes": 53907.0,
+        "despues": 55275.420999999995
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 54866.65563598759,
+        "despues": 54866.65563598758
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 54866.65563598759,
+        "despues": 54866.65563598758
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 54866.65563598759,
+        "despues": 54866.65563598758
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Factor_Ajuste",
+        "antes": 1.0,
+        "despues": 0.9999999999999999
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": 83630.0,
+        "despues": 83629.99999999999
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": 80870.20999999999,
+        "despues": 80870.20999999998
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": 80870.20999999999,
+        "despues": 80870.20999999998
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": 53056.056,
+        "despues": 53056.05599999998
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": 82390.94,
+        "despues": 82390.93999999999
+      },
+      {
+        "Fecha": "2026-09-10",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": 79631.15,
+        "despues": 79631.14999999998
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 0.0,
+        "despues": 55879.424000000006
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Dato_Mina_TMH",
+        "antes": 0.0,
+        "despues": 55879.424000000006
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Vueltas_KOM",
+        "antes": 0.0,
+        "despues": 153.0
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Participacion_KOM",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Participacion_CAT",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 54604.35253392573
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": null,
+        "despues": 356.89119303219434
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 0.0,
+        "despues": 54604.35253392573
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 0.0,
+        "despues": 54604.35253392573
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Factor_Ajuste",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Flag_Factor_Ajuste_Valido",
+        "antes": false,
+        "despues": true
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Estado_Calculo",
+        "antes": "SIN_DATOS_CAMIONES",
+        "despues": "OK_SIN_AJUSTE"
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": null,
+        "despues": 92240.0
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": null,
+        "despues": 89196.08
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 88763.67084362329
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 52802.40890030618
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": null,
+        "despues": 91073.34
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": null,
+        "despues": 88029.42
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Cantidad_Registros_Originales",
+        "antes": 0,
+        "despues": 8
+      },
+      {
+        "Fecha": "2026-09-11",
+        "columna": "Cantidad_Registros_Validos",
+        "antes": 0,
+        "despues": 8
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 0.0,
+        "despues": 57022.798
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Dato_Mina_TMH",
+        "antes": 0.0,
+        "despues": 57022.798
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Vueltas_KOM",
+        "antes": 0.0,
+        "despues": 157.0
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Participacion_KOM",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Participacion_CAT",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 58438.11535698959
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": null,
+        "despues": 372.21729526744963
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 0.0,
+        "despues": 58438.11535698959
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 0.0,
+        "despues": 58438.11535698959
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Factor_Ajuste",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Flag_Factor_Ajuste_Valido",
+        "antes": false,
+        "despues": true
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Estado_Calculo",
+        "antes": "SIN_DATOS_CAMIONES",
+        "despues": "OK_SIN_AJUSTE"
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": null,
+        "despues": 92718.0
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": null,
+        "despues": 89658.306
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 89583.59222322013
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 56509.65755020893
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": null,
+        "despues": 91577.13
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": null,
+        "despues": 88517.436
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Cantidad_Registros_Originales",
+        "antes": 0,
+        "despues": 9
+      },
+      {
+        "Fecha": "2026-09-12",
+        "columna": "Cantidad_Registros_Validos",
+        "antes": 0,
+        "despues": 9
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 0.0,
+        "despues": 42702.909999999996
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Dato_Mina_TMH",
+        "antes": 0.0,
+        "despues": 42702.909999999996
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Vueltas_KOM",
+        "antes": 0.0,
+        "despues": 118.0
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Participacion_KOM",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Participacion_CAT",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 43144.954003170606
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": null,
+        "despues": 365.63520341670005
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 0.0,
+        "despues": 43144.954003170606
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 0.0,
+        "despues": 43144.954003170606
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Factor_Ajuste",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Flag_Factor_Ajuste_Valido",
+        "antes": false,
+        "despues": true
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Estado_Calculo",
+        "antes": "SIN_DATOS_CAMIONES",
+        "despues": "OK_SIN_AJUSTE"
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": null,
+        "despues": 65371.0
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": null,
+        "despues": 63213.757
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 63171.602849563475
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 41721.17052106597
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": null,
+        "despues": 64455.93
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": null,
+        "despues": 62298.687
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Cantidad_Registros_Originales",
+        "antes": 0,
+        "despues": 7
+      },
+      {
+        "Fecha": "2026-09-13",
+        "columna": "Cantidad_Registros_Validos",
+        "antes": 0,
+        "despues": 7
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 0.0,
+        "despues": 50094.0
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Dato_Mina_TMH",
+        "antes": 0.0,
+        "despues": 50094.0
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Vueltas_KOM",
+        "antes": 0.0,
+        "despues": 138.0
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Participacion_KOM",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Participacion_CAT",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 52601.45319042543
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": null,
+        "despues": 381.16995065525674
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 0.0,
+        "despues": 52440.0
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 0.0,
+        "despues": 52440.0
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Factor_Ajuste",
+        "antes": null,
+        "despues": 0.9969306325085555
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Flag_Factor_Ajuste_Valido",
+        "antes": false,
+        "despues": true
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Estado_Calculo",
+        "antes": "SIN_DATOS_CAMIONES",
+        "despues": "OK_AJUSTE_KOM"
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": null,
+        "despues": 72093.0386898562
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": null,
+        "despues": 69713.96841309094
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 68980.37814408084
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 50650.96864823234
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": null,
+        "despues": 71042.9286898562
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": null,
+        "despues": 68663.85841309094
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Cantidad_Registros_Originales",
+        "antes": 0,
+        "despues": 9
+      },
+      {
+        "Fecha": "2026-09-14",
+        "columna": "Cantidad_Registros_Validos",
+        "antes": 0,
+        "despues": 9
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "SRR_TMS_Turno_A",
+        "antes": 454.813177,
+        "despues": 454.813028
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "SRR_TMS_Dia",
+        "antes": 454.813177,
+        "despues": 454.813028
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Chancado_TMS_Sin_Ajuste",
+        "antes": 1707.4867101794148,
+        "despues": 1707.4868591794148
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Chancado_TMH_Sin_Ajuste",
+        "antes": 1765.756680640553,
+        "despues": 1765.7568347253514
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 1765.756680640553,
+        "despues": 1765.7568347253514
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": 1765.756680640553,
+        "despues": 1765.7568347253514
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Factor_Ajuste",
+        "antes": 0.2152051888950802,
+        "despues": 0.21520517011568346
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": 530.6959958152678,
+        "despues": 530.6959495052754
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": 513.183027953364,
+        "despues": 513.1829831716013
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": 349.2309151327788,
+        "despues": 349.23087035101616
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": -163.95226186722118,
+        "despues": -163.9521576489838
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": 472.3259958152678,
+        "despues": 472.3259495052754
+      },
+      {
+        "Fecha": "2026-09-16",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": 454.813027953364,
+        "despues": 454.81298317160133
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 0.0,
+        "despues": 1428.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Dato_Mina_TMH",
+        "antes": 0.0,
+        "despues": 1428.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Vueltas_KOM",
+        "antes": 0.0,
+        "despues": 4.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Participacion_KOM",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Participacion_CAT",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 811.4408283028918
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": null,
+        "despues": 202.86020707572294
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 0.0,
+        "despues": 811.4408283028918
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 0.0,
+        "despues": 811.4408283028918
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Factor_Ajuste",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Flag_Factor_Ajuste_Valido",
+        "antes": false,
+        "despues": true
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Estado_Calculo",
+        "antes": "SIN_DATOS_CAMIONES",
+        "despues": "OK_SIN_AJUSTE"
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 774.6014146979405
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 774.6014146979405
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Cantidad_Registros_Originales",
+        "antes": 0,
+        "despues": 1
+      },
+      {
+        "Fecha": "2026-09-21",
+        "columna": "Cantidad_Registros_Validos",
+        "antes": 0,
+        "despues": 1
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 0.0,
+        "despues": 48909.0
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Dato_Mina_TMH",
+        "antes": 0.0,
+        "despues": 48909.0
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Vueltas_KOM",
+        "antes": 0.0,
+        "despues": 137.0
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Participacion_KOM",
+        "antes": null,
+        "despues": 1.0
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Participacion_CAT",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 54296.258977598416
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": null,
+        "despues": 0.0
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Carga_KOM_TMH_Viaje_Sin_Ajuste",
+        "antes": null,
+        "despues": 396.32305823064536
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 0.0,
+        "despues": 52060.0
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 0.0,
+        "despues": 52060.0
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Factor_Ajuste",
+        "antes": null,
+        "despues": 0.9588137558699753
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Flag_Factor_Ajuste_Valido",
+        "antes": false,
+        "despues": true
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Estado_Calculo",
+        "antes": "SIN_DATOS_CAMIONES",
+        "despues": "OK_AJUSTE_KOM"
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Apilado_TMH_Bruto_Ajustado",
+        "antes": null,
+        "despues": 84441.76866571285
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Apilado_TMS_Bruto_Ajustado",
+        "antes": null,
+        "despues": 80608.11236828948
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Mineral_Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 80442.78591242192
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Chancado_TMS_Ajustado",
+        "antes": null,
+        "despues": 48368.653788304924
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Apilado_TMH_Neto_Ajustado",
+        "antes": null,
+        "despues": 84441.76866571285
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Apilado_TMS_Neto_Ajustado",
+        "antes": null,
+        "despues": 80608.11236828948
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Cantidad_Registros_Originales",
+        "antes": 0,
+        "despues": 8
+      },
+      {
+        "Fecha": "2026-09-22",
+        "columna": "Cantidad_Registros_Validos",
+        "antes": 0,
+        "despues": 8
+      }
+    ],
+    "diferencia_maxima_numerica": {
+      "Limite_KOM_TMH_Viaje": 0,
+      "Limite_CAT_TMH_Viaje": 0,
+      "Apilado_TMH_Bruto_Original": 0,
+      "Apilado_TMH_Neto_Original": 0,
+      "Sal_TMH_Dia": 0,
+      "Humedad_Pct": 0,
+      "Apilado_TMS_Bruto_Sin_Ajuste": 0,
+      "Apilado_TMS_Neto_Sin_Ajuste": 0,
+      "Inventario_Chancado_TMS_Actual": 0,
+      "Inventario_Chancado_TMS_Anterior": 0,
+      "Delta_Inventario_Chancado_TMS": 0,
+      "Flag_Continuidad_Diaria": 0,
+      "Flag_Inventario_Valido": 0,
+      "Flag_Humedad_Valida": 0,
+      "SRR_TMS_Turno_A": 0.0001490000000217151,
+      "SRR_TMS_Turno_B": 0,
+      "SRR_TMS_Dia": 0.0001490000000217151,
+      "Mineral_Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMS_Sin_Ajuste": 0.00014899999996487168,
+      "Chancado_TMH_Sin_Ajuste": 0.00015408479839607025,
+      "Produccion_KOM_TMH": 57022.798,
+      "Produccion_CAT_TMH": 7.275957614183426e-12,
+      "Dato_Mina_TMH": 57022.798,
+      "Vueltas_KOM": 157.0,
+      "Vueltas_CAT": 0,
+      "Participacion_KOM": 2.7755575615628914e-17,
+      "Participacion_CAT": 0,
+      "Chancado_KOM_TMH_Sin_Ajuste": 0.00015408479839607025,
+      "Chancado_CAT_TMH_Sin_Ajuste": 7.275957614183426e-12,
+      "Carga_KOM_TMH_Viaje_Sin_Ajuste": 0.00015408479839607025,
+      "KOM_TMH_Corregido": 58438.11535698959,
+      "CAT_TMH_Corregido": 7.275957614183426e-12,
+      "Chancado_TMH_Corregido_Total": 58438.11535698959,
+      "Factor_Ajuste": 1.8779396732115927e-08,
+      "Flag_Factor_Ajuste_Valido": 1.0,
+      "Apilado_TMH_Bruto_Ajustado": 4.630999239907396e-05,
+      "Apilado_TMS_Bruto_Ajustado": 4.478176265365619e-05,
+      "Mineral_Chancado_TMS_Ajustado": 4.478176265365619e-05,
+      "Chancado_TMS_Ajustado": 0.00010421823736805891,
+      "Apilado_TMH_Neto_Ajustado": 4.630999239907396e-05,
+      "Apilado_TMS_Neto_Ajustado": 4.478176265365619e-05,
+      "Cantidad_Registros_Originales": 9.0,
+      "Cantidad_Registros_Validos": 9.0,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Check_TMH_Bruto": 0,
+      "Check_Produccion_Flotas": 3.637978807091713e-12,
+      "Carga_CAT_TMH_Viaje_Sin_Ajuste": 5.684341886080802e-14
+    }
+  },
+  "O_vs_P_calculo": {
+    "filas_antes": 84,
+    "filas_despues": 84,
+    "diferencias": [
+      {
+        "Fecha": "2026-07-05",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 42251.057,
+        "despues": 42251.05700000001,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-05",
+        "columna": "Dato_Mina_TMH",
+        "antes": 42251.057,
+        "despues": 42251.05700000001,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-09",
+        "columna": "Check_Produccion_Flotas",
+        "antes": -3.637978807091713e-12,
+        "despues": 0.0,
+        "diferencia_absoluta": 3.637978807091713e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 49702.852000000006,
+        "despues": 49702.85200000001,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Dato_Mina_TMH",
+        "antes": 49702.852000000006,
+        "despues": 49702.85200000001,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Carga_KOM_Sin_Ajuste",
+        "antes": 368.12303640009605,
+        "despues": 368.1230364000961,
+        "diferencia_absoluta": 5.684341886080802e-14,
+        "cota_8_ULP": 4.547473508864641e-13,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Chancado_TMH_Corregido_Total",
+        "antes": 52641.59420521374,
+        "despues": 52641.59420521375,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-15",
+        "columna": "Factor_Ajuste_Calculado",
+        "antes": 1.0,
+        "despues": 1.0000000000000002,
+        "diferencia_absoluta": 2.220446049250313e-16,
+        "cota_8_ULP": 1.7763568394002505e-15,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-31",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 43252.861000000004,
+        "despues": 43252.861,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-07-31",
+        "columna": "Dato_Mina_TMH",
+        "antes": 43252.861000000004,
+        "despues": 43252.861,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-03",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 61927.596000000005,
+        "despues": 61927.596,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-03",
+        "columna": "Dato_Mina_TMH",
+        "antes": 61927.596000000005,
+        "despues": 61927.596,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-04",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 60770.32800000001,
+        "despues": 60770.328,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-04",
+        "columna": "Dato_Mina_TMH",
+        "antes": 60770.32800000001,
+        "despues": 60770.328,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 12267.443999999998,
+        "despues": 12267.444,
+        "diferencia_absoluta": 1.8189894035458565e-12,
+        "cota_8_ULP": 1.4551915228366852e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Dato_Mina_TMH",
+        "antes": 18559.361999999997,
+        "despues": 18559.362,
+        "diferencia_absoluta": 3.637978807091713e-12,
+        "cota_8_ULP": 2.9103830456733704e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Participacion_CAT",
+        "antes": 0.33901585625626574,
+        "despues": 0.3390158562562657,
+        "diferencia_absoluta": 5.551115123125783e-17,
+        "cota_8_ULP": 4.440892098500626e-16,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Chancado_KOM_TMH_Sin_Ajuste",
+        "antes": 13158.748114436852,
+        "despues": 13158.748114436854,
+        "diferencia_absoluta": 1.8189894035458565e-12,
+        "cota_8_ULP": 1.4551915228366852e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Chancado_CAT_TMH_Sin_Ajuste",
+        "antes": 6749.06395486226,
+        "despues": 6749.063954862259,
+        "diferencia_absoluta": 9.094947017729282e-13,
+        "cota_8_ULP": 7.275957614183426e-12,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Carga_KOM_Sin_Ajuste",
+        "antes": 375.96423184105294,
+        "despues": 375.964231841053,
+        "diferencia_absoluta": 5.684341886080802e-14,
+        "cota_8_ULP": 4.547473508864641e-13,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "Carga_CAT_Sin_Ajuste",
+        "antes": 249.9653316615652,
+        "despues": 249.96533166156516,
+        "diferencia_absoluta": 2.842170943040401e-14,
+        "cota_8_ULP": 2.2737367544323206e-13,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "KOM_TMH_Corregido",
+        "antes": 13158.748114436852,
+        "despues": 13158.748114436854,
+        "diferencia_absoluta": 1.8189894035458565e-12,
+        "cota_8_ULP": 1.4551915228366852e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-07",
+        "columna": "CAT_TMH_Corregido",
+        "antes": 6749.06395486226,
+        "despues": 6749.063954862259,
+        "diferencia_absoluta": 9.094947017729282e-13,
+        "cota_8_ULP": 7.275957614183426e-12,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-09",
+        "columna": "Produccion_KOM_TMH",
+        "antes": 41608.08900000001,
+        "despues": 41608.089,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      },
+      {
+        "Fecha": "2026-08-09",
+        "columna": "Dato_Mina_TMH",
+        "antes": 41608.08900000001,
+        "despues": 41608.089,
+        "diferencia_absoluta": 7.275957614183426e-12,
+        "cota_8_ULP": 5.820766091346741e-11,
+        "solo_representacion_float": true
+      }
+    ],
+    "diferencia_maxima_numerica": {
+      "Apilado_TMH_Bruto": 0,
+      "Apilado_TMH_Neto": 0,
+      "Sal_Dia": 0,
+      "Humedad_Inventario": 0,
+      "Apilado_TMS_Sin_Ajuste": 0,
+      "Total_Inventario_Chancado_TMS": 0,
+      "Inventario_Chancado_TMS_Anterior": 0,
+      "Delta_Inventario_Chancado_TMS": 0,
+      "SRR_TMS_Dia": 0,
+      "Mineral_Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMH_Sin_Ajuste": 0,
+      "Produccion_KOM_TMH": 7.275957614183426e-12,
+      "Produccion_CAT_TMH": 0,
+      "Dato_Mina_TMH": 7.275957614183426e-12,
+      "Vueltas_KOM": 0,
+      "Vueltas_CAT": 0,
+      "Participacion_KOM": 0,
+      "Participacion_CAT": 5.551115123125783e-17,
+      "Chancado_KOM_TMH_Sin_Ajuste": 7.275957614183426e-12,
+      "Chancado_CAT_TMH_Sin_Ajuste": 9.094947017729282e-13,
+      "Carga_KOM_Sin_Ajuste": 5.684341886080802e-14,
+      "KOM_TMH_Corregido": 7.275957614183426e-12,
+      "CAT_TMH_Corregido": 9.094947017729282e-13,
+      "Chancado_TMH_Corregido_Total": 7.275957614183426e-12,
+      "Factor_Ajuste_Calculado": 2.220446049250313e-16,
+      "Flag_Factor_Ajuste_Valido": 0,
+      "Cantidad_Registros_Originales": 0,
+      "Cantidad_Registros_Validos": 0,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Check_TMH_Bruto": 0,
+      "Check_Produccion_Flotas": 3.637978807091713e-12,
+      "Flag_Continuidad_Diaria": 0,
+      "Flag_Inventario_Valido": 0,
+      "Flag_Humedad_Inventario_Valida": 0,
+      "Carga_CAT_Sin_Ajuste": 2.842170943040401e-14
+    },
+    "diferencias_funcionales": []
+  },
+  "O_vs_P_control": {
+    "filas_antes": 84,
+    "filas_despues": 84,
+    "diferencias": [],
+    "diferencia_maxima_numerica": {
+      "Limite_KOM_TMH_Viaje": 0,
+      "Limite_CAT_TMH_Viaje": 0,
+      "Apilado_TMH_Bruto_Original": 0,
+      "Apilado_TMH_Neto_Original": 0,
+      "Sal_TMH_Dia": 0,
+      "Humedad_Pct": 0,
+      "Apilado_TMS_Bruto_Sin_Ajuste": 0,
+      "Apilado_TMS_Neto_Sin_Ajuste": 0,
+      "Inventario_Chancado_TMS_Actual": 0,
+      "Inventario_Chancado_TMS_Anterior": 0,
+      "Delta_Inventario_Chancado_TMS": 0,
+      "Flag_Continuidad_Diaria": 0,
+      "Flag_Inventario_Valido": 0,
+      "Flag_Humedad_Valida": 0,
+      "SRR_TMS_Turno_A": 0,
+      "SRR_TMS_Turno_B": 0,
+      "SRR_TMS_Dia": 0,
+      "Mineral_Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMH_Sin_Ajuste": 0,
+      "Produccion_KOM_TMH": 0,
+      "Produccion_CAT_TMH": 0,
+      "Dato_Mina_TMH": 0,
+      "Vueltas_KOM": 0,
+      "Vueltas_CAT": 0,
+      "Participacion_KOM": 0,
+      "Participacion_CAT": 0,
+      "Chancado_KOM_TMH_Sin_Ajuste": 0,
+      "Chancado_CAT_TMH_Sin_Ajuste": 0,
+      "Carga_KOM_TMH_Viaje_Sin_Ajuste": 0,
+      "KOM_TMH_Corregido": 0,
+      "CAT_TMH_Corregido": 0,
+      "Chancado_TMH_Corregido_Total": 0,
+      "Factor_Ajuste": 0,
+      "Flag_Factor_Ajuste_Valido": 0,
+      "Apilado_TMH_Bruto_Ajustado": 0,
+      "Apilado_TMS_Bruto_Ajustado": 0,
+      "Mineral_Chancado_TMS_Ajustado": 0,
+      "Chancado_TMS_Ajustado": 0,
+      "Apilado_TMH_Neto_Ajustado": 0,
+      "Apilado_TMS_Neto_Ajustado": 0,
+      "Cantidad_Registros_Originales": 0,
+      "Cantidad_Registros_Validos": 0,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Check_TMH_Bruto": 0,
+      "Check_Produccion_Flotas": 0,
+      "Carga_CAT_TMH_Viaje_Sin_Ajuste": 0
+    },
+    "diferencias_funcionales": []
+  },
+  "O_vs_P_vista": {
+    "filas_antes": 84,
+    "filas_despues": 84,
+    "diferencias": [],
+    "diferencia_maxima_numerica": {
+      "Factor_Ajuste_Calculado": 0,
+      "Flag_Factor_Ajuste_Valido": 0,
+      "Flag_Usa_Ajuste": 0,
+      "Factor_Aplicacion_Reportes": 0,
+      "Apilado_TMH_Bruto_Original": 0,
+      "Apilado_TMH_Neto_Original": 0,
+      "Apilado_TMS_Bruto_Sin_Ajuste": 0,
+      "Apilado_TMS_Neto_Sin_Ajuste": 0,
+      "Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMH_Sin_Ajuste": 0,
+      "Apilado_TMH_Bruto_Ajustado": 0,
+      "Apilado_TMH_Neto_Ajustado": 0,
+      "Apilado_TMS_Bruto_Ajustado": 0,
+      "Apilado_TMS_Neto_Ajustado": 0,
+      "Chancado_TMS_Ajustado": 0,
+      "Apilado_TMH_Reporte": 0,
+      "Apilado_TMS_Reporte": 0,
+      "Chancado_TMS_Reporte": 0,
+      "Diferencia_Apilado_TMH_Ajuste": 0,
+      "Diferencia_Apilado_TMS_Ajuste": 0,
+      "Diferencia_Chancado_TMS_Ajuste": 0,
+      "Sal_TMH_Dia": 0,
+      "Humedad_Pct": 0,
+      "Inventario_Chancado_TMS_Actual": 0,
+      "Inventario_Chancado_TMS_Anterior": 0,
+      "Delta_Inventario_Chancado_TMS": 0,
+      "SRR_TMS_Turno_A": 0,
+      "SRR_TMS_Turno_B": 0,
+      "SRR_TMS_Dia": 0,
+      "Produccion_KOM_TMH": 0,
+      "Produccion_CAT_TMH": 0,
+      "Vueltas_KOM": 0,
+      "Vueltas_CAT": 0,
+      "Carga_KOM_TMH_Viaje_Sin_Ajuste": 0,
+      "KOM_TMH_Corregido": 0,
+      "CAT_TMH_Corregido": 0,
+      "Cantidad_Registros_Originales": 0,
+      "Cantidad_Registros_Validos": 0,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Carga_CAT_TMH_Viaje_Sin_Ajuste": 0
+    },
+    "diferencias_funcionales": []
+  },
+  "P_vs_P_repetido": {
+    "filas_antes": 84,
+    "filas_despues": 84,
+    "diferencias": [],
+    "diferencia_maxima_numerica": {
+      "Limite_KOM_TMH_Viaje": 0,
+      "Limite_CAT_TMH_Viaje": 0,
+      "Apilado_TMH_Bruto_Original": 0,
+      "Apilado_TMH_Neto_Original": 0,
+      "Sal_TMH_Dia": 0,
+      "Humedad_Pct": 0,
+      "Apilado_TMS_Bruto_Sin_Ajuste": 0,
+      "Apilado_TMS_Neto_Sin_Ajuste": 0,
+      "Inventario_Chancado_TMS_Actual": 0,
+      "Inventario_Chancado_TMS_Anterior": 0,
+      "Delta_Inventario_Chancado_TMS": 0,
+      "Flag_Continuidad_Diaria": 0,
+      "Flag_Inventario_Valido": 0,
+      "Flag_Humedad_Valida": 0,
+      "SRR_TMS_Turno_A": 0,
+      "SRR_TMS_Turno_B": 0,
+      "SRR_TMS_Dia": 0,
+      "Mineral_Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMH_Sin_Ajuste": 0,
+      "Produccion_KOM_TMH": 0,
+      "Produccion_CAT_TMH": 0,
+      "Dato_Mina_TMH": 0,
+      "Vueltas_KOM": 0,
+      "Vueltas_CAT": 0,
+      "Participacion_KOM": 0,
+      "Participacion_CAT": 0,
+      "Chancado_KOM_TMH_Sin_Ajuste": 0,
+      "Chancado_CAT_TMH_Sin_Ajuste": 0,
+      "Carga_KOM_TMH_Viaje_Sin_Ajuste": 0,
+      "KOM_TMH_Corregido": 0,
+      "CAT_TMH_Corregido": 0,
+      "Chancado_TMH_Corregido_Total": 0,
+      "Factor_Ajuste": 0,
+      "Flag_Factor_Ajuste_Valido": 0,
+      "Apilado_TMH_Bruto_Ajustado": 0,
+      "Apilado_TMS_Bruto_Ajustado": 0,
+      "Mineral_Chancado_TMS_Ajustado": 0,
+      "Chancado_TMS_Ajustado": 0,
+      "Apilado_TMH_Neto_Ajustado": 0,
+      "Apilado_TMS_Neto_Ajustado": 0,
+      "Cantidad_Registros_Originales": 0,
+      "Cantidad_Registros_Validos": 0,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Check_TMH_Bruto": 0,
+      "Check_Produccion_Flotas": 0,
+      "Carga_CAT_TMH_Viaje_Sin_Ajuste": 0
+    },
+    "diferencias_funcionales": []
+  },
+  "previo_frontera": {
+    "filas_antes": 5,
+    "filas_despues": 5,
+    "diferencias": [],
+    "diferencia_maxima_numerica": {
+      "Apilado_TMH_Bruto": 0,
+      "Apilado_TMH_Neto": 0,
+      "Sal_Dia": 0,
+      "Humedad_Inventario": 0,
+      "Apilado_TMS_Sin_Ajuste": 0,
+      "Total_Inventario_Chancado_TMS": 0,
+      "Inventario_Chancado_TMS_Anterior": 0,
+      "Delta_Inventario_Chancado_TMS": 0,
+      "SRR_TMS_Dia": 0,
+      "Mineral_Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMS_Sin_Ajuste": 0,
+      "Chancado_TMH_Sin_Ajuste": 0,
+      "Produccion_KOM_TMH": 0,
+      "Produccion_CAT_TMH": 0,
+      "Dato_Mina_TMH": 0,
+      "Vueltas_KOM": 0,
+      "Vueltas_CAT": 0,
+      "Participacion_KOM": 0,
+      "Participacion_CAT": 0,
+      "Chancado_KOM_TMH_Sin_Ajuste": 0,
+      "Chancado_CAT_TMH_Sin_Ajuste": 0,
+      "Carga_KOM_Sin_Ajuste": 0,
+      "KOM_TMH_Corregido": 0,
+      "CAT_TMH_Corregido": 0,
+      "Chancado_TMH_Corregido_Total": 0,
+      "Factor_Ajuste_Calculado": 0,
+      "Flag_Factor_Ajuste_Valido": 0,
+      "Cantidad_Registros_Originales": 0,
+      "Cantidad_Registros_Validos": 0,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Check_TMH_Bruto": 0,
+      "Check_Produccion_Flotas": 0,
+      "Flag_Continuidad_Diaria": 0,
+      "Flag_Inventario_Valido": 0,
+      "Flag_Humedad_Inventario_Valida": 0,
+      "Limite_KOM_TMH_Viaje": 0,
+      "Limite_CAT_TMH_Viaje": 0
+    },
+    "diferencias_funcionales": []
+  },
+  "produccion_viajes": {
+    "filas_antes": 84,
+    "filas_despues": 84,
+    "diferencias": [],
+    "diferencia_maxima_numerica": {
+      "Produccion_KOM_TMH": 0,
+      "Produccion_CAT_TMH": 0,
+      "Vueltas_KOM": 0,
+      "Vueltas_CAT": 0,
+      "Dato_Mina_TMH": 0
+    },
+    "diferencias_funcionales": []
+  },
+  "temporal": {
+    "D": "2026-07-06",
+    "D2": "2026-07-09",
+    "impacto_retroactivo": {
+      "Es_Retroactivo": true,
+      "Fecha_Inicio_Afectada": "2026-07-06",
+      "Fecha_Fin_Afectada": "2026-09-22",
+      "Valor_Anterior": "380.000000",
+      "Valor_Nuevo": "350.000000"
+    },
+    "impacto_futuro": {
+      "Es_Retroactivo": false,
+      "Fecha_Inicio_Afectada": "2026-10-28",
+      "Fecha_Fin_Afectada": "2026-09-22",
+      "Valor_Anterior": "365.000000",
+      "Valor_Nuevo": "350.000000"
+    },
+    "frontera": [
+      {
+        "Fecha": "2026-07-05",
+        "KOM": 380.0,
+        "CAT": 265.0
+      },
+      {
+        "Fecha": "2026-07-06",
+        "KOM": 350.0,
+        "CAT": 265.0
+      },
+      {
+        "Fecha": "2026-07-07",
+        "KOM": 350.0,
+        "CAT": 265.0
+      }
+    ],
+    "caso_original": {
+      "Fecha": "2026-07-06",
+      "Apilado_TMH_Bruto": 89903.0,
+      "Apilado_TMH_Neto": 88761.006,
+      "Sal_Dia": 1141.994,
+      "Humedad_Inventario": 4.08,
+      "Apilado_TMS_Sin_Ajuste": 86234.95760000001,
+      "Total_Inventario_Chancado_TMS": 7316.724763736036,
+      "Inventario_Chancado_TMS_Anterior": 6950.675501908588,
+      "Delta_Inventario_Chancado_TMS": 366.0492618274484,
+      "SRR_TMS_Dia": 33618.3638311905,
+      "Mineral_Chancado_TMS_Sin_Ajuste": 86601.00686182745,
+      "Chancado_TMS_Sin_Ajuste": 51840.649030636945,
+      "Chancado_TMH_Sin_Ajuste": 54045.71416872075,
+      "Produccion_KOM_TMH": 50900.031,
+      "Produccion_CAT_TMH": 0.0,
+      "Dato_Mina_TMH": 50900.031,
+      "Vueltas_KOM": 146.0,
+      "Vueltas_CAT": 0.0,
+      "Participacion_KOM": 1.0,
+      "Participacion_CAT": 0.0,
+      "Chancado_KOM_TMH_Sin_Ajuste": 54045.71416872075,
+      "Chancado_CAT_TMH_Sin_Ajuste": 0.0,
+      "Carga_KOM_Sin_Ajuste": 370.1761244432928,
+      "Carga_CAT_Sin_Ajuste": null,
+      "KOM_TMH_Corregido": 54045.71416872075,
+      "CAT_TMH_Corregido": 0.0,
+      "Chancado_TMH_Corregido_Total": 54045.71416872075,
+      "Factor_Ajuste_Calculado": 1.0,
+      "Flag_Factor_Ajuste_Valido": 1,
+      "Estado_Calculo": "OK_SIN_AJUSTE",
+      "Cantidad_Registros_Originales": 12,
+      "Cantidad_Registros_Validos": 12,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Check_TMH_Bruto": 0.0,
+      "Check_Produccion_Flotas": 0.0,
+      "Flag_Continuidad_Diaria": 1,
+      "Flag_Inventario_Valido": 1,
+      "Flag_Humedad_Inventario_Valida": 1,
+      "Limite_KOM_TMH_Viaje": 380.0,
+      "Limite_CAT_TMH_Viaje": 265.0
+    },
+    "caso_prueba": {
+      "Fecha": "2026-07-06",
+      "Apilado_TMH_Bruto": 89903.0,
+      "Apilado_TMH_Neto": 88761.006,
+      "Sal_Dia": 1141.994,
+      "Humedad_Inventario": 4.08,
+      "Apilado_TMS_Sin_Ajuste": 86234.95760000001,
+      "Total_Inventario_Chancado_TMS": 7316.724763736036,
+      "Inventario_Chancado_TMS_Anterior": 6950.675501908588,
+      "Delta_Inventario_Chancado_TMS": 366.0492618274484,
+      "SRR_TMS_Dia": 33618.3638311905,
+      "Mineral_Chancado_TMS_Sin_Ajuste": 86601.00686182745,
+      "Chancado_TMS_Sin_Ajuste": 51840.649030636945,
+      "Chancado_TMH_Sin_Ajuste": 54045.71416872075,
+      "Produccion_KOM_TMH": 50900.031,
+      "Produccion_CAT_TMH": 0.0,
+      "Dato_Mina_TMH": 50900.031,
+      "Vueltas_KOM": 146.0,
+      "Vueltas_CAT": 0.0,
+      "Participacion_KOM": 1.0,
+      "Participacion_CAT": 0.0,
+      "Chancado_KOM_TMH_Sin_Ajuste": 54045.71416872075,
+      "Chancado_CAT_TMH_Sin_Ajuste": 0.0,
+      "Carga_KOM_Sin_Ajuste": 370.1761244432928,
+      "Carga_CAT_Sin_Ajuste": null,
+      "KOM_TMH_Corregido": 51100.0,
+      "CAT_TMH_Corregido": 0.0,
+      "Chancado_TMH_Corregido_Total": 51100.0,
+      "Factor_Ajuste_Calculado": 0.9454958785533896,
+      "Flag_Factor_Ajuste_Valido": 1,
+      "Estado_Calculo": "OK_AJUSTE_KOM",
+      "Cantidad_Registros_Originales": 12,
+      "Cantidad_Registros_Validos": 12,
+      "Cantidad_Duplicados_Eliminados": 0,
+      "Check_TMH_Bruto": 0.0,
+      "Check_Produccion_Flotas": 0.0,
+      "Flag_Continuidad_Diaria": 1,
+      "Flag_Inventario_Valido": 1,
+      "Flag_Humedad_Inventario_Valida": 1,
+      "Limite_KOM_TMH_Viaje": 350.0,
+      "Limite_CAT_TMH_Viaje": 265.0
+    },
+    "vigencias_provisionales": [
+      {
+        "id": 2,
+        "flota": "CAT",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "valor": "265.000000",
+        "vigencia_desde": "2026-07-01",
+        "vigencia_hasta": null,
+        "motivo": "Seed: limites originales cadena V2; MIN(Fecha)=01-07-2026",
+        "usuario_registro": "MIGRACION_FASE2A",
+        "fecha_registro": "2026-09-28 10:20:00.978949",
+        "activo": true
+      },
+      {
+        "id": 1,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "valor": "380.000000",
+        "vigencia_desde": "2026-07-01",
+        "vigencia_hasta": "2026-07-06",
+        "motivo": "Seed: limites originales cadena V2; MIN(Fecha)=01-07-2026",
+        "usuario_registro": "MIGRACION_FASE2A",
+        "fecha_registro": "2026-09-28 10:20:00.978949",
+        "activo": true
+      },
+      {
+        "id": 3,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "valor": "350.000000",
+        "vigencia_desde": "2026-07-06",
+        "vigencia_hasta": "2026-07-07",
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "usuario_registro": "VALIDACION_FASE2A",
+        "fecha_registro": "2026-09-28 10:20:21.606056",
+        "activo": true
+      },
+      {
+        "id": 6,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "valor": "360.000000",
+        "vigencia_desde": "2026-07-07",
+        "vigencia_hasta": "2026-07-09",
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "usuario_registro": "VALIDACION_FASE2A",
+        "fecha_registro": "2026-09-28 10:20:33.959989",
+        "activo": true
+      },
+      {
+        "id": 4,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "valor": "365.000000",
+        "vigencia_desde": "2026-07-09",
+        "vigencia_hasta": "2026-10-28",
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "usuario_registro": "VALIDACION_FASE2A",
+        "fecha_registro": "2026-09-28 10:20:28.705752",
+        "activo": true
+      },
+      {
+        "id": 5,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "valor": "350.000000",
+        "vigencia_desde": "2026-10-28",
+        "vigencia_hasta": null,
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "usuario_registro": "VALIDACION_FASE2A",
+        "fecha_registro": "2026-09-28 10:20:33.881665",
+        "activo": true
+      }
+    ],
+    "auditoria": [
+      {
+        "id": 1,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "accion": "NUEVA_VIGENCIA",
+        "valor_anterior": "380.000000",
+        "valor_nuevo": "350.000000",
+        "vigencia_desde": "2026-07-06",
+        "usuario": "VALIDACION_FASE2A",
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "fecha_registro": "2026-09-28 10:20:21.606056",
+        "es_retroactivo": true
+      },
+      {
+        "id": 2,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "accion": "NUEVA_VIGENCIA",
+        "valor_anterior": "350.000000",
+        "valor_nuevo": "365.000000",
+        "vigencia_desde": "2026-07-09",
+        "usuario": "VALIDACION_FASE2A",
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "fecha_registro": "2026-09-28 10:20:28.705752",
+        "es_retroactivo": true
+      },
+      {
+        "id": 3,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "accion": "NUEVA_VIGENCIA",
+        "valor_anterior": "365.000000",
+        "valor_nuevo": "350.000000",
+        "vigencia_desde": "2026-10-28",
+        "usuario": "VALIDACION_FASE2A",
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "fecha_registro": "2026-09-28 10:20:33.881665",
+        "es_retroactivo": false
+      },
+      {
+        "id": 4,
+        "flota": "KOM",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "accion": "NUEVA_VIGENCIA",
+        "valor_anterior": "350.000000",
+        "valor_nuevo": "360.000000",
+        "vigencia_desde": "2026-07-07",
+        "usuario": "VALIDACION_FASE2A",
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "fecha_registro": "2026-09-28 10:20:33.959989",
+        "es_retroactivo": true
+      },
+      {
+        "id": 5,
+        "flota": "CAT",
+        "parametro": "LIMITE_CARGA_AJUSTE",
+        "accion": "NUEVA_VIGENCIA",
+        "valor_anterior": "265.000000",
+        "valor_nuevo": "250.000000",
+        "vigencia_desde": "2026-07-06",
+        "usuario": "VALIDACION_FASE2A",
+        "motivo": "PRUEBA REVERSIBLE FASE2A",
+        "fecha_registro": "2026-09-28 10:20:34.084949",
+        "es_retroactivo": true
+      }
+    ]
+  },
+  "rollback_pruebas_identico": true,
+  "rechazos": {
+    "valor_cero": "('42000', '[42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]El limite debe ser mayor que cero. (51011) (SQLExecDirectW)')",
+    "flota_invalida": "('42000', '[42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Flota debe ser KOM o CAT. (51010) (SQLExecDirectW)')",
+    "inicio_duplicado": "('42000', '[42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Ya existe una vigencia KOM iniciada el 01-07-2026. (51015) (SQLExecDirectW)')",
+    "parametro_invalido": "('23000', '[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The INSERT statement conflicted with the CHECK constraint \"CK__factor_ca__param__017FD6A3\". The conflict occurred in database \"inventar_SpcHidr\", table \"inventar_SpcHidr.factor_camiones_parametro_vigencia_test\", column \\'parametro\\'. (547) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)')",
+    "intervalo_invalido": "('23000', '[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The INSERT statement conflicted with the CHECK constraint \"CK_factor_vigencia_intervalo\". The conflict occurred in database \"inventar_SpcHidr\", table \"inventar_SpcHidr.factor_camiones_parametro_vigencia_test\". (547) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)')",
+    "solapamiento": "('42000', '[42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Existen vigencias superpuestas de limites de carga para ajuste. (51001) (SQLExecDirectW)')",
+    "abiertas_multiples": "('23000', \"[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Cannot insert duplicate key row in object 'inventar_SpcHidr.factor_camiones_parametro_vigencia_test' with unique index 'UX_factor_vigencia_abierta'. The duplicate key value is (KOM, LIMITE_CARGA_AJUSTE). (2601) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The statement has been terminated. (3621)\")",
+    "faltante": "('01003', '[01003] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Warning: Null value is eliminated by an aggregate or other SET operation. (8153) (SQLMoreResults); [01003] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]No existe limite vigente KOM para 2026-09-07. (51020)')",
+    "previo_seed": "('01003', '[01003] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Warning: Null value is eliminated by an aggregate or other SET operation. (8153) (SQLExecDirectW); [01003] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]No existe limite vigente CAT para 2026-06-30. (51020)')",
+    "multiples_calculo": "('42000', '[42000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Existen multiples limites vigentes KOM para 2026-09-07. (51020) (SQLMoreResults)')"
+  }
+}

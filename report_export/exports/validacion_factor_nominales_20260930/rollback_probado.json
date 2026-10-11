@@ -1,0 +1,10 @@
+{
+  "estado": "OK",
+  "commit": false,
+  "datos_restaurables": [
+    "V2",
+    "Datos Conciliados",
+    "Cache"
+  ],
+  "python_restaurado": false
+}

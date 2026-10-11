@@ -1,0 +1,43 @@
+{
+  "diario": {
+    "bytes": 54364,
+    "sheets": [
+      "Reporte por Turno",
+      "Generador Reporte",
+      "Malla #100",
+      "Curva Granulométrica",
+      "Clays-CuFe",
+      "Trazabilidad Analitos",
+      "Reconst Mod SRR"
+    ],
+    "reconst_16": [
+      483.2380620948381,
+      0,
+      483.2380620948381,
+      0,
+      0,
+      0
+    ]
+  },
+  "mensual": {
+    "bytes": 127437,
+    "sheets": [
+      "Reporte por Turno",
+      "Generador Reporte",
+      "Malla #100",
+      "Curva Granulométrica",
+      "Clays-CuFe",
+      "Trazabilidad Analitos",
+      "Reconst Mod SRR"
+    ],
+    "reconst_16": [
+      483.2380620948381,
+      0,
+      483.2380620948381,
+      0,
+      0,
+      0
+    ]
+  },
+  "day_month_exact": true
+}

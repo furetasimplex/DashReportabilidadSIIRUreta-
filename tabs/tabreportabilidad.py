@@ -12,45 +12,6 @@ import dash_ag_grid as dag
 import numpy as np
 import io
 
-GEKKO_ERROR_MAP = {
-    "Solution Not Found": "No se encontró una solución válida. "
-                          "El modelo no pudo cerrar los balances con las mediciones actuales. Revise datos de entrada y tolerancias.",
-
-    "Infeasible": "El modelo es infactible: las restricciones o ecuaciones se contradicen. "
-                  "Revise signos, matriz de balance y límites de variables.",
-
-    "Maximum Iterations": "La optimización no convergió dentro del número máximo de iteraciones. "
-                          "Puede requerir más iteraciones o datos menos ruidosos.",
-
-    "APMonitor Error": "Error interno de APMonitor. "
-                       "Puede deberse a divisiones por cero o formulación problemática.",
-
-    "Model Error": "El modelo tiene un error en su estructura o ecuaciones. "
-                   "Verifique índices, tamaños de matrices y límites.",
-
-    # fallback
-    "Unknown": "Ocurrió un error inesperado durante la optimización."
-}
-def traducir_error_gekkp(e: Exception):
-    mensaje = str(e)
-
-    for key in GEKKO_ERROR_MAP:
-        if key in mensaje:
-            return GEKKO_ERROR_MAP[key]
-
-    return GEKKO_ERROR_MAP["Unknown"]
-def make_toast(mensaje, header="Error en Reconciliación", color="danger", duration=5000):
-    return dbc.Toast(
-        mensaje,
-        header=header,
-        icon=color,
-        duration=duration,
-        is_open=True,
-        dismissable=True,
-        style={"maxWidth": "350px"},
-    )
-
-
 dict_style_boton_2 = {
     'background': '#C0E48C', 'color': 'black', 'border-color': '#7EB72B',
     'border-radius': '10px',
@@ -77,7 +38,7 @@ except Exception:
     ]
     columnsDefs_desbalances = [
         {"headerName": "Área", "field": "Area"},
-        {"headerName": "Desbalance masa_Ini", "field": "Desbalance masa inicial", "type": "rightAligned"},
+        {"headerName": "Desbalance masa_Ini", "field": "Desbalance masa_Ini", "type": "rightAligned"},
         {"headerName": "Desbalance masa (Recon)", "field": "Desbalance masa", "type": "rightAligned"},
         {"headerName": "Desbalance fino Cu (Recon)", "field": "Desbalance fino Cu", "type": "rightAligned"},
     ]
@@ -96,13 +57,8 @@ OUTPUT_DIR = BASE_DIR / "Desbalances"
 
 # 1) LAYOUT (vista)
 def render_layout_reporte():
-        return html.Div([
+    return html.Div([
         # Componente de descarga (si usas exportación adicional)
-        html.Div(
-        id="toast-container-reporte",
-        className="position-fixed top-0 end-0 p-3",
-        style={"zIndex": 9999},
-        ),
         dcc.Download(id="dl-reporte-caso"),
 
         # ——————————————————————  SECCIÓN: RECONCILIADOR (arriba)  ——————————————————————
@@ -184,7 +140,7 @@ def render_layout_reporte():
         # ——————————————————————  SECCIÓN: REPORTE (debajo)  ——————————————————————
         dbc.Card(
             dbc.CardBody([
-                html.H4("Resumen reconciliación", className="mb-3"),
+                html.H4("Módulo de Reportabilidad", className="mb-3"),
                 dbc.Row([
                     # Columna 1: Controles e información del caso
                     dbc.Col([
@@ -241,23 +197,21 @@ def register_callbacks_reporte(app):
     @callback(
     Output('recon-resultados','rowData'),
     Output('recon-desbalances','rowData'),
-    Output('toast-container-reporte', 'children'),
     Input('btn-recon','n_clicks'),
     State('recon-data','data'),               # ← datos persistidos
     State('active-case','data'),              # ← caso activo unificado
     prevent_initial_call=True
 )
     def get_recon(n_clicks, data_base, active_case):
-        print(f"data_base: {data_base}")
         if not n_clicks:
-            return [], [], []
+            return [], []
         if not data_base:
-            return [], [], []
+            return [], []
 
         try:
             # 1) Base desde la grilla
             dfb = pd.DataFrame(data_base)
-            print(dfb)
+
             # 2) Normalización numérica
             dfb['id_flujo'] = pd.to_numeric(dfb.get('id_flujo', np.arange(1, len(dfb)+1)), errors='coerce')
             dfb.sort_values('id_flujo', inplace=True)
@@ -294,20 +248,11 @@ def register_callbacks_reporte(app):
             df_med_all.rename(columns={'Flujo': 'Masa Medida', 'nombre_flujo': 'Flujo', 'codigo_flujo': 'Codigo'}, inplace=True)
             df_out = resultados.merge(df_med_all, how='left', on='Flujo')
 
-            return df_out.round(4).to_dict('records'), df_des.round(4).to_dict('records'),[]
+            return df_out.round(4).to_dict('records'), df_des.round(4).to_dict('records')
 
         except Exception as e:
-            error_es = traducir_error_gekkp(e)
-            print(f"❌ Error durante la reconciliación final: {error_es}\n🔍 Detalle técnico: {e}")
-
-            toast = make_toast(
-                mensaje=error_es,
-                header="Error en Reconciliación",
-                color="danger",
-                duration=6000
-            )
-
-            return [], [], [toast]
+            print(f"❌ Error durante la reconciliación final: {e}")
+            return [], []
 
     # ==============================================================================
     # CALLBACK #3: PUBLICAR DATOS
@@ -315,76 +260,19 @@ def register_callbacks_reporte(app):
     @app.callback(
         Output('btn-pub-msg_caso', 'children'),
         Input('btn-publica-casos', 'n_clicks'),
-        State('recon-data', 'data'),
         State('recon-resultados', 'rowData'),
         State('active-case', 'data'),
         prevent_initial_call=True
     )
-    def get_publica_casos(n_clicks, med_cas, rec_caso, shared):
+    def get_publica_casos(n_clicks, rec_caso, shared):
         if not n_clicks:
             return no_update
-        if not rec_caso:
-            return "⚠️ No hay datos reconciliados para publicar."
-        if not med_cas:
-            return "⚠️ No hay datos base (recon-data) para publicar."
-
-        # --- Función auxiliar con PRINTS para detectar el error ---
-        def limpiar_y_diagnosticar(lista_diccionarios, nombre_dataset):
-            if not lista_diccionarios:
-                return []
-            
-            print(f"\n--- 🔍 REVISANDO DATASET: {nombre_dataset} ---")
-            df = pd.DataFrame(lista_diccionarios)
-
-            # 1. DIAGNÓSTICO: Buscar columnas con ndarrays
-            for col in df.columns:
-                # Verificamos si algún elemento de la columna es tipo ndarray
-                # (Usamos .head(1) para no saturar la consola, pero revisamos la serie)
-                try:
-                    ejemplo = df[col].iloc[0]
-                    es_array = isinstance(ejemplo, np.ndarray) or type(ejemplo).__name__ == 'ndarray'
-                    
-                    if es_array:
-                        print(f"🔴 ¡CULPABLE ENCONTRADO! Columna: '{col}'")
-                        print(f"   Valor típico: {ejemplo}")
-                        print(f"   Tipo detectado: {type(ejemplo)}")
-                except Exception:
-                    pass
-
-            # 2. CORRECCIÓN (Aplanar arrays)
-            # Esto convierte array([1.23]) -> 1.23
-            for col in df.columns:
-                df[col] = df[col].apply(lambda x: x.item() if hasattr(x, 'item') and (isinstance(x, np.ndarray) or hasattr(x, 'size')) else x)
-
-            # 3. Limpieza estándar (NaN -> None)
-            for col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='ignore')
-
-            # Reemplazar infinitos y NaN por None para SQL
-            df = df.astype(object)
-            df = df.where(pd.notnull(df), None)
-
-            return df.to_dict("records")
-
         try:
-            # 1) Diagnosticar y Limpiar Resultados (rec_caso)
-            print(">>> Iniciando limpieza de Resultados Reconciliados...")
-            rec_caso_limpio = limpiar_y_diagnosticar(rec_caso, "RESULTADOS")
-
-            # 2) Diagnosticar y Limpiar Mediciones (med_cas)
-            print(">>> Iniciando limpieza de Mediciones Originales...")
-            med_cas_limpio = limpiar_y_diagnosticar(med_cas, "MEDICIONES")
-
-            # 3) PUBLICACIÓN
-            print(">>> Enviando datos limpios a SQL...")
-            nrows = get_data_publica_casos(med_cas_limpio, rec_caso_limpio, shared)
+            # Asumo que get_data_publica_casos no necesita med_cas
+            nrows = get_data_publica_casos(rec_caso, shared) 
             return f"✅ Publicado correctamente ({nrows} filas)."
-
         except Exception as e:
-            import traceback
-            print("\n❌❌ ERROR FATAL EN PUBLICACIÓN ❌❌")
-            traceback.print_exc() # Esto imprime la traza completa en tu terminal
-            return f"❌ Error al publicar: {str(e)}"
+            return f"❌ Error al publicar: {e}"
 
     # ==============================================================================
     # CALLBACK #4: DESCARGAR

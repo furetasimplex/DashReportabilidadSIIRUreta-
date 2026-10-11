@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "start": "2026-09-07",
+    "recovery": "2026-09-11",
+    "pi_sum": "140489.000",
+    "tum_sum": "140489.000000",
+    "residual": "0.000000",
+    "complete": true,
+    "state": "CONTINGENCIA_TUM_RECONCILIADA"
+  }
+]

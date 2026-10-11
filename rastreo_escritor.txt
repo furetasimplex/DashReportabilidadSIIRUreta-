@@ -1,0 +1,24 @@
+====================================================================================================
+QUIEN LEE/ESCRIBE cada tabla (sys.sql_expression_dependencies, objetos tipo P=SP, V=vista, FN=funcion)
+====================================================================================================
+
+--- Dependencias de: rep_prod_ajustado_stg ---
+  (sin dependencias registradas via sql_expression_dependencies)
+
+--- Dependencias de: rep_prod_targets ---
+  (sin dependencias registradas via sql_expression_dependencies)
+
+--- Dependencias de: rep_prod_reglas ---
+  (sin dependencias registradas via sql_expression_dependencies)
+
+====================================================================================================
+Contenido COMPLETO de rep_prod_reglas (sin truncar)
+====================================================================================================
+ERROR leyendo rep_prod_reglas: (pyodbc.ProgrammingError) ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'rep_prod_reglas'. (208) (SQLExecDirectW)")
+[SQL: SELECT * FROM rep_prod_reglas]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+====================================================================================================
+Buscar SPs que mencionen 'rep_prod_ajustado_stg' o 'factor_chancado' en su definicion (texto plano)
+====================================================================================================
+  (ninguno encontrado en inventar_SpcHidr)

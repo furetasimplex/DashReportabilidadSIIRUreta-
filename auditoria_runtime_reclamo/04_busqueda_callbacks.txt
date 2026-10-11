@@ -1,0 +1,15 @@
+Busquedas realizadas:
+rg -n "btn-automatizacion|btn-recalcular|cb_automatizacion|cb_recalcular" .
+rg -n "Input\(\"btn-recalcular\"|Input\(\"btn-automatizacion\"" .
+
+Coincidencias unicas (excluyendo venv/.git):
+reclamo\panel.py:164 id="btn-recalcular"
+reclamo\panel.py:205 id="btn-automatizacion"
+reclamo\panel.py:804 Input("btn-recalcular", "n_clicks")
+reclamo\panel.py:809 def cb_recalcular(n, desde, hasta)
+reclamo\panel.py:811 msg = db.recalcular(desde, hasta)
+reclamo\panel.py:846 Input("btn-automatizacion", "n_clicks")
+reclamo\panel.py:849 def cb_automatizacion(n)
+reclamo\panel.py:851 df = db.mantener_secuencia()
+
+No se encontraron callbacks duplicados ni IDs alternativos en el repositorio auditado.
