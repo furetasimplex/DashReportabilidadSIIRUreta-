@@ -1,0 +1,171 @@
+/* Estilos de Curvas encapsulados al paquete. No cambian Reportabilidad ni el
+   resto del theme SIIR. */
+.curvas-recon-shell {
+  --cr-orange: var(--siir-orange, #E86D1F);
+  --cr-orange-hover: var(--siir-orange-hover, #D05C10);
+  --cr-orange-soft: var(--siir-orange-light, #FFF0E6);
+  --cr-dark: var(--siir-dark, #1A1A2E);
+  --cr-text: var(--siir-text, #2D2D2D);
+  --cr-muted: var(--siir-muted, #8A8A9A);
+  --cr-border: var(--siir-border, #E5E7EB);
+  --cr-bg: var(--siir-bg, #F5F6FA);
+  --cr-paper: var(--siir-white, #FFFFFF);
+  width: 100%;
+  min-width: 0;
+  color: var(--cr-text);
+  font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.curvas-recon-shell #curvas-recon-root {
+  width: 100%; min-width: 0; color: var(--cr-text); font-family: inherit;
+}
+.curvas-recon-shell #curvas-recon-root * { box-sizing: border-box; }
+.curvas-recon-shell #curvas-recon-root h1,
+.curvas-recon-shell #curvas-recon-root h2,
+.curvas-recon-shell #curvas-recon-root h3,
+.curvas-recon-shell #curvas-recon-root h4,
+.curvas-recon-shell #curvas-recon-root h5,
+.curvas-recon-shell #curvas-recon-root h6 {
+  color: var(--cr-dark); font-family: inherit; letter-spacing: -.015em;
+}
+
+/* Hero y lectura del Caso */
+.curvas-recon-shell .dashboard-shell { width: 100%; max-width: 1600px; padding: 0; }
+.curvas-recon-shell .overview-card {
+  margin: 0 0 18px; padding: 24px 25px 19px; background: var(--cr-paper);
+  border: 1px solid var(--cr-border); border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(26, 26, 46, .045);
+}
+.curvas-recon-shell .page-heading { margin-bottom: 18px; }
+.curvas-recon-shell .eyebrow {
+  margin: 0 0 5px; color: var(--cr-orange); font-size: .7rem;
+  font-weight: 700; letter-spacing: .12em;
+}
+.curvas-recon-shell .page-title {
+  margin: 0; color: var(--cr-dark); font-size: clamp(1.4rem, 2vw, 1.85rem);
+  font-weight: 700; line-height: 1.25;
+}
+.curvas-recon-shell .page-intro {
+  max-width: 780px; margin: 7px 0 0; color: var(--cr-muted);
+  font-size: .88rem; line-height: 1.55;
+}
+
+/* Selector y acciones */
+.curvas-recon-shell .controls-card {
+  padding: 15px; border: 1px solid var(--cr-border); border-radius: 9px;
+  background: #FAFBFC;
+}
+.curvas-recon-shell .recon-controls { align-items: end; gap: 10px 12px; margin: 0; }
+.curvas-recon-shell .control-field { display: flex; flex-direction: column; gap: 5px; }
+.curvas-recon-shell .control-label { color: #454B58; font-size: .76rem; font-weight: 700; }
+.curvas-recon-shell .case-dropdown { width: 100%; min-width: 250px; }
+.curvas-recon-shell .Select-control,
+.curvas-recon-shell .Select-menu-outer { border-color: var(--cr-border); border-radius: 7px; }
+.curvas-recon-shell .action-primary,
+.curvas-recon-shell .action-secondary,
+.curvas-recon-shell .action-tertiary {
+  min-height: 39px; padding: 8px 13px; border-radius: 7px;
+  font-family: inherit; font-size: .8rem; font-weight: 650; white-space: nowrap;
+}
+.curvas-recon-shell .action-primary { border-color: var(--cr-orange); background: var(--cr-orange); }
+.curvas-recon-shell .action-primary:hover,
+.curvas-recon-shell .action-primary:focus { border-color: var(--cr-orange-hover); background: var(--cr-orange-hover); }
+.curvas-recon-shell .action-secondary { border-color: #C9CFD8; color: #454B58; background: var(--cr-paper); }
+.curvas-recon-shell .action-secondary:hover:not(:disabled) { border-color: var(--cr-orange); color: var(--cr-orange); background: var(--cr-orange-soft); }
+.curvas-recon-shell .action-tertiary { border: 1px solid var(--cr-border); color: #545B68; background: #F0F2F5; }
+.curvas-recon-shell .action-tertiary:hover { color: var(--cr-dark); background: #E7EAF0; }
+.curvas-recon-shell .status-column { align-self: center; }
+.curvas-recon-shell .status-badge { display: inline-flex; align-items: center; min-height: 32px; }
+
+/* Freshness and methodology notes */
+.curvas-recon-shell .freshness-wrap { margin: 13px 0 0; }
+.curvas-recon-shell .freshness-wrap > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.curvas-recon-shell .freshness-wrap span {
+  margin: 0 !important; padding: 4px 8px; border: 1px solid var(--cr-border);
+  border-radius: 999px; background: var(--cr-paper); font-size: .7rem;
+}
+.curvas-recon-shell .method-note {
+  display: flex; flex-wrap: wrap; gap: 4px 9px; margin-top: 14px; padding: 11px 13px;
+  border-left: 3px solid #6F8CAB; border-radius: 3px 7px 7px 3px;
+  background: #F1F5F8; line-height: 1.45;
+}
+.curvas-recon-shell .method-note-title { color: #33495F; font-size: .75rem; font-weight: 750; white-space: nowrap; }
+.curvas-recon-shell .method-note-text { color: #596978; font-size: .75rem; }
+
+/* Pad cards and active status legend */
+.curvas-recon-shell .recon-workspace { display: flex; flex-direction: column; gap: 14px; }
+.curvas-recon-shell .result-card,
+.curvas-recon-shell .chart-card,
+.curvas-recon-shell .siir-card {
+  min-width: 0; padding: 16px 18px; border: 1px solid var(--cr-border);
+  border-radius: 10px; background: var(--cr-paper);
+  box-shadow: 0 1px 5px rgba(26, 26, 46, .045);
+}
+.curvas-recon-shell .pad-legend {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px 16px;
+  margin: 0 0 15px; color: #535C69; font-size: .75rem;
+}
+.curvas-recon-shell .pad-legend span { margin: 0 !important; }
+.curvas-recon-shell .pad-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.curvas-recon-shell .pad-panel {
+  min-width: 0; overflow-x: auto; padding: 8px 9px 2px;
+  border: 1px solid #ECEEF2; border-radius: 8px; background: #FCFCFD;
+}
+.curvas-recon-shell .pad-panel h6 { margin: 2px 0 8px; color: var(--cr-dark) !important; font-size: .87rem; font-weight: 700; }
+
+/* KPI tiles */
+.curvas-recon-shell .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 10px; }
+.curvas-recon-shell .kpi-tile {
+  min-width: 0; padding: 13px 14px; border: 1px solid var(--cr-border);
+  border-radius: 9px; background: var(--cr-paper); box-shadow: 0 1px 4px rgba(26, 26, 46, .035);
+}
+.curvas-recon-shell .kpi-label { min-height: 2.35em; color: var(--cr-muted); font-size: .72rem; font-weight: 600; line-height: 1.35; }
+.curvas-recon-shell .kpi-value {
+  margin-top: 6px; color: #26354B; font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+  font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -.02em; overflow-wrap: anywhere;
+}
+
+/* Warnings, no-result and report feedback */
+.curvas-recon-shell .warning-list { display: grid; gap: 6px; padding: 11px 13px; border: 1px solid #F0D5A6; border-radius: 8px; background: #FFF9EE; }
+.curvas-recon-shell .warning-item { display: flex; align-items: baseline; gap: 8px; color: #854D0E; font-size: .8rem; line-height: 1.45; }
+.curvas-recon-shell .warning-tag { flex: 0 0 auto; color: #9A5B0A; font-size: .67rem; font-weight: 750; letter-spacing: .04em; }
+.curvas-recon-shell .empty-state { display: grid; place-content: center; min-height: 125px; padding: 22px; text-align: center; }
+.curvas-recon-shell .empty-title { color: #334253; font-size: .95rem; font-weight: 700; }
+.curvas-recon-shell .empty-copy { max-width: 560px; margin: 5px auto 0; color: var(--cr-muted); font-size: .82rem; line-height: 1.5; }
+.curvas-recon-shell .report-status { color: var(--cr-muted); font-size: .78rem; }
+.curvas-recon-shell .report-status:empty { display: none; }
+
+/* Sub-tabs and responsive Plotly area */
+.curvas-recon-shell .chart-tabs-wrap { padding: 0 7px; }
+.curvas-recon-shell .chart-tabs-wrap .tab { color: #737B88 !important; font-family: inherit; font-size: .8rem; }
+.curvas-recon-shell .chart-tabs-wrap .tab--selected { color: var(--cr-orange) !important; }
+.curvas-recon-shell #curvas-recon-root .dash-graph,
+.curvas-recon-shell #curvas-recon-root .js-plotly-plot,
+.curvas-recon-shell #curvas-recon-root .plot-container { max-width: 100%; }
+.curvas-recon-shell #curvas-recon-root .chart-card { overflow: hidden; }
+
+@media (max-width: 1050px) {
+  .curvas-recon-shell .overview-card { padding: 20px 18px 16px; }
+  .curvas-recon-shell .kpi-grid { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+  .curvas-recon-shell .pad-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .curvas-recon-shell .overview-card { margin-bottom: 12px; padding: 16px 12px 12px; border-radius: 9px; }
+  .curvas-recon-shell .controls-card { padding: 11px; }
+  .curvas-recon-shell .recon-controls > .col { width: 100%; }
+  .curvas-recon-shell .case-dropdown { min-width: 0; }
+  .curvas-recon-shell .action-primary,
+  .curvas-recon-shell .action-secondary,
+  .curvas-recon-shell .action-tertiary { width: 100%; }
+  .curvas-recon-shell .status-column { justify-content: flex-start; }
+  .curvas-recon-shell .method-note { display: block; }
+  .curvas-recon-shell .method-note-title { display: block; margin-bottom: 4px; }
+  .curvas-recon-shell .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .curvas-recon-shell .kpi-tile { padding: 10px; }
+  .curvas-recon-shell .kpi-label { min-height: 0; font-size: .68rem; }
+  .curvas-recon-shell .kpi-value { font-size: 1.12rem; }
+  .curvas-recon-shell .result-card,
+  .curvas-recon-shell .chart-card,
+  .curvas-recon-shell .siir-card { padding: 10px 7px; border-radius: 7px; }
+  .curvas-recon-shell .pad-legend { gap: 6px 11px; }
+}

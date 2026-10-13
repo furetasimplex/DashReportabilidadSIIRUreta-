@@ -1,0 +1,13 @@
+.reconstitucion-shell { padding: 8px; color: var(--siir-text, #2D2D2D); font-family: Inter, 'Segoe UI', sans-serif; }
+.reconstitucion-shell .reconstitucion-title { font-size: 20px; font-weight: 600; margin: 0 0 16px; }
+.reconstitucion-shell .reconstitucion-controls { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(220px, 1fr) auto auto; gap: 12px; align-items: center; margin-bottom: 12px; }
+.reconstitucion-shell .reconstitucion-button { background: var(--siir-orange, #E86D1F); color: white; border: 0; border-radius: var(--siir-radius, 8px); padding: 10px 16px; cursor: pointer; }
+.reconstitucion-shell .reconstitucion-button:disabled { opacity: .6; cursor: wait; }
+.reconstitucion-shell .reconstitucion-kpis { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+.reconstitucion-shell .reconstitucion-note { color: var(--siir-muted, #8A8A9A); font-size: 12px; }
+.reconstitucion-shell details { margin: 12px 0; background: var(--siir-white, white); border: 1px solid var(--siir-border, #E5E7EB); border-radius: 8px; padding: 12px; }
+.reconstitucion-shell summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
+.reconstitucion-shell .reconstitucion-modal { position: fixed; inset: 0; z-index: 1100; background: #0007; align-items: center; justify-content: center; padding: 20px; }
+.reconstitucion-shell .reconstitucion-dialog { background: white; border-radius: 10px; padding: 24px; max-width: 900px; max-height: 85vh; overflow: auto; }
+@media (max-width: 1050px) { .reconstitucion-shell .reconstitucion-controls { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .reconstitucion-shell .reconstitucion-controls { grid-template-columns: 1fr; } }

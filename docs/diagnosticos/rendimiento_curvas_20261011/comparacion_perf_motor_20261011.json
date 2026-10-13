@@ -1,0 +1,41 @@
+{
+  "etapas": [
+    {
+      "etapa": "casos",
+      "segundos": 1.7204,
+      "consultas": 1,
+      "sql_segundos": 0.0796
+    },
+    {
+      "etapa": "primera_preparacion_historico",
+      "segundos": 0.8279,
+      "consultas": 1,
+      "sql_segundos": 0.0884
+    },
+    {
+      "etapa": "ancla",
+      "segundos": 0.0016,
+      "consultas": 0,
+      "sql_segundos": 0
+    },
+    {
+      "etapa": "entradas_ventana",
+      "segundos": 0.9274,
+      "consultas": 0,
+      "sql_segundos": 0
+    },
+    {
+      "etapa": "motor_original_frio",
+      "segundos": 6.7519,
+      "consultas": 0,
+      "sql_segundos": 0
+    },
+    {
+      "etapa": "motor_vectorizado_frio",
+      "segundos": 1.5783,
+      "consultas": 0,
+      "sql_segundos": 0
+    }
+  ],
+  "resultados_identicos": true
+}

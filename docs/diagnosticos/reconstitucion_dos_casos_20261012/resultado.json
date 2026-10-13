@@ -1,0 +1,35 @@
+﻿{
+    "fecha":  "2026-10-12",
+    "casos_catalogo":  8,
+    "casos":  [
+                  {
+                      "caso_id":  8,
+                      "nombre":  "Caso hidrometalurgia",
+                      "solver_run_id":  47,
+                      "desde":  "2026-08-22",
+                      "hasta":  "2026-08-31",
+                      "filas_publicadas":  0,
+                      "dias_publicados":  0,
+                      "estado":  "SIN_MASA_PUBLICADA",
+                      "tipo_error":  "ValueError",
+                      "mensaje_ui":  "No se pudo cargar el Caso. Verifica conexión y masa publicada validada; puedes reintentar.",
+                      "segundos":  20.676
+                  },
+                  {
+                      "caso_id":  7,
+                      "nombre":  "Semana 3 agosto",
+                      "solver_run_id":  50,
+                      "desde":  "2026-08-15",
+                      "hasta":  "2026-08-21",
+                      "filas_publicadas":  0,
+                      "dias_publicados":  0,
+                      "estado":  "SIN_MASA_PUBLICADA",
+                      "tipo_error":  "ValueError",
+                      "mensaje_ui":  "No se pudo cargar el Caso. Verifica conexión y masa publicada validada; puedes reintentar.",
+                      "segundos":  15.893
+                  }
+              ],
+    "aislamiento_entre_casos":  null,
+    "consultas_lectura":  39,
+    "motivo_aislamiento_no_verificado":  "No se obtuvieron dos resultados reales para comparar."
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "etapa": "casos",
+    "segundos": 2.4609,
+    "consultas": 1,
+    "sql_segundos": 0.0729
+  },
+  {
+    "etapa": "primera_preparacion_historico",
+    "segundos": 2.2068,
+    "consultas": 1,
+    "sql_segundos": 0.2459
+  },
+  {
+    "etapa": "ancla",
+    "segundos": 0.0013,
+    "consultas": 0,
+    "sql_segundos": 0
+  },
+  {
+    "etapa": "entradas_ventana",
+    "segundos": 4.3959,
+    "consultas": 0,
+    "sql_segundos": 0
+  },
+  {
+    "etapa": "motor_y_preparacion_persistencia_sin_escribir",
+    "segundos": 15.9508,
+    "consultas": 0,
+    "sql_segundos": 0
+  },
+  {
+    "etapa": "barras_recuperacion",
+    "segundos": 3.7771,
+    "consultas": 5,
+    "sql_segundos": 0.5087
+  },
+  {
+    "etapa": "barras_flujos",
+    "segundos": 0.8127,
+    "consultas": 0,
+    "sql_segundos": 0
+  },
+  {
+    "etapa": "graficos_pila",
+    "segundos": 3.3544,
+    "consultas": 1,
+    "sql_segundos": 0.0888
+  },
+  {
+    "etapa": "motor_repetido",
+    "segundos": 0.2614,
+    "consultas": 0,
+    "sql_segundos": 0
+  }
+]

@@ -38,6 +38,18 @@ def fecha(value):
     return pd.Timestamp(value).strftime("%d-%m-%Y %H:%M")
 
 
+def comentario_texto(value):
+    if value is None:
+        return "Sin comentario"
+    try:
+        if pd.isna(value):
+            return "Sin comentario"
+    except (TypeError, ValueError):
+        pass
+    texto = str(value)
+    return texto if texto else "Sin comentario"
+
+
 def _campo(nombre, etiqueta):
     limites = {"min": 0, "max": 1} if nombre.startswith("umbral_") else {}
     categoria = categoria_parametro(nombre)
@@ -221,7 +233,7 @@ def mostrar_historial(frame):
         titulo = (f"Versión {registro['configuracion_id']} · {fecha(registro['fecha_submit'])} · "
                   f"{registro['usuario_submit']}")
         items.append(dbc.AccordionItem([
-            html.P("Comentario: " + (registro.get("comentario") or "Sin comentario")),
+            html.P("Comentario: " + comentario_texto(registro.get("comentario"))),
             _detalle_parametros(registro),
         ], title=titulo, item_id=str(registro["configuracion_id"])))
     return dbc.Accordion(items, start_collapsed=True, always_open=False)
@@ -233,7 +245,7 @@ def _estado_vigente(registro):
     return dbc.Card(dbc.CardBody([
         html.H5(f"Versión vigente: {registro['configuracion_id']}"),
         html.Div(f"Enviada por {registro['usuario_submit']} el {fecha(registro['fecha_submit'])}."),
-        html.Div("Comentario: " + (registro.get("comentario") or "Sin comentario"), className="small"),
+        html.Div("Comentario: " + comentario_texto(registro.get("comentario")), className="small"),
     ]), color="light")
 
 
@@ -285,7 +297,7 @@ def preparar_confirmacion(valores, comentario, configuracion_esperada):
         dbc.Alert(f"Esta configuración reemplazará globalmente a la versión {configuracion_esperada}.",
                   color="warning"),
         _detalle_parametros(payload), html.P("Usuario: " + payload["usuario_submit"]),
-        html.P("Comentario: " + (payload["comentario"] or "Sin comentario")),
+        html.P("Comentario: " + comentario_texto(payload["comentario"])),
     ])
     return token, resumen
 

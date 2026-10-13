@@ -5,14 +5,14 @@ from flask import Blueprint, request, session, redirect, render_template
 from sqlalchemy import text
 from passlib.hash import django_pbkdf2_sha256
 from db_connection import get_engine
-from env_loader import load_app_env
+from env_loader import load_app_env, require_app_env
 
 load_app_env()
 
 auth_bp = Blueprint("auth", __name__, template_folder="templatesFrontend")
 
 
-LOGIN_TABLE = os.environ["LOGIN_DATABASE"]
+LOGIN_TABLE = require_app_env("LOGIN_DATABASE")["LOGIN_DATABASE"]
 if not re.fullmatch(r"[\w.]+", LOGIN_TABLE):
     raise ValueError(f"LOGIN_DATABASE inválido: {LOGIN_TABLE!r}")
 

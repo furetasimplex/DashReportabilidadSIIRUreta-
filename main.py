@@ -1,7 +1,8 @@
 import os
-from env_loader import load_app_env
+from env_loader import load_app_env, require_app_env
 
 load_app_env()
+require_app_env("LOGIN_DATABASE", "SECRET_KEY")
 
 # Debe ejecutarse antes de importar layout/auth/report_export: esos módulos
 # construyen nombres SQL al importarse y no deben ocultar un .env PROD inválido.

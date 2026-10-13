@@ -1,11 +1,11 @@
 from dash import clientside_callback, html, dcc, no_update
 import dash
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import base64, os
 from datetime import datetime
 
-from tabs import tab_report
+from tabs import tab_report, tab_curvas, tab_reconstitucion
 import report_export.callbacks.reportabilidad_cb
 import callbacks.reportabilidad_callbacks
 from reclamo import panel as reclamo_panel  # registra sus @callback al importarse
@@ -81,6 +81,14 @@ def render_sidebar():
                     html.I(className="bi bi-calculator me-2"),
                     "Polinomio Ácido",
                 ], href="#", id="nav-polinomio-acido", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-graph-up-arrow me-2"),
+                    "Curvas y reconciliación",
+                ], href="#", id="nav-curvas-recon", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-stack me-2"),
+                    "Reconstitución de Módulos",
+                ], href="#", id="nav-reconstitucion", className="siir-nav-link", n_clicks=0),
             ], vertical=True, pills=False),
         ]
     )
@@ -94,7 +102,7 @@ def render_main_header():
             html.Span(" / ", className="siir-bc-sep"),
             html.Span("HIDROMETALURGIA", className="siir-bc-item"),
             html.Span(" / ", className="siir-bc-sep"),
-            html.Span("REPORTES", className="siir-bc-active"),
+            html.Span("REPORTABILIDAD", id="siir-bc-active", className="siir-bc-active"),
         ], className="siir-breadcrumb"),
 
         # Title + date row
@@ -168,6 +176,10 @@ subtabs = html.Div(
                  children=lixiviacion_panel.layout()),
         html.Div(id="subtabs-polinomio-acido", style={"display": "none"},
                  children=polinomio_acido_panel.layout()),
+        # El árbol de Curvas se crea al entrar en la sección. Los callbacks de
+        # la pestaña sí quedan registrados al iniciar la app.
+        html.Div(id="subtabs-curvas-recon", style={"display": "none"}),
+        html.Div(id="subtabs-reconstitucion", style={"display": "none"}),
     ]
 )
 
@@ -191,26 +203,40 @@ def register_callbacks(app):
         Output("subtabs-monitor-pitum", "style"),
         Output("subtabs-lixiviacion", "style"),
         Output("subtabs-polinomio-acido", "style"),
+        Output("subtabs-curvas-recon", "style"),
+        Output("subtabs-curvas-recon", "children"),
+        Output("subtabs-reconstitucion", "style"),
+        Output("subtabs-reconstitucion", "children"),
         Output("nav-reportabilidad", "className"),
         Output("nav-reclamo", "className"),
         Output("nav-powerbi", "className"),
         Output("nav-monitor-pitum", "className"),
         Output("nav-lixiviacion", "className"),
         Output("nav-polinomio-acido", "className"),
+        Output("nav-curvas-recon", "className"),
+        Output("nav-reconstitucion", "className"),
+        Output("siir-bc-active", "children"),
         Input("nav-reportabilidad", "n_clicks"),
         Input("nav-reclamo", "n_clicks"),
         Input("nav-powerbi", "n_clicks"),
         Input("nav-monitor-pitum", "n_clicks"),
         Input("nav-lixiviacion", "n_clicks"),
         Input("nav-polinomio-acido", "n_clicks"),
+        Input("nav-curvas-recon", "n_clicks"),
+        Input("nav-reconstitucion", "n_clicks"),
+        State("subtabs-curvas-recon", "children"),
+        State("subtabs-reconstitucion", "children"),
         prevent_initial_call=False,
     )
-    def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum, n_lix, n_polinomio):
+    def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum, n_lix, n_polinomio, n_curvas,
+                       n_reconstitucion, mounted_curvas, mounted_reconstitucion):
         # dash.ctx.triggered_id es None en la carga inicial -> por defecto
         # se muestra Reportabilidad, igual que antes.
         triggered = dash.ctx.triggered_id
 
         secciones = {
+            "nav-curvas-recon": "curvas-recon",
+            "nav-reconstitucion": "reconstitucion",
             "nav-reportabilidad": "reportabilidad",
             "nav-reclamo": "reclamo",
             "nav-powerbi": "powerbi",
@@ -226,6 +252,19 @@ def register_callbacks(app):
         def clase(nombre):
             return "siir-nav-link active" if nombre == activa else "siir-nav-link"
 
+        children = dash.no_update
+        if activa == "curvas-recon" and not mounted_curvas:
+            children = tab_curvas.layout()
+        reconstitucion_children = dash.no_update
+        if activa == "reconstitucion" and not mounted_reconstitucion:
+            reconstitucion_children = tab_reconstitucion.layout()
+        titles = {
+            "reportabilidad": "REPORTABILIDAD", "reclamo": "ADMINISTRACIÓN DE RECLAMO",
+            "powerbi": "CARGA POWERBI CAMIONES", "monitor-pitum": "MONITOREO CORREAS",
+            "lixiviacion": "LIXIVIACIÓN", "polinomio-acido": "POLINOMIO ÁCIDO",
+            "curvas-recon": "CURVAS Y RECONCILIACIÓN",
+            "reconstitucion": "RECONSTITUCIÓN DE MÓDULOS",
+        }
         return (
             estilo("reportabilidad"),
             estilo("reclamo"),
@@ -233,13 +272,19 @@ def register_callbacks(app):
             estilo("monitor-pitum"),
             estilo("lixiviacion"),
             estilo("polinomio-acido"),
+            estilo("curvas-recon"), children,
+            estilo("reconstitucion"), reconstitucion_children,
             clase("reportabilidad"),
             clase("reclamo"),
             clase("powerbi"),
             clase("monitor-pitum"),
             clase("lixiviacion"),
             clase("polinomio-acido"),
+            clase("curvas-recon"), clase("reconstitucion"), titles[activa],
         )
+
+    tab_curvas.register_callbacks(app)
+    tab_reconstitucion.register_callbacks(app)
 
     @app.callback(
         Output("siir-username", "children"),

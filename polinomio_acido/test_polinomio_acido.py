@@ -124,6 +124,24 @@ def test_historial_expandible_muestra_todas_las_versiones():
         assert etiqueta in rendered
 
 
+
+def test_comentarios_renderizan_ausentes_numericos_y_texto_en_historial_y_estado():
+    valores_comentario = [None, float("nan"), pd.NA, 12.5, "Texto preservado"]
+    for comentario in valores_comentario:
+        registro = {
+            **valores(), "configuracion_id": 2, "fecha_submit": "2026-10-07 10:00",
+            "usuario_submit": "u", "comentario": comentario,
+        }
+        historial = str(panel.mostrar_historial(pd.DataFrame([registro])))
+        vigente = str(panel._estado_vigente(registro))
+        if comentario is None or (isinstance(comentario, float) and math.isnan(comentario)) or comentario is pd.NA:
+            esperado = "Sin comentario"
+        else:
+            esperado = str(comentario)
+        assert f"Comentario: {esperado}" in historial
+        assert f"Comentario: {esperado}" in vigente
+
+
 def test_esquema_coloreado_representa_funcion_completa_sin_redondear():
     parametros = {k: Decimal(v) for k, v in valores().items()}
     parametros["factor_co3"] = Decimal("15.510123")
