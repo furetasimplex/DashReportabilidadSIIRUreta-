@@ -43,6 +43,10 @@ from .umbrales import (  # re-exportadas: los consumidores leen engine.X
     SEMANA_DEF, SHIFT1_END, SHIFT1_FRAC, SHIFT1_START, opcion,
 )
 
+
+class MissingCaseMassError(ValueError):
+    """El Caso solicitado no tiene masa validada en su ventana publicada."""
+
 # Columnas que shift_table necesita si o si en el frame de masa. El resto
 # (boundary, boundary_h, H_op_src, turnos_ok) son opcionales y cada una declara
 # su valor por defecto donde se lee.
@@ -911,29 +915,40 @@ def analyze_db(fecha_min=None, fecha_max=None, boundary=SHIFT1_FRAC,
     opcion("boundary_src", boundary_src, BOUNDARY_SRC)
     opcion("proy_modo", proy_modo, PROY_MODOS)
 
+    if caso_id is not None and (fecha_min is None or fecha_max is None):
+        raise ValueError("Un Caso requiere su ventana exacta")
     if caso_id is not None:
-        if fecha_min is None or fecha_max is None:
-            raise ValueError("Un Caso requiere su ventana exacta")
         recortar_a_masa = False
-    cov = dbs.coverage()
-    t0, t1 = cov["tms"]
     # a Timestamp antes de comparar: los limites llegan como str desde el CLI y
     # desde el dashboard, y la cobertura siempre es Timestamp
     fecha_min = pd.Timestamp(fecha_min) if fecha_min is not None else None
     fecha_max = pd.Timestamp(fecha_max) if fecha_max is not None else None
-    if recortar_a_masa:
-        t0 = max(t0, cov['apilado'][0])
-        t1 = min(t1, cov['apilado'][1])
-        fecha_min = max(fecha_min, t0) if fecha_min is not None else t0
-        fecha_max = min(fecha_max, t1) if fecha_max is not None else t1
-        if pd.isna(fecha_min) or pd.isna(fecha_max) or fecha_min > fecha_max:
-            raise ValueError('La ventana solicitada no tiene cobertura oficial y de volumen coincidente')
-
-    apilado = dbs.load_apilado(fecha_min, fecha_max)
-    masa = (dbs.load_masa(fecha_min, fecha_max) if caso_id is None else
-            dbs.load_masa(fecha_min, fecha_max, caso_id=caso_id))
-    if caso_id is not None and masa.empty:
-        raise ValueError("El Caso no tiene masa publicada validada en su ventana")
+    if caso_id is not None:
+        # El Caso ya define la ventana. Leer su masa primero evita consultar
+        # cobertura global, volumen y ticks si no publicó filas en ese período.
+        masa = dbs.load_masa(fecha_min, fecha_max, caso_id=caso_id)
+        if masa.empty:
+            raise MissingCaseMassError("El Caso no tiene masa publicada validada en su ventana")
+        apilado = dbs.load_apilado(fecha_min, fecha_max)
+        # Bordes observados en los frames cargados; no afirma cobertura interna.
+        cov = {
+            'apilado': (pd.Timestamp(apilado.fecha.min()).normalize(),
+                        pd.Timestamp(apilado.fecha.max()).normalize()) if not apilado.empty else (pd.NaT, pd.NaT),
+            'tms': (pd.Timestamp(masa.fecha.min()).normalize(),
+                    pd.Timestamp(masa.fecha.max()).normalize()),
+        }
+    else:
+        cov = dbs.coverage()
+        t0, t1 = cov["tms"]
+        if recortar_a_masa:
+            t0 = max(t0, cov['apilado'][0])
+            t1 = min(t1, cov['apilado'][1])
+            fecha_min = max(fecha_min, t0) if fecha_min is not None else t0
+            fecha_max = min(fecha_max, t1) if fecha_max is not None else t1
+            if pd.isna(fecha_min) or pd.isna(fecha_max) or fecha_min > fecha_max:
+                raise ValueError('La ventana solicitada no tiene cobertura oficial y de volumen coincidente')
+        apilado = dbs.load_apilado(fecha_min, fecha_max)
+        masa = dbs.load_masa(fecha_min, fecha_max)
     avisos = (v.exigir(v.revisar_apilado(apilado), "control_apilado_diario")
               + v.exigir(v.revisar_masa(masa), "Datos_conciliados_of_ver"))
 

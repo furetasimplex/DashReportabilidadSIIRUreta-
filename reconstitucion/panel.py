@@ -239,6 +239,8 @@ def register_callbacks(app, loader=None, case_loader=None):
                 {'label': f'Pad {int(r.pad_id)} · campaña {int(r.campana)}', 'value': f'{int(r.pad_id)}|{int(r.campana)}'}
                 for r in groups.itertuples()]
             return remember(res), options, 'all', 'Carga finalizada. Los resultados identifican el Caso asociado.'
+        except e.MissingCaseMassError:
+            return None, [], 'all', 'El Caso no tiene masa publicada validada disponible. No se usan datos de otros Casos.'
         except Exception:
             return None, [], 'all', 'No se pudo cargar el Caso. Verifica conexión y masa publicada validada; puedes reintentar.'
 

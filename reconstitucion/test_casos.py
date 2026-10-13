@@ -48,3 +48,19 @@ class Casos(unittest.TestCase):
   cov={'tms':(pd.Timestamp('2026-08-05'),pd.Timestamp('2026-08-07')),'apilado':(pd.Timestamp('2026-08-03'),pd.Timestamp('2026-08-09'))}
   with patch.object(db,'coverage',return_value=cov),patch.object(db,'load_apilado',return_value=apilado(7)),patch.object(db,'load_masa',return_value=masa(7).assign(caso_id=1)) as load:r=e.analyze_db('2026-08-03','2026-08-09',caso_id=1)
   self.assertEqual(r['ventana'],(pd.Timestamp('2026-08-03'),pd.Timestamp('2026-08-09')));self.assertEqual(load.call_args.kwargs,{'caso_id':1})
+ def test_caso_sin_masa_no_consulta_volumen_ni_cobertura(self):
+  with patch.object(db,'load_masa',return_value=pd.DataFrame()) as mass, \
+       patch.object(db,'coverage') as coverage, patch.object(db,'load_apilado') as ap:
+   with self.assertRaises(e.MissingCaseMassError):
+    e.analyze_db('2026-08-03','2026-08-09',caso_id=1)
+  call=mass.call_args
+  self.assertEqual(call.kwargs,{'caso_id':1});self.assertEqual([str(x.date()) for x in call.args],['2026-08-03','2026-08-09'])
+  coverage.assert_not_called();ap.assert_not_called()
+ def test_callback_mensaje_caso_sin_masa(self):
+  def missing(**kw):raise e.MissingCaseMassError('detalle interno')
+  out=find(callbacks(missing),'reconstitucion-token.data')(1,1,CASES)
+  self.assertIsNone(out[0]);self.assertIn('no tiene masa publicada',out[-1]);self.assertNotIn('detalle interno',out[-1])
+ def test_masa_vacia_no_consulta_ticks(self):
+  with patch.object(db.pd,'read_sql',return_value=pd.DataFrame()) as query:
+   out=db.load_masa('2026-08-03','2026-08-09',engine=object(),caso_id=8)
+  self.assertTrue(out.empty);self.assertIn('caso_id',out.columns);query.assert_called_once()

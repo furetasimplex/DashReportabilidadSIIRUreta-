@@ -79,3 +79,6 @@ Cambiar Caso, fechas del catálogo o run oficial invalida visualización y detal
 
 
 Verificación del cambio por Caso: 63 pruebas offline pasaron en el repositorio destino (66.06 s). Incluye 15 HTTP SIIR, 8 regresiones nuevas de Casos, panel/Gantt, metodología y curvas. git diff --check limpio; main.py conserva el hash anterior. SQL real y navegador interactivo no verificados. Sin commits ni push.
+
+## Rendimiento Reconstitución Caso8 — 13/10/2026
+Perfil online de analyze_db para Caso8/run47/22–31 agosto: antes 8.546/14.398 s (ticks 7.120/13.007 s, fetch incluido); después 0.274/0.266 s. Caso sin masa publicada, por lo tanto cálculo y gráfico no se alcanzan. Ahora masa primero, sin cobertura global en modoCaso, sin apilado/ticks cuando masa vacía, y mensaje específico MissingCaseMassError. Cobertura del Caso con masa se deriva de frames observados; la ruta sinCaso mantiene clipping previo. Cinco SELECTs de datos pasan a uno para caso vacío. No son tiempos totales de UI. Cambios aplicados en engine/db_source/panel/test_casos; 66 tests offline pasan y main.py intacto. Evidencia: docs/diagnosticos/rendimiento_reconstitucion_caso8_20261013/PERFIL_CASO8.md y JSONs. Sin escriturasDB, SP, XLSX, commits o push.

@@ -137,6 +137,15 @@ def load_masa(fecha_min=None, fecha_max=None, engine=None, caso_id=None):
     case_name = 'k.nombre_caso' if caso_id is None else 'CAST(NULL AS NVARCHAR(255))'
     case_join = f'LEFT JOIN {SCHEMA}.{CASOS_TABLE} k ON k.caso_id = m.caso_id' if caso_id is None else ''
     tms = pd.read_sql(text(f"\n    WITH v AS (\n        SELECT *, ROW_NUMBER() OVER (PARTITION BY Fecha\n                   ORDER BY COALESCE(fecha_validacion, '19000101') DESC,\n                            COALESCE(validation_id, 0) DESC) AS rn\n        FROM {SCHEMA}.{MASA_VER_TABLE}\n        WHERE {case_clause}\n          AND COALESCE(estado_validacion, 'VALIDADO') = 'VALIDADO'\n          AND Apilado_TMS_Real IS NOT NULL\n          AND Apilado_TMH_promedio_dia IS NOT NULL\n          {_and_window('Fecha', fecha_min, fecha_max)}\n    )\n    SELECT CAST(m.Fecha AS DATE) AS fecha,\n           (m.Apilado_TMH_turno_A + COALESCE(m.Sal_turno_A, 0))\n               * (1 - m.Humedad_Turno_A / 100.0) - COALESCE(m.Sal_turno_A, 0) AS TMS_T1,\n           (m.Apilado_TMH_turno_B + COALESCE(m.Sal_Turno_B, 0))\n               * (1 - m.Humedad_Turno_B / 100.0) - COALESCE(m.Sal_Turno_B, 0) AS TMS_T2,\n           m.Apilado_TMS_Real         AS TMS,\n           m.Apilado_TMH_turno_A      AS TMH_T1,\n           m.Apilado_TMH_turno_B      AS TMH_T2,\n           m.Apilado_TMH_promedio_dia AS TMH,\n           m.Humedad_promedio_dia / 100.0 AS humedad,\n           m.Sal_promedio_dia         AS sal,\n           m.caso_id                  AS caso_id,\n           CAST(m.run_id AS VARCHAR(36)) AS reporte_run_id,\n           {case_name}              AS caso\n    FROM v m\n    {case_join}\n    WHERE m.rn = 1\n    "), eng, params=params)
+    # Sin dias publicados no hay intervalo que consultar en ticks. Mantener las
+    # columnas de la salida hace que el contrato vacio sea identico al normal.
+    if tms.empty:
+        return pd.DataFrame(columns=[
+            'fecha', 'TMS', 'TMS_T1', 'TMS_T2', 'TMH', 'TMH_T1', 'TMH_T2',
+            'humedad', 'sal', 'H_op', 'H_torres', 'H_op_T1', 'H_op_T2',
+            'H_op_src', 'turnos_ok', 'boundary', 'boundary_normalizada',
+            'boundary_h', 'oficial', 'fuente_masa', 'caso_id', 'caso',
+            'reporte_run_id'])
     tms['oficial'] = True
     tms['fuente_masa'] = 'OFICIAL'
     tms['caso_id'] = tms['caso_id'].astype('Int64')

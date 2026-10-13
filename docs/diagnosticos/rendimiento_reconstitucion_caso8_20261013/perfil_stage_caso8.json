@@ -1,0 +1,64 @@
+{
+  "caso_id": 8,
+  "etiquetas_sql": {
+    "catalogo_casos": [
+      0.0856
+    ],
+    "masa_versionada": [
+      0.067,
+      0.0865
+    ]
+  },
+  "funciones": {
+    "db_pipeline.load_casos": [
+      1.4562
+    ],
+    "db_source.load_masa": [
+      0.2742,
+      0.2657
+    ],
+    "engine.analyze_db": [
+      0.2742,
+      0.2658
+    ]
+  },
+  "read_sql": [
+    {
+      "label": "masa_versionada",
+      "seconds_total": 0.2709
+    },
+    {
+      "label": "masa_versionada",
+      "seconds_total": 0.2629
+    }
+  ],
+  "catalogo_casos": {
+    "seconds_total": 1.4562,
+    "cantidad": 8
+  },
+  "ventana": [
+    "2026-08-22",
+    "2026-08-31"
+  ],
+  "solver_run_id_presente": true,
+  "carga": {
+    "estado": "ERROR",
+    "tipo": "MissingCaseMassError",
+    "seconds_total": 0.2743
+  },
+  "carga_caliente": {
+    "estado": "ERROR",
+    "tipo": "MissingCaseMassError",
+    "seconds_total": 0.2658
+  },
+  "sql_por_etiqueta": {
+    "catalogo_casos": {
+      "n": 1,
+      "segundos_execute": 0.0856
+    },
+    "masa_versionada": {
+      "n": 2,
+      "segundos_execute": 0.1535
+    }
+  }
+}
