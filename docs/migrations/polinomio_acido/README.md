@@ -1,96 +1,86 @@
-# Polinomio Ácido
+# Polinomio Ácido con vigencia temporal
 
-## Estado de implementación
+## Regla de negocio
 
-La configuración versionada del polinomio de ácido está centralizada en los siguientes objetos:
+Los parámetros se seleccionan según la fecha del dato calculado. Una nueva
+configuración no cambia el resultado de fechas históricas: cada reporte vuelve
+a usar la versión que estaba vigente en su fecha.
+
+La tabla guarda `vigencia_desde`. La fecha final se deriva como el día anterior
+a la siguiente `vigencia_desde`; no se almacena para evitar rangos
+contradictorios. La última versión queda abierta y se presenta como **En uso**.
+
+## Objetos
 
 - Tabla: `[inventar_SpcHidr].[dosis_acido_configuracion]`.
-- Función escalar: `[inventar_SpcHidr].[fn_calcular_dosis_acido]`.
+- Función temporal: `[inventar_SpcHidr].[fn_calcular_dosis_acido_fecha]`.
+- Función compatible: `[inventar_SpcHidr].[fn_calcular_dosis_acido]`.
+- Registro controlado: `[inventar_SpcHidr].[sp_registrar_dosis_acido_configuracion]`.
 
-La versión vigente corresponde a la fila con el mayor `configuracion_id`. Cada cambio inserta una fila nueva y no modifica ni elimina versiones históricas.
+Consumidores temporales:
 
-Los siguientes objetos consumidores ya fueron actualizados para utilizar la función centralizada:
+- `[inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]` usa `d.Fecha`.
+- `[inventar_SpcHidr].[sp_reporte_turno_emision_test]` usa `r.Fecha`.
 
-- `[inventar_SpcHidr].[sp_reporte_turno_emision_test]`.
-- `[inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]`.
+No se agregan columnas al resultado de los reportes para no romper la caché,
+`INSERT ... EXEC`, la exportación Excel ni otros consumidores posicionales.
 
-Con esta integración, los coeficientes y umbrales ya no deben quedar codificados directamente en esos dos objetos. Cualquier nueva configuración guardada desde el módulo **Polinomio Ácido** pasa a ser utilizada por ambos.
+## Periodo histórico inicial
 
-## Firma pública
+La primera versión comienza el `1900-01-01`, con los parámetros estáticos
+utilizados antes de incorporar vigencias. Esto garantiza cobertura para los
+reportes históricos existentes. Cuando comienza una versión nueva, el fin de la
+anterior se deriva automáticamente.
 
-```sql
-[inventar_SpcHidr].[fn_calcular_dosis_acido]
-(
-    @solubilidad DECIMAL(18,6),
-    @co3         DECIMAL(18,6),
-    @cus         DECIMAL(18,6)
-)
-```
+## Registro de versiones
 
-La función devuelve `DECIMAL(18,2)`. Los parámetros almacenados conservan precisión `DECIMAL(18,6)`.
+La aplicación no inserta directamente en la tabla. El procedimiento de
+registro:
 
-## Integración en el reporte por turno
+- usa una transacción y bloqueo `UPDLOCK, HOLDLOCK`;
+- verifica que la versión revisada siga siendo la última;
+- exige que la nueva fecha sea posterior a la última vigencia;
+- inserta el conjunto completo de parámetros;
+- no actualiza ni elimina versiones históricas.
 
-En `[inventar_SpcHidr].[sp_reporte_turno_emision_test]`, el cálculo de `Dosis_Acido_Ideal_TM` utiliza:
+Las correcciones retroactivas quedan fuera de la UI normal y requieren una
+migración SQL revisada expresamente.
 
-```sql
-[inventar_SpcHidr].[fn_calcular_dosis_acido]
-(
-    CAST(Solubilidad_Real AS DECIMAL(18,6)),
-    CAST(CO3_Real         AS DECIMAL(18,6)),
-    CAST(CuS_Real         AS DECIMAL(18,6))
-)
-```
-
-El cálculo de `Dosis_Acido_Programa_Semanal` utiliza:
+## Interfaz temporal
 
 ```sql
-[inventar_SpcHidr].[fn_calcular_dosis_acido]
+SELECT [inventar_SpcHidr].[fn_calcular_dosis_acido_fecha]
 (
-    CAST(CuS_Programa / NULLIF(CuT_Programa, 0) AS DECIMAL(18,6)),
-    CAST(CO3_Programa                              AS DECIMAL(18,6)),
-    CAST(CuS_Programa                              AS DECIMAL(18,6))
-)
+    @fecha_calculo,
+    @solubilidad,
+    @co3,
+    @cus
+);
 ```
 
-## Integración en el reporte diario
+La función devuelve `DECIMAL(18,2)`. Los parámetros se almacenan como
+`DECIMAL(18,6)` y la UI los presenta sin redondeo visual.
 
-En `[inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]`, el cálculo de `Dosis_Acido_Ideal_Dia` utiliza:
-
-```sql
-[inventar_SpcHidr].[fn_calcular_dosis_acido]
-(
-    CAST(Solubilidad_Real_Dia AS DECIMAL(18,6)),
-    CAST(CO3_Real_Dia         AS DECIMAL(18,6)),
-    CAST(CuS_Real_Dia         AS DECIMAL(18,6))
-)
-```
-
-El cálculo de `Dosis_Acido_Programa_Semanal` mantiene el mismo mapeo de programa indicado para el reporte por turno.
-
-## Validaciones conservadas en los consumidores
-
-Los objetos consumidores mantienen sus condiciones previas para decidir si el resultado es evaluable. Por ejemplo, ausencia o valor cero del tonelaje base y datos requeridos nulos pueden producir `NULL` antes de invocar la función. La función centralizada se ocupa exclusivamente de aplicar la fórmula con la configuración vigente.
-
-## Migración
-
-El script idempotente que crea la tabla, registra la configuración inicial y crea o actualiza la función está en [`001_dosis_acido_configuracion.sql`](001_dosis_acido_configuracion.sql).
-
-Después de crear esos objetos, ejecutar
-[`002_integrar_consumidores_polinomio_acido.sql`](002_integrar_consumidores_polinomio_acido.sql)
-para actualizar las definiciones completas de producción de:
-
-- `[inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]`.
-- `[inventar_SpcHidr].[sp_reporte_turno_emision_test]`.
-
-La segunda migración fue construida desde las definiciones extraídas de
-`inventar_SpcHidr_PROD` el 08-10-2026. Es idempotente mediante `CREATE OR ALTER`,
-comprueba primero que exista `[inventar_SpcHidr].[fn_calcular_dosis_acido]` y
-conserva el resto de cada definición sin cambios.
-
-Orden de ejecución:
+## Orden de despliegue
 
 ```text
 001_dosis_acido_configuracion.sql
-002_integrar_consumidores_polinomio_acido.sql
+002_fn_calcular_dosis_acido_fecha.sql
+003_sp_registrar_dosis_acido_configuracion.sql
+004_integrar_consumidores_dosis_acido_fecha.sql
+005_verificar_polinomio_acido_vigencia.sql
 ```
+
+Los scripts apuntan explícitamente a `inventar_SpcHidr_PROD`. El cuarto script
+se construyó desde las definiciones de producción extraídas el 08-10-2026 y
+conserva el resto de ambos objetos sin cambios.
+
+## Estados mostrados en la UI
+
+- **HISTÓRICA**: su periodo ya terminó.
+- **VIGENTE**: aplica a la fecha actual.
+- **PROGRAMADA**: comenzará en una fecha futura.
+
+La UI permite consultar una fecha para identificar su versión aplicable y
+muestra para cada fila el rango **Desde — Hasta**, usuario, fecha de registro,
+comentario y los once parámetros.

@@ -12,7 +12,10 @@ from . import db, panel
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "docs/migrations/polinomio_acido/001_dosis_acido_configuracion.sql"
-CONSUMER_MIGRATION = ROOT / "docs/migrations/polinomio_acido/002_integrar_consumidores_polinomio_acido.sql"
+FUNCTION_MIGRATION = ROOT / "docs/migrations/polinomio_acido/002_fn_calcular_dosis_acido_fecha.sql"
+REGISTER_MIGRATION = ROOT / "docs/migrations/polinomio_acido/003_sp_registrar_dosis_acido_configuracion.sql"
+CONSUMER_MIGRATION = ROOT / "docs/migrations/polinomio_acido/004_integrar_consumidores_dosis_acido_fecha.sql"
+VERIFY_MIGRATION = ROOT / "docs/migrations/polinomio_acido/005_verificar_polinomio_acido_vigencia.sql"
 
 
 def valores():
@@ -65,35 +68,32 @@ def test_validacion_contrato_completo_y_precision():
         db.validar_configuracion(valores(), None)
 
 
-def test_insercion_es_unica_y_parametrizada():
+def test_insercion_usa_procedimiento_temporal_parametrizado():
     engine = MagicMock()
     conn = engine.begin.return_value.__enter__.return_value
-    select_result = MagicMock()
-    select_result.scalar.return_value = 7
     insert_result = MagicMock()
     insert_result.mappings.return_value.one.return_value = {
         "configuracion_id": 8, "fecha_submit": "2026-10-07",
         "usuario_submit": "operador", "comentario": None,
     }
-    conn.execute.side_effect = [select_result, insert_result]
+    conn.execute.return_value = insert_result
     with patch.object(db, "_engine", return_value=engine):
-        result = db.insertar_configuracion(valores(), "operador", None, 7)
+        result = db.insertar_configuracion(valores(), "operador", None, 7, "2026-10-20")
     assert result["configuracion_id"] == 8
-    assert conn.execute.call_count == 2
+    assert conn.execute.call_count == 1
     sql = " ".join(str(call.args[0]) for call in conn.execute.call_args_list).upper()
-    assert sql.count("INSERT INTO") == 1
+    assert "SP_REGISTRAR_DOSIS_ACIDO_CONFIGURACION" in sql
+    assert "@VIGENCIA_DESDE = :VIGENCIA_DESDE" in sql
     assert "UPDATE " not in sql and "DELETE " not in sql
     assert ":UMBRAL_MINERAL" in sql
 
 
-def test_version_obsoleta_se_rechaza_antes_del_insert():
-    engine = MagicMock()
-    conn = engine.begin.return_value.__enter__.return_value
-    conn.execute.return_value.scalar.return_value = 9
-    with patch.object(db, "_engine", return_value=engine):
-        with pytest.raises(ValueError, match="cambio desde la revision"):
-            db.insertar_configuracion(valores(), "operador", None, 7)
-    assert conn.execute.call_count == 1
+def test_validacion_fecha_vigencia():
+    result = db.validar_configuracion(
+        valores(), "operador", None, vigencia_desde="2026-10-20")
+    assert result["vigencia_desde"].isoformat() == "2026-10-20"
+    with pytest.raises(ValueError, match="fecha de inicio"):
+        db.validar_configuracion(valores(), "operador", None, vigencia_desde="no-fecha")
 
 
 def test_confirmacion_conserva_usuario_y_payload_revisado():
@@ -104,12 +104,15 @@ def test_confirmacion_conserva_usuario_y_payload_revisado():
         "usuario_submit": "operador", "comentario": "Cambio",
     }) as write:
         session["user"] = "operador"
-        token, resumen = panel.preparar_confirmacion(valores(), "Cambio", 1)
-        assert "reemplazará globalmente" in str(resumen)
+        version = {"configuracion_id": 1, "vigencia_desde": "1900-01-01"}
+        token, resumen = panel.preparar_confirmacion(
+            valores(), "Cambio", version, "2026-10-20")
+        assert "quedará vigente hasta" in str(resumen)
         result = panel.confirmar_configuracion(token)
         assert result["configuracion_id"] == 2
         assert write.call_args.args[1] == "operador"
         assert write.call_args.args[3] == 1
+        assert write.call_args.args[4] == "2026-10-20"
         with pytest.raises(ValueError, match="confirmación no está vigente"):
             panel.confirmar_configuracion(token)
 
@@ -117,9 +120,16 @@ def test_confirmacion_conserva_usuario_y_payload_revisado():
 def test_historial_expandible_muestra_todas_las_versiones():
     base = {**valores(), "fecha_submit": "2026-10-07 10:00", "usuario_submit": "u",
             "comentario": None}
-    frame = pd.DataFrame([{**base, "configuracion_id": 2}, {**base, "configuracion_id": 1}])
+    frame = pd.DataFrame([
+        {**base, "configuracion_id": 2, "vigencia_desde": "2026-10-20",
+         "vigencia_hasta": None, "estado_vigencia": "PROGRAMADA"},
+        {**base, "configuracion_id": 1, "vigencia_desde": "1900-01-01",
+         "vigencia_hasta": "2026-10-19", "estado_vigencia": "VIGENTE"},
+    ])
     rendered = str(panel.mostrar_historial(frame))
     assert "Versión 2" in rendered and "Versión 1" in rendered
+    assert "20-10-2026" in rendered and "19-10-2026" in rendered
+    assert "PROGRAMADA" in rendered and "VIGENTE" in rendered
     for _, etiqueta, _ in db.PARAMETROS:
         assert etiqueta in rendered
 
@@ -131,6 +141,8 @@ def test_comentarios_renderizan_ausentes_numericos_y_texto_en_historial_y_estado
         registro = {
             **valores(), "configuracion_id": 2, "fecha_submit": "2026-10-07 10:00",
             "usuario_submit": "u", "comentario": comentario,
+            "vigencia_desde": "1900-01-01", "vigencia_hasta": None,
+            "estado_vigencia": "VIGENTE",
         }
         historial = str(panel.mostrar_historial(pd.DataFrame([registro])))
         vigente = str(panel._estado_vigente(registro))
@@ -178,13 +190,20 @@ def test_migracion_y_funcion_cubren_contrato_y_ramas():
     sql = MIGRATION.read_text(encoding="utf-8")
     upper = sql.upper()
     assert "IF OBJECT_ID" in upper and "IF NOT EXISTS" in upper
-    assert "CREATE OR ALTER FUNCTION [INVENTAR_SPCHIDR].[FN_CALCULAR_DOSIS_ACIDO]" in upper
-    assert "ORDER BY CONFIGURACION_ID DESC" in upper
-    assert "IF @CONFIGURACION_ID IS NULL RETURN NULL" in upper
-    assert "WHEN @CUS IS NULL OR @CUS <= 0 THEN 0.0" in upper
+    assert "VIGENCIA_DESDE DATE NOT NULL" in upper
+    assert "UNIQUE INDEX UX_DOSIS_ACIDO_CONFIGURACION_VIGENCIA_DESDE" in upper
+    assert "19000101" in upper
     assert "MIGRACION_INICIAL" in upper
     for nombre in db.NOMBRES_PARAMETROS:
         assert nombre in sql
+
+    function_sql = FUNCTION_MIGRATION.read_text(encoding="utf-8")
+    function_upper = function_sql.upper()
+    assert "FN_CALCULAR_DOSIS_ACIDO_FECHA" in function_upper
+    assert "WHERE VIGENCIA_DESDE <= @FECHA_CALCULO" in function_upper
+    assert "ORDER BY VIGENCIA_DESDE DESC, CONFIGURACION_ID DESC" in function_upper
+    assert "IF @CONFIGURACION_ID IS NULL RETURN NULL" in function_upper
+    assert "WHEN @CUS IS NULL OR @CUS <= 0 THEN 0.0" in function_upper
 
     assert calcular_referencia(None, None, None) == 14.00
     assert calcular_referencia(0.10, 0.50, 1) == 18.76
@@ -200,7 +219,7 @@ def test_migracion_conecta_los_dos_consumidores_con_la_funcion_centralizada():
     assert "CREATE OR ALTER FUNCTION [inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]" in sql
     assert "CREATE OR ALTER PROCEDURE [inventar_SpcHidr].[sp_reporte_turno_emision_test]" in sql
     assert ");\nGO\n\n/****** Objeto: StoredProcedure" in sql.replace("\r\n", "\n")
-    assert sql.count("[inventar_SpcHidr].[fn_calcular_dosis_acido]") == 6
+    assert sql.count("[inventar_SpcHidr].[fn_calcular_dosis_acido_fecha]") == 5
     for alias in (
         "Dosis_Acido_Ideal_Dia",
         "Dosis_Acido_Ideal_TM",
@@ -209,6 +228,25 @@ def test_migracion_conecta_los_dos_consumidores_con_la_funcion_centralizada():
         assert alias in sql
     assert "CAST(pr.CuS_Programa / NULLIF(pr.CuT_Programa, 0) AS DECIMAL(18,6))" in sql
     assert "CAST(ISNULL(ps.Solubilidad_Plan_Semanal, 0) AS DECIMAL(18,6))" in sql
+    assert sql.count("d.Fecha,") >= 2
+    assert sql.count("r.Fecha,") >= 2
+
+
+def test_registro_sql_es_transaccional_y_solo_admite_vigencias_posteriores():
+    sql = REGISTER_MIGRATION.read_text(encoding="utf-8")
+    upper = sql.upper()
+    assert "WITH (UPDLOCK, HOLDLOCK)" in upper
+    assert "@VIGENCIA_DESDE <= @ULTIMA_VIGENCIA" in upper
+    assert "BEGIN TRANSACTION" in upper and "COMMIT TRANSACTION" in upper
+    assert "OUTPUT INSERTED.CONFIGURACION_ID" in upper
+
+
+def test_verificacion_deriva_rangos_y_estados():
+    sql = VERIFY_MIGRATION.read_text(encoding="utf-8")
+    assert "LEAD(vigencia_desde)" in sql
+    assert "DATEADD(DAY, -1" in sql
+    for estado in ("PROGRAMADA", "VIGENTE", "HISTORICA"):
+        assert estado in sql
 
 
 def test_sidebar_monta_modulo_sin_conectarlo_a_consumidores():

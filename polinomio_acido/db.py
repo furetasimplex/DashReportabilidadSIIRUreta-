@@ -1,4 +1,5 @@
 """Persistencia versionada para la configuracion del polinomio de acido."""
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 import pandas as pd
@@ -46,7 +47,18 @@ def _decimal6(nombre, valor):
     return numero.quantize(ESCALA)
 
 
-def validar_configuracion(valores, usuario, comentario=None):
+def _fecha_vigencia(valor):
+    if isinstance(valor, datetime):
+        return valor.date()
+    if isinstance(valor, date):
+        return valor
+    try:
+        return pd.Timestamp(valor).date()
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("Ingrese una fecha de inicio de vigencia válida.") from None
+
+
+def validar_configuracion(valores, usuario, comentario=None, vigencia_desde=None):
     """Valida el contrato completo; nunca admite configuraciones parciales."""
     if not isinstance(valores, dict):
         raise ValueError("La configuracion debe contener los 11 parametros.")
@@ -64,16 +76,45 @@ def validar_configuracion(valores, usuario, comentario=None):
     comentario = (comentario or "").strip() or None
     if comentario and len(comentario) > 500:
         raise ValueError("El comentario puede tener hasta 500 caracteres.")
-    return {**normalizados, "usuario_submit": usuario.strip(), "comentario": comentario}
+    payload = {**normalizados, "usuario_submit": usuario.strip(), "comentario": comentario}
+    if vigencia_desde is not None:
+        payload["vigencia_desde"] = _fecha_vigencia(vigencia_desde)
+    return payload
+
+
+def obtener_configuracion_para_fecha(fecha_consulta=None):
+    fecha_consulta = _fecha_vigencia(fecha_consulta or date.today())
+    with _engine().connect() as conn:
+        row = conn.execute(text(f"""
+            WITH periodos AS
+            (
+                SELECT configuracion_id, vigencia_desde,
+                       DATEADD(DAY, -1, LEAD(vigencia_desde) OVER
+                       (ORDER BY vigencia_desde, configuracion_id)) AS vigencia_hasta,
+                       {', '.join(NOMBRES_PARAMETROS)}, fecha_submit,
+                       usuario_submit, comentario
+                FROM {TABLA}
+            )
+            SELECT TOP (1) *
+            FROM periodos
+            WHERE vigencia_desde <= :fecha_consulta
+            ORDER BY vigencia_desde DESC, configuracion_id DESC
+        """), {"fecha_consulta": fecha_consulta}).mappings().first()
+    return dict(row) if row else None
 
 
 def obtener_configuracion_vigente():
+    return obtener_configuracion_para_fecha(date.today())
+
+
+def obtener_ultima_configuracion():
     with _engine().connect() as conn:
         row = conn.execute(text(f"""
-            SELECT TOP (1) configuracion_id, {', '.join(NOMBRES_PARAMETROS)},
-                   fecha_submit, usuario_submit, comentario
+            SELECT TOP (1) configuracion_id, vigencia_desde,
+                   {', '.join(NOMBRES_PARAMETROS)}, fecha_submit,
+                   usuario_submit, comentario
             FROM {TABLA}
-            ORDER BY configuracion_id DESC
+            ORDER BY vigencia_desde DESC, configuracion_id DESC
         """)).mappings().first()
     return dict(row) if row else None
 
@@ -81,35 +122,42 @@ def obtener_configuracion_vigente():
 def obtener_historial():
     with _engine().connect() as conn:
         return pd.read_sql(text(f"""
-            SELECT configuracion_id, {', '.join(NOMBRES_PARAMETROS)},
-                   fecha_submit, usuario_submit, comentario
-            FROM {TABLA}
-            ORDER BY configuracion_id DESC
+            WITH periodos AS
+            (
+                SELECT configuracion_id, vigencia_desde,
+                       DATEADD(DAY, -1, LEAD(vigencia_desde) OVER
+                       (ORDER BY vigencia_desde, configuracion_id)) AS vigencia_hasta,
+                       {', '.join(NOMBRES_PARAMETROS)}, fecha_submit,
+                       usuario_submit, comentario
+                FROM {TABLA}
+            )
+            SELECT *, CASE
+                WHEN CAST(GETDATE() AS date) < vigencia_desde THEN 'PROGRAMADA'
+                WHEN vigencia_hasta IS NULL OR CAST(GETDATE() AS date) <= vigencia_hasta
+                    THEN 'VIGENTE'
+                ELSE 'HISTORICA'
+            END AS estado_vigencia
+            FROM periodos
+            ORDER BY vigencia_desde DESC, configuracion_id DESC
         """), conn)
 
 
-def insertar_configuracion(valores, usuario, comentario, configuracion_esperada):
+def insertar_configuracion(valores, usuario, comentario, configuracion_esperada, vigencia_desde):
     """Inserta una version completa si la version revisada sigue vigente."""
-    payload = validar_configuracion(valores, usuario, comentario)
+    payload = validar_configuracion(valores, usuario, comentario, vigencia_desde)
     try:
         esperada = int(configuracion_esperada)
     except (TypeError, ValueError):
         raise ValueError("No existe una version vigente confirmada.") from None
-    columnas = ", ".join(NOMBRES_PARAMETROS)
-    parametros = ", ".join(f":{nombre}" for nombre in NOMBRES_PARAMETROS)
+    payload["configuracion_esperada"] = esperada
+    asignaciones = ",\n".join(f"                @{nombre} = :{nombre}" for nombre in NOMBRES_PARAMETROS)
     with _engine().begin() as conn:
-        actual = conn.execute(text(f"""
-            SELECT TOP (1) configuracion_id
-            FROM {TABLA} WITH (UPDLOCK, HOLDLOCK)
-            ORDER BY configuracion_id DESC
-        """)).scalar()
-        if actual != esperada:
-            raise ValueError("La configuracion cambio desde la revision. Actualice y confirme nuevamente.")
         row = conn.execute(text(f"""
-            INSERT INTO {TABLA}
-                ({columnas}, usuario_submit, comentario)
-            OUTPUT INSERTED.configuracion_id, INSERTED.fecha_submit,
-                   INSERTED.usuario_submit, INSERTED.comentario
-            VALUES ({parametros}, :usuario_submit, :comentario)
+            EXEC [inventar_SpcHidr].[sp_registrar_dosis_acido_configuracion]
+                @vigencia_desde = :vigencia_desde,
+                @configuracion_esperada = :configuracion_esperada,
+{asignaciones},
+                @usuario_submit = :usuario_submit,
+                @comentario = :comentario
         """), payload).mappings().one()
     return dict(row)

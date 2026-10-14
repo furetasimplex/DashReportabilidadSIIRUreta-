@@ -4,7 +4,7 @@
 
     Requisitos:
       1. Ejecutar previamente 001_dosis_acido_configuracion.sql.
-      2. [inventar_SpcHidr].[fn_calcular_dosis_acido] debe existir.
+      2. Ejecutar previamente 002_fn_calcular_dosis_acido_fecha.sql.
 
     Objetos actualizados:
       - [inventar_SpcHidr].[fn_generador_reporte_diario_emision_test]
@@ -15,8 +15,8 @@ GO
 SET XACT_ABORT ON;
 GO
 
-IF OBJECT_ID(N'[inventar_SpcHidr].[fn_calcular_dosis_acido]', N'FN') IS NULL
-    THROW 51000, 'Debe ejecutar primero 001_dosis_acido_configuracion.sql.', 1;
+IF OBJECT_ID(N'[inventar_SpcHidr].[fn_calcular_dosis_acido_fecha]', N'FN') IS NULL
+    THROW 51000, 'Debe ejecutar primero 002_fn_calcular_dosis_acido_fecha.sql.', 1;
 GO
 
 /****** Objeto: UserDefinedFunction [inventar_SpcHidr].[fn_generador_reporte_diario_emision_test] Fecha de script: 08-10-2026 8:42:23 ******/
@@ -524,8 +524,9 @@ CAST
           OR d.Solubilidad_Real_Dia IS NULL
           OR d.CO3_Real_Dia IS NULL
         THEN NULL
-        ELSE [inventar_SpcHidr].[fn_calcular_dosis_acido]
+        ELSE [inventar_SpcHidr].[fn_calcular_dosis_acido_fecha]
         (
+            d.Fecha,
             CAST(d.Solubilidad_Real_Dia AS DECIMAL(18,6)),
             CAST(d.CO3_Real_Dia AS DECIMAL(18,6)),
             CAST(d.CuS_Real_Dia AS DECIMAL(18,6))
@@ -542,8 +543,9 @@ CAST
           OR pr.CuS_Programa IS NULL
           OR pr.CO3_Programa IS NULL
         THEN NULL
-        ELSE [inventar_SpcHidr].[fn_calcular_dosis_acido]
+        ELSE [inventar_SpcHidr].[fn_calcular_dosis_acido_fecha]
         (
+            d.Fecha,
             CAST(pr.CuS_Programa / NULLIF(pr.CuT_Programa, 0) AS DECIMAL(18,6)),
             CAST(pr.CO3_Programa AS DECIMAL(18,6)),
             CAST(pr.CuS_Programa AS DECIMAL(18,6))
@@ -3485,8 +3487,9 @@ ps.CaolBeta_Plan_Semanal,
 /* Dosis de ácido */
 CAST
 (
-    [inventar_SpcHidr].[fn_calcular_dosis_acido]
+    [inventar_SpcHidr].[fn_calcular_dosis_acido_fecha]
     (
+        r.Fecha,
         CAST(r.Solubilidad_Real AS DECIMAL(18,6)),
         CAST(r.CO3_Real AS DECIMAL(18,6)),
         CAST(r.CuS_Real AS DECIMAL(18,6))
@@ -3496,8 +3499,9 @@ CAST
 
 CAST
 (
-    [inventar_SpcHidr].[fn_calcular_dosis_acido]
+    [inventar_SpcHidr].[fn_calcular_dosis_acido_fecha]
     (
+        r.Fecha,
         CAST(ISNULL(ps.Solubilidad_Plan_Semanal, 0) AS DECIMAL(18,6)),
         CAST(ps.CO3_Plan_Semanal AS DECIMAL(18,6)),
         CAST(ps.CuS_Plan_Semanal AS DECIMAL(18,6))

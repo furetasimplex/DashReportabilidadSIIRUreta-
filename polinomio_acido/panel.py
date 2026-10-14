@@ -1,6 +1,7 @@
 """Panel Dash para administrar versiones del polinomio de acido."""
 import logging
 import math
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -48,6 +49,12 @@ def comentario_texto(value):
         pass
     texto = str(value)
     return texto if texto else "Sin comentario"
+
+
+def fecha_solo(value):
+    if value is None or pd.isna(value):
+        return "En uso"
+    return pd.Timestamp(value).strftime("%d-%m-%Y")
 
 
 def _campo(nombre, etiqueta):
@@ -187,18 +194,32 @@ def layout():
     return html.Div([
         html.H3("Polinomio Ácido", className="mb-1"),
         html.P(
-            "La última versión enviada queda vigente globalmente. Guardar no ejecuta ni modifica reportes.",
+            "Cada versión se aplica según la fecha del dato. Los periodos históricos permanecen congelados.",
             className="text-muted",
         ),
         dcc.Store(id=PREFIX + "refresh", data=0),
         dcc.Store(id=PREFIX + "version-vigente"),
         dcc.Store(id=PREFIX + "token"),
         html.Div(id=PREFIX + "estado", className="mb-3"),
+        dbc.Card(dbc.CardBody([
+            dbc.Label("Consultar configuración aplicable en una fecha",
+                      html_for=PREFIX + "fecha-consulta", className="fw-semibold"),
+            dcc.DatePickerSingle(id=PREFIX + "fecha-consulta", date=date.today(),
+                                 display_format="DD-MM-YYYY"),
+            html.Div(id=PREFIX + "consulta-fecha-resultado", className="mt-2"),
+        ]), className="mb-3"),
         html.H4("Fórmula vigente", className="mt-3"),
         html.P("Los colores y nombres técnicos relacionan cada valor con su campo editable.",
                className="small text-muted"),
         html.Div(id=PREFIX + "vista-funcion"),
         *grupos,
+        dbc.Card(dbc.CardBody([
+            dbc.Label("Inicio de vigencia de la nueva configuración",
+                      html_for=PREFIX + "vigencia-desde", className="fw-semibold"),
+            dcc.DatePickerSingle(id=PREFIX + "vigencia-desde", display_format="DD-MM-YYYY",
+                                 min_date_allowed=date.today()),
+            dbc.FormText("Debe ser posterior a la última vigencia registrada."),
+        ]), className="mb-3"),
         dbc.Label("Comentario del cambio (opcional)", html_for=PREFIX + "comentario"),
         dbc.Textarea(id=PREFIX + "comentario", maxLength=500, className="mb-3"),
         dbc.Button("Revisar y guardar", id=PREFIX + "revisar", color="primary"),
@@ -230,9 +251,14 @@ def mostrar_historial(frame):
         return dbc.Alert("No existen versiones registradas.", color="warning")
     items = []
     for registro in frame.to_dict("records"):
-        titulo = (f"Versión {registro['configuracion_id']} · {fecha(registro['fecha_submit'])} · "
-                  f"{registro['usuario_submit']}")
+        hasta = fecha_solo(registro.get("vigencia_hasta"))
+        estado = registro.get("estado_vigencia", "")
+        titulo = (f"Versión {registro['configuracion_id']} · "
+                  f"{fecha_solo(registro['vigencia_desde'])} — {hasta} · {estado}")
         items.append(dbc.AccordionItem([
+            html.P([html.Strong("Estado: "), estado]),
+            html.P([html.Strong("Registrada por: "), registro['usuario_submit'],
+                    " el ", fecha(registro['fecha_submit'])]),
             html.P("Comentario: " + comentario_texto(registro.get("comentario"))),
             _detalle_parametros(registro),
         ], title=titulo, item_id=str(registro["configuracion_id"])))
@@ -243,7 +269,9 @@ def _estado_vigente(registro):
     if not registro:
         return dbc.Alert("No existe una configuración vigente.", color="warning")
     return dbc.Card(dbc.CardBody([
-        html.H5(f"Versión vigente: {registro['configuracion_id']}"),
+        html.H5(f"Versión vigente hoy: {registro['configuracion_id']}"),
+        html.Div(f"Vigencia: {fecha_solo(registro['vigencia_desde'])} — "
+                 f"{fecha_solo(registro.get('vigencia_hasta'))}."),
         html.Div(f"Enviada por {registro['usuario_submit']} el {fecha(registro['fecha_submit'])}."),
         html.Div("Comentario: " + comentario_texto(registro.get("comentario")), className="small"),
     ]), color="light")
@@ -258,14 +286,39 @@ def _estado_vigente(registro):
 def cargar_configuracion(_refresh):
     try:
         vigente = db.obtener_configuracion_vigente()
+        ultima = db.obtener_ultima_configuracion()
         historial = db.obtener_historial()
-        valores = [float(vigente[nombre]) if vigente else None for nombre in db.NOMBRES_PARAMETROS]
+        valores = [float(ultima[nombre]) if ultima else None for nombre in db.NOMBRES_PARAMETROS]
+        version_data = ({"configuracion_id": ultima["configuracion_id"],
+                         "vigencia_desde": str(ultima["vigencia_desde"])} if ultima else None)
         return (_estado_vigente(vigente), mostrar_historial(historial),
-                vigente["configuracion_id"] if vigente else None, *valores)
+                version_data, *valores)
     except Exception:
         log.exception("No fue posible cargar el polinomio de acido")
         return (dbc.Alert("No fue posible consultar la configuración del polinomio ácido.", color="danger"),
                 "", None, *([None] * len(db.NOMBRES_PARAMETROS)))
+
+
+@callback(
+    Output(PREFIX + "consulta-fecha-resultado", "children"),
+    Input(PREFIX + "fecha-consulta", "date"),
+    Input(PREFIX + "refresh", "data"),
+)
+def consultar_fecha(fecha_consulta, _refresh):
+    if not fecha_consulta:
+        return dbc.Alert("Seleccione una fecha.", color="info")
+    try:
+        registro = db.obtener_configuracion_para_fecha(fecha_consulta)
+        if not registro:
+            return dbc.Alert("No existe configuración para esa fecha.", color="warning")
+        return html.Div([
+            html.Strong(f"Versión {registro['configuracion_id']}"),
+            html.Span(f" · {fecha_solo(registro['vigencia_desde'])} — "
+                      f"{fecha_solo(registro.get('vigencia_hasta'))}"),
+        ])
+    except Exception:
+        log.exception("No fue posible consultar la configuración por fecha")
+        return dbc.Alert("No fue posible consultar esa fecha.", color="danger")
 
 
 @callback(
@@ -283,18 +336,29 @@ def actualizar_vista_funcion(*valores):
         )
 
 
-def preparar_confirmacion(valores, comentario, configuracion_esperada):
-    payload = db.validar_configuracion(valores, usuario_actual(), comentario)
+def preparar_confirmacion(valores, comentario, configuracion_esperada, vigencia_desde):
+    if not vigencia_desde:
+        raise ValueError("Debe indicar la fecha de inicio de vigencia.")
+    payload = db.validar_configuracion(
+        valores, usuario_actual(), comentario, vigencia_desde=vigencia_desde)
     if configuracion_esperada is None:
         raise ValueError("No existe una versión vigente para revisar.")
+    version_id = int(configuracion_esperada["configuracion_id"])
+    ultima_fecha = pd.Timestamp(configuracion_esperada["vigencia_desde"]).date()
+    if payload["vigencia_desde"] <= ultima_fecha:
+        raise ValueError("La nueva vigencia debe comenzar después de la última configuración.")
     token = uuid4().hex
     session[SESSION_KEY] = {
-        "token": token, "configuracion_esperada": int(configuracion_esperada),
+        "token": token, "configuracion_esperada": version_id,
+        "vigencia_desde": payload["vigencia_desde"].isoformat(),
         "valores": {nombre: str(payload[nombre]) for nombre in db.NOMBRES_PARAMETROS},
         "usuario": payload["usuario_submit"], "comentario": payload["comentario"],
     }
+    fin_anterior = payload["vigencia_desde"] - timedelta(days=1)
     resumen = html.Div([
-        dbc.Alert(f"Esta configuración reemplazará globalmente a la versión {configuracion_esperada}.",
+        dbc.Alert(f"La versión {version_id} quedará vigente hasta "
+                  f"{fecha_solo(fin_anterior)}. La nueva versión comenzará el "
+                  f"{fecha_solo(payload['vigencia_desde'])}.",
                   color="warning"),
         _detalle_parametros(payload), html.P("Usuario: " + payload["usuario_submit"]),
         html.P("Comentario: " + comentario_texto(payload["comentario"])),
@@ -309,7 +373,7 @@ def confirmar_configuracion(token):
         raise ValueError("La confirmación no está vigente. Revise nuevamente la configuración.")
     resultado = db.insertar_configuracion(
         pendiente["valores"], pendiente["usuario"], pendiente["comentario"],
-        pendiente["configuracion_esperada"],
+        pendiente["configuracion_esperada"], pendiente["vigencia_desde"],
     )
     session.pop(SESSION_KEY, None)
     return resultado
@@ -324,13 +388,14 @@ _INPUT_STATES = [State(PREFIX + nombre, "value") for nombre in db.NOMBRES_PARAME
     Output(PREFIX + "refresh", "data"),
     Input(PREFIX + "revisar", "n_clicks"), Input(PREFIX + "cancelar", "n_clicks"),
     Input(PREFIX + "confirmar", "n_clicks"), *_INPUT_STATES,
-    State(PREFIX + "comentario", "value"), State(PREFIX + "version-vigente", "data"),
+    State(PREFIX + "comentario", "value"), State(PREFIX + "vigencia-desde", "date"),
+    State(PREFIX + "version-vigente", "data"),
     State(PREFIX + "token", "data"), State(PREFIX + "refresh", "data"),
     prevent_initial_call=True,
 )
 def gestionar(_revisar, _cancelar, _confirmar, *estados):
     valores_lista = estados[:len(db.NOMBRES_PARAMETROS)]
-    comentario, version, token, refresh = estados[len(db.NOMBRES_PARAMETROS):]
+    comentario, vigencia_desde, version, token, refresh = estados[len(db.NOMBRES_PARAMETROS):]
     accion = ctx.triggered_id
     try:
         if accion == PREFIX + "cancelar":
@@ -339,7 +404,8 @@ def gestionar(_revisar, _cancelar, _confirmar, *estados):
             return False, "", None, no_update, no_update
         if accion == PREFIX + "revisar":
             challenge, resumen = preparar_confirmacion(
-                dict(zip(db.NOMBRES_PARAMETROS, valores_lista)), comentario, version)
+                dict(zip(db.NOMBRES_PARAMETROS, valores_lista)), comentario,
+                version, vigencia_desde)
             return True, resumen, challenge, "", no_update
         if accion == PREFIX + "confirmar":
             resultado = confirmar_configuracion(token)
