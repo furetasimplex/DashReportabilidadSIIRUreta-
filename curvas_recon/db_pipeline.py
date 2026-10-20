@@ -124,14 +124,13 @@ def load_casos():
         FROM {HIDRO_SCHEMA}.recon_caso c
         JOIN {HIDRO_SCHEMA}.recon_caso_oficial o ON o.caso_id = c.id
         JOIN {HIDRO_SCHEMA}.recon_solver_run r ON r.id = o.solver_run_id
-        WHERE c.id BETWEEN :caso_min AND :caso_max
+        WHERE c.id BETWEEN :caso_min 
           AND r.estado = 'success'
         ORDER BY c.fecha_inicio DESC, c.id DESC
     """)
     with get_engine().connect() as conn:
         rows = conn.execute(query, {
             'caso_min': CASO_ID_MIN,
-            'caso_max': CASO_ID_MAX,
         }).fetchall()
     return [dict(
         id=int(r[0]), nombre=r[1], fecha_inicio=pd.Timestamp(r[2]).normalize(),
