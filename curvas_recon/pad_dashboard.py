@@ -44,7 +44,7 @@ from .recon_engine import (
 from .db_pipeline import (
     connect, get_material_id, load_pila_daily_history, load_pila_history, load_week_totals, save_run,
     sync_all, data_freshness, load_casos, load_caso_anchor,
-    caso_anchor_completo, CASO_ID_MIN, CASO_ID_MAX,
+    caso_anchor_completo, CASO_ID_MIN, CASO_ID_MAX, HIDRO_SCHEMA,
 )
 # Todo lo que se lee de la DB pasa por un cache local en disco (`local_cache.py`).
 # El boton 'Actualizar datos' lo bota entero para forzar la bajada de nuevo.
@@ -160,6 +160,67 @@ def _load_material_window(label, start, end):
 _CALLBACKS = []
 _DATA_READY = False
 _FULL_DATA_READY = False
+
+# Avance visible en UI mientras corre carga/cálculo (otra hebra lo lee vía Interval).
+_PROGRESS_LOCK = threading.Lock()
+_PROGRESS = {
+    'active': False,
+    'label': '',
+    'detail': '',
+    'pct': 0,
+    'seq': 0,
+}
+
+
+def _progress_begin(label, detail='', pct=0):
+    with _PROGRESS_LOCK:
+        _PROGRESS.update({
+            'active': True, 'label': label, 'detail': detail or '',
+            'pct': max(0, min(100, int(pct))), 'seq': _PROGRESS['seq'] + 1,
+        })
+
+
+def _progress_set(label, detail='', pct=None):
+    with _PROGRESS_LOCK:
+        _PROGRESS['active'] = True
+        _PROGRESS['label'] = label
+        _PROGRESS['detail'] = detail or ''
+        if pct is not None:
+            _PROGRESS['pct'] = max(0, min(100, int(pct)))
+        _PROGRESS['seq'] += 1
+
+
+def _progress_end():
+    with _PROGRESS_LOCK:
+        _PROGRESS.update({
+            'active': False, 'label': '', 'detail': '', 'pct': 0,
+            'seq': _PROGRESS['seq'] + 1,
+        })
+
+
+def _progress_snapshot():
+    with _PROGRESS_LOCK:
+        return dict(_PROGRESS)
+
+
+def _progress_children(snap=None):
+    snap = snap or _progress_snapshot()
+    if not snap['active'] and not snap['label']:
+        return ''
+    pct = snap['pct']
+    detail = snap['detail']
+    return html.Div([
+        html.Div([
+            html.Strong(snap['label'] or 'Procesando…', className='curvas-progress-label'),
+            html.Span(f'{pct} %', className='curvas-progress-pct'),
+        ], className='curvas-progress-head'),
+        html.Div(
+            html.Span(style={'width': f'{pct}%'}),
+            className='curvas-progress-bar',
+            **{'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100},
+        ),
+        html.Div(detail, className='curvas-progress-detail') if detail else None,
+    ])
 # Empty defaults let the visible controls render without loading all history.
 DATA_OX, DATA_SU, CYCLES_OX, CYCLES_SU = {}, {}, {}, {}
 GLOBAL_MIN_DATE = GLOBAL_MAX_DATE = JOINT_DATA_CUTOFF = None
@@ -189,9 +250,14 @@ def initialize_data(force=False):
             ensure_full_data(force=True)
         elif not _DATA_READY:
             started = time.perf_counter()
-            CASOS, CASO_OPTIONS, DEFAULT_CASO_ID = _load_caso_options()
-            _DATA_READY = True
-            print(f'[curvas] opciones de casos: {time.perf_counter() - started:.3f}s')
+            _progress_begin('Cargando casos oficiales', f'Consultando {HIDRO_SCHEMA}…', 5)
+            try:
+                CASOS, CASO_OPTIONS, DEFAULT_CASO_ID = _load_caso_options()
+                _progress_set('Casos listos', f'{len(CASO_OPTIONS)} opciones', 100)
+                _DATA_READY = True
+                print(f'[curvas] opciones de casos: {time.perf_counter() - started:.3f}s')
+            finally:
+                _progress_end()
 
 
 def ensure_full_data(force=False):
@@ -201,9 +267,16 @@ def ensure_full_data(force=False):
         if force or not _FULL_DATA_READY:
             _FULL_DATA_READY = False
             started = time.perf_counter()
-            refresh_data_caches(bajar_de_nuevo=force)
-            _FULL_DATA_READY = _DATA_READY = True
-            print(f'[curvas] histórico y metadatos: {time.perf_counter() - started:.3f}s')
+            owns_progress = not _progress_snapshot()['active']
+            if owns_progress:
+                _progress_begin('Cargando histórico y metadatos', 'Preparando cachés…', 2)
+            try:
+                refresh_data_caches(bajar_de_nuevo=force)
+                _FULL_DATA_READY = _DATA_READY = True
+                print(f'[curvas] histórico y metadatos: {time.perf_counter() - started:.3f}s')
+            finally:
+                if owns_progress:
+                    _progress_end()
 
 
 # ── Curvas: helpers ──────────────────────────────────────────────────────────────
@@ -287,11 +360,15 @@ def refresh_data_caches(bajar_de_nuevo=False):
     # tampoco expira solo, hay que botarlo junto con el resto.
     clear_actividad_cache()
     if bajar_de_nuevo:
+        _progress_set('Actualizando datos', 'Limpiando caché local…', 5)
         limpiar_cache_local()
 
+    _progress_set('Curvas de óxido', 'Leyendo recuperaciones…', 12)
     DATA_OX = load_oxido()
+    _progress_set('Curvas de sulfuro', 'Leyendo recuperaciones…', 28)
     DATA_SU = load_sulfuro()
 
+    _progress_set('Campañas', 'Partiendo ciclos por pila…', 38)
     last_ox, last_su = _global_last_date(DATA_OX), _global_last_date(DATA_SU)
     CYCLES_OX = {num: split_into_cycles(p['dates'], p['values'], last_ox)
                  for num, p in DATA_OX.items()}
@@ -309,6 +386,7 @@ def refresh_data_caches(bajar_de_nuevo=False):
 
     # WIP (parcela/campana actual) y curvas de recuperacion: tablas chicas,
     # sin escala de fecha relevante para el recon semanal.
+    _progress_set('WIP y recuperación', 'Óxidos y sulfuros…', 52)
     WIP_META = {label: load_wip(label) for label in ('SULFUROS', 'OXIDOS')}
     REC_META = {label: load_rec_curves(label) for label in ('SULFUROS', 'OXIDOS')}
 
@@ -316,6 +394,7 @@ def refresh_data_caches(bajar_de_nuevo=False):
     # OTRO (si uno termina antes, el residuo de planta se concentra mal en el
     # que quedo "solo" — ver fix de "aporte SULFUROS ~0 semana 2025-08-25").
     # El corte se recalcula cada carga contra la DB en vivo.
+    _progress_set('Cortes de fecha', 'Alineando materiales…', 64)
     _CUTOFFS = {label: material_cutoff(label) for label in ('SULFUROS', 'OXIDOS')}
     JOINT_DATA_CUTOFF = min(c for c in _CUTOFFS.values() if c is not None)
     # Default heredado (ultimo lunes de semana COMPLETA dentro del corte).
@@ -331,16 +410,20 @@ def refresh_data_caches(bajar_de_nuevo=False):
     # resultado por pila tiene que ser comparable con el flowsheet del Caso,
     # y para eso el periodo tiene que ser EL MISMO. El del caso 17, por
     # ejemplo, dura 8 dias y no empieza lunes.
+    _progress_set('Casos oficiales', 'Actualizando lista…', 74)
     CASOS, CASO_OPTIONS, DEFAULT_CASO_ID = _load_caso_options()
 
+    _progress_set('Producción planta', 'Serie diaria…', 84)
     RECON_PRODUCCION = load_produccion()
     RAW_CURVES_BY_MATERIAL = {'OXIDOS': DATA_OX, 'SULFUROS': DATA_SU}
 
     # Grilla de estado de Reconciliacion MHE: activa = caudal de riego real
     # reciente (`active_pilas_by_riego`), NO clasificacion de curva de
     # recuperacion -- ver su docstring en recon_engine.py.
+    _progress_set('Pilas activas', 'Detectando riego reciente…', 94)
     _ACTIVE_OX = active_pilas_by_riego('OXIDOS', JOINT_DATA_CUTOFF)
     _ACTIVE_SU = active_pilas_by_riego('SULFUROS', JOINT_DATA_CUTOFF)
+    _progress_set('Histórico listo', 'Metadatos cargados', 100)
 
 
 
@@ -1612,16 +1695,21 @@ def sync_and_refresh(_n_clicks):
         return (dash.no_update,) * 4
     fallas = []
     if ctx.triggered_id == 'curvas-recon-sync-btn':
-        report = sync_all()
-        ensure_full_data(force=True)
-        resumen = ' | '.join(
-            f'{r["tabla"]}: OK ({r["filas"]:,} filas)' if r['ok'] else f'{r["tabla"]}: FALLO ({r["error"][:80]})'
-            for r in report
-        )
-        print(f'[sync] {resumen}')
-        fallas = [r for r in report if not r['ok']]
-        CASOS, CASO_OPTIONS, DEFAULT_CASO_ID = _load_caso_options()
-        store = None
+        _progress_begin('Actualizando datos', 'Sincronizando tablas…', 3)
+        try:
+            report = sync_all()
+            _progress_set('Actualizando datos', 'Refrescando histórico…', 35)
+            ensure_full_data(force=True)
+            resumen = ' | '.join(
+                f'{r["tabla"]}: OK ({r["filas"]:,} filas)' if r['ok'] else f'{r["tabla"]}: FALLO ({r["error"][:80]})'
+                for r in report
+            )
+            print(f'[sync] {resumen}')
+            fallas = [r for r in report if not r['ok']]
+            CASOS, CASO_OPTIONS, DEFAULT_CASO_ID = _load_caso_options()
+            store = None
+        finally:
+            _progress_end()
     else:
         store = dash.no_update
     banner = [_freshness_banner()]
@@ -1655,35 +1743,56 @@ def compute_recon(_n_clicks, caso_id):
     if (caso is None or not (CASO_ID_MIN <= caso['id'] <= CASO_ID_MAX)
             or not caso.get('run_id')):
         raise dash.exceptions.PreventUpdate
-    ensure_full_data()
-    ws, week_end, n_days = resolve_window(caso['fecha_inicio'], caso['fecha_fin'])
-    # Se reconcilian TODAS las pilas activas, sin filtro de dias activos: el
-    # corte transiente/SS ya no lo decide el operador. `active_days` queda solo
-    # porque el motor lo pide en la firma; con `force_all_active` no filtra.
-    active_days = N_TRANSIENT_DEFAULT
-    method = 'Pendiente'
-    force_all_active = True
-    solve = reconcile_week_flowsheet_dash
-    tag = method
-
-    # Ancla POR PAD (oxidos F39/F48, sulfuros F44/F50+F49). Esta ruta es
-    # exclusivamente oficial: si falta una magnitud no se permite que el
-    # motor mezcle el run con su fallback sintetico.
-    anchor = load_caso_anchor(caso['run_id'])
-    if not caso_anchor_completo(anchor):
-        raise RuntimeError(
-            f'Caso #{caso["id"]}: el run oficial {caso["run_id"]} no contiene '
-            'un ancla completa y positiva para OXIDOS y SULFUROS.')
-    materials = {label: _load_material_window(label, ws, week_end) for label in ('SULFUROS', 'OXIDOS')}
-
-    conn = connect()
+    _progress_begin(
+        'Ejecutando cálculo',
+        f'Caso #{caso["id"]} · {caso["nombre"]}',
+        3,
+    )
     try:
-        joint = solve(ws, materials, RECON_PRODUCCION, conn, active_days=active_days,
-                      force_all_active=force_all_active, week_end=week_end,
-                      anchor=anchor, caso_id=caso['id'])
+        _progress_set('Histórico y metadatos', 'Asegurando cachés…', 8)
+        ensure_full_data()
+        ws, week_end, n_days = resolve_window(caso['fecha_inicio'], caso['fecha_fin'])
+        # Se reconcilian TODAS las pilas activas, sin filtro de dias activos: el
+        # corte transiente/SS ya no lo decide el operador. `active_days` queda solo
+        # porque el motor lo pide en la firma; con `force_all_active` no filtra.
+        active_days = N_TRANSIENT_DEFAULT
+        method = 'Pendiente'
+        force_all_active = True
+        solve = reconcile_week_flowsheet_dash
+        tag = method
+
+        # Ancla POR PAD (oxidos F39/F48, sulfuros F44/F50+F49). Esta ruta es
+        # exclusivamente oficial: si falta una magnitud no se permite que el
+        # motor mezcle el run con su fallback sintetico.
+        _progress_set(
+            'Ancla del caso',
+            f'Run oficial {caso["run_id"]} · ventana {ws.date()}..{week_end.date()} ({n_days} d)',
+            28,
+        )
+        anchor = load_caso_anchor(caso['run_id'])
+        if not caso_anchor_completo(anchor):
+            raise RuntimeError(
+                f'Caso #{caso["id"]}: el run oficial {caso["run_id"]} no contiene '
+                'un ancla completa y positiva para OXIDOS y SULFUROS.')
+        _progress_set(
+            'Riego y drenaje',
+            'Completando series diarias (óxidos / sulfuros)…',
+            45,
+        )
+        materials = {label: _load_material_window(label, ws, week_end) for label in ('SULFUROS', 'OXIDOS')}
+
+        _progress_set('Reconciliación Pendiente', 'Resolviendo flowsheet…', 72)
+        conn = connect()
+        try:
+            joint = solve(ws, materials, RECON_PRODUCCION, conn, active_days=active_days,
+                          force_all_active=force_all_active, week_end=week_end,
+                          anchor=anchor, caso_id=caso['id'])
+        finally:
+            conn.close()
+        _progress_set('Guardando resultado', 'Corrida lista para la UI…', 92)
+        raw_token = _save_recon_raw(joint.get('res'), caso, ws, week_end)
     finally:
-        conn.close()
-    raw_token = _save_recon_raw(joint.get('res'), caso, ws, week_end)
+        _progress_end()
 
     print(f'[{tag}] caso=#{caso["id"]} {caso["nombre"]!r} ventana={ws.date()}..{week_end.date()} '
           f'({n_days} d) run_oficial={caso["run_id"]} ancla={sorted(anchor)} '
@@ -1964,6 +2073,13 @@ def build_layout():
     """Return a lazy section shell, without opening a SQL connection."""
     return html.Div([
         dcc.Interval(id='curvas-recon-load-trigger', interval=100, max_intervals=1),
+        dcc.Interval(id='curvas-recon-progress-tick', interval=400, n_intervals=0),
+        html.Div(
+            id='curvas-recon-progress',
+            className='curvas-progress is-idle',
+            role='status',
+            **{'aria-live': 'polite'},
+        ),
         html.Div('Preparando datos de curvas y reconciliación…',
                  id='curvas-recon-load-status', role='status'),
         dbc.Button('Reintentar carga', id='curvas-recon-retry', n_clicks=0,
@@ -1992,6 +2108,19 @@ def load_section(_n_intervals, _retry_clicks):
         ], className='alert alert-warning', role='alert'), {'display': 'inline-block'}
 
 
+@_callback(
+    Output('curvas-recon-progress', 'children'),
+    Output('curvas-recon-progress', 'className'),
+    Input('curvas-recon-progress-tick', 'n_intervals'),
+)
+def poll_progress(_n_intervals):
+    """Refresca el avance mientras otra hebra carga o calcula."""
+    snap = _progress_snapshot()
+    if not snap['active'] and not snap['label']:
+        return '', 'curvas-progress is-idle'
+    return _progress_children(snap), 'curvas-progress is-busy'
+
+
 def register_callbacks(app):
     """Install before server startup; safe if the host calls this twice."""
     registered = getattr(app, '_siir_curvas_callbacks_registered', False)
@@ -2000,7 +2129,7 @@ def register_callbacks(app):
     for args, kwargs, fn in _CALLBACKS:
         @wraps(fn)
         def ready_callback(*values, _fn=fn, **callback_kwargs):
-            if _fn is not load_section and not _DATA_READY:
+            if _fn not in (load_section, poll_progress) and not _DATA_READY:
                 raise dash.exceptions.PreventUpdate
             return _fn(*values, **callback_kwargs)
         app.callback(*args, **kwargs)(ready_callback)

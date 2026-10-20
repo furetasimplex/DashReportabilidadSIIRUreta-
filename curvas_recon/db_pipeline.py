@@ -1,7 +1,12 @@
 import os
+import re
 import urllib.parse
 import pandas as pd
 from sqlalchemy import create_engine, text
+
+from env_loader import load_app_env
+
+load_app_env()
 
 # ── 1. Configuration ──────────────────────────────────────────────────────────
 
@@ -9,6 +14,36 @@ from sqlalchemy import create_engine, text
 # Neither the driver nor credentials are loaded while importing this module.
 SCHEMA = os.getenv("RECON_SQL_SCHEMA", "inventar_SpcHidr")
 _engine = None
+
+
+def _resolve_hidro_schema() -> str:
+    """Base.schema de casos oficiales (solo lectura).
+
+    Prioridad:
+      1. RECON_HIDRO_SCHEMA completo (ej. PROD_SIIR.hidro)
+      2. HIDRO_SIIR_DB (mismo override que db_startup_check) + schema hidro
+      3. SQLSERVER_DB: *_PROD -> PROD_SIIR; resto -> DEV_SIIR
+    """
+    explicit = (os.getenv("RECON_HIDRO_SCHEMA") or "").strip()
+    if explicit:
+        if not re.fullmatch(r"[A-Za-z_][\w]*\.[A-Za-z_][\w]*", explicit):
+            raise RuntimeError(
+                f"RECON_HIDRO_SCHEMA inválido: {explicit!r}. Use Base.schema."
+            )
+        return explicit
+
+    siir_db = (os.getenv("HIDRO_SIIR_DB") or "").strip()
+    if siir_db not in {"DEV_SIIR", "PROD_SIIR"}:
+        sql_db = (os.getenv("SQLSERVER_DB") or "").strip()
+        if sql_db.endswith("_PROD") or sql_db == "inventar_SpcHidr_PROD":
+            siir_db = "PROD_SIIR"
+        else:
+            siir_db = "DEV_SIIR"
+
+    schema = (os.getenv("RECON_HIDRO_SCHEMA_NAME") or "hidro").strip()
+    if not re.fullmatch(r"[A-Za-z_][\w]*", schema):
+        raise RuntimeError(f"RECON_HIDRO_SCHEMA_NAME inválido: {schema!r}.")
+    return f"{siir_db}.{schema}"
 
 
 def configure_engine(engine):
@@ -63,11 +98,11 @@ def _ensure_reconciliation_tables():
     _TABLAS_LISTAS = True
 
 
-# ── Casos de reconciliacion global (DEV_SIIR.hidro) ─────────────────────────
+# ── Casos de reconciliacion global (DEV_SIIR.hidro / PROD_SIIR.hidro) ────────
 #
 # Esquema administrado por Django: SOLO LECTURA desde aca. Nada de DDL ni de
-# INSERT/UPDATE/DELETE sobre `recon_*`.
-HIDRO_SCHEMA = 'DEV_SIIR.hidro'
+# INSERT/UPDATE/DELETE sobre `recon_*`. Ambiente via .env (ver _resolve_hidro_schema).
+HIDRO_SCHEMA = _resolve_hidro_schema()
 
 # Alcance oficial de esta aplicacion. Los casos posteriores pertenecen a
 # pruebas/escenarios del flowsheet y no deben aparecer en el dashboard PAD.
@@ -124,13 +159,14 @@ def load_casos():
         FROM {HIDRO_SCHEMA}.recon_caso c
         JOIN {HIDRO_SCHEMA}.recon_caso_oficial o ON o.caso_id = c.id
         JOIN {HIDRO_SCHEMA}.recon_solver_run r ON r.id = o.solver_run_id
-        WHERE c.id BETWEEN :caso_min 
+        WHERE c.id BETWEEN :caso_min AND :caso_max
           AND r.estado = 'success'
         ORDER BY c.fecha_inicio DESC, c.id DESC
     """)
     with get_engine().connect() as conn:
         rows = conn.execute(query, {
             'caso_min': CASO_ID_MIN,
+            'caso_max': CASO_ID_MAX,
         }).fetchall()
     return [dict(
         id=int(r[0]), nombre=r[1], fecha_inicio=pd.Timestamp(r[2]).normalize(),
