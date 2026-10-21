@@ -356,3 +356,48 @@ la union al modelo y ordena por `fecha_inicio DESC, id DESC`. El dropdown y el
 guardado de calculo ya no reimponen un rango de IDs. Asi, Casos futuros con run
 oficial se incluyen y el mas reciente por fecha queda primero. Prueba offline
 captura SQL sin conexion y verifica filtro, orden e identidad de modelo.
+
+## Reconstitucion con flujos oficiales por modelo - 21/10/2026
+
+Reconstitucion de Modulos usa los flujos solidos del run oficial del Caso:
+125 v2: OX F18, SU F19; 120 v1 conserva OX F15, SU F14. Se verifica metadata,
+periodo e identidad del run sin cache ni escrituras DB. modelo_flujos.py lee
+perfil operativo de correas/humedad y engine.py conserva cada total por PAD
+antes de distribuir por volumen a sus modulos. Los dias/turnos son distribuidos
+del total reconciliado, no mediciones reconciliadas independientes. La UI pasa
+el Caso completo y lo explica en Consideraciones; no depende de publicaciones
+AJUSTE_REPORTE de casos_balance para los Casos hidro con modelo conocido.
+
+SELECT-only online: Caso10013/run10104 cierra 728062.407300 t SU (F19), OX0;
+Caso8/run47 cierra 598606.933440 t SU (F14), OX0; pendientes diarios y por PAD0.
+Se construyeron ambos Gantt en Python. Suite integrada:154passed. Lecturas
+perfil/horas paralelas: motor+figuras18.162s/16.920s, no tiempos UI. Evidencia:
+auditorias/reconstitucion_modelo125_20261021/RESULTADO.md y JSONs.
+No se ejecuto SP, solver, sync, publicacion ni escritura DB. Sin commit/push.
+
+## 2026-10-21 — Revisión XLSX Caso10013 y Prod por pad
+Se separó Prod en Prod Oxidos y Prod Sulfuros, manteniendo datos/formato y
+agregando Caso/run/período. Suite155passed y render de ambas hojas verificado.
+Comparación1–12oct2026: OX166.029 vs156.926tCu (+5.80%);
+SU2279.031 vs1691.492tCu (+34.74%). Core puro SELECT-only run10134 reproduce
+el adjunto al redondeo. La base operativa de pilas difiere de la del ancla;
+los ratios no garantizan cierre absoluto: SU2279.031 vs1929.949tCu netos
+por componentes, OX166.030 vs157.036. F29 almacenado1923.609 difiere6.340t
+de sus componentes. No se cambió metodología ni se forzó escala/historia.
+Evidencia: auditorias/revision_reporte_prod_20261021/RESULTADO.md.
+No hubo SP, persistencia DB, commit ni push. El adjunto no identifica su run.
+
+## 2026-10-21 — Cierre neto curvas con F25/F29 (modelo125)
+El usuario confirmó que producción=Cu drenaje−Cu riego y debe igualar el fino
+reconciliado F25OX/F29SU. Se incorporó objetivo absoluto neto al motor antes
+del reparto y validación sobre diarios post-rampa; no-cierre detiene antes de
+guardar. Se conserva riego por ratios y forma Q/rampa; modelo120 intacto.
+DB loader lee F25/F29 reales (no derivados de componentes); raw payload v2
+invalida exportaciones de corridas previas al fix. No tocar solver constraints.
+Caso10013/run10134: motor OX157.036198tCu, SU1923.608655tCu, residuo0;
+constructor reporte157.037/1923.610 por redondeo3dec (<1.4kg). Historial previo
+no corregido. 164tests pasan11.01s y diffcheck limpio. Validación live SELECT
+only47+5WITH, sin persistencia/SP. Evidencia auditorias/cierre_transferencias_20261021.
+Para proceso ya iniciado: reiniciar servidor y recalcular; no se reinició desde
+el agente. Sin commit/push. No confundir40.502s del diagnóstico completo sin
+caché+reporte con tiempo UI Calcular.

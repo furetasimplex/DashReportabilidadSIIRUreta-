@@ -335,7 +335,7 @@ def dias_por_semana(sem=SEMANA_DEF) -> int:
 # Los cuatro frames fechados de un resultado. Recortar la ventana de analisis
 # es recortarlos a los cuatro: lo derivado (daily, weekly, modules, itinerario)
 # se recalcula desde ellos, no se filtra.
-FRAMES_FECHADOS = ("apilado", "masa", "shift_table", "inactivos", "cuadratura")
+FRAMES_FECHADOS = ("apilado", "masa", "shift_table", "inactivos", "cuadratura", "masa_por_pad", "cuadratura_pad")
 
 
 def _recortar(res: dict, mascara) -> dict:
@@ -894,7 +894,7 @@ def inactive_table(apilado: pd.DataFrame) -> pd.DataFrame:
 
 def analyze_db(fecha_min=None, fecha_max=None, boundary=SHIFT1_FRAC,
                recortar_a_masa=True, boundary_src="masa", proy_modo="apilado",
-               sem=SEMANA_DEF, tasa=None, avance_ok=None, caso_id=None) -> dict:
+               sem=SEMANA_DEF, tasa=None, avance_ok=None, caso_id=None, caso=None) -> dict:
     """Fuente SQL Server: volumen de control_apilado_diario y masa por turno de
     Datos_conciliados_of_ver, la tabla versionada que guarda, por dia, la fila
     que cerro el caso de reconciliacion validado. TMS y TMH salen de la misma
@@ -914,6 +914,13 @@ def analyze_db(fecha_min=None, fecha_max=None, boundary=SHIFT1_FRAC,
 
     opcion("boundary_src", boundary_src, BOUNDARY_SRC)
     opcion("proy_modo", proy_modo, PROY_MODOS)
+
+    if caso is not None:
+        if (caso_id is not None and int(caso_id) != int(caso['id'])) or (
+                pd.Timestamp(fecha_min).normalize() != pd.Timestamp(caso['fecha_inicio']).normalize()
+                or pd.Timestamp(fecha_max).normalize() != pd.Timestamp(caso['fecha_fin']).normalize()):
+            raise ValueError('El Caso y la ventana de reconstitución deben coincidir')
+        return _analyze_flow_case(caso, boundary_src, proy_modo, sem, tasa, avance_ok)
 
     if caso_id is not None and (fecha_min is None or fecha_max is None):
         raise ValueError("Un Caso requiere su ventana exacta")
@@ -980,6 +987,102 @@ def analyze_db(fecha_min=None, fecha_max=None, boundary=SHIFT1_FRAC,
         "avisos_entrada": avisos,
     }
     res["avisos"] = avisos + v.revisar_resultado(res)
+    return res
+
+
+def _analyze_flow_case(caso, boundary_src, proy_modo, sem, tasa, avance_ok):
+    """Official model solids, independently conserved for each PAD."""
+    from . import db_source as dbs, modelo_flujos as mf
+    start, end = (pd.Timestamp(caso[k]).normalize() for k in ('fecha_inicio', 'fecha_fin'))
+    import time
+    timings = {}
+    started = time.perf_counter()
+    targets = mf.load_targets(caso)
+    timings['targets'] = time.perf_counter()-started
+    started = time.perf_counter()
+    ap = mark_status(dbs.load_apilado(start, end))
+    timings['apilado'] = time.perf_counter()-started
+    avisos = v.exigir(v.revisar_apilado(ap), 'control_apilado_diario')
+    if not ap.vol_diario.gt(0).any():
+        raise mf.FlowCaseError('El Caso no tiene volumen de apilado para distribuir sus flujos.')
+    from concurrent.futures import ThreadPoolExecutor
+
+    def read_source(loader):
+        began = time.perf_counter()
+        return loader(start, end), time.perf_counter()-began
+
+    # Independent SELECTs, each using its own pooled connection. No solver,
+    # shared SQL transaction or mutable reconciliation state runs in workers.
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        profile_job = workers.submit(read_source, mf.load_profile)
+        hours_job = workers.submit(read_source, mf.load_hours)
+        profile, timings['profile'] = profile_job.result()
+        hours, timings['hours'] = hours_job.result()
+    by_pad, base, balance = mf.distribute_profile(profile, ap, targets, caso)
+    hours['fecha'] = pd.to_datetime(hours.fecha).dt.normalize()
+    by_pad = by_pad.merge(hours, on='fecha', how='left', validate='many_to_one')
+    by_pad['H_op_src'] = np.where(by_pad.H_op.notna(), 'torre', 'n/d')
+    mass = by_pad.groupby('fecha', as_index=False)[['TMS','TMS_T1','TMS_T2']].sum()
+    mass = mass.merge(base[['fecha','TMH','TMS_base']], on='fecha', validate='one_to_one')
+    mass = mass.merge(hours, on='fecha', how='left', validate='one_to_one')
+    mass['H_op_src'] = np.where(mass.H_op.notna(), 'torre', 'n/d')
+    mass['boundary'] = mass.TMS_T1.div(mass.TMS).where(mass.TMS.gt(0), 0.0)
+    mass['boundary_normalizada'] = True
+    mass['turnos_ok'] = mass.TMS_T1.gt(0) & mass.TMS_T2.gt(0)
+    mass['fuente_masa'] = 'FLUJOS_CASO_DISTRIBUIDOS'
+    mass['caso_id'] = int(caso['id'])
+    mass['reporte_run_id'] = str(caso['run_id'])
+    avisos += v.exigir(v.revisar_masa(mass), 'Perfil distribuido del Caso')
+    parts, pad_checks = [], []
+    for pad in targets:
+        pad_ap = ap[ap.pad_id.eq(pad)]
+        pad_mass = by_pad[by_pad.pad_id.eq(pad)].copy()
+        if pad_mass.empty:
+            continue
+        # There is no independently reconciled daily/shift mass: its boundary
+        # comes from the measured conveyor profile, with a single PAD factor.
+        part = shift_table(pad_ap, pad_mass, boundary_src='masa')
+        if not part.empty:
+            part['boundary_medida'] = False
+            part['frontera_tipo'] = 'distribuida_del_caso'
+            parts.append(part)
+        check = cuadratura_masa(pad_ap, pad_mass, part)
+        check['pad_id'] = pad
+        pad_checks.append(check)
+    if not parts:
+        raise mf.FlowCaseError('No hay módulos activos para distribuir los flujos del Caso.')
+    st = pd.concat(parts, ignore_index=True)
+    global_mass = mass.set_index('fecha')
+    volumes = ap[ap.estado.eq('ACTIVO')].groupby('fecha').vol_diario.sum()
+    counts = ap[ap.estado.eq('ACTIVO')].groupby('fecha').size()
+    # Global daily columns are repeated on module rows and aggregated with
+    # first(); keep them global even when the mass split is PAD-specific.
+    for output, source in [('TMS_dia','TMS'), ('masa_dia','TMS'), ('TMH_dia','TMH'),
+                           ('H_op','H_op'), ('H_op_src','H_op_src')]:
+        st[output] = st.fecha.map(global_mass[source])
+    st['vol_dia_total'] = st.fecha.map(volumes)
+    st['n_modulos_dia'] = st.fecha.map(counts)
+    # Hours and percentages retain the observed global volume share; mass is
+    # conserved separately within each PAD rather than crossing to another PAD.
+    st['frac_vol'] = st.vol_diario/st.vol_dia_total
+    for pad, row in balance.set_index('pad_id').iterrows():
+        allocated = st.loc[st.pad_id.eq(pad), 'masa_total'].sum()
+        if not np.isclose(allocated, row.objetivo_t, rtol=1e-10, atol=1e-6):
+            raise mf.FlowCaseError(f'PAD {pad}: los módulos no cierran con el flujo reconciliado.')
+    res = dict(apilado=ap, masa=mass, masa_por_pad=by_pad, shift_table=st,
+        daily=daily_shift_summary(st, sem), cuadratura=cuadratura_masa(ap, mass, st),
+        cuadratura_pad=pd.concat(pad_checks, ignore_index=True), balance_flujos=balance,
+        modules=module_summary(st), weekly=weekly_summary(st, sem),
+        itinerario=module_itinerary(ap, st, proy_modo, sem, tasa, avance_ok),
+        tasa=tasa or tasa_referencia(st), inactivos=inactive_table(ap),
+        cobertura={'apilado': (ap.fecha.min(), ap.fecha.max()), 'tms': (mass.fecha.min(), mass.fecha.max())},
+        ventana=(start,end), boundary_src='masa', proy_modo=proy_modo, sem=sem,
+        avance_ok=AVANCE_OK if avance_ok is None else float(avance_ok), fuente='sql',
+        fuente_modelo=dict(caso), avisos_entrada=avisos, _phase_seconds=timings)
+    avisos.append(v.Aviso('info','perfil_caso_distribuido',
+        'Totales reconciliados por PAD; distribución diaria y por turno desde el perfil operativo. '
+        'Los turnos distribuidos no son mediciones reconciliadas independientes.'))
+    res['avisos'] = avisos + v.revisar_resultado(res)
     return res
 
 

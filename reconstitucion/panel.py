@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from dash import Input, Output, State, dcc, html, no_update
 
 from . import engine as e, db_source as dbs, validacion as val
+from .modelo_flujos import FlowCaseError
 from .presentacion import C, SANS, MONO, kpi, tabla_itinerario, tabla_detalle_modulo, panel_calidad, gantt_labels
 
 _lock = RLock()
@@ -130,6 +131,10 @@ def summary(res):
 def render(res):
     st = res['shift_table']
     sources = sorted(str(x) for x in st.get('fuente_masa', pd.Series(dtype=str)).dropna().unique())
+    if res.get('fuente_modelo'):
+        source = res['fuente_modelo']
+        flows = '/'.join(res['balance_flujos']['flujo'])
+        sources = [f"Caso #{source['id']} - run #{source['run_id']} - {flows}: masa reconciliada"]
     return html.Div([
         summary(res),
         html.P('Fuente de masa: ' + (', '.join(sources) if sources else 'Oficial validada'), className='reconstitucion-note'),
@@ -142,16 +147,20 @@ def render(res):
         html.Div([html.Div([
             html.Button('Cerrar', id='reconstitucion-cerrar', n_clicks=0, className='reconstitucion-button'),
             html.H3('Consideraciones'),
-            html.P('Masa oficial ya reconciliada: se conserva el total publicado. '
+            html.P('La masa conserva el total reconciliado de cada pad. '
                    'Un turno conocido en cero conserva cero. Días sin masa no se rellenan. '
                    'El pendiente global no se atribuye a módulos sin evidencia de volumen. '
                    'Los días medidos delimitan levantamientos, no horas efectivas de operación. '
                    'Las fechas proyectadas requieren tasa y densidad válidas.'),
-            html.P('La reconstitución usa el mismo Caso oficial y su período que Curvas. '
-                   'Los UUID de publicación de masa pertenecen al motor de reportabilidad y son distintos '
-                   'del run entero del solver. No se afirma correspondencia entre ambos runs. '
-                   'Se conserva la última publicación validada del Caso, incluso si ya no está activa. '
-                   'Publicaciones de masa: ' + ', '.join(sorted(res['masa'].get('reporte_run_id', pd.Series(dtype=str)).dropna().astype(str).unique()))),
+            html.P((
+                'Fuente: flujos solidos del Caso y su run oficial. La distribucion por dia y turno '
+                'se deriva del perfil operativo de correas y humedad; no es un nuevo pesaje por turno. '
+                'No se mezclan publicaciones de otros Casos. '
+                f"Caso #{res['fuente_modelo']['id']} - run #{res['fuente_modelo']['run_id']}."
+            ) if res.get('fuente_modelo') else (
+                'Fuente historica: publicacion de masa validada del Caso. '
+                'Publicaciones: ' + ', '.join(sorted(res['masa'].get('reporte_run_id', pd.Series(dtype=str))
+                    .dropna().astype(str).unique())))),
             panel_calidad(res) or html.P('Sin observaciones adicionales.')], className='reconstitucion-dialog')],
             id='reconstitucion-modal', role='dialog', **{'aria-label': 'Consideraciones'},
             className='reconstitucion-modal', style={'display': 'none'})])
@@ -227,7 +236,10 @@ def register_callbacks(app, loader=None, case_loader=None):
         if case is None:
             return None, [], 'all', 'Selecciona un Caso oficial antes de cargar.'
         try:
-            res = load(fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'], caso_id=case_id)
+            kwargs = dict(fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'], caso_id=case_id)
+            if case.get('modelo_codigo'):
+                kwargs['caso'] = dict(case)
+            res = load(**kwargs)
             mass = res.get('masa')
             if mass is None or mass.empty or not mass['caso_id'].eq(case_id).all():
                 return None, [], 'all', 'El Caso no tiene masa publicada validada disponible. No se usan datos de otros Casos.'
@@ -239,10 +251,12 @@ def register_callbacks(app, loader=None, case_loader=None):
                 {'label': f'Pad {int(r.pad_id)} · campaña {int(r.campana)}', 'value': f'{int(r.pad_id)}|{int(r.campana)}'}
                 for r in groups.itertuples()]
             return remember(res), options, 'all', 'Carga finalizada. Los resultados identifican el Caso asociado.'
+        except FlowCaseError as exc:
+            return None, [], 'all', str(exc)
         except e.MissingCaseMassError:
             return None, [], 'all', 'El Caso no tiene masa publicada validada disponible. No se usan datos de otros Casos.'
         except Exception:
-            return None, [], 'all', 'No se pudo cargar el Caso. Verifica conexión y masa publicada validada; puedes reintentar.'
+            return None, [], 'all', 'No se pudo cargar el Caso. Verifica conexión y datos del Caso; puedes reintentar.'
 
     def resultado_actual(token, case_id, cases):
         with _lock:

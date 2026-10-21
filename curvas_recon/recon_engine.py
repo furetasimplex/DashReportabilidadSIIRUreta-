@@ -189,6 +189,7 @@ Motor de reconciliacion de pilas de lixiviacion. Combina en un solo modulo:
        hay Fdrena reconciliado.
 """
 import hashlib
+import math
 import time
 
 import numpy as np
@@ -1813,6 +1814,31 @@ def _split_fino(target, fino_med, q_final):
     return out
 
 
+def _pls_fine_target_for_net(net_cu_target_t, fino_riego_recon):
+    """Absolute PLS fine target that gives the requested net Cu in t Cu.
+
+    Fine values inside the engine are sums of daily Q[m3/h]*Cu[g/L]. One
+    such daily unit converts to 0.024 t Cu, matching report_metodo.
+    """
+    target_t = float(net_cu_target_t)
+    riego = float(fino_riego_recon)
+    if not math.isfinite(target_t) or not math.isfinite(riego):
+        raise ValueError('El objetivo neto y el fino reconciliado de riego deben ser finitos.')
+    pls_target = riego + target_t / 0.024
+    if not math.isfinite(pls_target) or pls_target < 0:
+        raise ValueError(
+            'El neto Cu objetivo implicaria fino PLS negativo o no finito; '
+            'no se puede cerrar la curva con fino no negativo.')
+    return pls_target
+
+
+def _daily_net_cu_t(daily_rows):
+    """Net Cu delivered by the actual post-ramp daily rows, in t Cu."""
+    return sum((d.get('fino_pls_final') or 0.0) -
+               (d.get('fino_riego_final') or 0.0)
+               for d in daily_rows) * 0.024
+
+
 def _build_piles(rows, materials, week_start, q_riego_medido, q_pls_medido,
                   delta_recon_riego, delta_recon_pls, delta_fino_riego, delta_fino_pls,
                   ramp_cap_by_label, week_end=None, nuevas_by_label=None,
@@ -2286,7 +2312,10 @@ ANCHOR_KEYS = ('q_riego_medido', 'q_riego_recon', 'q_pls_medido', 'q_pls_recon',
 def _anchor_ratio(anchor, key_recon, key_medido):
     """Razon reconciliado/medido del ancla, o None si el ancla no la trae.
 
-    El ancla se aplica como RAZON y no como valor absoluto a proposito. El
+    Los caudales y la base reconciliada de riego se aplican como RAZON porque
+    el Caso y el motor de curvas NO cubren el mismo universo de parcelas.
+    En el modelo 125, el fino PLS se ajusta después para cerrar el neto absoluto
+    de F25/F29. El
     Caso y el motor de curvas NO cubren el mismo universo de parcelas, y la
     diferencia va en las dos direcciones: con `incluir_sin_campana` el motor
     ya suma las pilas que riegan sin campana (P32 de oxidos, ~3 % del pad),
@@ -2480,6 +2509,14 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
                               if r['q_pls'] > 0 and pd.notna(r['cu_pls']))
 
     if q_riego_medido <= 0 or q_pls_medido <= 0:
+        target_net_t = (float(anchor['net_cu_target_t'])
+                        if anchor and anchor.get('net_cu_target_t') is not None else None)
+        if (target_net_t is not None and
+                (not math.isfinite(target_net_t) or abs(target_net_t) > 1e-6)):
+            flow = anchor.get('net_cu_target_flow', 'el ancla neta')
+            raise RuntimeError(
+                f'{flow}: objetivo {target_net_t:.9f} t Cu sin pilas activas '
+                'con caudal; no se puede construir una curva diaria que lo entregue.')
         warnings.append('QRiego_medido o QPLS_medido = 0 esta semana; sin pilas activas con caudal, no se reparte nada.')
         return dict(
             week_start=week_start, week_end=week_end, anchored=False,
@@ -2493,6 +2530,14 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
             cu_fino_riego_recon=None, cu_fino_pls_recon=None,
             delta_fino_riego=None, delta_fino_pls=None,
             ramp_cap_by_label={}, inventario_pls=0.0, inventario_fino_pls=0.0,
+            net_cu_target_t=target_net_t, daily_net_cu_t=0.0,
+            net_closure_residual_t=(0.0 if target_net_t == 0 else None),
+            cu_fino_pls_daily=0.0,
+            net_cu_by_label={label: {
+                'target_flow': (anchor.get('net_cu_target_flow') if anchor else None),
+                'target_t': target_net_t, 'daily_t': 0.0,
+                'residual_t': (0.0 if target_net_t == 0 else None),
+            } for label in materials} if target_net_t is not None else {},
             all_rows=rows, piles=[], daily=[], warnings=warnings,
         )
 
@@ -2566,6 +2611,15 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
         cu_fino_pls_recon = cu_fino_pls_medido * ratio_fp
     else:
         cu_fino_pls_recon = _noisy_global(week_start, 'cu_fino_pls_global', cu_fino_pls_medido, sigma_rel)
+    # 125-flow runs publish a pad-level net Cu balance (F25/F29). Use that
+    # absolute reconciled balance as the PLS fine target after preserving the
+    # separately reconciled irrigation fine. Internal fine is sum(Q*Cu); the
+    # report's conversion to t Cu is 0.024 per daily Q[m3/h]*Cu[g/L].
+    target_net_t = (float(anchor['net_cu_target_t'])
+                    if anchor and anchor.get('net_cu_target_t') is not None else None)
+    if target_net_t is not None:
+        cu_fino_pls_recon = _pls_fine_target_for_net(target_net_t,
+                                                    cu_fino_riego_recon)
     delta_fino_riego = cu_fino_riego_recon - cu_fino_riego_medido
     delta_fino_pls = cu_fino_pls_recon - cu_fino_pls_medido
 
@@ -2590,6 +2644,21 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
         ramp_cap_by_label, week_end=week_end, nuevas_by_label=nuevas_by_label,
         campana_by_label=campana_by_label)
     warnings.extend(loop_warnings)
+    daily_net_cu_t = _daily_net_cu_t(daily_rows)
+    net_closure_residual_t = None
+    if target_net_t is not None:
+        net_closure_residual_t = daily_net_cu_t - target_net_t
+        # A remaining ramp residue is internal PLS Cu not delivered in the
+        # daily pile curves. Keep it explicit instead of changing the daily
+        # profile after ramp constraints have been applied.
+        if (not math.isfinite(net_closure_residual_t) or
+                abs(net_closure_residual_t) > 1e-6):
+            raise RuntimeError(
+                f'{_pad}No se puede construir una curva diaria cerrada con '
+                f'{anchor.get("net_cu_target_flow", "el ancla neta")}: objetivo '
+                f'{target_net_t:.9f} t Cu, entrega diaria {daily_net_cu_t:.9f} t Cu, '
+                f'residuo {net_closure_residual_t:+.9f} t Cu. La restricción de '
+                'rampa/inventario impide entregar ese saldo en las pilas activas.')
     # Antes esto disparaba la expansion del set transiente. Ya no hay a quien
     # sumar -- todas las activas estan dentro -- asi que el recorte se reporta
     # tal cual. `clipped` se marca SOLO cuando `ramp_curve.ajustar` devuelve
@@ -2617,6 +2686,14 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
         cu_fino_riego_medido=cu_fino_riego_medido, cu_fino_pls_medido=cu_fino_pls_medido,
         cu_fino_riego_recon=cu_fino_riego_recon, cu_fino_pls_recon=cu_fino_pls_recon,
         delta_fino_riego=delta_fino_riego, delta_fino_pls=delta_fino_pls,
+        net_cu_target_t=target_net_t, daily_net_cu_t=daily_net_cu_t,
+        net_closure_residual_t=net_closure_residual_t,
+        cu_fino_pls_daily=sum(d.get('fino_pls_final') or 0.0 for d in daily_rows),
+        net_cu_by_label=({label: {
+            'target_flow': (anchor.get('net_cu_target_flow') if anchor else None),
+            'target_t': target_net_t, 'daily_t': daily_net_cu_t,
+            'residual_t': net_closure_residual_t,
+        } for label in materials} if target_net_t is not None else {}),
         ramp_cap_by_label=ramp_cap_by_label,
         inventario_pls=sum(q for q, _ in inventario_by_label.values()),
         inventario_fino_pls=sum(f for _, f in inventario_by_label.values()),
@@ -2637,6 +2714,8 @@ _MERGE_SUM_KEYS = (
     'cu_fino_riego_medido', 'cu_fino_pls_medido',
     'cu_fino_riego_recon', 'cu_fino_pls_recon',
     'delta_fino_riego', 'delta_fino_pls',
+    'net_cu_target_t', 'daily_net_cu_t', 'net_closure_residual_t',
+    'cu_fino_pls_daily',
     'inventario_pls', 'inventario_fino_pls',
 )
 
@@ -2678,6 +2757,10 @@ def merge_flowsheet_res(parts):
         for p in parts:
             merged.update(p.get(k) or {})
         out[k] = merged
+    net_by_label = {}
+    for p in parts:
+        net_by_label.update(p.get('net_cu_by_label') or {})
+    out['net_cu_by_label'] = net_by_label
     # Un resultado conjunto solo esta anclado si TODOS sus pads lo estan.
     # ``any`` pintaba una corrida parcial como oficial cuando el otro pad
     # habia caido al objetivo sintetico.

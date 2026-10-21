@@ -60,6 +60,9 @@ from .local_cache import limpiar as limpiar_cache_local, estado as estado_cache_
 # guarda transitoriamente en disco y el navegador conserva solo su token opaco.
 _RECON_RAW_DIR = os.path.join(tempfile.gettempdir(), 'hidronueva_recon_runs')
 _RECON_RAW_TTL_SECONDS = 24 * 60 * 60
+# Change this when the meaning of a stored reconciliation changes. Browser
+# stores can outlive a deployment and otherwise export pre-fix results.
+_RECON_RAW_PAYLOAD_VERSION = 2
 
 TOP_OX = list(range(1, 17))
 BOTTOM_OX = list(range(32, 16, -1))
@@ -117,7 +120,8 @@ def _save_recon_raw(res, caso, week_start, week_end):
     fd, tmp_path = tempfile.mkstemp(dir=_RECON_RAW_DIR, suffix='.tmp')
     try:
         with os.fdopen(fd, 'wb') as fh:
-            pickle.dump(dict(res=res, caso=caso, ws=week_start, we=week_end), fh,
+            pickle.dump(dict(payload_version=_RECON_RAW_PAYLOAD_VERSION,
+                             res=res, caso=caso, ws=week_start, we=week_end), fh,
                         protocol=pickle.HIGHEST_PROTOCOL)
         os.replace(tmp_path, path)
     except Exception:
@@ -137,7 +141,10 @@ def _load_recon_raw(token, caso_id):
             raw = pickle.load(fh)
     except (OSError, pickle.PickleError, EOFError):
         return None, path
-    caso = raw.get('caso') if isinstance(raw, dict) else None
+    if (not isinstance(raw, dict)
+            or raw.get('payload_version') != _RECON_RAW_PAYLOAD_VERSION):
+        return None, path
+    caso = raw.get('caso')
     if not isinstance(caso, dict) or caso.get('id') != caso_id:
         return None, path
     return raw, path

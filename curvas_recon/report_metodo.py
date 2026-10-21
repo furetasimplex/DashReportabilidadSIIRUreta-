@@ -352,7 +352,7 @@ FILAS = ['Campana', 'Ciclos', 'Recuperacion max.', 'Aporte Parcelas',
          'Apilado tmf', 'Rec termino ciclo', 'Recuperable', 'WIP']
 CHART = {'OXIDOS': 'Curvas Ox', 'SULFUROS': 'Curvas Sulfuro'}
 COL_T = 40          # bloque de toneladas, lejos a la derecha de los graficos
-PROD_SHEET = 'Prod'
+PROD_SHEET = {'OXIDOS': 'Prod Oxidos', 'SULFUROS': 'Prod Sulfuros'}
 
 
 def _corte_corto(doc):
@@ -449,86 +449,67 @@ def _escribir_hoja_pad(ws, doc, label):
 
 
 def _escribir_prod(w, doc):
-    """Hoja ancha con el Cu neto diario reconstruido por pila, no cátodos."""
+    """Crea una hoja Prod independiente para cada pad, con t Cu neto diario."""
     pad_defs = [('OXIDOS', 'Óxidos'), ('SULFUROS', 'Sulfuros')]
-    active = [(label, title, sorted(doc.get('pads', {}).get(label, {}).get('pilas', []),
-                                    key=lambda q: ORDEN[label].index(q['num'])))
-              for label, title in pad_defs
-              if doc.get('pads', {}).get(label, {}).get('pilas')]
-    ws = w.book.create_sheet(PROD_SHEET)
-
-    first_col = 2
-    col_by_pad = {}
-    all_dates = set()
-    for label, title, pilas in active:
-        begin = first_col
-        col_by_pad[label] = {}
-        for q in pilas:
-            col_by_pad[label][q['p']] = first_col
-            first_col += 1
-            start = pd.Timestamp(q.get('ini') or doc['pads'][label].get('desde'))
-            all_dates.update(start + pd.Timedelta(days=i) for i in range(len(q['rec'])))
-        ws.merge_cells(start_row=3, start_column=begin,
-                       end_row=3, end_column=first_col - 1)
-        ws.cell(3, begin, title)
-
-    ws['A1'] = 'Cu neto diario reconstruido [t Cu/dia]'
-    cases = ', '.join(str(c['id']) for c in doc.get('casos', []))
-    ws['A2'] = f'Caso {cases} — corte {doc["end"]}' if cases else f'Corte {doc["end"]}'
-    if not all_dates:
+    for label, title in pad_defs:
+        ws = w.book.create_sheet(PROD_SHEET[label])
+        pilas = sorted(doc.get('pads', {}).get(label, {}).get('pilas', []),
+                       key=lambda q: ORDEN[label].index(q['num']))
+        ws['A1'] = 'Cu neto diario [t Cu/dia]'
+        case_labels = []
+        for case in doc.get('casos', []):
+            case_id = case.get('id')
+            run_id = case.get('run', case.get('run_id'))
+            start = case.get('desde') or case.get('fecha_inicio')
+            end = case.get('hasta') or case.get('fecha_fin')
+            period = f'{start}–{end}' if start and end else 'periodo no disponible'
+            case_labels.append(
+                f'Caso {case_id if case_id is not None else "no disponible"} / '
+                f'run {run_id if run_id is not None else "no disponible"} ({period})')
+        ws['A2'] = ' | '.join(case_labels) if case_labels else f'Corte {doc["end"]}'
+        ws['A3'] = title
         ws['A4'] = 'Parcela'
         ws['A1'].font = Font(name='Arial', size=10, bold=True)
+        ws['A3'].font = Font(name='Arial', size=10, bold=True)
+        ws['A3'].alignment = Alignment(horizontal='center')
+        ws['A4'].font = Font(name='Arial', size=10)
         ws.column_dimensions['A'].width = 46
-        return ws
 
-    final_col = first_col - 1
-    ws['A4'] = 'Parcela'
-    for label, title, pilas in active:
-        for q in pilas:
-            col = col_by_pad[label][q['p']]
+        all_dates = set()
+        for col, q in enumerate(pilas, start=2):
             ws.cell(4, col, q['num'])
+            start = pd.Timestamp(q.get('ini') or doc['pads'][label].get('desde'))
+            all_dates.update(start + pd.Timedelta(days=i) for i in range(len(q['rec'])))
 
-    dates = sorted(all_dates)
-    row_by_date = {day: row for row, day in enumerate(dates, start=5)}
-    for day, row in row_by_date.items():
-        ws.cell(row, 1, day.to_pydatetime())
-    for label, title, pilas in active:
-        for q in pilas:
-            col = col_by_pad[label][q['p']]
+        if not all_dates:
+            continue
+        dates = sorted(all_dates)
+        row_by_date = {day: row for row, day in enumerate(dates, start=5)}
+        for day, row in row_by_date.items():
+            ws.cell(row, 1, day.to_pydatetime())
+        for col, q in enumerate(pilas, start=2):
             start = pd.Timestamp(q.get('ini') or doc['pads'][label].get('desde'))
             previous = 0.0
             for i, cumulative in enumerate(q['rec']):
                 day = start + pd.Timedelta(days=i)
-                value = float(cumulative) - previous
-                ws.cell(row_by_date[day], col, round(value, 3))
+                ws.cell(row_by_date[day], col, round(float(cumulative) - previous, 3))
                 previous = float(cumulative)
 
-    # La fuente y el color de relleno siguen las hojas Rec y Prod de referencia.
-    header_fill = PatternFill('solid', fgColor='FFFFC000')
-    base_font = Font(name='Arial', size=10)
-    group_font = Font(name='Arial', size=10, bold=True)
-    header_font = Font(name='Arial', size=10)
-    ws['A1'].font = group_font
-    for cell in ws[3]:
-        if cell.column <= final_col:
-            cell.font = group_font
-            cell.alignment = Alignment(horizontal='center')
-    for cell in ws[4]:
-        if cell.column <= final_col:
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal='center')
-    for row in range(5, 5 + len(dates)):
-        for col in range(1, final_col + 1):
-            ws.cell(row, col).fill = header_fill
-            ws.cell(row, col).font = base_font
-        ws.cell(row, 1).number_format = 'dd-mm-yyyy'
+        final_col = len(pilas) + 1
+        header_fill = PatternFill('solid', fgColor='FFFFC000')
+        base_font = Font(name='Arial', size=10)
+        for cell in ws[4]:
+            if cell.column <= final_col:
+                cell.alignment = Alignment(horizontal='center')
+        for row in range(5, 5 + len(dates)):
+            for col in range(1, final_col + 1):
+                ws.cell(row, col).fill = header_fill
+                ws.cell(row, col).font = base_font
+            ws.cell(row, 1).number_format = 'dd-mm-yyyy'
+            for col in range(2, final_col + 1):
+                ws.cell(row, col).number_format = '0.00'
         for col in range(2, final_col + 1):
-            ws.cell(row, col).number_format = '0.00'
-    ws.column_dimensions['A'].width = 46
-    for col in range(2, final_col + 1):
-        ws.column_dimensions[get_column_letter(col)].width = 11
-    return ws
-
+            ws.column_dimensions[get_column_letter(col)].width = 11
 
 def hoja_resumen(doc):
     r = []
@@ -685,7 +666,7 @@ def notas(doc):
 
 
 def escribir_libro(doc, out_path):
-    """Rec Ox, Rec Sulfuro, las dos hojas de gráficos y Prod diaria.
+    """Rec Ox, Rec Sulfuro, las dos hojas de gráficos y Prod diaria por pad.
 
     Las hojas Resumen, Comparacion planta y Metodo se sacaron del libro. Sus
     constructores (`hoja_resumen`, `hoja_comparacion`, `notas`) se conservan

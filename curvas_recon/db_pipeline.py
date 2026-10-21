@@ -196,9 +196,10 @@ def load_caso_anchor(run_id, model_code, model_version=None, total_flows=None):
 
     Devuelve {'OXIDOS': {...}, 'SULFUROS': {...}} con las claves que espera
     `recon_engine.reconcile_flowsheet`: masa y fino, medidos y reconciliados.
-    El motor usa la RAZON reconciliado/medido, no el valor absoluto (ver
-    `recon_engine._anchor_ratio`): el Caso mide sobre todas las parcelas del
-    pad y el motor de curvas solo sobre las que tienen campana registrada.
+    Los componentes conservan la razon reconciliado/medido para repartir
+    entre pilas. En el modelo 125, F25/F29 son además el objetivo neto
+    absoluto por pad para la curva diaria; no se derivan de la diferencia de
+    componentes porque el balance puede no cerrar exactamente.
 
     Un pad al que le falte cualquiera de sus flujos queda FUERA del dict --
     mejor correr ese material sin ancla que anclarlo a una suma incompleta.
@@ -208,6 +209,12 @@ def load_caso_anchor(run_id, model_code, model_version=None, total_flows=None):
     caso_flujos, flujos_opcionales = _caso_flows_for_model(
         model_code, model_version, total_flows)
     codes = sorted({c for f in caso_flujos.values() for c in f['riego'] + f['pls']})
+    # In the 125-flow catalog these net balance outputs are authoritative
+    # for each pad. Keep the component flows above for Q/fine ratios, but do
+    # not derive the net target from them: F29 can differ from that sum.
+    net_target_by_label = ({'OXIDOS': 'F25', 'SULFUROS': 'F29'}
+                           if str(model_code) == 'hidrometalurgia_125_v2' else {})
+    codes = sorted(set(codes) | set(net_target_by_label.values()))
     query = text(f"""
         SELECT codigo_flujo, masa_medida, masa_reconciliada,
                fino_cu_medido, fino_cu_reconciliado
@@ -223,6 +230,9 @@ def load_caso_anchor(run_id, model_code, model_version=None, total_flows=None):
     for label, flows in caso_flujos.items():
         needed = [c for c in flows['riego'] + flows['pls']
                   if c not in flujos_opcionales]
+        target_flow = net_target_by_label.get(label)
+        if target_flow:
+            needed.append(target_flow)
         if any(c not in by_code for c in needed):
             print(f'[db_pipeline] load_caso_anchor(run={run_id}): {label} sin ancla, '
                   f'faltan flujos {[c for c in needed if c not in by_code]}.')
@@ -243,6 +253,8 @@ def load_caso_anchor(run_id, model_code, model_version=None, total_flows=None):
             q_pls_medido=_sum(flows['pls'], 0), q_pls_recon=_sum(flows['pls'], 1),
             fino_riego_medido=_sum(flows['riego'], 2), fino_riego_recon=_sum(flows['riego'], 3),
             fino_pls_medido=_sum(flows['pls'], 2), fino_pls_recon=_sum(flows['pls'], 3),
+            **({'net_cu_target_t': by_code[target_flow][3],
+                'net_cu_target_flow': target_flow} if target_flow else {}),
         )
     return out
 
@@ -297,6 +309,21 @@ def diagnose_caso_anchor(anchor):
                 fallas.append(f'{label}: {nombre} no finito o negativo')
             elif key in denominadores and number <= 0:
                 fallas.append(f'{label}: {nombre} = {number:.6g} (debe ser > 0)')
+        # 120-flow anchors do not carry these fields. 125-flow anchors must
+        # have the separate authoritative net output, which may be zero or
+        # negative when its implied absolute PLS fine remains feasible.
+        target_flow = valores.get('net_cu_target_flow')
+        if target_flow:
+            target = valores.get('net_cu_target_t')
+            if target is None:
+                fallas.append(f'{label}: fino Cu reconciliado de {target_flow} ausente')
+            else:
+                try:
+                    target_number = float(target)
+                except (TypeError, ValueError):
+                    target_number = float('nan')
+                if not math.isfinite(target_number):
+                    fallas.append(f'{label}: fino Cu reconciliado de {target_flow} no finito')
     return fallas
 
 

@@ -81,7 +81,7 @@ def _pile(label: str, num: int, p: str, start: str, rec: list[float]) -> dict:
 
 def _doc() -> dict:
     return dict(
-        end="2026-10-04", corte_planta="2026-10-12", casos=[],
+        end="2026-10-04", corte_planta="2026-10-12", casos=[dict(id=18, run_id=456, fecha_inicio="2026-10-01", fecha_fin="2026-10-04")],
         pads={
             "OXIDOS": dict(desde="2026-10-01", pilas=[
                 _pile("OXIDOS", 1, "P01", "2026-10-01", [0.5, 1.5, 3.0]),
@@ -100,12 +100,12 @@ def _series_formula(series, kind: str) -> str:
     return (numeric or string).f
 
 
-def test_libro_final_tiene_cinco_hojas_layout_pad_curvas_y_prod(tmp_path):
+def test_libro_final_tiene_seis_hojas_layout_pad_curvas_y_prod(tmp_path):
     path = tmp_path / "reporte.xlsx"
     report.escribir_libro(_doc(), path)
     wb = load_workbook(path, data_only=False)
 
-    assert wb.sheetnames == ["Rec Ox", "Rec Sulfuro", "Curvas Ox", "Curvas Sulfuro", "Prod"]
+    assert wb.sheetnames == ["Rec Ox", "Rec Sulfuro", "Curvas Ox", "Curvas Sulfuro", "Prod Oxidos", "Prod Sulfuros"]
     ox, su = wb["Rec Ox"], wb["Rec Sulfuro"]
     # La hoja de óxidos conserva su fila 9 con números de pila y curva desde 10.
     assert ox["A1"].value == "Campana"
@@ -131,30 +131,29 @@ def test_libro_final_tiene_cinco_hojas_layout_pad_curvas_y_prod(tmp_path):
         assert _series_formula(recovery, "val") == val_range
         assert _series_formula(recovery, "cat") == cat_range
 
-    prod = wb["Prod"]
-    assert prod["A1"].value is not None
-    assert prod["B3"].value == "Óxidos"
-    assert prod["C3"].value == "Sulfuros"
-    assert prod["A4"].value == "Parcela"
-    assert prod["B4"].value == 1
-    assert prod["C4"].value == 21
-    # Fechas cronológicas en A5:A7; por pila, Prod usa incrementos diarios del
-    # acumulado reconciliado, no duplicados de origen ni el total final repetido.
-    dates = [prod.cell(row, 1).value for row in range(5, 9)]
-    assert [date.fromisoformat(str(value)[:10]) for value in dates] == [
-        date(2026, 10, 1), date(2026, 10, 2), date(2026, 10, 3), date(2026, 10, 4),
+    prod_ox, prod_su = wb["Prod Oxidos"], wb["Prod Sulfuros"]
+    assert prod_ox["A1"].value == "Cu neto diario [t Cu/dia]"
+    assert prod_ox["A2"].value == "Caso 18 / run 456 (2026-10-01–2026-10-04)"
+    assert prod_ox["A3"].value.endswith("xidos")
+    assert prod_su["A3"].value == "Sulfuros"
+    assert prod_ox["A4"].value == prod_su["A4"].value == "Parcela"
+    assert prod_ox["B4"].value == 1
+    assert prod_su["B4"].value == 21
+    # Cada hoja conserva fechas y deltas diarios solo de su pad.
+    dates_ox = [prod_ox.cell(row, 1).value for row in range(5, 8)]
+    assert [date.fromisoformat(str(value)[:10]) for value in dates_ox] == [
+        date(2026, 10, 1), date(2026, 10, 2), date(2026, 10, 3),
     ]
-    assert prod["B5"].value == pytest.approx(0.5)
-    assert prod["B6"].value == pytest.approx(1.0)
-    assert prod["B7"].value == pytest.approx(1.5)
-    assert prod["C5"].value is None
-    assert prod["C6"].value == pytest.approx(1.0)
-    assert prod["C7"].value == pytest.approx(1.0)
-    assert prod["C8"].value == pytest.approx(2.0)
-    assert sum(prod.cell(row, 2).value or 0 for row in range(5, 9)) == pytest.approx(ox['B4'].value)
-    assert sum(prod.cell(row, 3).value or 0 for row in range(5, 9)) == pytest.approx(su['B4'].value)
+    dates_su = [prod_su.cell(row, 1).value for row in range(5, 8)]
+    assert [date.fromisoformat(str(value)[:10]) for value in dates_su] == [
+        date(2026, 10, 2), date(2026, 10, 3), date(2026, 10, 4),
+    ]
+    assert [prod_ox.cell(row, 2).value for row in range(5, 8)] == pytest.approx([0.5, 1.0, 1.5])
+    assert [prod_su.cell(row, 2).value for row in range(5, 8)] == pytest.approx([1.0, 1.0, 2.0])
+    assert sum(prod_ox.cell(row, 2).value or 0 for row in range(5, 8)) == pytest.approx(ox['B4'].value)
+    assert sum(prod_su.cell(row, 2).value or 0 for row in range(5, 8)) == pytest.approx(su['B4'].value)
     assert ox['B9'].fill.fgColor.rgb[-6:] == 'FFFF00'
-    assert prod['B5'].fill.fgColor.rgb[-6:] == 'FFC000'
+    assert prod_ox['B5'].fill.fgColor.rgb[-6:] == 'FFC000'
     assert ox['B10'].font.name == 'Arial'
     # El lector reconoce las columnas por parcela y puede releer el resultado.
     assert report.leer_planta('OXIDOS', str(path))[1]['curva'] == [0.5, 1.5, 3.0]
@@ -168,7 +167,8 @@ def test_prod_preserva_extraccion_negativa_y_pads_sin_datos(tmp_path):
     path = tmp_path / 'solo_ox.xlsx'
     report.escribir_libro(doc, path)
     book = load_workbook(path)
-    assert book['Prod']['B6'].value == pytest.approx(-0.3)
+    assert book['Prod Oxidos']['B6'].value == pytest.approx(-0.3)
+    assert 'Prod Sulfuros' in book.sheetnames
     assert book['Rec Ox']['B4'].value == 1.0
     assert len(book['Curvas Sulfuro']._charts) == 0
 
@@ -182,3 +182,12 @@ def test_recuperacion_maxima_no_confunde_maximo_con_ultimo_punto(tmp_path):
     assert book['Rec Ox']['B3'].value == 2.0
     assert book['Rec Ox']['B4'].value == 0.5
     assert book['Rec Ox']['B12'].value == 0.5
+
+
+def test_prod_marca_run_y_periodo_ausentes_sin_inventar_metadatos(tmp_path):
+    doc = _doc()
+    doc["casos"] = [dict(id=19, desde="2026-10-01", hasta="2026-10-04")]
+    path = tmp_path / "caso_sin_run.xlsx"
+    report.escribir_libro(doc, path)
+    book = load_workbook(path)
+    assert book["Prod Oxidos"]["A2"].value == "Caso 19 / run no disponible (2026-10-01–2026-10-04)"
