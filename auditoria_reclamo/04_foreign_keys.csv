@@ -1,3 +1,0 @@
-﻿FK,esquema_hijo,tabla_hijo,columna_hijo,esquema_padre,tabla_padre,columna_padre
-FK_hr_rotopala,reclamo,rotopala_horas_turno,rotopala_id,reclamo,rotopala,rotopala_id
-FK_sr_rotopala,reclamo,secuencia_rotopala,rotopala_id,reclamo,rotopala,rotopala_id

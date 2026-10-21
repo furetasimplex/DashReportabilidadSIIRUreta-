@@ -14,12 +14,16 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.worksheet.views import Selection
 from report_export.report_export import BalanceReportError
 from report_export.balance_contract import (
     build_balance_report_identity,
     validate_balance_template_hash,
+    get_balance_model_contract,
+    get_balance_template_path,
+    balance_solver_observation,
+    is_finite_balance_number,
 )
 # Rango por defecto de la plantilla antigua de Datos conciliados.
 # La plantilla vigente se detecta dinamicamente desde el encabezado "Dia".
@@ -288,12 +292,12 @@ def _balance_metadata_dict(metadata):
     raise BalanceReportError("La metadata del Run no tiene un formato valido.")
 
 
-def _balance_validate_codes(frame, label):
+def _balance_validate_codes(frame, label, flow_count=120):
     if not isinstance(frame, pd.DataFrame):
         raise BalanceReportError(f"{label} debe ser un DataFrame.")
-    if len(frame) != 120:
+    if len(frame) != flow_count:
         raise BalanceReportError(
-            f"{label} posee {len(frame)} flujos; se esperaban 120."
+            f"{label} posee {len(frame)} flujos; se esperaban {flow_count}."
         )
     if "codigo_flujo" not in frame.columns:
         raise BalanceReportError(f"{label} no contiene codigo_flujo.")
@@ -305,7 +309,7 @@ def _balance_validate_codes(frame, label):
             + ", ".join(duplicated)
             + "."
         )
-    expected = {f"F{i}" for i in range(1, 121)}
+    expected = {f"F{i}" for i in range(1, flow_count + 1)}
     received = set(codes)
     missing_codes = sorted(expected - received, key=lambda x: int(x[1:]))
     extra_codes = sorted(received - expected)
@@ -368,8 +372,19 @@ def _balance_validate_inputs(df_periodo, df_acumulado, metadata):
         raise BalanceReportError("Las fechas del acumulado MTD no son validas.")
     if mtd_start.date() != end.date().replace(day=1) or mtd_end.date() != end.date():
         raise BalanceReportError("El intervalo acumulado MTD no coincide con el Caso.")
-    period = _balance_validate_codes(df_periodo, "El periodo")
-    accumulated = _balance_validate_codes(df_acumulado, "El acumulado")
+    try:
+        count = get_balance_model_contract(meta.get("modelo_id", 1))["flow_count"]
+    except ValueError as exc:
+        raise BalanceReportError(str(exc)) from exc
+    period = _balance_validate_codes(df_periodo, "El periodo", count)
+    accumulated = _balance_validate_codes(df_acumulado, "El acumulado", count)
+    if count == 125:
+        for field in _BALANCE_FIELDS:
+            if not period[field].map(is_finite_balance_number).all():
+                raise BalanceReportError(f"El periodo contiene {field} faltante o no finito.")
+        for field in ("masa_reconciliada_acumulada", "fino_cu_reconciliado_acumulado"):
+            if not accumulated[field].map(is_finite_balance_number).all():
+                raise BalanceReportError(f"El acumulado contiene {field} faltante o no finito.")
     return (
         period,
         accumulated,
@@ -380,8 +395,13 @@ def _balance_validate_inputs(df_periodo, df_acumulado, metadata):
     )
 
 
-def _balance_flow_rows(ws):
-    found = {f"F{i}": [] for i in range(1, 121)}
+def _balance_flow_rows(ws, flow_count=120):
+    # V10 identifica los flujos del analisis con enteros 1..125, no con texto F1.
+    if flow_count == 125 and ws.title == _BALANCE_SHEETS[1]:
+        if [ws.cell(i + 3, 2).value for i in range(1, 126)] != list(range(1, 126)):
+            raise BalanceReportError("La tabla numerica 1-125 del Analisis V10 cambio.")
+        return {f"F{i}": i + 3 for i in range(1, 126)}, 2
+    found = {f"F{i}": [] for i in range(1, flow_count + 1)}
     for row in ws.iter_rows():
         for cell in row:
             value = str(cell.value).strip() if cell.value is not None else ""
@@ -570,6 +590,25 @@ def _balance_update_headers_and_metadata(wb, metadata, start, end, mtd_start):
     _balance_update_authorized_visible_metadata(wb, metadata, start, end)
 
 
+def _balance_update_v2_metadata(wb, metadata, start, end, mtd_start):
+    """Actualiza las fechas de V10 por su texto, conservando formulas y geometria."""
+    period = _balance_period_text("Período", start, end)
+    accumulated = _balance_period_text("Acumulado", mtd_start, end)
+    for ws in wb:
+        for row in ws:
+            for cell in row:
+                if cell.data_type == 'f' or not isinstance(cell.value, str):
+                    continue
+                text = _balance_normalize(cell.value)
+                if re.match(r'^periodo\s+\d', text):
+                    cell.value = period
+                elif re.match(r'^acumulado\s+(?:al\s+)?\d', text):
+                    cell.value = accumulated
+    summary = wb['Resumen']
+    summary['E11'] = f"Período {start.day:02d} al {end.day:02d}"
+    summary['F11'] = f"Acumulado al {end.day:02d}"
+
+
 def _balance_cell_snapshot(wb):
     return {
         (ws.title, cell.coordinate): (cell.value, cell.data_type)
@@ -647,11 +686,17 @@ def _balance_replace_cell_xml(base_xml, source_xml, coordinate):
         raise BalanceReportError(
             f"No existe la fila OOXML para insertar la celda {coordinate}."
         )
-    return row_pattern.sub(
-        lambda match: match.group(1) + match.group(2) + replacement + match.group(3),
-        base_xml,
-        count=1,
-    )
+    def insert_in_column_order(match):
+        body = match.group(2)
+        target_column = column_index_from_string(re.match(r'[A-Z]+', coordinate).group())
+        for existing in re.finditer(rb'<c\b[^>]*\br="([A-Z]+)\d+"', body):
+            if column_index_from_string(existing.group(1).decode('ascii')) > target_column:
+                body = body[:existing.start()] + replacement + body[existing.start():]
+                break
+        else:
+            body += replacement
+        return match.group(1) + body + match.group(3)
+    return row_pattern.sub(insert_in_column_order, base_xml, count=1)
 
 
 def _balance_direct_xf_nodes(cell_xfs_body):
@@ -731,7 +776,7 @@ def _balance_apply_f10_dark_font(files, summary_part):
     files[summary_part] = files[summary_part].replace(cell, updated_cell, 1)
 
 
-def validate_balance_output_package(xlsx_bytes):
+def validate_balance_output_package(xlsx_bytes, modelo_id=1):
     """Rechaza ZIP, XML o referencias de celda invalidas antes de exportar."""
     with ZipFile(io.BytesIO(xlsx_bytes), "r") as archive:
         names = [item.filename for item in archive.infolist()]
@@ -750,6 +795,9 @@ def validate_balance_output_package(xlsx_bytes):
                 "Proceso Área Seca", "Proceso Área Húmeda", "Proceso Área Cátodos"
             )
         }
+        if int(modelo_id) == 2:
+            # V10 conserva las tres validaciones C11 historicas y agrega la de Modelo Completo.
+            permitted_ref_parts.add(sheet_parts["Modelo Completo"])
         accepted_ref_parts = set()
         ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
         rel_ns = "{http://schemas.openxmlformats.org/package/2006/relationships}"
@@ -829,8 +877,11 @@ def validate_balance_output_package(xlsx_bytes):
                         f"Referencias de celda duplicadas en {name}, fila "
                         f"{row.attrib.get('r')}: {', '.join(repeated)}."
                     )
+                columns = [column_index_from_string(re.match(r'[A-Z]+', ref).group()) for ref in refs if ref]
+                if columns != sorted(columns):
+                    raise BalanceReportError(f"Celdas fuera de orden en {name}, fila {row.attrib.get('r')}.")
         if accepted_ref_parts != permitted_ref_parts:
-            raise BalanceReportError("Deben conservarse exactamente los tres #REF! autorizados en C11.")
+            raise BalanceReportError("Deben conservarse exactamente las validaciones #REF! preexistentes en C11.")
 
 
 def _balance_update_period_textbox(drawing_xml, period_text):
@@ -923,7 +974,7 @@ def _balance_clear_formula_caches(files, sheet_parts):
     return removed
 
 
-def _balance_package_preserving_output(template_path, staged_bytes, changed_cells, start, end):
+def _balance_package_preserving_output(template_path, staged_bytes, changed_cells, start, end, modelo_id=1):
     """Parte del OOXML maestro y sustituye solo celdas/textos autorizados."""
     with ZipFile(template_path, "r") as archive:
         infos = {item.filename: item for item in archive.infolist()}
@@ -940,7 +991,8 @@ def _balance_package_preserving_output(template_path, staged_bytes, changed_cell
             files[base_part], staged_files[source_part], coordinate
         )
 
-    _balance_apply_f10_dark_font(files, base_sheets["Resumen"])
+    if int(modelo_id) == 1:
+        _balance_apply_f10_dark_font(files, base_sheets["Resumen"])
 
     period_text = _balance_period_text("Período:", start, end) + "."
     for part in (
@@ -951,6 +1003,19 @@ def _balance_package_preserving_output(template_path, staged_bytes, changed_cell
         files[part] = _balance_update_period_textbox(files[part], period_text)
 
     _balance_set_initial_view(files, base_sheets)
+    if int(modelo_id) == 2:
+        # El filtro es parte del contrato de exportacion, no de las ecuaciones.
+        part = base_sheets[_BALANCE_SHEETS[1]]
+        filt = re.search(rb'<autoFilter\b[^>]*(?:/>|>.*?</autoFilter>)', staged_files[staged_sheets[_BALANCE_SHEETS[1]]], re.DOTALL)
+        if filt:
+            if re.search(rb'<autoFilter\b', files[part]):
+                files[part] = re.sub(rb'<autoFilter\b[^>]*(?:/>|>.*?</autoFilter>)', lambda _: filt.group(), files[part], flags=re.DOTALL)
+            else:
+                files[part] = files[part].replace(b'</sheetData>', b'</sheetData>' + filt.group(), 1)
+        files['xl/workbook.xml'] = _balance_patch_single_tag_attributes(
+            files['xl/workbook.xml'], b'calcPr',
+            {b'calcMode': b'auto', b'fullCalcOnLoad': b'1', b'forceFullCalc': b'1'},
+        )
     removed_caches = _balance_clear_formula_caches(files, base_sheets)
     print(f"[BALANCE EXPORT] caches_formula_eliminados={removed_caches}")
     output = io.BytesIO()
@@ -958,7 +1023,7 @@ def _balance_package_preserving_output(template_path, staged_bytes, changed_cell
         for name, data in files.items():
             archive.writestr(infos[name], data)
     result = output.getvalue()
-    validate_balance_output_package(result)
+    validate_balance_output_package(result, modelo_id)
     return result
 
 
@@ -975,9 +1040,11 @@ def _balance_enable_full_calculation(wb):
             setattr(calc, attr, value)
 
 
-def _balance_validate_template_contract(wb):
+def _balance_validate_template_contract(wb, modelo_id=1):
     """Valida la geometria observada en el template maestro oficial."""
-    missing_sheets = [name for name in _BALANCE_ALL_SHEETS if name not in wb.sheetnames]
+    count = get_balance_model_contract(modelo_id)["flow_count"]
+    expected_sheets = _BALANCE_ALL_SHEETS + (("Modelo Completo",) if count == 125 else ())
+    missing_sheets = [name for name in expected_sheets if name not in wb.sheetnames]
     if missing_sheets:
         raise BalanceReportError(
             "El template de Balance no contiene las hojas oficiales: "
@@ -986,11 +1053,11 @@ def _balance_validate_template_contract(wb):
         )
 
     ws_data = wb[_BALANCE_SHEETS[0]]
-    rows_data, flow_col_data = _balance_flow_rows(ws_data)
-    expected_data_rows = {f"F{i}": i + 2 for i in range(1, 121)}
+    rows_data, flow_col_data = _balance_flow_rows(ws_data, count)
+    expected_data_rows = {f"F{i}": i + 2 for i in range(1, count + 1)}
     if flow_col_data != 2 or rows_data != expected_data_rows:
         raise BalanceReportError(
-            "La tabla F1-F120 de Datos Reconciliados ya no ocupa B3:B122."
+            f"La tabla F1-F{count} de Datos Reconciliados ya no ocupa B3:B{count + 2}."
         )
     required_data_merges = {"B2:C2", "D1:F1", "G1:I1", "K2:M2"}
     actual_data_merges = {str(item) for item in ws_data.merged_cells.ranges}
@@ -1013,11 +1080,11 @@ def _balance_validate_template_contract(wb):
         )
 
     ws_analysis = wb[_BALANCE_SHEETS[1]]
-    rows_analysis, flow_col_analysis = _balance_flow_rows(ws_analysis)
-    expected_analysis_rows = {f"F{i}": i + 3 for i in range(1, 121)}
+    rows_analysis, flow_col_analysis = _balance_flow_rows(ws_analysis, count)
+    expected_analysis_rows = {f"F{i}": i + 3 for i in range(1, count + 1)}
     if flow_col_analysis != 2 or rows_analysis != expected_analysis_rows:
         raise BalanceReportError(
-            "La tabla F1-F120 de Analisis Variacion-Tolerancias ya no ocupa B4:B123."
+            f"La tabla F1-F{count} de Analisis Variacion-Tolerancias cambio de geometria."
         )
     required_analysis_merges = {
         "D1:D3", "E1:E3", "F1:Q1", "F2:I2", "J2:M2", "N2:Q2"
@@ -1042,7 +1109,7 @@ def _balance_validate_template_contract(wb):
         raise BalanceReportError(
             "Las columnas escribibles de Analisis Variacion-Tolerancias cambiaron."
         )
-    for row in range(4, 124):
+    for row in range(4, count + 4):
         for column in (7, 8, 9, 11, 12, 13, 15, 16, 17):
             if ws_analysis.cell(row, column).data_type != "f":
                 raise BalanceReportError(
@@ -1056,9 +1123,9 @@ def _balance_validate_template_contract(wb):
         ("Proceso Área Húmeda", "U105"),
         ("Proceso Área Cátodos", "P14"),
     ):
-        if wb[sheet_name][coordinate].value != "Período 01 al 23 de Agosto":
+        if count == 120 and wb[sheet_name][coordinate].value != "Período 01 al 23 de Agosto":
             raise BalanceReportError(f"Encabezado contractual inesperado en {sheet_name}!{coordinate}.")
-    for row in range(4, 124):
+    for row in range(4, count + 4):
         for column, source_column in ((7, "D"), (11, "E"), (15, "F")):
             if ws_analysis.cell(row, column).value != f"='Datos Reconciliados'!{source_column}{row - 1}":
                 raise BalanceReportError(f"Enlace reconciliado inesperado en Analisis, fila {row}.")
@@ -1074,11 +1141,13 @@ def _balance_validate_template_contract(wb):
 
 
 def export_balance_reconciliacion_to_template(
-    df_periodo, df_acumulado, metadata, template_path
+    df_periodo, df_acumulado, metadata, template_path=None
 ):
     """Inyecta solamente inputs del reconciliador en el template oficial."""
+    model = int(metadata.get("modelo_id", 1))
+    template_path = template_path or get_balance_template_path(model)
     try:
-        template_hash = validate_balance_template_hash(template_path)
+        template_hash = validate_balance_template_hash(template_path, model)
     except (OSError, ValueError) as exc:
         raise BalanceReportError(str(exc)) from exc
     print(f"[BALANCE EXPORT] template_hash={template_hash}")
@@ -1093,7 +1162,7 @@ def export_balance_reconciliacion_to_template(
         ws_analysis,
         rows_analysis,
         cols_analysis,
-    ) = _balance_validate_template_contract(wb)
+    ) = _balance_validate_template_contract(wb, model)
     original_cells = _balance_cell_snapshot(wb)
     for code, row in rows_data.items():
         source = data.loc[code]
@@ -1122,9 +1191,11 @@ def export_balance_reconciliacion_to_template(
     display_metadata.setdefault("mtd_fecha_fin", meta.get("fecha_fin_acumulado"))
     display_metadata.setdefault("fecha_inicio_acumulado", mtd_start)
     display_metadata.setdefault("fecha_fin_acumulado", end)
-    _balance_update_headers_and_metadata(
-        wb, display_metadata, start, end, mtd_start
-    )
+    if model == 2:
+        _balance_update_v2_metadata(wb, display_metadata, start, end, mtd_start)
+        ws_analysis.auto_filter.ref = "B3:Q128"
+    else:
+        _balance_update_headers_and_metadata(wb, display_metadata, start, end, mtd_start)
     _balance_enable_full_calculation(wb)
     current_cells = _balance_cell_snapshot(wb)
     changed_cells = {
@@ -1144,7 +1215,7 @@ def export_balance_reconciliacion_to_template(
     staged = io.BytesIO()
     wb.save(staged)
     result = _balance_package_preserving_output(
-        template_path, staged.getvalue(), changed_cells, start, end
+        template_path, staged.getvalue(), changed_cells, start, end, model
     )
     print("[BALANCE EXPORT] validacion_ooxml=OK")
     return result

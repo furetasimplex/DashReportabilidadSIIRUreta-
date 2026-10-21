@@ -39,7 +39,7 @@ def run():
             contract=[dict(r) for r in conn.execute(text('''SELECT c.column_id,c.name,t.name AS type,c.max_length,c.precision,c.scale,c.is_nullable
                 FROM sys.columns c JOIN sys.types t ON t.user_type_id=c.user_type_id
                 WHERE c.object_id=OBJECT_ID(:obj) ORDER BY c.column_id'''),{'obj':db.SOURCE}).mappings()]
-            expected=json.loads(Path('lixiviacion/diagnostico_auditoria/resultados.json').read_text(encoding='utf-8'))['objects'][db.SOURCE]['columns']
+            expected=json.loads(Path('test_fixtures/lixiviacion/source_contract.json').read_text(encoding='utf-8'))['objects'][db.SOURCE]['columns']
             assert contract==expected, 'CONTRACT: columnas/tipos/nullability cambiaron'
             report['checks']['contract']=True
             rows=[dict(r) for r in conn.execute(text(f'''SELECT fecha,pad_id,parcela_id,nro_parcela_pad,campana_id,estado_asignacion,

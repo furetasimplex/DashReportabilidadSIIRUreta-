@@ -1,5 +1,13 @@
 # Continuidad de trabajo — DashReportabilidadSIIR
 
+## Auditorías y evidencias locales
+
+Guardar todas las auditorías, diagnósticos, capturas y exportaciones de validación
+en `auditorias/`; esta carpeta está excluida de Git. No crear nuevas carpetas de
+auditoría en la raíz ni dentro de los módulos. El archivo histórico conserva las
+rutas anteriores bajo `auditorias/archivo/`. Las referencias pequeñas necesarias
+para las pruebas sin SQL se versionan en `test_fixtures/`.
+
 Este repositorio es la base activa de trabajo indicada por el usuario.
 Leer `NOTAS_CONTINUIDAD.md` e `INTEGRACION_CURVAS.md` antes de continuar la
 integración de curvas. Trabajar sobre los archivos de este repositorio;

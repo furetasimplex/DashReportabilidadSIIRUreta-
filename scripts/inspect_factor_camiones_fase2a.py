@@ -8,7 +8,7 @@ from monitor_pi_tum.db import _engine_dev, _assert_dev_connection
 
 
 def main():
-    destino = Path("docs/diagnosticos/factor_camiones_fase2a") / datetime.now().strftime("%Y%m%d_%H%M%S")
+    destino = Path("auditorias/archivo/docs/diagnosticos/factor_camiones_fase2a") / datetime.now().strftime("%Y%m%d_%H%M%S")
     nombres = (
         "sp_mantiene_factor_ajuste_camiones_test", "Control_Factor_Ajuste_Camiones",
         "sp_mantiene_factor_ajuste_camiones_v2_test", "Control_Factor_Ajuste_Camiones_v2_test",

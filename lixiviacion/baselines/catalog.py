@@ -9,7 +9,7 @@ P=Path(__file__).parent
 
 
 def run():
-    original=Path('lixiviacion/SMOKE_DEV.json')
+    original=Path('test_fixtures/lixiviacion/SMOKE_DEV.json')
     manifest=dict(type='HISTORICAL_BASELINE',validated_at=None,
         validation_date_note='No registrada en SMOKE_DEV.json; no inferida del mtime ni de la fecha de inventario.',
         period={'desde':'2026-06-01','hasta':'2026-09-10'},environment='DEV',database='inventar_SpcHidr',

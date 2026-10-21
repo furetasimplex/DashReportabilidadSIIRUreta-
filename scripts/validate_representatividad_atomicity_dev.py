@@ -69,7 +69,7 @@ def main():
     parser.add_argument('--execute-rollback', action='store_true')
     parser.add_argument('--date', type=date.fromisoformat, default=date(2026, 9, 10))
     parser.add_argument('--output', type=Path,
-                        default=Path('report_export/exports/fase4c/manual_dev.json'))
+                        default=Path('auditorias/archivo/report_export/exports/fase4c/manual_dev.json'))
     args = parser.parse_args()
     if not args.execute_rollback:
         parser.error('Falta --execute-rollback; no se ha conectado a SQL.')

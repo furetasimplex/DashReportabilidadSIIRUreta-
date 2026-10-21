@@ -100,6 +100,78 @@
   pointer-events: none;
 }
 
+/* Información del caso de Balance; aislada de las demás tarjetas. */
+.rp-balance-case.alert {
+  background: var(--siir-white, #fff);
+  color: var(--siir-dark, #243247);
+  border: 1px solid var(--siir-border, #dce1e8);
+  padding: 10px 12px;
+}
+.rp-balance-case__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+}
+.rp-balance-case__header { margin-bottom: 8px; }
+.rp-balance-case__name { display: block; font-size: 0.84rem; line-height: 1.4; overflow-wrap: anywhere; }
+.rp-balance-case__period { display: block; margin-top: 3px; color: #475569; font-size: 0.75rem; line-height: 1.45; }
+.rp-balance-case__secondary { margin-top: 7px; font-size: 0.73rem; line-height: 1.45; color: #475569; overflow-wrap: anywhere; }
+.rp-balance-case__wide { grid-column: 1 / -1; }
+.rp-balance-case__item { min-width: 0; }
+.rp-balance-case__label {
+  display: block;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 1px;
+}
+.rp-balance-case__value {
+  display: block;
+  color: var(--siir-dark, #243247);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.rp-balance-solver {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--siir-border, #dce1e8);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.rp-balance-solver__notice { margin-bottom: 3px; font-weight: 600; color: #735016; }
+.rp-balance-solver__details summary { cursor: pointer; color: #334155; font-weight: 600; }
+.rp-balance-solver__details summary:focus-visible { outline: 2px solid var(--siir-orange); outline-offset: 3px; }
+.rp-balance-solver__details dl { margin: 10px 0 0; }
+.rp-balance-solver__details dt { color: #475569; font-weight: 600; }
+.rp-balance-solver__details dd { margin: 0 0 8px; }
+.rp-balance-solver__meaning { margin: 7px 0; }
+.rp-balance-pdf-note { display: block; margin-top: 8px; color: #475569; font-size: 0.75rem; line-height: 1.5; }
+.rp-balance-card { container-type: inline-size; min-width: 0; }
+.rp-balance-card .rp-card-desc { min-height: 0; margin-bottom: 10px; }
+.rp-balance-selector { font-size: 0.78rem; min-width: 0; }
+.rp-balance-option { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; display: block; }
+.rp-balance-selector .Select-control { height: auto; min-height: 38px; }
+.rp-balance-selector .Select-value { position: relative !important; padding: 6px 30px 6px 9px !important; line-height: 1.35 !important; }
+.rp-balance-selector .Select-value-label { white-space: normal !important; }
+.rp-balance-selector .Select-input { position: absolute; top: 0; left: 0; width: calc(100% - 30px); }
+.rp-balance-selector .Select-arrow-zone { position: absolute; right: 0; top: 0; bottom: 0; }
+.rp-balance-selector .VirtualizedSelectOption { white-space: normal; line-height: 1.35; padding: 2px 9px; }
+.rp-balance-selector .Select-menu-outer { z-index: 1005; }
+.rp-balance-solver__advanced { margin-top: 8px; }
+.rp-balance-solver__advanced summary { font-size: 0.75rem; }
+@container (max-width: 220px) {
+  .rp-balance-card .card-body { padding: 10px; }
+  .rp-balance-card .rp-card-title { font-size: 0.82rem; }
+  .rp-balance-card .rp-card-icon-wrap { width: 28px; height: 32px; }
+  .rp-balance-card .rp-btn-export, .rp-balance-card .rp-btn-pdf { font-size: 0.73rem; padding: 5px 7px; margin-right: 0 !important; }
+}
+@media (max-width: 767px) {
+  .rp-balance-column { padding-left: 0; padding-right: 0; }
+  .rp-balance-card { margin-inline: -6px; }
+}
+
 /* ── generating progress bar ── */
 .rp-progress-bar {
   display: flex;

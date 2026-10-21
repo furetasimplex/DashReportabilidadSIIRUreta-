@@ -1,1 +1,0 @@
-DROP VIEW reclamo.v_preliminar_cv25_con_acumulado_contingencia_test;

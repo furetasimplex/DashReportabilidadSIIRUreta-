@@ -61,17 +61,23 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual([i for i, n in Counter(ids).items() if n > 1], [])
         entry = next(v for k, v in app.callback_map.items() if "subtabs-report.style" in k)
         toggle = entry["callback"].__wrapped__
+        # El host incorpora más secciones y enlaces directos; derivar el contrato actual.
+        inputs = ["/" if x['id']=='page-url' and x['property']=='pathname' else
+                  "" if x['id']=='page-url' else 0 for x in entry['inputs']]
+        args = inputs + [None] * len(entry.get('state', []))
         for idx, nav in enumerate(["nav-reportabilidad", "nav-reclamo", "nav-powerbi", "nav-monitor-pitum"]):
             token = context_value.set(AttributeDict(triggered_inputs=[{"prop_id": nav + ".n_clicks"}]))
             try:
-                result = toggle(0, 0, 0, 0)
+                result = toggle(*args)
                 self.assertEqual([v["display"] for v in result[:4]], ["block" if i == idx else "none" for i in range(4)])
-                self.assertEqual(result[4 + idx], "siir-nav-link active")
+                output_index = next(i for i,o in enumerate(entry['output'])
+                                    if o.component_id==nav and o.component_property=='className')
+                self.assertEqual(result[output_index], "siir-nav-link active")
             finally:
                 context_value.reset(token)
         token = context_value.set(AttributeDict(triggered_inputs=[]))
         try:
-            self.assertEqual(toggle(0, 0, 0, 0)[0], {"display": "block"})
+            self.assertEqual(toggle(*args)[0], {"display": "block"})
         finally:
             context_value.reset(token)
 

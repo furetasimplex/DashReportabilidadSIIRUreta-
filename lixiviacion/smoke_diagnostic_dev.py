@@ -8,7 +8,7 @@ from types import ModuleType
 from sqlalchemy import text
 from . import db, callbacks
 
-OUT=Path(__file__).with_name('diagnostico_fase1')
+OUT=(Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion/diagnostico_fase1')
 CASES=[(1,1,'RIEGO_DRENAJE'),(1,17,'MIXTO'),(1,29,'REPOSO_PRE_RECLAMO'),
        (2,33,'MIXTO'),(2,39,'RIEGO_DRENAJE'),(2,41,'REPOSO_PRE_RECLAMO'),(2,60,'APILADO')]
 
@@ -65,7 +65,7 @@ def run():
         report['cases'].append(case)
         print('PASS',pad,parcel,flush=True)
     # Evidencia de preservación del mapa y del baseline histórico.
-    audit=json.loads(Path('lixiviacion/diagnostico_auditoria/resultados.json').read_text(encoding='utf-8'))
+    audit=json.loads(Path('test_fixtures/lixiviacion/source_contract.json').read_text(encoding='utf-8'))
     preserved=['lixiviacion\\map_db.py','lixiviacion\\map_panel.py','lixiviacion\\map_states.py',
                'assets\\lixiviacion_map.css','lixiviacion\\smoke_dev.py','layout.py']
     report['preserved_files']={p:hashlib.sha256(Path(p).read_bytes()).hexdigest()==audit['runtime_hashes'][p] for p in preserved}

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-OUT = Path(__file__).with_name('test_evidence')
+OUT = (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion/test_evidence')
 
 
 def write_evidence(category, name, result, *, period, definitions=None):
@@ -14,7 +14,7 @@ def write_evidence(category, name, result, *, period, definitions=None):
     now = datetime.now(timezone.utc)
     prefix = {'CURRENT_SMOKE':'smoke_current','REGRESSION_TEST':'regression',
               'STRUCTURAL_TEST':'structural','HISTORICAL_BASELINE':'baseline'}[category]
-    OUT.mkdir(exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / f'{prefix}_{name}_{now:%Y%m%dT%H%M%S%fZ}_{uuid4().hex[:8]}.json'
     record = dict(type=category, executed_at=now.isoformat(), environment='DEV', database='inventar_SpcHidr',
                   period=period, definitions=definitions, result=result)

@@ -1,8 +1,13 @@
 import os
+import re
 import urllib.parse
 import math
 import pandas as pd
 from sqlalchemy import create_engine, text
+
+from env_loader import load_app_env
+
+load_app_env()
 
 # ── 1. Configuration ──────────────────────────────────────────────────────────
 
@@ -10,6 +15,36 @@ from sqlalchemy import create_engine, text
 # Neither the driver nor credentials are loaded while importing this module.
 SCHEMA = os.getenv("RECON_SQL_SCHEMA", "inventar_SpcHidr")
 _engine = None
+
+
+def _resolve_hidro_schema() -> str:
+    """Base.schema de casos oficiales (solo lectura).
+
+    Prioridad:
+      1. RECON_HIDRO_SCHEMA completo (ej. PROD_SIIR.hidro)
+      2. HIDRO_SIIR_DB (mismo override que db_startup_check) + schema hidro
+      3. SQLSERVER_DB: *_PROD -> PROD_SIIR; resto -> DEV_SIIR
+    """
+    explicit = (os.getenv("RECON_HIDRO_SCHEMA") or "").strip()
+    if explicit:
+        if not re.fullmatch(r"[A-Za-z_][\w]*\.[A-Za-z_][\w]*", explicit):
+            raise RuntimeError(
+                f"RECON_HIDRO_SCHEMA inválido: {explicit!r}. Use Base.schema."
+            )
+        return explicit
+
+    siir_db = (os.getenv("HIDRO_SIIR_DB") or "").strip()
+    if siir_db not in {"DEV_SIIR", "PROD_SIIR"}:
+        sql_db = (os.getenv("SQLSERVER_DB") or "").strip()
+        if sql_db.endswith("_PROD") or sql_db == "inventar_SpcHidr_PROD":
+            siir_db = "PROD_SIIR"
+        else:
+            siir_db = "DEV_SIIR"
+
+    schema = (os.getenv("RECON_HIDRO_SCHEMA_NAME") or "hidro").strip()
+    if not re.fullmatch(r"[A-Za-z_][\w]*", schema):
+        raise RuntimeError(f"RECON_HIDRO_SCHEMA_NAME inválido: {schema!r}.")
+    return f"{siir_db}.{schema}"
 
 
 def configure_engine(engine):
@@ -64,11 +99,11 @@ def _ensure_reconciliation_tables():
     _TABLAS_LISTAS = True
 
 
-# ── Casos de reconciliacion global (DEV_SIIR.hidro) ─────────────────────────
+# ── Casos de reconciliacion global (DEV_SIIR.hidro / PROD_SIIR.hidro) ────────
 #
 # Esquema administrado por Django: SOLO LECTURA desde aca. Nada de DDL ni de
-# INSERT/UPDATE/DELETE sobre `recon_*`.
-HIDRO_SCHEMA = 'DEV_SIIR.hidro'
+# INSERT/UPDATE/DELETE sobre `recon_*`. Ambiente via .env (ver _resolve_hidro_schema).
+HIDRO_SCHEMA = _resolve_hidro_schema()
 
 # Flujos que anclan cada pad, versionados por el codigo del modelo. El mismo
 # codigo F cambia de significado entre catalogos; no inferir version por
@@ -125,12 +160,12 @@ def _caso_flows_for_model(model_code, model_version=None, total_flows=None):
 
 
 def load_casos():
-    """Casos dentro del alcance PAD con run oficial exitoso, mas nuevos primero.
+    """Casos PAD oficiales con run exitoso, ordenados por fecha descendente.
 
-    La relacion de oficializacion cambia fuera de esta aplicacion. Por eso
-    esta lectura corta y barata evita deliberadamente ``local_cache``: un
-    puntero viejo haria que el dashboard usara el run anterior aunque el
-    usuario ya hubiese oficializado uno nuevo.
+    Sin filtro por rango de id: se listan todos los oficializados con
+    ``solver_run`` en success. La relacion de oficializacion cambia fuera
+    de esta aplicacion; por eso esta lectura evita deliberadamente
+    ``local_cache``: un puntero viejo usaria el run anterior.
     """
     query = text(f"""
         SELECT c.id, c.nombre_caso, c.fecha_inicio, c.fecha_fin, c.estado,
@@ -218,29 +253,49 @@ CASO_ANCHOR_KEYS = (
 
 
 def caso_anchor_completo(anchor):
-    """True si ambos pads tienen un ancla numerica utilizable completa.
+    """True si ambos pads tienen un ancla num?rica utilizable completa."""
+    return not diagnose_caso_anchor(anchor)
 
-    Los cuatro denominadores medidos deben ser positivos: con cero el motor
-    no puede construir la razon oficial/recon y caeria en su fallback
-    sintetico. Esta ruta no admite esa mezcla silenciosa.
-    """
-    if set(anchor or {}) != set(CASO_FLUJOS_120):
-        return False
+
+def diagnose_caso_anchor(anchor):
+    """Lista fallas del ancla para ambos pads, o lista vac?a si est? completa."""
     denominadores = {
         'q_riego_medido', 'q_pls_medido',
         'fino_riego_medido', 'fino_pls_medido',
     }
-    for valores in anchor.values():
+    etiquetas = {
+        'q_riego_medido': 'caudal riego medido',
+        'q_pls_medido': 'caudal PLS medido',
+        'fino_riego_medido': 'fino Cu riego medido',
+        'fino_pls_medido': 'fino Cu PLS medido',
+        'q_riego_recon': 'caudal riego reconciliado',
+        'q_pls_recon': 'caudal PLS reconciliado',
+        'fino_riego_recon': 'fino Cu riego reconciliado',
+        'fino_pls_recon': 'fino Cu PLS reconciliado',
+    }
+    fallas = []
+    anchor = anchor or {}
+    for label in ('OXIDOS', 'SULFUROS'):
+        if label not in anchor:
+            fallas.append(f'{label}: faltan flujos obligatorios del run oficial')
+            continue
+        valores = anchor[label] or {}
         for key in CASO_ANCHOR_KEYS:
             value = valores.get(key)
+            nombre = etiquetas.get(key, key)
             if value is None or not pd.notna(value):
-                return False
-            number = float(value)
+                fallas.append(f'{label}: {nombre} ausente')
+                continue
+            try:
+                number = float(value)
+            except (TypeError, ValueError):
+                fallas.append(f'{label}: {nombre} no num?rico')
+                continue
             if not math.isfinite(number) or number < 0:
-                return False
-            if key in denominadores and number <= 0:
-                return False
-    return True
+                fallas.append(f'{label}: {nombre} no finito o negativo')
+            elif key in denominadores and number <= 0:
+                fallas.append(f'{label}: {nombre} = {number:.6g} (debe ser > 0)')
+    return fallas
 
 
 def get_material_id(conn, label):

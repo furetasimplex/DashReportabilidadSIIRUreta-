@@ -55,6 +55,10 @@ def render_sidebar():
             html.Hr(className="siir-divider"),
 
             html.Div("ÁREAS DE TRABAJO", className="siir-section-label"),
+            # Compatibilidad del antiguo disparador; el acceso visible vive en Monitoreo.
+            html.Button(id="nav-balance-m6", n_clicks=0, hidden=True, tabIndex=-1,
+                        **{"aria-hidden": "true"}),
+            dcc.Store(id="monitor-route-sync"),
 
             dbc.Nav([
                 dbc.NavLink([
@@ -180,6 +184,7 @@ subtabs = html.Div(
         # la pestaña sí quedan registrados al iniciar la app.
         html.Div(id="subtabs-curvas-recon", style={"display": "none"}),
         html.Div(id="subtabs-reconstitucion", style={"display": "none"}),
+        html.Div(id="subtabs-balance-m6", style={"display": "none"}),
     ]
 )
 
@@ -216,6 +221,10 @@ def register_callbacks(app):
         Output("nav-curvas-recon", "className"),
         Output("nav-reconstitucion", "className"),
         Output("siir-bc-active", "children"),
+        Output("subtabs-balance-m6", "style"),
+        Output("subtabs-balance-m6", "children"),
+        Output("nav-balance-m6", "className"),
+        Output("pitum-tabs", "active_tab"),
         Input("nav-reportabilidad", "n_clicks"),
         Input("nav-reclamo", "n_clicks"),
         Input("nav-powerbi", "n_clicks"),
@@ -224,17 +233,40 @@ def register_callbacks(app):
         Input("nav-polinomio-acido", "n_clicks"),
         Input("nav-curvas-recon", "n_clicks"),
         Input("nav-reconstitucion", "n_clicks"),
+        Input("nav-balance-m6", "n_clicks"),
+        Input("page-url", "pathname"),
+        Input("page-url", "hash"),
         State("subtabs-curvas-recon", "children"),
         State("subtabs-reconstitucion", "children"),
+        State("subtabs-balance-m6", "children"),
         prevent_initial_call=False,
     )
     def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum, n_lix, n_polinomio, n_curvas,
-                       n_reconstitucion, mounted_curvas, mounted_reconstitucion):
+                       n_reconstitucion, n_balance_m6, pathname, url_hash, mounted_curvas, mounted_reconstitucion,
+                       mounted_balance_m6):
         # dash.ctx.triggered_id es None en la carga inicial -> por defecto
         # se muestra Reportabilidad, igual que antes.
         triggered = dash.ctx.triggered_id
+        route_tabs = {
+            "#monitoreo-correas/diagnostico": "pitum-diagnostico",
+            "#monitoreo-correas/gestion-pi-tum": "pitum-gestion",
+            "#monitoreo-correas/contingencia-m6": "pitum-contingencia-m6",
+            "#balance-m6": "pitum-contingencia-m6",
+            "#contingencia-m6": "pitum-contingencia-m6",
+        }
+        route_tab = None
+        if triggered in (None, "page-url"):
+            route_tab = route_tabs.get(url_hash)
+            if route_tab is None and (pathname or "").rstrip("/") in ("/balance-m6", "/contingencia-m6"):
+                route_tab = "pitum-contingencia-m6"
+            if route_tab:
+                triggered = "nav-balance-m6" if route_tab == "pitum-contingencia-m6" else "nav-monitor-pitum"
+            elif triggered == "page-url":
+                # Los href="#" existentes no deben sobrescribir el clic de otro menú.
+                return (dash.no_update,) * 23
 
         secciones = {
+            "nav-balance-m6": "monitor-pitum",
             "nav-curvas-recon": "curvas-recon",
             "nav-reconstitucion": "reconstitucion",
             "nav-reportabilidad": "reportabilidad",
@@ -259,6 +291,7 @@ def register_callbacks(app):
         if activa == "reconstitucion" and not mounted_reconstitucion:
             reconstitucion_children = tab_reconstitucion.layout()
         titles = {
+            "balance-m6": "BALANCE DE MASA M6",
             "reportabilidad": "REPORTABILIDAD", "reclamo": "ADMINISTRACIÓN DE RECLAMO",
             "powerbi": "CARGA POWERBI CAMIONES", "monitor-pitum": "MONITOREO CORREAS",
             "lixiviacion": "LIXIVIACIÓN", "polinomio-acido": "POLINOMIO ÁCIDO",
@@ -281,7 +314,37 @@ def register_callbacks(app):
             clase("lixiviacion"),
             clase("polinomio-acido"),
             clase("curvas-recon"), clase("reconstitucion"), titles[activa],
+            estilo("balance-m6"),
+            dash.no_update,
+            clase("balance-m6"),
+            "pitum-contingencia-m6" if triggered == "nav-balance-m6" else (route_tab or dash.no_update),
         )
+
+    clientside_callback(
+        """function(tab, style) {
+            const routes = {
+                'pitum-diagnostico': '#monitoreo-correas/diagnostico',
+                'pitum-gestion': '#monitoreo-correas/gestion-pi-tum',
+                'pitum-contingencia-m6': '#monitoreo-correas/contingencia-m6'
+            };
+            const current = window.location.hash;
+            const path = window.location.pathname;
+            const visible = style && style.display === 'block';
+            const normalizedPath = path.endsWith('/') ? path.slice(0, -1) : path;
+            const canonicalPath = ['/balance-m6', '/contingencia-m6'].includes(normalizedPath) && visible ? '/' : path;
+            const target = visible ? routes[tab] : '';
+            if (target === undefined) return window.dash_clientside.no_update;
+            if ((target !== current || canonicalPath !== path) && (visible || Object.values(routes).includes(current))) {
+                window.history.replaceState(null, '', canonicalPath + window.location.search + target);
+                // Mantener dcc.Location coherente para el próximo enlace o recarga.
+                window.dispatchEvent(new PopStateEvent('popstate'));
+            }
+            return target;
+        }""",
+        Output("monitor-route-sync", "data"),
+        Input("pitum-tabs", "active_tab"), Input("subtabs-monitor-pitum", "style"),
+        prevent_initial_call=True,
+    )
 
     tab_curvas.register_callbacks(app)
     tab_reconstitucion.register_callbacks(app)

@@ -3,6 +3,7 @@
 from datetime import timedelta
 
 import pandas as pd
+from report_export.balance_contract import get_balance_model_contract, balance_solver_observation
 
 from report_export.report_export import (
     BalanceReportError,
@@ -76,10 +77,12 @@ def _candidate_cases(raw_candidates):
             "estado_run": first["estado_run"],
             "solver_name": first.get("solver_name"),
             "solver_version": first.get("solver_version"),
+            "solver_metadata_json": first.get("solver_metadata_json"),
+            "run_caso_id": first.get("run_caso_id"),
             "oficializado_en": first.get("oficializado_en"),
             "es_oficial": True,
         }
-        flows = group.loc[:, _FLOW_FIELDS].copy()
+        flows = group.loc[:, [c for c in (*_FLOW_FIELDS, "flujo_modelo_coherente", "resultado_caso_coherente", "resultado_run_id") if c in group]].copy()
         validated = validate_recon_balance_result(
             flows, metadata, f"El Run oficial {int(run_id)}"
         )
@@ -181,8 +184,15 @@ def validate_balance_mtd_coverage(cases, mtd_start, mtd_end, selected_key):
 
 def aggregate_balance_mtd(cases):
     """Suma masa/fino por Flow ID y calcula ley ponderada."""
+    models = {int(item["metadata"]["modelo_id"]) for item in cases}
+    if len(models) != 1:
+        raise BalanceReportError("El acumulado MTD no puede mezclar modelos de Balance.")
+    try:
+        count = get_balance_model_contract(models.pop())["flow_count"]
+    except ValueError as exc:
+        raise BalanceReportError(str(exc)) from exc
     rows = []
-    for number in range(1, 121):
+    for number in range(1, count + 1):
         code = f"F{number}"
         mass_total = None
         fine_total = None
@@ -226,6 +236,8 @@ def _resolve_balance_mtd_cases(period, metadata, fetch_candidates):
     else:
         raw_candidates = fetch_candidates(metadata["modelo_id"], mtd_start, end)
         cases = _candidate_cases(raw_candidates)
+        if any(int(item["metadata"]["modelo_id"]) != int(metadata["modelo_id"]) for item in cases):
+            raise BalanceReportError("Los candidatos MTD contienen resultados de otro modelo.")
         ordered = validate_balance_mtd_coverage(
             cases,
             mtd_start,
@@ -252,6 +264,9 @@ def get_balance_case_status(
         "fecha_fin": end,
         "solver_run_id": run_id,
         "estado_run": metadata.get("estado_run"),
+        "modelo_id": metadata.get("modelo_id"),
+        "observacion_solver": balance_solver_observation(metadata),
+        "solver_metadata_json": metadata.get("solver_metadata_json"),
         "oficial": bool(metadata.get("es_oficial", True)),
         "mtd_disponible": False,
         "mtd_fecha_inicio": end.replace(day=1),
@@ -301,5 +316,12 @@ def build_balance_official_report(
         "fecha_fin_acumulado": end,
         "casos_mtd": case_ids,
         "runs_mtd": run_ids,
+        "observacion_solver": balance_solver_observation(metadata),
+        "observaciones_solver_mtd": [
+            {"caso_id": item["metadata"]["caso_id"],
+             "run_id": item["metadata"]["solver_run_id"],
+             "observacion": balance_solver_observation(item["metadata"])}
+            for item in ordered if balance_solver_observation(item["metadata"])
+        ],
     })
     return period, accumulated, result_metadata

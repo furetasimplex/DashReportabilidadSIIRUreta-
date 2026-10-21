@@ -1,8 +1,0 @@
-SHA256 de candidatos relevantes:
-
-47B80A9C162C48B982372CF63A9550D3877760834ECF4450665A28DEEE00E657  C:\Users\nimun\OneDrive\Documentos\GitHub\DashReportabilidadSIIR\reclamo\db.py
-3029492166AD19C0981E9924B4844B296DACD6082071CCBEB3B4D66A961B8767  C:\Users\nimun\OneDrive\Documentos\GitHub\DashReportabilidadSIIR\powerbi_camiones\db.py
-96DB9C3CE6BF95BDED610360476986169F959199971D7D32471D4B3DD8D31DF6  C:\Users\nimun\OneDrive\Documentos\GitHub\DashReportabilidadSIIR\scripts\audit_reclamo_readonly.py
-8EE248BFAC4EDA961F49E704B2E727CCE49B2E7C570DFE8D9920998AAA0B0C05  C:\Users\nimun\OneDrive\Documentos\GitHub\DashReportabilidadSIIR\tabs\tab_importar_reclamo_camiones.py
-
-Solo reclamo\db.py define recalcular y mantener_secuencia.

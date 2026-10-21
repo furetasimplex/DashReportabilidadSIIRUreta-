@@ -10,9 +10,9 @@ from sqlalchemy import text
 
 def run(name):
     module,category,target={
-        'map':(smoke_map_dev,'CURRENT_SMOKE',Path('lixiviacion/SMOKE_MAP_DEV.json')),
-        'modules':(smoke_modules_dev,'CURRENT_SMOKE',Path('lixiviacion/SMOKE_MODULES_DEV.json')),
-        'diagnostic':(smoke_diagnostic_dev,'REGRESSION_TEST',Path('lixiviacion/diagnostico_fase1/smoke.json'))}[name]
+        'map':(smoke_map_dev,'CURRENT_SMOKE',Path('auditorias/archivo/lixiviacion/SMOKE_MAP_DEV.json')),
+        'modules':(smoke_modules_dev,'CURRENT_SMOKE',Path('auditorias/archivo/lixiviacion/SMOKE_MODULES_DEV.json')),
+        'diagnostic':(smoke_diagnostic_dev,'REGRESSION_TEST',Path('auditorias/archivo/lixiviacion/diagnostico_fase1/smoke.json'))}[name]
     report={'passed':False}; hashes=None
     def capture(path,data,*args,**kwargs):
         if path.resolve()==target.resolve():

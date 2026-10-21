@@ -16,7 +16,7 @@ from monitor_pi_tum.db import _engine_dev, _assert_dev_connection
 from monitor_pi_tum.validacion.downstream.comparar import body, run
 from report_export import report_export as repo
 
-OUT = Path('report_export/exports/validacion_downstream_fase1')
+OUT = Path('auditorias/archivo/report_export/exports/validacion_downstream_fase1')
 TABLES = ('Control_Apilado_TMH_v2_test', 'Historico_Apilado_Diario',
           'Control_Factor_Ajuste_Camiones_v2_test', 'v_ajuste_camiones_emision_test',
           'reporte_turno_cache_emision_test', 'v_srr_tms_origen_turno_emision_test')

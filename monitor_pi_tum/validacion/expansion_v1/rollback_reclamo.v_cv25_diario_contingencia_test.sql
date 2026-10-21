@@ -1,1 +1,0 @@
-DROP VIEW reclamo.v_cv25_diario_contingencia_test;

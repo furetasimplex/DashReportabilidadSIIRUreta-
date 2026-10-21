@@ -90,7 +90,7 @@ def test_existing_metric_and_chart_functions_unchanged_from_baseline():
     root=Path(__file__).parent
     for file,names in [('db.py',['where','options','overview','detail']),
                        ('callbacks.py',['number','serial','figure','figures','load'])]:
-        old,new=nodes(root/'diagnostico_fase1'/file),nodes(root/file)
+        old,new=nodes(root.parent/'test_fixtures/lixiviacion/diagnostico_fase1'/file),nodes(root/file)
         assert all(old[n]==new[n] for n in names)
 
 

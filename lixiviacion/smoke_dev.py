@@ -18,6 +18,7 @@ def run():
         2: (2856, '9260436.238434241623000', '23334.497994245'),
         None: (6120, '12168556.400321637026000', '30136.221811330'),
     }
+    (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion').mkdir(parents=True, exist_ok=True)
     report = {}
     for pad, (count, flow, cu) in expected.items():
         f = dict(desde='2026-06-01', hasta='2026-09-10', pad=pad)
@@ -32,7 +33,7 @@ def run():
         report[str(pad)] = dict(actual=actual, diferencias=differences, dias_pad=len(daily), passed=passed)
         if not passed:
             break  # detenerse ante discrepancia; no modificar SQL ni continuar otras pruebas live
-    out = Path(__file__).with_name('SMOKE_DEV.json')
+    out = (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion/SMOKE_DEV.json')
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str)+'\n', encoding='utf-8')
     print(json.dumps(report, ensure_ascii=False, indent=2, default=str))
     if len(report) != 3 or not all(r['passed'] for r in report.values()):

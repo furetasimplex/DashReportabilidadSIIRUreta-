@@ -11,7 +11,7 @@ from sqlalchemy import text
 from .db import _connection
 from .map_db import validate_snapshot
 
-OUT = Path(__file__).with_name('promocion_estado_operacional_reanudada_20261005')
+OUT = (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion/promocion_estado_operacional_reanudada_20261005')
 PAIRS = {
     'parcela': ('inventar_SpcHidr.fn_estado_operacional_parcela_diario_test_v2',
                 'inventar_SpcHidr.fn_estado_operacional_parcela_diario'),
@@ -60,7 +60,7 @@ def guard(conn):
 
 
 def precheck():
-    OUT.mkdir(exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     if any(OUT.iterdir()):
         raise RuntimeError('Evidencia existente: no sobrescribir backups.')
     report = {'database': 'inventar_SpcHidr', 'objects': {}, 'ddl_executed': False}

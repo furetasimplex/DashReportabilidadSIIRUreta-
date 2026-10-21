@@ -12,7 +12,7 @@ from report_export.report_export import _get_engine
 def main():
     if os.getenv("SQLSERVER_HOST") != "149.50.136.234":
         raise RuntimeError("Inspección bloqueada fuera de DEV")
-    output = Path(__file__).resolve().parents[1] / "report_export/exports/reconst_mod_srr_validation"
+    output = Path(__file__).resolve().parents[1] / "auditorias/archivo/report_export/exports/reconst_mod_srr_validation"
     output.mkdir(parents=True, exist_ok=True)
     with _get_engine().connect() as conn:
         candidate = pd.read_sql(text("""

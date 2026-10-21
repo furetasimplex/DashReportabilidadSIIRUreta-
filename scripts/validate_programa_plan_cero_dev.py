@@ -19,7 +19,7 @@ from sqlalchemy import text
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     assert os.getenv("SQLSERVER_HOST") == "149.50.136.234", "Solo DEV"
-    target = ROOT / "report_export/exports/validacion_programa_plan_cero"
+    target = ROOT / "auditorias/archivo/report_export/exports/validacion_programa_plan_cero"
     target.mkdir(parents=True, exist_ok=True)
     with rep._get_engine().connect() as conn:
         for name in ["inventar_SpcHidr.sp_reporte_turno_emision_test",

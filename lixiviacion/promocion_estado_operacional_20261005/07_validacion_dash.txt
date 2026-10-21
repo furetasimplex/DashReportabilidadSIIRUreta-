@@ -1,4 +1,0 @@
-NO EJECUTADA PARA PROMOCIÓN: detenido antes de DDL por criterio canónico incompatible.
-map_db.py permanece sin cambios y consume fn_estado_operacional_parcela_diario_test_v2.
-No se modificaron tests, callbacks, columnas, parámetros, Store, CSS ni navegación.
-Los resultados anteriores de 35 tests y smoke UX no se presentan como validación de una promoción inexistente.

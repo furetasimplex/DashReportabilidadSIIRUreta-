@@ -1,7 +1,0 @@
-OP_TIMELINE_SQL = f'''WITH fechas AS (
-    SELECT CAST(:desde AS date) AS fecha
-    UNION ALL SELECT DATEADD(day,1,fecha) FROM fechas WHERE fecha<CAST(:hasta AS date)
-    ) SELECT {','.join('e.'+c for c in OP_FIELDS)}
-    FROM fechas d CROSS APPLY {OP_SOURCE}(d.fecha) e
-    WHERE e.pad_id=:pad_id AND e.parcela_id=:parcela_id
-    ORDER BY e.fecha OPTION (MAXRECURSION 32767)'''

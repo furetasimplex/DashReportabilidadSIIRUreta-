@@ -1,6 +1,0 @@
-extraido=2026-10-07
-database_actual=inventar_SpcHidr_PROD
-servidor=VPS-6191873-X
-usuario=SIIR
-vistas=17
-script=scripts/dump_reclamo_views.py

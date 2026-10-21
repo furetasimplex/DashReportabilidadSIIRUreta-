@@ -1,6 +1,0 @@
-extraido=2026-10-07
-database_actual=inventar_SpcHidr_PROD
-servidor=VPS-6191873-X
-objetos_cierre=110
-tablas=44
-script=scripts/dump_reclamo_object_graph.py

@@ -1,3 +1,0 @@
-﻿rotopala_id,nombre,pad_id,material,tag_corriente,umbral_corriente,horas_por_muestra,activa,observacion
-1,Rotopala 1,1,OXIDO,rc001corr,45.0,1.0,True,datos_filtrados es horaria: cada muestra sobre umbral vale 1 hora. Umbral 45 pendiente de confirmar.
-2,Rotopala 2,2,SULFURO,rc002corr,45.0,1.0,True,datos_filtrados es horaria: cada muestra sobre umbral vale 1 hora. Umbral 45 pendiente de confirmar.

@@ -39,7 +39,7 @@ class Fase2ATests(unittest.TestCase):
             self.assertIn('f.'+col,view)
 
     def test_secciones_balance_y_camiones_intactas(self):
-        baseline=Path('docs/diagnosticos/factor_camiones_fase2a/baseline_20260928_100315/sp_factor_ajuste_camiones_test.sql').read_text(encoding='utf-8')
+        baseline=Path('auditorias/archivo/docs/diagnosticos/factor_camiones_fase2a/baseline_20260928_100315/sp_factor_ajuste_camiones_test.sql').read_text(encoding='utf-8')
         current=(ROOT/'03_sp_factor_ajuste_camiones_test.sql').read_text(encoding='utf-8')
         start='    ;WITH SRR_Diario AS'
         end='       7. Aplicacion de limites operacionales'
