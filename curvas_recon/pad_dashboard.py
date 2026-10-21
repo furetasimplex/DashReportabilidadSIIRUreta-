@@ -2138,7 +2138,8 @@ def register_callbacks(app):
 
 if __name__ == '__main__':
     app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY],
-                    suppress_callback_exceptions=True, title='Curvas y reconciliación')
+                    suppress_callback_exceptions=True, title='Curvas y reconciliación',
+                    update_title=None)
     app.layout = build_layout
     register_callbacks(app)
     app.run(debug=os.environ.get('DASH_DEBUG', '0') == '1',

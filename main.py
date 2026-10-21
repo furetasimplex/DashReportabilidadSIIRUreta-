@@ -32,6 +32,8 @@ app = Dash(
     external_stylesheets=external_stylesheets,
     external_scripts=external_scripts,
     suppress_callback_exceptions=True,
+    # El sondeo de progreso no debe mantener la pestaña en "Updating...".
+    update_title=None,
 )
 server = app.server
 setup_download_route(server)
