@@ -36,7 +36,7 @@ from .curve_recalc import (
     cu_tf_toneladas,
 )
 from .recon_engine import (
-    FDRENA_MAX,
+    FDRENA_MAX, UNLISTED_GAP_DAYS,
     week_monday, load_wip, load_rec_curves, load_riego, load_cu_riego,
     load_drena_cu, load_produccion, compute_wz_week, material_cutoff,
     reconcile_week_flowsheet_dash, N_TRANSIENT_DEFAULT, clear_curve_cache,
@@ -44,14 +44,14 @@ from .recon_engine import (
     _fechas_actividad,
 )
 from .input_preparation import prepare_recon_inputs
+from .perf_trace import record_phase, set_trace_id, reset_trace_id
 from .db_pipeline import (
     connect, get_material_id, load_pila_daily_history, load_pila_history, load_week_totals, save_run,
-    sync_all, data_freshness, load_casos, load_caso_anchor,
+    load_casos, load_caso_anchor,
     caso_anchor_completo, diagnose_caso_anchor, HIDRO_SCHEMA,
 )
 
 # Todo lo que se lee de la DB pasa por un cache local en disco (`local_cache.py`).
-# El boton 'Actualizar datos' lo bota entero para forzar la bajada de nuevo.
 from .local_cache import limpiar as limpiar_cache_local, estado as estado_cache_local
 
 # Corridas crudas del motor (`res` con `piles` y detalle diario). No caben en
@@ -251,6 +251,21 @@ def _callback(*args, **kwargs):
     return declare
 
 
+def _trace_render(phase):
+    def decorate(fn):
+        @wraps(fn)
+        def measured(*args, **kwargs):
+            trace_id = next((arg.get('performance_id') for arg in args
+                             if isinstance(arg, dict) and arg.get('performance_id')), None)
+            started = time.perf_counter()
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                record_phase(phase, time.perf_counter() - started, trace_id=trace_id)
+        return measured
+    return decorate
+
+
 def initialize_data(force=False):
     """Opening the section needs only official Case options, not history."""
     global _DATA_READY, CASOS, CASO_OPTIONS, DEFAULT_CASO_ID
@@ -350,11 +365,11 @@ def refresh_data_caches(bajar_de_nuevo=False):
     la tab de Reconciliacion, y sin este refresco quedan congeladas en lo que
     había al arrancar el proceso.
 
-    Se llama antes de usar resultados/c?lculos y desde Actualizar datos.
+    Se llama antes de usar resultados/c?lculos; los flujos internos pueden
+    solicitar una recarga forzada cuando corresponda.
 
     `bajar_de_nuevo` bota ademas el cache local en disco (`local_cache.py`).
-    Solo lo pide el boton: al importar hay que APROVECHAR lo guardado, que es
-    justamente lo que hace que el arranque no vuelva a bajar todo."""
+    Al importar se aprovecha lo guardado, evitando otra bajada al arrancar."""
     global DATA_OX, DATA_SU, CYCLES_OX, CYCLES_SU, GLOBAL_MIN_DATE, GLOBAL_MAX_DATE
     global MAX_CAMPANAS, CAMPANA_OPTIONS, WIP_META, REC_META, _CUTOFFS
     global JOINT_DATA_CUTOFF, DEFAULT_WEEK_STR, RECON_PRODUCCION, RAW_CURVES_BY_MATERIAL
@@ -1474,7 +1489,7 @@ def _reconstructed_campaign_series(label, num, week_start, week_end, raw=None):
     from . import report_metodo
     d = first
     while d <= end:
-        source, inc = 'Reconstruido · FDRENA_MAX 0,95 (proxy)', None
+        source, inc = 'Medido', None
         if ws <= d <= we and isinstance(raw, dict):
             source, inc = 'Reconciliado del Caso', reconciled.get(d)
         elif d in riego.index and p in riego.columns:
@@ -1501,6 +1516,107 @@ def _measured_cycles(label, num):
     return [cycle for cycle in cycles if cycle.get('dates')]
 
 
+def _operational_activity_in_window(label, num, week_start, week_end):
+    """Whether cached operations or a WIP start support activity in a Case."""
+    try:
+        ws, we = pd.Timestamp(week_start).normalize(), pd.Timestamp(week_end).normalize()
+        if pd.isna(ws) or pd.isna(we) or we < ws:
+            return False
+        riego_by_pile, drena_by_pile = _fechas_actividad(label)
+        p = f'P{num:02d}'
+        for mapping in (riego_by_pile, drena_by_pile):
+            for value in mapping.get(p, ()):
+                day = pd.Timestamp(value).normalize()
+                if pd.notna(day) and ws <= day <= we:
+                    return True
+        info = WIP_META.get(label, {}).get(p) or {}
+        start = pd.Timestamp(info.get('ini_aporte'))
+        return bool(pd.notna(start) and ws <= start.normalize() <= we)
+    except Exception:
+        return False
+
+
+def _measured_cycles_active_in_window(label, num, week_start, week_end):
+    """Select measured curves belonging to operational campaigns active in a Case.
+
+    Operational campaigns follow the existing 30-day gap rule over the union
+    of positive irrigation and drain-Cu dates. A stale last recovery reading
+    does not close a campaign: its curve is retained when its readings belong
+    to the same uninterrupted operational activity group as the Case window.
+    Full curve traces are returned without clipping their dates.
+    """
+    cycles = _measured_cycles(label, num)
+    if not cycles:
+        return []
+    try:
+        ws, we = pd.Timestamp(week_start).normalize(), pd.Timestamp(week_end).normalize()
+    except (TypeError, ValueError):
+        return []
+    if pd.isna(ws) or pd.isna(we) or we < ws:
+        return []
+
+    p = f'P{num:02d}'
+    try:
+        riego_by_pile, drena_by_pile = _fechas_actividad(label)
+    except Exception:
+        # If cached operational history is unavailable, do not infer an active
+        # operation campaign from a stale measured recovery trace.
+        riego_by_pile, drena_by_pile = {}, {}
+    events = set()
+    for mapping in (riego_by_pile, drena_by_pile):
+        for value in mapping.get(p, ()):
+            day = pd.Timestamp(value).normalize()
+            if pd.notna(day):
+                events.add(day)
+
+    # WIP start is corroborating evidence only when the start itself lies in
+    # this Case window. A pre-window WIP row is not treated as proof that the
+    # campaign remained active, because its stored end may be stale.
+    info = WIP_META.get(label, {}).get(p) or {}
+    try:
+        wip_start = pd.Timestamp(info.get('ini_aporte'))
+        if pd.notna(wip_start):
+            wip_start = wip_start.normalize()
+            if ws <= wip_start <= we:
+                events.add(wip_start)
+    except (TypeError, ValueError):
+        pass
+
+    active_groups = []
+    for day in sorted(events):
+        if not active_groups or (day - active_groups[-1][-1]).days > UNLISTED_GAP_DAYS:
+            active_groups.append([day])
+        else:
+            active_groups[-1].append(day)
+    active_groups = [group for group in active_groups
+                     if any(ws <= day <= we for day in group)]
+
+    cycle_rows = []
+    selected = set()
+    for idx, cycle in enumerate(cycles):
+        cycle_dates = [pd.Timestamp(day).normalize() for day in cycle.get('dates', ())]
+        if not cycle_dates:
+            continue
+        cycle_start = min(cycle_dates)
+        cycle_rows.append((idx, cycle_start, cycle_dates))
+
+    # For each operational day in the Case, show only its latest measured
+    # cycle within that same uninterrupted activity group. An earlier reset
+    # trace may overlap the group's historical dates but was no longer active
+    # once a newer measured cycle had begun.
+    for group in active_groups:
+        case_days = [day for day in group if ws <= day <= we]
+        group_start, group_end = group[0], group[-1]
+        group_cycles = [row for row in cycle_rows
+                        if row[1] <= we
+                        and any(group_start <= day <= group_end for day in row[2])]
+        for active_day in case_days:
+            eligible = [row for row in group_cycles if row[1] <= active_day]
+            if eligible:
+                selected.add(max(eligible, key=lambda row: (row[1], row[0]))[0])
+    return [cycle for idx, cycle in enumerate(cycles) if idx in selected]
+
+
 def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=None,
                           caso_id=None) -> go.Figure:
     """Medido por tramos y serie reconstruida/reconciliada del Caso."""
@@ -1511,7 +1627,7 @@ def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=No
     label = _PAD_TO_LABEL.get(pad_id)
     if label is None:
         return empty_figure()
-    measured = _measured_cycles(label, num)
+    measured = _measured_cycles_active_in_window(label, num, week_start, week_end)
     raw = None
     if isinstance(data, dict) and data.get('raw_token'):
         try:
@@ -1523,6 +1639,8 @@ def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=No
         except Exception:
             raw = None
     rs = _reconstructed_campaign_series(label, num, week_start, week_end, raw=raw)
+    if not _operational_activity_in_window(label, num, week_start, week_end) and raw is None:
+        rs = dict(xs=[], ys=[], sources=[], cu_tf=rs.get('cu_tf'), capped=rs.get('capped', False))
     if not measured and not rs['xs']:
         return empty_figure()
     fig = go.Figure()
@@ -1536,19 +1654,49 @@ def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=No
                                            width=1.8 if idx == len(measured) else 1.2),
                                  connectgaps=False))
     if rs['xs']:
-        fig.add_trace(go.Scatter(
-            x=rs['xs'], y=rs['ys'], mode='lines',
-            name='Reconstruido (Fdrena proxy 0,95) / reconciliado',
-            line=dict(color='#2a78d6', width=2.5), connectgaps=False,
-            customdata=rs['sources'],
-            hovertemplate='%{x|%d/%m/%Y}<br>%{y:.2f}%<br>%{customdata}<extra></extra>'))
+        case_start = pd.Timestamp(week_start).normalize()
+        case_end = pd.Timestamp(week_end).normalize()
+        dates = [pd.Timestamp(day).normalize() for day in rs['xs']]
+        values = list(rs['ys'])
+        sources = list(rs['sources'])
+        in_case = [case_start <= day <= case_end for day in dates]
+
+        def add_operational_segment(indices, name, color):
+            if not indices:
+                return
+            fig.add_trace(go.Scatter(
+                x=[rs['xs'][idx] for idx in indices],
+                y=[values[idx] for idx in indices],
+                mode='lines+markers' if len(indices) == 1 else 'lines', name=name,
+                line=dict(color=color, width=2.5), connectgaps=False,
+                marker=dict(size=5, color=color) if len(indices) == 1 else None,
+                customdata=[sources[idx] for idx in indices],
+                hovertemplate='%{x|%d/%m/%Y}<br>%{y:.2f}%<br>%{customdata}<extra></extra>'))
+
+        before = [i for i, day in enumerate(dates) if day < case_start]
+        after = [i for i, day in enumerate(dates) if day > case_end]
+        inside = [i for i, active in enumerate(in_case) if active]
+        # Carry only the exact observed endpoint into the adjacent gray segment.
+        # No interpolation is added, and None gaps remain visible in all traces.
+        if inside:
+            first_inside, last_inside = inside[0], inside[-1]
+            if first_inside > 0 and dates[first_inside - 1] < case_start:
+                before.append(first_inside)
+            if last_inside + 1 < len(dates) and dates[last_inside + 1] > case_end:
+                after.insert(0, last_inside)
+        add_operational_segment(before, 'Medido (fuera del Caso)', '#9CA3AF')
+        case_name = ('Reconciliado del Caso'
+                     if any(sources[idx] == 'Reconciliado del Caso' for idx in inside)
+                     else 'Medido en Caso')
+        add_operational_segment(inside, case_name, '#2a78d6')
+        add_operational_segment(after, 'Medido (fuera del Caso)', '#9CA3AF')
         if rs['capped']:
             fig.add_annotation(x=0.5, y=1.0, xref='paper', yref='paper', yanchor='bottom',
                                showarrow=False, font=dict(color='#B45309', size=11),
                                text='La serie supera 100 % segun Cu neto acumulado y CuTf de campana')
     _add_week_zoom_box(fig, week_start, week_end)
     fig.update_layout(
-        title=f'{label} - P{num:02d}: Recuperacion acumulada - medido / reconstruido / reconciliado',
+        title=f'{label} - P{num:02d}: Recuperacion acumulada - medido / reconciliado',
         paper_bgcolor=CHART_SURFACE, plot_bgcolor=CHART_SURFACE,
         font=dict(color=CHART_INK_PRIMARY, family='Inter, system-ui, sans-serif'),
         yaxis_title='Recuperacion (%)', legend=dict(bgcolor='rgba(0,0,0,0)'),
@@ -1677,11 +1825,6 @@ def _build_content_layout():
             xs=12, sm='auto',
         ),
         dbc.Col(
-            dbc.Button('Actualizar datos', id='curvas-recon-sync-btn', n_clicks=0,
-                       color='light', className='action-tertiary'),
-            xs=12, sm='auto',
-        ),
-        dbc.Col(
             dbc.Button('Consideraciones', id='curvas-recon-consideraciones-btn', n_clicks=0,
                        color='secondary', outline=True, className='action-secondary'),
             xs=12, sm='auto',
@@ -1713,7 +1856,6 @@ def _build_content_layout():
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle('Consideraciones')),
             dbc.ModalBody([
-                dcc.Loading(html.Div('Estado de fuentes disponible después de actualizar datos.', id='curvas-recon-freshness', className='freshness-wrap'), type='default', color='#E86D1F'),
                 html.Div([
                     html.Span('Cómo leer este panel', className='method-note-title'),
                     html.Span('Los deltas de caudal y Cu fino son relativos al medido. Los agregados de Cu fino son proporcionales, no toneladas. En las barras de concentración, la media diaria es aritmética sobre los días con dato y no está ponderada por caudal. “Cálculo listo” confirma que hay datos y pilas para mostrar; revisa avisos y gráficos para evaluar el resultado.',
@@ -1890,76 +2032,6 @@ def render_figure(selected, campana_idx, range_start, range_end):
 
 # ── Callbacks: reconciliacion ────────────────────────────────────────────────────
 
-def _freshness_banner():
-    """Fila de chips, uno por tabla materializada, con su atraso contra la
-    fuente (`db_pipeline.data_freshness()`). Verde al dia, ambar >2 dias,
-    rojo >7 dias o sin dato."""
-    items = []
-    for r in data_freshness():
-        atraso = r['dias_atraso']
-        if atraso is None:
-            color, txt = '#DC2626', 'sin dato'
-        elif atraso <= 2:
-            color, txt = '#2E9E5B', f'{atraso} d atraso' if atraso else 'al dia'
-        elif atraso <= 7:
-            color, txt = '#D97706', f'{atraso} d atraso'
-        else:
-            color, txt = '#DC2626', f'{atraso} d atraso'
-        items.append(html.Span(f'{r["tabla"]}: {txt}', style={
-            'marginRight': '16px', 'color': color, 'fontWeight': '600',
-        }))
-    return html.Div(items, style={'fontSize': '0.8rem', 'marginBottom': '10px'})
-
-
-@_callback(
-    Output('curvas-recon-freshness', 'children'),
-    Output('curvas-recon-caso', 'options'),
-    Output('curvas-recon-caso', 'value'),
-    Output('curvas-recon-store', 'data', allow_duplicate=True),
-    Input('curvas-recon-sync-btn', 'n_clicks'),
-    prevent_initial_call='initial_duplicate',
-)
-def sync_and_refresh(_n_clicks):
-    """Al cargar la pagina solo pinta el banner de frescura (sin escribir en
-    la DB). Al apretar 'Actualizar datos' corre sync_all(), refresca todas
-    las cachés de modulo (`refresh_data_caches`, incluida `_CURVE_CACHE` via
-    `clear_curve_cache` y el cache local en disco) y recarga la lista de Casos.
-
-    Ademas BOTA `recon-store`: los datos de abajo cambiaron, asi que lo que
-    hay en pantalla ya no corresponde a la DB. Sin esto el badge seguia
-    diciendo 'Reconciliado' y el boton de reporte seguia armando el libro con
-    la corrida vieja."""
-    global CASOS, CASO_OPTIONS, DEFAULT_CASO_ID
-    if not _n_clicks:
-        return (dash.no_update,) * 4
-    fallas = []
-    if ctx.triggered_id == 'curvas-recon-sync-btn':
-        _progress_begin('Actualizando datos', 'Sincronizando tablas…', 3)
-        try:
-            report = sync_all()
-            _progress_set('Actualizando datos', 'Refrescando histórico…', 35)
-            ensure_full_data(force=True)
-            resumen = ' | '.join(
-                f'{r["tabla"]}: OK ({r["filas"]:,} filas)' if r['ok'] else f'{r["tabla"]}: FALLO ({r["error"][:80]})'
-                for r in report
-            )
-            print(f'[sync] {resumen}')
-            fallas = [r for r in report if not r['ok']]
-            CASOS, CASO_OPTIONS, DEFAULT_CASO_ID = _load_caso_options()
-            store = None
-        finally:
-            _progress_end()
-    else:
-        store = dash.no_update
-    banner = [_freshness_banner()]
-    if fallas:
-        banner.append(html.Div(
-            'Sync con fallas: ' + ' | '.join(f'{r["tabla"]} ({r["error"][:60]})' for r in fallas),
-            style={'fontSize': '0.8rem', 'color': '#DC2626', 'fontWeight': '600',
-                   'marginBottom': '10px'}))
-    return html.Div(banner), CASO_OPTIONS, DEFAULT_CASO_ID, store
-
-
 def _error_modal_body(titulo, detalle, fallas=None):
     """Contenido del modal de error (sin URLs ni secretos)."""
     items = []
@@ -1988,6 +2060,8 @@ def _error_modal_body(titulo, detalle, fallas=None):
 def compute_recon(_n_clicks, caso_id):
     """Reconcile every active pile over the selected official Case window."""
     profile_total_t0 = time.perf_counter()
+    perf_trace_id = uuid.uuid4().hex
+    record_phase('compute.start', 0.0, trace_id=perf_trace_id)
     caso = _caso_by_id(caso_id)
     if caso is None or not caso.get('run_id'):
         raise dash.exceptions.PreventUpdate
@@ -2025,11 +2099,13 @@ def compute_recon(_n_clicks, caso_id):
                     _error_modal_body(titulo, None, fallas_ancla),
                 )
             phase_anchor = time.perf_counter() - phase_t0
+            record_phase('compute.anchor', phase_anchor, trace_id=perf_trace_id)
 
             phase_t0 = time.perf_counter()
             _progress_set('Historico y metadatos', 'Asegurando caches...', 28)
             ensure_full_data()
             phase_full_data = time.perf_counter() - phase_t0
+            record_phase('compute.full_data', phase_full_data, trace_id=perf_trace_id)
 
             _progress_set(
                 'Riego y drenaje',
@@ -2049,23 +2125,30 @@ def compute_recon(_n_clicks, caso_id):
                 activity_loader=_fechas_actividad,
             )
             phase_materials = time.perf_counter() - phase_t0
+            record_phase('compute.inputs', phase_materials, trace_id=perf_trace_id,
+                         activity_dates=len(activity_dates), labels=len(materials))
 
             _progress_set('Reconciliaci?n Pendiente', 'Resolviendo flowsheet...', 72)
             conn = connect()
             phase_t0 = time.perf_counter()
+            trace_token = set_trace_id(perf_trace_id)
             try:
                 joint = solve(ws, materials, RECON_PRODUCCION, conn,
                               active_days=active_days, force_all_active=force_all_active,
                               week_end=week_end, anchor=anchor, caso_id=caso['id'])
             finally:
                 conn.close()
+                reset_trace_id(trace_token)
             phase_solve_and_persist = time.perf_counter() - phase_t0
 
             _progress_set('Guardando resultado', 'Corrida lista para la UI...', 92)
             phase_t0 = time.perf_counter()
             raw_token = _save_recon_raw(joint.get('res'), caso, ws, week_end)
             phase_raw = time.perf_counter() - phase_t0
+            record_phase('compute.raw_pickle', phase_raw, trace_id=perf_trace_id)
         except Exception as exc:
+            record_phase('compute.error', time.perf_counter() - profile_total_t0,
+                         trace_id=perf_trace_id, error_type=type(exc).__name__)
             print(f'[curvas] error en c?lculo caso=#{caso["id"]}: {exc}')
             mensaje = str(exc).strip() or 'Error inesperado durante el c?lculo.'
             if 'password' in mensaje.lower() or 'pwd=' in mensaje.lower():
@@ -2098,7 +2181,7 @@ def compute_recon(_n_clicks, caso_id):
     out = dict(
         week_start=ws.isoformat(), week_end=week_end.isoformat(), n_days=n_days,
         caso_id=caso['id'], caso_nombre=caso['nombre'], caso_run_id=caso['run_id'],
-        raw_token=raw_token,
+        raw_token=raw_token, performance_id=perf_trace_id,
         balance_inventario=dict(
             volumen_m3=24.*float((joint.get('res') or {}).get('inventario_pls') or 0.),
             cobre_t=.024*float((joint.get('res') or {}).get('inventario_fino_pls') or 0.),
@@ -2116,6 +2199,7 @@ def compute_recon(_n_clicks, caso_id):
                                   mat['drena_cu'], week_end=week_end)
         out[label] = _serialize_result(sub, wz_base)
     phase_store = time.perf_counter() - phase_t0
+    record_phase('compute.store_serialization', phase_store, trace_id=perf_trace_id)
     engine_phases = joint.get('_phase_seconds') or {}
     print(
         '[RECON_PERF] '
@@ -2127,6 +2211,8 @@ def compute_recon(_n_clicks, caso_id):
         f'solve_plus_persist={phase_solve_and_persist:.3f}s '
         f'raw_pickle={phase_raw:.3f}s store_serialization={phase_store:.3f}s'
     )
+    record_phase('compute.callback_total', time.perf_counter() - profile_total_t0,
+                 trace_id=perf_trace_id, output_piles=len(materials))
     return out, False, dash.no_update
 
 
@@ -2148,6 +2234,7 @@ def close_error_modal(_n_clicks):
     Input('curvas-recon-caso', 'value'),
     prevent_initial_call=True,
 )
+@_trace_render('render.recon')
 def render_recon(data, tab_value, caso_id):
     if not _store_matches_case(data, caso_id):
         return (
@@ -2190,6 +2277,7 @@ def select_recon_pila(_n_clicks_list, current):
     State('curvas-recon-pila-store', 'data'),
     prevent_initial_call=False,
 )
+@_trace_render('render.grid')
 def render_recon_grid(data, caso_id, selected_pila):
     """Reconstruye la grilla solo al calcular o cambiar de Caso."""
     if not _store_matches_case(data, caso_id):
@@ -2236,6 +2324,7 @@ def toggle_consideraciones(_open_clicks, _close_clicks):
     Input('curvas-recon-caso', 'value'),
     prevent_initial_call=False,
 )
+@_trace_render('render.pile_charts')
 def render_recon_pila_charts(data, selected_pila, caso_id):
     """Los tres graficos por pila. Lo unico que depende de la seleccion y lo
     unico que muestra spinner al hacer click."""

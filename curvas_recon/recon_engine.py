@@ -203,6 +203,7 @@ from .db_pipeline import get_engine, SCHEMA
 # asi que cada loader vuelve a correr sus pivots y su ffill sobre la ventana
 # que le toca y devuelve lo mismo que devolveria la query directa.
 from .local_cache import sql_df as _sql_df, sql_rows as _sql_rows
+from .perf_trace import record_phase
 from . import pad_data
 from .pad_cycles import split_into_cycles
 from . import ramp_curve
@@ -2755,6 +2756,7 @@ def reconcile_week_flowsheet_db(week_start, materials, conn, n_transient=N_TRANS
                                    force_all_active=force_all_active, week_end=week_end, anchor=anchor)
     _num = lambda v: v if pd.notna(v) else None
 
+    row_build_started = time.perf_counter()
     trans_keys = {(p['label'], p['parcela']) for p in res['piles']}
     detalle_rows, daily_rows = [], []
 
@@ -2809,6 +2811,10 @@ def reconcile_week_flowsheet_db(week_start, materials, conn, n_transient=N_TRANS
     # quedo ninguna pila activa -- ambos casos dejan *_recon en None y el badge
     # no debe leerse como "Reconciliado".
     converged = res['q_riego_recon'] is not None and res['n_active'] > 0
+    record_phase('engine.prepare_persistence_rows',
+                 time.perf_counter() - row_build_started,
+                 detail_rows=len(detalle_rows), daily_rows=len(daily_rows),
+                 active_piles=len(res['piles']), raw_piles=len(res['all_rows']))
 
     return save_run(
         conn, week_start, method=METHOD_NAME, active_days=n_transient, sigma_rel=sigma_rel,
@@ -2832,6 +2838,9 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
     res = reconcile_flowsheet(week_start, materials, n_transient=active_days, sigma_rel=sigma_rel,
                                force_all_active=force_all_active, week_end=week_end, anchor=anchor)
     solve_seconds = time.perf_counter() - solve_started
+    record_phase('engine.solve', solve_seconds,
+                 active_piles=int(res.get('n_active') or 0),
+                 pile_rows=len(res.get('piles') or []))
     # Se persiste EL MISMO `res` que se devuelve para pintar; no se
     # recalcula (ver `res=` en `reconcile_week_flowsheet_db`).
     persist_started = time.perf_counter()
@@ -2839,6 +2848,7 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
                                  force_all_active=force_all_active, week_end=week_end,
                                  anchor=anchor, caso_id=caso_id, res=res)
     persist_seconds = time.perf_counter() - persist_started
+    record_phase('engine.persist_total', persist_seconds)
 
     # Misma senal que reconcile_week_flowsheet_db: sin caudal repartido o sin
     # pilas activas, no hay reconciliacion real que mostrar en verde.

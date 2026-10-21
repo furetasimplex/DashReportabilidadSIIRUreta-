@@ -249,23 +249,28 @@ class IntegracionSIIR(unittest.TestCase):
         modal = find(tree, 'curvas-recon-consideraciones-modal')
         self.assertFalse(modal['props']['is_open'])
         self.assertIn('curvas-recon-warnings', ids(modal))
-        self.assertIn('curvas-recon-freshness', ids(modal))
+        self.assertNotIn('curvas-recon-freshness', ids(tree))
+        self.assertNotIn('curvas-recon-sync-btn', ids(tree))
         self.assertEqual(ids(tree).count('curvas-recon-warnings'), 1)
 
 
     def test_11_calculo_indica_progreso_y_restauracion_en_cliente(self):
         response = self.client.get('/_dash-dependencies')
         self.assertEqual(response.status_code, 200)
-        calculation = next(item for item in response.get_json()
-                           if item['output'] == 'curvas-recon-store.data'
-                           and any(i['id'] == 'curvas-recon-btn'
-                                   for i in item['inputs']))
+        calculation = next(
+            item for item in response.get_json()
+            if any(i['id'] == 'curvas-recon-btn' for i in item['inputs'])
+            and 'curvas-recon-store.data' in str(item['output'])
+        )
+        # The calculation now updates the result store and error modal together.
+        self.assertIn('curvas-recon-error-modal.is_open', str(calculation['output']))
+        self.assertIn('curvas-recon-error-body.children', str(calculation['output']))
         # Dash applies runningOff when the request finishes, including failures.
         self.assertEqual(calculation['running'], {
             'running': {'curvas-recon-btn.disabled': True,
-                        'curvas-recon-btn.children': 'Calculando…'},
+                        'curvas-recon-btn.children': 'Calculando\u2026'},
             'runningOff': {'curvas-recon-btn.disabled': False,
-                           'curvas-recon-btn.children': 'Ejecutar cálculo'},
+                           'curvas-recon-btn.children': 'Ejecutar c\u00e1lculo'},
         })
         self.assertTrue(calculation['prevent_initial_call'])
         self.sql.assert_not_called()

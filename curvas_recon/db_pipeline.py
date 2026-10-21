@@ -2,6 +2,7 @@ import os
 import re
 import urllib.parse
 import math
+import time
 import pandas as pd
 from sqlalchemy import create_engine, text
 
@@ -72,6 +73,7 @@ def connect():
 
 
 from .local_cache import sql_maps as _sql_maps, sql_rows as _sql_rows, olvidar as _olvidar
+from .perf_trace import record_phase
 
 _TABLAS_LISTAS = False
 
@@ -411,11 +413,52 @@ def load_week_totals(conn):
     return _sql_maps(get_engine(), query, etiqueta='recon_run')
 
 
+def _insert_rows_batched(conn, table, columns, rows, parameter_limit=2000):
+    """Insert rows with bounded multi-VALUES on SQL Server, executemany elsewhere.
+
+    The SQL Server batch stays below its 2,100-parameter ceiling and the
+    1,000-row VALUES constructor limit. Values remain bound parameters.
+    """
+    if not rows:
+        return 0
+    columns = tuple(columns)
+    col_sql = ', '.join(columns)
+    single_placeholders = ', '.join(':' + col for col in columns)
+    if getattr(getattr(conn, 'dialect', None), 'name', None) != 'mssql':
+        conn.execute(text(f'INSERT INTO {table} ({col_sql}) VALUES ({single_placeholders})'), rows)
+        return 1
+
+    parameter_limit = int(parameter_limit)
+    if parameter_limit < len(columns):
+        raise ValueError('parameter_limit must fit at least one complete row')
+    max_rows = min(1000, parameter_limit // len(columns))
+    statements = 0
+    for offset in range(0, len(rows), max_rows):
+        batch = rows[offset:offset + max_rows]
+        params = {}
+        value_groups = []
+        for row_index, row in enumerate(batch):
+            names = []
+            for col in columns:
+                bind = f'{col}_{row_index}'
+                names.append(':' + bind)
+                params[bind] = row.get(col)
+            value_groups.append('(' + ', '.join(names) + ')')
+        statement = text(
+            f'INSERT INTO {table} ({col_sql}) VALUES ' + ', '.join(value_groups))
+        conn.execute(statement, params)
+        statements += 1
+    return statements
+
+
 def save_run(conn, week_start, method, active_days, sigma_rel, r_global, converged,
              week_row, detalle_rows, daily_rows, warnings=None,
              semana_fin=None, caso_id=None):
     """Persist a reconciliation run and its detailed rows in the shared SQL schema."""
+    save_started = time.perf_counter()
+    phase_started = time.perf_counter()
     _ensure_reconciliation_tables()
+    record_phase('save_run.schema_check', time.perf_counter() - phase_started)
     week_start = pd.Timestamp(week_start).date()
     semana_fin = pd.Timestamp(semana_fin).date() if semana_fin is not None else None
     caso_id = int(caso_id) if caso_id is not None else None
@@ -431,17 +474,23 @@ def save_run(conn, week_start, method, active_days, sigma_rel, r_global, converg
     # reconciliar uno borraba la corrida de otro. Con caso_id NULL (corrida
     # por semana, sin Caso) solo reemplaza a las otras corridas sin Caso.
     caso_pred = "caso_id = :caso" if caso_id is not None else "caso_id IS NULL"
+    phase_started = time.perf_counter()
     old_ids = [r[0] for r in conn.execute(
         text(f"SELECT id FROM {SCHEMA}.reconciliacion_run "
              f"WHERE semana_lunes = :ws AND method = :m AND {caso_pred}"),
         ({"ws": week_start, "m": method, "caso": caso_id} if caso_id is not None
          else {"ws": week_start, "m": method}),
     ).fetchall()]
+    record_phase('save_run.find_previous', time.perf_counter() - phase_started,
+                 previous_runs=len(old_ids))
+    delete_started = time.perf_counter()
     if old_ids:
         ids_csv = ",".join(str(int(i)) for i in old_ids)
         conn.execute(text(f"DELETE FROM {SCHEMA}.reconciliacion_detalle_dia WHERE run_id IN ({ids_csv})"))
         conn.execute(text(f"DELETE FROM {SCHEMA}.reconciliacion_detalle WHERE run_id IN ({ids_csv})"))
         conn.execute(text(f"DELETE FROM {SCHEMA}.reconciliacion_run WHERE id IN ({ids_csv})"))
+    record_phase('save_run.delete_previous', time.perf_counter() - delete_started,
+                 statements=(3 if old_ids else 0), previous_runs=len(old_ids))
 
     insert_run = text(f"""
         INSERT INTO {SCHEMA}.reconciliacion_run (
@@ -454,6 +503,7 @@ def save_run(conn, week_start, method, active_days, sigma_rel, r_global, converg
             :r_global, :converged, :warnings, :actual_t, :mt_base_t, :mt_opt_t
         );
     """)
+    phase_started = time.perf_counter()
     run_id = conn.execute(insert_run, {
         "semana_lunes": week_start,
         "semana_fin": semana_fin,
@@ -468,58 +518,62 @@ def save_run(conn, week_start, method, active_days, sigma_rel, r_global, converg
         "mt_base_t": week_row.get('mt_base_t'),
         "mt_opt_t": week_row.get('mt_opt_t'),
     }).scalar()
+    record_phase('save_run.insert_header', time.perf_counter() - phase_started)
 
     # id de material resuelto UNA vez por label (antes: un SELECT por fila,
     # ~400 round trips extra por corrida) y INSERT en executemany.
     material_ids = {}
+    material_lookup_calls = 0
+    material_lookup_seconds = 0.0
 
     def _material_id(label):
+        nonlocal material_lookup_calls, material_lookup_seconds
         if label not in material_ids:
+            lookup_started = time.perf_counter()
             material_ids[label] = get_material_id(conn, label)
+            material_lookup_seconds += time.perf_counter() - lookup_started
+            material_lookup_calls += 1
         return material_ids[label]
 
-    insert_detail = text(f"""
-        INSERT INTO {SCHEMA}.reconciliacion_detalle (
-            run_id, material_id, label, parcela_nombre, estado, fdrena,
-            fdrena_prior, dia_ciclo, w_t, z_t, q_mean, q_pls_mean,
-            cu_drena_mean, cu_riego_mean
-        ) VALUES (
-            :run_id, :id_pad, :label, :parcela_nombre, :estado, :fdrena,
-            :fdrena_prior, :dia_ciclo, :w_t, :z_t, :q_mean, :q_pls_mean,
-            :cu_drena_mean, :cu_riego_mean
-        )
-    """)
+    detail_columns = (
+        'run_id', 'material_id', 'label', 'parcela_nombre', 'estado', 'fdrena',
+        'fdrena_prior', 'dia_ciclo', 'w_t', 'z_t', 'q_mean', 'q_pls_mean',
+        'cu_drena_mean', 'cu_riego_mean',
+    )
+    phase_started = time.perf_counter()
     detalle_params = [{
-        "run_id": run_id,
-        "id_pad": _material_id(row.get('label')),
-        "label": row.get('label'),
-        "parcela_nombre": row.get('parcela_nombre'),
-        "estado": row.get('estado'),
-        "fdrena": row.get('fdrena'),
-        "fdrena_prior": row.get('fdrena_prior'),
-        "dia_ciclo": row.get('dia_ciclo'),
-        "w_t": row.get('w_t'),
-        "z_t": row.get('z_t'),
-        "q_mean": row.get('q_mean'),
-        "q_pls_mean": row.get('q_pls_mean'),
-        "cu_drena_mean": row.get('cu_drena_mean'),
-        "cu_riego_mean": row.get('cu_riego_mean'),
+        'run_id': run_id,
+        'material_id': _material_id(row.get('label')),
+        'label': row.get('label'),
+        'parcela_nombre': row.get('parcela_nombre'),
+        'estado': row.get('estado'),
+        'fdrena': row.get('fdrena'),
+        'fdrena_prior': row.get('fdrena_prior'),
+        'dia_ciclo': row.get('dia_ciclo'),
+        'w_t': row.get('w_t'),
+        'z_t': row.get('z_t'),
+        'q_mean': row.get('q_mean'),
+        'q_pls_mean': row.get('q_pls_mean'),
+        'cu_drena_mean': row.get('cu_drena_mean'),
+        'cu_riego_mean': row.get('cu_riego_mean'),
     } for row in detalle_rows]
-    if detalle_params:
-        conn.execute(insert_detail, detalle_params)
+    record_phase('save_run.prepare_detail_batch', time.perf_counter() - phase_started,
+                 rows=len(detalle_params))
+    phase_started = time.perf_counter()
+    detail_statements = _insert_rows_batched(
+        conn, f'{SCHEMA}.reconciliacion_detalle', detail_columns, detalle_params)
+    record_phase('save_run.insert_detail_batch', time.perf_counter() - phase_started,
+                 rows=len(detalle_params), statements=detail_statements)
 
-    insert_detail_day = text(f"""
-        INSERT INTO {SCHEMA}.reconciliacion_detalle_dia (
-            run_id, material_id, label, parcela_nombre, dia_offset,
-            fdrena, q, q_pls, cu_drena, cu_riego
-        ) VALUES (
-            :run_id, :id_pad, :label, :parcela_nombre, :dia_offset,
-            :fdrena, :q, :q_pls, :cu_drena, :cu_riego
-        )
-    """)
+
+    daily_columns = (
+        'run_id', 'material_id', 'label', 'parcela_nombre', 'dia_offset',
+        'fdrena', 'q', 'q_pls', 'cu_drena', 'cu_riego',
+    )
+    phase_started = time.perf_counter()
     daily_params = [{
         "run_id": run_id,
-        "id_pad": _material_id(row.get('label')),
+        "material_id": _material_id(row.get('label')),
         "label": row.get('label'),
         "parcela_nombre": row.get('parcela_nombre'),
         "dia_offset": row.get('dia_offset'),
@@ -529,19 +583,35 @@ def save_run(conn, week_start, method, active_days, sigma_rel, r_global, converg
         "cu_drena": row.get('cu_drena'),
         "cu_riego": row.get('cu_riego'),
     } for row in daily_rows]
-    if daily_params:
-        conn.execute(insert_detail_day, daily_params)
+    record_phase('save_run.prepare_daily_batch', time.perf_counter() - phase_started,
+                 rows=len(daily_params))
+    record_phase('save_run.material_lookups', material_lookup_seconds,
+                 lookup_calls=material_lookup_calls, labels=len(material_ids))
+    phase_started = time.perf_counter()
+    daily_statements = _insert_rows_batched(
+        conn, f'{SCHEMA}.reconciliacion_detalle_dia', daily_columns, daily_params)
+    record_phase('save_run.insert_daily_batch', time.perf_counter() - phase_started,
+                 rows=len(daily_params), statements=daily_statements)
 
     # `conn` viene de get_engine().connect() (no get_engine().begin()): en SQLAlchemy 2.0
     # eso NO autocommitea, y el conn.close() del llamador hacia rollback de
     # toda la corrida -- las tres tablas de reconciliacion quedaban en 0 filas
     # y por eso los graficos por pila (que leen reconciliacion_detalle_dia)
     # salian siempre vacios.
+    phase_started = time.perf_counter()
     conn.commit()
+    record_phase('save_run.commit', time.perf_counter() - phase_started)
     # Las tablas de reconciliacion acaban de cambiar: el cache local de sus
     # lecturas queda invalido. El resto (riego, Cu, campanas) no se toca.
+    phase_started = time.perf_counter()
     for pre in ('recon_run', 'recon_dia', 'recon_semana'):
         _olvidar(pre)
+    record_phase('save_run.invalidate_cache', time.perf_counter() - phase_started)
+    record_phase('save_run.total', time.perf_counter() - save_started,
+                 previous_runs=len(old_ids), detail_rows=len(detalle_params),
+                 daily_rows=len(daily_params), material_lookups=material_lookup_calls,
+                 delete_statements=(3 if old_ids else 0),
+                 batch_statements=(detail_statements + daily_statements))
     return run_id
 
 # ── 3. Database Teardown & Schema Creation ──────────────────────────────────────
