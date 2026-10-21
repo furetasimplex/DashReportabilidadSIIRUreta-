@@ -104,10 +104,6 @@ def _ensure_reconciliation_tables():
 # INSERT/UPDATE/DELETE sobre `recon_*`. Ambiente via .env (ver _resolve_hidro_schema).
 HIDRO_SCHEMA = _resolve_hidro_schema()
 
-# Alcance oficial de esta aplicacion. Los casos posteriores pertenecen a
-# pruebas/escenarios del flowsheet y no deben aparecer en el dashboard PAD.
-CASO_ID_MIN = 1
-CASO_ID_MAX = 8
 
 # Flujos del modelo `hidrometalurgia_120_completo` que anclan cada pad.
 #
@@ -146,12 +142,12 @@ CASO_FLUJOS_OPCIONALES = {'F41', 'F45', 'F46'}
 
 
 def load_casos():
-    """Casos 1..8 con run oficial exitoso, mas nuevos primero.
+    """Casos oficiales con run exitoso, mas nuevos primero.
 
-    La relacion de oficializacion cambia fuera de esta aplicacion. Por eso
-    esta lectura corta y barata evita deliberadamente ``local_cache``: un
-    puntero viejo haria que el dashboard usara el run anterior aunque el
-    usuario ya hubiese oficializado uno nuevo.
+    Sin filtro por rango de id: se listan todos los oficializados con
+    ``solver_run`` en success. La relacion de oficializacion cambia fuera
+    de esta aplicacion; por eso esta lectura evita deliberadamente
+    ``local_cache``: un puntero viejo usaria el run anterior.
     """
     query = text(f"""
         SELECT c.id, c.nombre_caso, c.fecha_inicio, c.fecha_fin, c.estado,
@@ -159,15 +155,11 @@ def load_casos():
         FROM {HIDRO_SCHEMA}.recon_caso c
         JOIN {HIDRO_SCHEMA}.recon_caso_oficial o ON o.caso_id = c.id
         JOIN {HIDRO_SCHEMA}.recon_solver_run r ON r.id = o.solver_run_id
-        WHERE c.id BETWEEN :caso_min AND :caso_max
           AND r.estado = 'success'
         ORDER BY c.fecha_inicio DESC, c.id DESC
     """)
     with get_engine().connect() as conn:
-        rows = conn.execute(query, {
-            'caso_min': CASO_ID_MIN,
-            'caso_max': CASO_ID_MAX,
-        }).fetchall()
+        rows = conn.execute(query).fetchall()
     return [dict(
         id=int(r[0]), nombre=r[1], fecha_inicio=pd.Timestamp(r[2]).normalize(),
         fecha_fin=pd.Timestamp(r[3]).normalize(), estado=r[4],
@@ -243,20 +235,40 @@ def caso_anchor_completo(anchor):
     no puede construir la razon oficial/recon y caeria en su fallback
     sintetico. Esta ruta no admite esa mezcla silenciosa.
     """
-    if set(anchor or {}) != set(CASO_FLUJOS):
-        return False
+    return not diagnose_caso_anchor(anchor)
+
+
+def diagnose_caso_anchor(anchor):
+    """Lista legible de fallas del ancla, o lista vacia si esta completa."""
     denominadores = {
         'q_riego_medido', 'q_pls_medido',
         'fino_riego_medido', 'fino_pls_medido',
     }
-    for valores in anchor.values():
+    etiquetas = {
+        'q_riego_medido': 'caudal riego medido',
+        'q_pls_medido': 'caudal PLS medido',
+        'fino_riego_medido': 'fino Cu riego medido',
+        'fino_pls_medido': 'fino Cu PLS medido',
+        'q_riego_recon': 'caudal riego reconciliado',
+        'q_pls_recon': 'caudal PLS reconciliado',
+        'fino_riego_recon': 'fino Cu riego reconciliado',
+        'fino_pls_recon': 'fino Cu PLS reconciliado',
+    }
+    fallas = []
+    presentes = set(anchor or {})
+    for label in CASO_FLUJOS:
+        if label not in presentes:
+            fallas.append(f'{label}: faltan flujos obligatorios del run oficial')
+            continue
+        valores = anchor[label] or {}
         for key in CASO_ANCHOR_KEYS:
             value = valores.get(key)
+            nombre = etiquetas.get(key, key)
             if value is None or not pd.notna(value):
-                return False
-            if key in denominadores and float(value) <= 0:
-                return False
-    return True
+                fallas.append(f'{label}: {nombre} ausente')
+            elif key in denominadores and float(value) <= 0:
+                fallas.append(f'{label}: {nombre} = {float(value):.6g} (debe ser > 0)')
+    return fallas
 
 
 def get_material_id(conn, label):

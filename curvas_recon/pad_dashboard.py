@@ -44,7 +44,7 @@ from .recon_engine import (
 from .db_pipeline import (
     connect, get_material_id, load_pila_daily_history, load_pila_history, load_week_totals, save_run,
     sync_all, data_freshness, load_casos, load_caso_anchor,
-    caso_anchor_completo, CASO_ID_MIN, CASO_ID_MAX, HIDRO_SCHEMA,
+    diagnose_caso_anchor, HIDRO_SCHEMA,
 )
 # Todo lo que se lee de la DB pasa por un cache local en disco (`local_cache.py`).
 # El boton 'Actualizar datos' lo bota entero para forzar la bajada de nuevo.
@@ -294,16 +294,13 @@ def _view_data(cycles_map: dict, campana_idx: int) -> dict:
 
 
 def _load_caso_options():
-    """Casos oficiales 1..8, opciones del dropdown e id por defecto."""
+    """Casos oficiales con run exitoso; opciones del dropdown e id por defecto."""
     try:
         casos = load_casos()
     except Exception:
         raise RuntimeError('No se pudo cargar la lista de Casos oficiales.') from None
-    # Defensa adicional frente a implementaciones antiguas de ``load_casos``
-    # o datos inyectados en pruebas: la UI nunca ofrece casos fuera del
-    # alcance ni casos sin oficializacion.
-    casos = [c for c in casos
-             if CASO_ID_MIN <= c['id'] <= CASO_ID_MAX and c.get('run_id')]
+    # Solo se listan casos oficializados con run_id (load_casos ya exige success).
+    casos = [c for c in casos if c.get('run_id')]
     options = []
     for c in casos:
         dias = (c['fecha_fin'] - c['fecha_inicio']).days + 1
@@ -1496,6 +1493,14 @@ def _build_content_layout():
                                       n_clicks=0, className='action-primary')),
         ], id='curvas-recon-consideraciones-modal', is_open=False, size='lg',
                     scrollable=True, className='curvas-recon-shell'),
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle('No se pudo completar el cálculo'),
+                            close_button=True),
+            dbc.ModalBody(id='curvas-recon-error-body'),
+            dbc.ModalFooter(dbc.Button('Cerrar', id='curvas-recon-error-close',
+                                      n_clicks=0, className='action-primary')),
+        ], id='curvas-recon-error-modal', is_open=False, centered=True,
+           className='curvas-recon-shell'),
         dcc.Store(id='curvas-recon-store', data=None),
         dcc.Loading(
             html.Div(id='curvas-recon-report-status', className='report-status'),
@@ -1721,8 +1726,23 @@ def sync_and_refresh(_n_clicks):
     return html.Div(banner), CASO_OPTIONS, DEFAULT_CASO_ID, store
 
 
+def _error_modal_body(titulo, detalle, fallas=None):
+    """Contenido del modal de error (sin URLs ni secretos)."""
+    items = []
+    if fallas:
+        items.append(html.Ul([html.Li(f) for f in fallas], className='mb-0 ps-3'))
+    elif detalle:
+        items.append(html.P(detalle, className='mb-0'))
+    return html.Div([
+        dbc.Alert(titulo, color='danger', className='mb-3'),
+        *items,
+    ])
+
+
 @_callback(
     Output('curvas-recon-store', 'data'),
+    Output('curvas-recon-error-modal', 'is_open'),
+    Output('curvas-recon-error-body', 'children'),
     Input('curvas-recon-btn', 'n_clicks'),
     State('curvas-recon-caso', 'value'),
     prevent_initial_call=True,
@@ -1740,8 +1760,7 @@ def compute_recon(_n_clicks, caso_id):
     es comparable con el flowsheet global del Caso, que es justamente para lo
     que sirve el ancla."""
     caso = _caso_by_id(caso_id)
-    if (caso is None or not (CASO_ID_MIN <= caso['id'] <= CASO_ID_MAX)
-            or not caso.get('run_id')):
+    if caso is None or not caso.get('run_id'):
         raise dash.exceptions.PreventUpdate
     _progress_begin(
         'Ejecutando cálculo',
@@ -1749,48 +1768,66 @@ def compute_recon(_n_clicks, caso_id):
         3,
     )
     try:
-        _progress_set('Histórico y metadatos', 'Asegurando cachés…', 8)
-        ensure_full_data()
-        ws, week_end, n_days = resolve_window(caso['fecha_inicio'], caso['fecha_fin'])
-        # Se reconcilian TODAS las pilas activas, sin filtro de dias activos: el
-        # corte transiente/SS ya no lo decide el operador. `active_days` queda solo
-        # porque el motor lo pide en la firma; con `force_all_active` no filtra.
-        active_days = N_TRANSIENT_DEFAULT
-        method = 'Pendiente'
-        force_all_active = True
-        solve = reconcile_week_flowsheet_dash
-        tag = method
-
-        # Ancla POR PAD (oxidos F39/F48, sulfuros F44/F50+F49). Esta ruta es
-        # exclusivamente oficial: si falta una magnitud no se permite que el
-        # motor mezcle el run con su fallback sintetico.
-        _progress_set(
-            'Ancla del caso',
-            f'Run oficial {caso["run_id"]} · ventana {ws.date()}..{week_end.date()} ({n_days} d)',
-            28,
-        )
-        anchor = load_caso_anchor(caso['run_id'])
-        if not caso_anchor_completo(anchor):
-            raise RuntimeError(
-                f'Caso #{caso["id"]}: el run oficial {caso["run_id"]} no contiene '
-                'un ancla completa y positiva para OXIDOS y SULFUROS.')
-        _progress_set(
-            'Riego y drenaje',
-            'Completando series diarias (óxidos / sulfuros)…',
-            45,
-        )
-        materials = {label: _load_material_window(label, ws, week_end) for label in ('SULFUROS', 'OXIDOS')}
-
-        _progress_set('Reconciliación Pendiente', 'Resolviendo flowsheet…', 72)
-        conn = connect()
         try:
-            joint = solve(ws, materials, RECON_PRODUCCION, conn, active_days=active_days,
-                          force_all_active=force_all_active, week_end=week_end,
-                          anchor=anchor, caso_id=caso['id'])
-        finally:
-            conn.close()
-        _progress_set('Guardando resultado', 'Corrida lista para la UI…', 92)
-        raw_token = _save_recon_raw(joint.get('res'), caso, ws, week_end)
+            _progress_set('Histórico y metadatos', 'Asegurando cachés…', 8)
+            ensure_full_data()
+            ws, week_end, n_days = resolve_window(caso['fecha_inicio'], caso['fecha_fin'])
+            # Se reconcilian TODAS las pilas activas, sin filtro de dias activos: el
+            # corte transiente/SS ya no lo decide el operador. `active_days` queda solo
+            # porque el motor lo pide en la firma; con `force_all_active` no filtra.
+            active_days = N_TRANSIENT_DEFAULT
+            method = 'Pendiente'
+            force_all_active = True
+            solve = reconcile_week_flowsheet_dash
+            tag = method
+
+            # Ancla POR PAD (oxidos F39/F48, sulfuros F44/F50+F49). Esta ruta es
+            # exclusivamente oficial: si falta una magnitud no se permite que el
+            # motor mezcle el run con su fallback sintetico.
+            _progress_set(
+                'Ancla del caso',
+                f'Run oficial {caso["run_id"]} · ventana {ws.date()}..{week_end.date()} ({n_days} d)',
+                28,
+            )
+            anchor = load_caso_anchor(caso['run_id'])
+            fallas_ancla = diagnose_caso_anchor(anchor)
+            if fallas_ancla:
+                titulo = (f'Caso #{caso["id"]}: el run oficial {caso["run_id"]} '
+                          'no tiene ancla completa y positiva para OXIDOS y SULFUROS.')
+                return (
+                    dash.no_update,
+                    True,
+                    _error_modal_body(titulo, None, fallas_ancla),
+                )
+            _progress_set(
+                'Riego y drenaje',
+                'Completando series diarias (óxidos / sulfuros)…',
+                45,
+            )
+            materials = {label: _load_material_window(label, ws, week_end)
+                         for label in ('SULFUROS', 'OXIDOS')}
+
+            _progress_set('Reconciliación Pendiente', 'Resolviendo flowsheet…', 72)
+            conn = connect()
+            try:
+                joint = solve(ws, materials, RECON_PRODUCCION, conn, active_days=active_days,
+                              force_all_active=force_all_active, week_end=week_end,
+                              anchor=anchor, caso_id=caso['id'])
+            finally:
+                conn.close()
+            _progress_set('Guardando resultado', 'Corrida lista para la UI…', 92)
+            raw_token = _save_recon_raw(joint.get('res'), caso, ws, week_end)
+        except Exception as exc:
+            print(f'[curvas] error en cálculo caso=#{caso["id"]}: {exc}')
+            mensaje = str(exc).strip() or 'Error inesperado durante el cálculo.'
+            # No exponer rutas, URLs ni detalle de driver SQL al usuario.
+            if 'password' in mensaje.lower() or 'pwd=' in mensaje.lower():
+                mensaje = 'Error de conexión o de datos. Revisa el servidor y reintenta.'
+            return (
+                dash.no_update,
+                True,
+                _error_modal_body('No se pudo ejecutar el cálculo', mensaje),
+            )
     finally:
         _progress_end()
 
@@ -1838,7 +1875,16 @@ def compute_recon(_n_clicks, caso_id):
         wz_base = compute_wz_week(ws, sub['active'], mat['riego'], mat['cu_riego'], mat['drena_cu'],
                                    week_end=week_end)
         out[label] = _serialize_result(sub, wz_base)
-    return out
+    return out, False, dash.no_update
+
+
+@_callback(
+    Output('curvas-recon-error-modal', 'is_open', allow_duplicate=True),
+    Input('curvas-recon-error-close', 'n_clicks'),
+    prevent_initial_call=True,
+)
+def close_error_modal(_n_clicks):
+    return False
 
 
 @_callback(
