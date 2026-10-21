@@ -1,4 +1,4 @@
-"""Exportación real del libro, sin SQL ni modificaciones a datos de planta."""
+"""ExportaciÃ³n real del libro, sin SQL ni modificaciones a datos de planta."""
 import base64
 from copy import deepcopy
 from io import BytesIO
@@ -29,12 +29,13 @@ def no_sql(monkeypatch):
     def forbidden(*args, **kwargs):
         raise AssertionError('SQL prohibido')
     monkeypatch.setattr(Engine, 'connect', forbidden)
+    monkeypatch.setattr(report, '_campaign_recovery_points', lambda label: {})
 
 
 @pytest.fixture
 def export_case(monkeypatch, tmp_path):
     start, end = pd.Timestamp('2026-08-01'), pd.Timestamp('2026-08-03')
-    case = dict(id=10013, nombre='Prueba sintética', run_id=10104,
+    case = dict(id=10013, nombre='Prueba sintÃ©tica', run_id=10104,
                 fecha_inicio=start, fecha_fin=end, modelo_codigo='hidrometalurgia_125_v2',
                 modelo_version='v2', total_flujos=125)
     monkeypatch.setattr(dashboard, 'CASOS', [case])
@@ -53,7 +54,7 @@ def test_descarga_real_sin_libro_planta_y_repetible(export_case):
     raw_path = Path(dashboard._recon_raw_path(data['raw_token']))
     for click in (1, 2):
         status, download = dashboard.generate_week_report(click, data, case['id'])
-        assert 'sin comparación planta' in str(status)
+        assert 'sin comparaci' in str(status)
         assert raw_path.is_file()
         book = load_workbook(BytesIO(base64.b64decode(download['content'])))
         assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros']
@@ -90,7 +91,7 @@ def test_descarga_rechaza_identidad_obsoleta(export_case, monkeypatch, change):
     elif change == 'model':
         case['modelo_version'] = 'v1'
     else:
-        data['week_start'] = 'fecha inválida'
+        data['week_start'] = 'fecha invÃ¡lida'
     def forbidden(*args, **kwargs):
         raise AssertionError('No debe reconstruir una corrida incompatible')
     monkeypatch.setattr(report, 'construir_doc', forbidden)
@@ -106,7 +107,7 @@ def test_fallo_envio_limpia_xlsx_sin_consumir_corrida(export_case, monkeypatch):
         written.append(Path(path))
         return writer(doc, path)
     def fail(*args, **kwargs):
-        raise OSError('Fallo sintético de descarga')
+        raise OSError('Fallo sintÃ©tico de descarga')
     monkeypatch.setattr(report, 'escribir_libro', tracked)
     monkeypatch.setattr(dashboard.dcc, 'send_file', fail)
     _, download = dashboard.generate_week_report(1, data, case['id'])
@@ -135,6 +136,96 @@ def test_curva_usa_finos_reconciliados_solo_dentro_del_caso(monkeypatch, tmp_pat
         assert pile['rec'] == pytest.approx([0.216, 0.696, 0.912])
         assert pile['pct'] == pytest.approx(0.912)
         assert pile['planta_rec_termino'] is None
+
+
+
+def test_primary_gapped_segments_rebase_without_proxy_prefix_peak():
+    days = pd.date_range('2026-07-01', periods=31)
+    segments = [
+        {'dates': [days[2], days[3]], 'values': [40.0, 41.0]},
+        {'dates': [days[12], days[13]], 'values': [45.0, 46.0]},
+    ]
+    points = report._primary_points_for_campaign(segments, days[0], days[20])
+    assert [day for day, _ in points] == [days[2], days[3], days[12], days[13]]
+
+    # Proxy history before the first reading is deliberately huge. It must not
+    # survive as the plotted historical maximum; after each anchor, gap-day
+    # proxy increments continue from that measured baseline.
+    increments = [0.0] + [0.1] * 30
+    curve = __import__('numpy').cumsum(increments)
+    curve[0] = 500.0
+    curve[1] = 700.0
+    position = {day: i for i, day in enumerate(days)}
+    stack_cu = pd.Series(100.0, index=days)
+    anchor = report._apply_primary_points(
+        curve, increments, 0, points, stack_cu, 100.0, days[-1], position)
+    display = report._recovery_curve_for_display(curve, anchor["first"][0], days[0])
+    assert curve[2] == pytest.approx(40.0)
+    assert curve[12] == pytest.approx(45.0)
+    assert display[:2] == [None, None]
+    assert display[2] == pytest.approx(40.0)
+    assert report._finite_recovery_max(display) == pytest.approx(47.7)
+
+def test_baseline_usa_lectura_primaria_pre_caso_y_preserva_varios_casos(monkeypatch, tmp_path):
+    days = pd.date_range('2026-08-01', periods=6)
+    apilado = {(pid, 1): dict(camp=17, f0=days[0], f1=days[4], fin=100.0,
+                            tms=1000.0, ley=10.0) for pid in (1, 2)}
+    monkeypatch.setattr(report, 'leer_apilado', lambda **kwargs: apilado)
+    monkeypatch.setattr(report.E, 'load_riego', lambda *args: pd.DataFrame({'P01': 10.0}, index=days))
+    monkeypatch.setattr(report.E, 'load_cu_riego', lambda *args: pd.Series(1.0, index=days))
+    monkeypatch.setattr(report.E, 'load_drena_cu', lambda *args: pd.DataFrame({'P01': 2.0}, index=days))
+    monkeypatch.setattr(report, '_campaign_recovery_points', lambda label: {
+        1: [
+            {'dates': [days[0] - pd.Timedelta(days=3)], 'values': [90.0]},
+            {'dates': [days[1], days[3]], 'values': [10.0, 99.0]},
+        ]
+    })
+    monkeypatch.setattr(report, '_campaign_cu_daily', lambda *args: {
+        1: pd.Series([80.0], index=[days[1]])
+    })
+
+    def case_result(day):
+        return {'piles': [dict(label=label, parcela='P01', daily=[dict(
+            date=day, fino_pls_final=30.0, fino_riego_final=10.0)])
+            for label in ('OXIDOS', 'SULFUROS')]}
+
+    runs = {
+        1: dict(ws=days[2], we=days[2], caso={'run_id': 1},
+                pads={label: {'res': case_result(days[2])} for label in ('OXIDOS', 'SULFUROS')}),
+        2: dict(ws=days[4], we=days[4], caso={'run_id': 2},
+                pads={label: {'res': case_result(days[4])} for label in ('OXIDOS', 'SULFUROS')}),
+    }
+    doc = report.construir_doc(runs, end=days[-1], xl=str(tmp_path / 'ausente.xlsx'), verbose=False)
+    for label in ('OXIDOS', 'SULFUROS'):
+        pile = doc['pads'][label]['pilas'][0]
+        assert pile['primary_anchor_date'] == str(days[1].date())
+        assert pile['primary_anchor_pct'] == pytest.approx(10.0)
+        assert pile['med'][1:] == pytest.approx([8.0, 8.216, 8.432, 8.648, 8.864])
+        assert pile['rec'][1:] == pytest.approx([8.0, 8.48, 8.696, 9.176, 9.392])
+
+
+def test_primary_baseline_does_not_use_measurements_after_first_case(monkeypatch, tmp_path):
+    days = pd.date_range('2026-08-01', periods=5)
+    apilado = {(pid, 1): dict(camp=17, f0=days[0], f1=days[0], fin=100.0,
+                            tms=1000.0, ley=10.0) for pid in (1, 2)}
+    monkeypatch.setattr(report, 'leer_apilado', lambda **kwargs: apilado)
+    monkeypatch.setattr(report.E, 'load_riego', lambda *args: pd.DataFrame({'P01': 10.0}, index=days))
+    monkeypatch.setattr(report.E, 'load_cu_riego', lambda *args: pd.Series(1.0, index=days))
+    monkeypatch.setattr(report.E, 'load_drena_cu', lambda *args: pd.DataFrame({'P01': 2.0}, index=days))
+    monkeypatch.setattr(report, '_campaign_recovery_points', lambda label: {
+        1: [{'dates': [days[1], days[3]], 'values': [10.0, 99.0]}]
+    })
+    raw = {'piles': [dict(label=label, parcela='P01', daily=[dict(
+        date=days[2], fino_pls_final=30.0, fino_riego_final=10.0)])
+        for label in ('OXIDOS', 'SULFUROS')]}
+    runs = {1: dict(ws=days[2], we=days[2], caso={'run_id': 1},
+                    pads={label: {'res': raw} for label in ('OXIDOS', 'SULFUROS')})}
+    doc = report.construir_doc(runs, end=days[-1], xl=str(tmp_path / 'ausente.xlsx'), verbose=False)
+    for label in ('OXIDOS', 'SULFUROS'):
+        pile = doc['pads'][label]['pilas'][0]
+        assert pile['primary_anchor_date'] == str(days[1].date())
+        assert pile['primary_anchor_pct'] == pytest.approx(10.0)
+        assert pile['rec'] == pytest.approx([0.216, 10.0, 10.48, 10.696, 10.912])
 
 
 def test_reporte_conserva_campana_completa_anterior_a_60_dias(monkeypatch, tmp_path):

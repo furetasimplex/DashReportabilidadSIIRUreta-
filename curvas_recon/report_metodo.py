@@ -92,6 +92,132 @@ def historical_net_increment(q_m3h, cu_drena_gl, cu_riego_gl):
     return result
 
 
+def _campaign_recovery_points(label):
+    """Load primary measured recovery curves, grouped into their cycles."""
+    from .pad_data import load_oxido, load_sulfuro
+    from .pad_cycles import split_into_cycles
+
+    data = load_oxido() if label == 'OXIDOS' else load_sulfuro()
+    global_last = max((max(row.get('dates') or []) for row in data.values()
+                       if row.get('dates')), default=None)
+    return {
+        int(num): split_into_cycles(row.get('dates') or [], row.get('values') or [], global_last)
+        for num, row in data.items()
+    }
+
+
+def _primary_points_for_campaign(cycles, campaign_start, before):
+    """All primary points in the active irrigation campaign before first Case.
+
+    Source cycle splitting can create several segments when a measurement gap
+    exceeds seven days; that is not by itself evidence of a new campaign.
+    The operational irrigation start bounds the eligible segments.
+    """
+    lo, hi = pd.Timestamp(campaign_start).normalize(), pd.Timestamp(before).normalize()
+    points = {}
+    for cycle in cycles or []:
+        for day, pct in zip(cycle.get('dates') or [], cycle.get('values') or []):
+            day = pd.Timestamp(day).normalize()
+            if not lo <= day < hi:
+                continue
+            try:
+                value = float(pct)
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(value) and 0 <= value <= 200:
+                points[day] = value
+    return sorted(points.items())
+
+
+def _campaign_cu_daily(pad_id, campaigns, end):
+    """Daily Cu fines by campaign, used when measured points predate stack end."""
+    if not campaigns:
+        return {}
+    params = {'hasta': pd.Timestamp(end).normalize() + pd.Timedelta(days=1)}
+    selects = []
+    for i, (num, campaign) in enumerate(campaigns):
+        params.update({f'pad{i}': int(pad_id), f'num{i}': int(num), f'camp{i}': int(campaign)})
+        selects.append(f'SELECT :pad{i} AS pad_id, :num{i} AS parcela, :camp{i} AS campana')
+    with connect() as cn:
+        rows = cn.execute(text(f'''
+            WITH campaigns AS ({' UNION ALL '.join(selects)}), daily AS (
+                SELECT c.parcela, c.campana, CAST(m.Fecha AS DATE) AS fecha,
+                       SUM(m.Finos_cut) AS cu_dia
+                FROM {SCHEMA}.modulos_turnos AS m
+                JOIN campaigns AS c
+                  ON c.pad_id = m.pad_id
+                 AND c.parcela = TRY_CAST(m.Parcela AS INT)
+                 AND c.campana = m.Campana
+                WHERE m.Fecha < :hasta
+                GROUP BY c.parcela, c.campana, CAST(m.Fecha AS DATE)
+            )
+            SELECT parcela, campana, fecha, cu_dia
+            FROM daily ORDER BY parcela, campana, fecha
+        '''), params).fetchall()
+    grouped = {}
+    for num, campaign, day, cu in rows:
+        grouped.setdefault(int(num), []).append((pd.Timestamp(day).normalize(), float(cu or 0.0)))
+    out = {}
+    for num, points in grouped.items():
+        points.sort(key=lambda row: row[0])
+        out[num] = pd.Series(np.cumsum([cu for _, cu in points]),
+                              index=pd.DatetimeIndex([day for day, _ in points]))
+    return out
+
+
+def _apply_primary_points(curve, increments, i0, points, stack_cu, fin_cu, stack_end, pos):
+    """Rebase measured points and following gaps in one cumulative pass."""
+    anchors = {}
+    for day, pct in points:
+        normalized_day = pd.Timestamp(day).normalize()
+        idx = pos.get(normalized_day)
+        if idx is None or idx < i0:
+            continue
+        if normalized_day >= pd.Timestamp(stack_end).normalize():
+            denominator = fin_cu
+        elif stack_cu is not None:
+            denominator = stack_cu.asof(normalized_day)
+        else:
+            denominator = None
+        if denominator is None or not np.isfinite(float(denominator)) or denominator <= 0:
+            continue
+        anchors[idx] = (normalized_day, float(pct), float(denominator),
+                        float(pct) * float(denominator) / 100.0)
+    if not anchors:
+        return None
+    first_applied, applied, cumulative = None, None, None
+    for idx in range(i0, i0 + len(curve)):
+        anchor = anchors.get(idx)
+        if anchor is not None:
+            cumulative = anchor[3]
+            applied = anchor[:3]
+            if first_applied is None:
+                first_applied = applied
+        elif cumulative is not None:
+            cumulative += float(increments[idx])
+        if cumulative is not None:
+            curve[idx - i0] = cumulative
+    return {'first': first_applied, 'last': applied}
+
+
+def _recovery_curve_for_display(rec, anchor_date, cycle_start):
+    """Hide proxy-only history before the first measured point in this cycle."""
+    values = [float(value) for value in rec]
+    if anchor_date is None:
+        return values
+    offset = (pd.Timestamp(anchor_date).normalize() -
+              pd.Timestamp(cycle_start).normalize()).days
+    for i in range(max(0, min(offset, len(values)))):
+        values[i] = None
+    return values
+
+
+def _finite_recovery_max(values):
+    finite = [float(value) for value in values
+              if value is not None and np.isfinite(float(value))]
+    return max(finite) if finite else None
+
+
 # ── paso 1: curvas por pila ─────────────────────────────────────────────────
 
 def inicio_ciclo(serie, f0, f1):
@@ -180,11 +306,13 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                   verbose=True):
     """Curvas de recuperacion por pila, medidas y reconciliadas.
 
-    Dentro de las ventanas con ancla de `runs` manda el Q y el Cu que
-    reconcilio el motor; fuera de ellas van las leyes medidas de la DB con el
-    Fdrenaje base (`FDRENA_MAX`), porque la DB no tiene caudal de drenaje por
-    pila. `end` estira las curvas mas alla del ultimo caso (default: el fin
-    del caso mas nuevo)."""
+    Cada ciclo comienza en la lectura primaria neta de recuperacion mas
+    reciente anterior al primer caso de esa campana. Los incrementos proxy de
+    la DB rellenan los huecos despues de esa lectura; los dias anteriores se
+    conservan para produccion, pero se ocultan en las curvas y en su maximo.
+    Dentro de las ventanas con ancla de `runs` manda el Q y el Cu reconciliado
+    por el motor. `end` estira las curvas mas alla del ultimo caso (default:
+    el fin del caso mas nuevo)."""
     casos = sorted(runs)
     if not casos:
         raise ValueError('construir_doc necesita al menos una corrida')
@@ -251,13 +379,27 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
 
         # extraccion reconciliada dia a dia, dentro de las ventanas con ancla
         rec_ext = {}
+        first_case_by_pile = {}
         for cid in casos:
             res = (runs[cid]['pads'].get(label) or {}).get('res')
             if not res:
                 continue
+            ws = pd.Timestamp(runs[cid]['ws']).normalize()
+            we = pd.Timestamp(runs[cid]['we']).normalize()
             for pl in res['piles']:
                 if pl.get('label', label) != label:
                     continue
+                raw_num = pl.get('parcela', pl.get('p'))
+                try:
+                    num = int(str(raw_num).strip().upper().removeprefix('P'))
+                except (TypeError, ValueError):
+                    num = None
+                p_name = f'P{num:02d}' if num is not None else None
+                if p_name in info and we >= info[p_name]['ini'] and ws <= END:
+                    first_day = max(ws, info[p_name]['ini'])
+                    if first_day <= we:
+                        first_case_by_pile[p_name] = min(
+                            first_day, first_case_by_pile.get(p_name, first_day))
                 for d in pl['daily']:
                     if day_caso.get(d['date']) != cid:
                         continue
@@ -265,6 +407,21 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                     if fp is None or fr is None:
                         continue
                     rec_ext[(pl['parcela'], d['date'])] = (fp - fr) * K_F
+
+        recovery_cycles = _campaign_recovery_points(label)
+        primary_points = {}
+        for p, v in info.items():
+            first_day = first_case_by_pile.get(p)
+            if first_day is not None:
+                primary_points[p] = _primary_points_for_campaign(
+                    recovery_cycles.get(v['num']), v['ini'], first_day)
+        still_stacking = [
+            (v['num'], v['camp'])
+            for p, v in info.items()
+            if primary_points.get(p)
+            and v['f1'] > primary_points[p][0][0]
+        ]
+        stack_cu_daily = _campaign_cu_daily(pid, still_stacking, END)
 
         cal = pd.date_range(start, END, freq='D')
         q_all = riego.reindex(cal).fillna(0.0) if not riego.empty else pd.DataFrame(index=cal)
@@ -300,6 +457,17 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
 
             med = np.cumsum(e_med[i0:])
             rec = np.cumsum(e_rec[i0:])
+            measured_anchor = None
+            if primary_points.get(p) and first_case_by_pile.get(p) is not None:
+                measured_anchor = _apply_primary_points(
+                    med, e_med, i0, primary_points[p], stack_cu_daily.get(v['num']),
+                    v['fin'], v['f1'], pos)
+                # The same measured baseline feeds the reconciled curve. All
+                # Case increments are after its last eligible measurement.
+                rec = np.cumsum(e_rec[i0:])
+                _apply_primary_points(
+                    rec, e_rec, i0, primary_points[p], stack_cu_daily.get(v['num']),
+                    v['fin'], v['f1'], pos)
             cov = ((q > 0) & ~np.isnan(cu_p)).astype(int)[i0:]
             rie = (q > 0).astype(int)[i0:]
             vol = float(q[i0:].sum()) * 24.0   # load_riego entrega m3/h
@@ -314,6 +482,8 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                 p=p, num=v['num'], campana=v['camp'],
                 ini=str(v['ini'].date()), apilado_ini=str(v['f0'].date()),
                 apilado_fin=str(v['f1'].date()), n=int(med.size),
+                primary_anchor_date=(str(measured_anchor['last'][0].date()) if measured_anchor else None),
+                primary_anchor_pct=(round(measured_anchor['last'][1], 6) if measured_anchor else None),
                 apilado=round(v['fin'], 3), tms=round(v['tms'], 1),
                 ley=(round(v['ley'], 4) if v['ley'] else None),
                 vol_riego=round(vol, 1),
@@ -334,6 +504,8 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                                for x in pl.get('curva', [])] if misma else []),
                 med=[round(float(x), 3) for x in med],
                 rec=[round(float(x), 3) for x in rec],
+                rec_curve=_recovery_curve_for_display(
+                    rec, (primary_points[p][0][0] if primary_points.get(p) else None), v['ini']),
                 cov=[int(x) for x in cov]))
 
         doc['pads'][label] = dict(pilas=pilas, desde=str(start.date()))
@@ -374,7 +546,8 @@ def hoja_pad(doc, label):
         recup = (ap * rt / 100.0) if rt else None
         M.at['Campana', c] = q['campana']
         M.at['Ciclos', c] = q['n']
-        M.at['Recuperacion max.', c] = max(q['rec']) * 100.0 / ap if ap and q['rec'] else None
+        rec_max = _finite_recovery_max(q.get('rec_curve', q['rec']))
+        M.at['Recuperacion max.', c] = rec_max * 100.0 / ap if ap and rec_max is not None else None
         M.at['Aporte Parcelas', c] = q['t_rec']
         M.at['Apilado tmf', c] = ap
         M.at['Rec termino ciclo', c] = rt
@@ -383,8 +556,8 @@ def hoja_pad(doc, label):
         M.at['', c] = q['num']
         if ap:
             k = 100.0 / ap
-            for i, v in enumerate(q['rec'], start=1):
-                M.at[str(i), c] = round(v * k, 6)
+            for i, v in enumerate(q.get('rec_curve', q['rec']), start=1):
+                M.at[str(i), c] = round(v * k, 6) if v is not None else None
     return M
 
 
@@ -401,7 +574,8 @@ def _escribir_hoja_pad(ws, doc, label):
         rt = q['planta_rec_termino']
         recup = ap * rt / 100.0 if rt is not None else None
         aporte = round(q['rec'][-1], 3) if q['rec'] else q['t_rec']
-        rec_max = max(q['rec']) * 100.0 / ap if ap and q['rec'] else None
+        rec_value = _finite_recovery_max(q.get('rec_curve', q['rec']))
+        rec_max = rec_value * 100.0 / ap if ap and rec_value is not None else None
         valores = [q['campana'], q['n'], rec_max, aporte, ap, rt,
                    round(recup, 3) if recup is not None else None,
                    round(recup - aporte, 3) if recup is not None else None]
@@ -413,8 +587,9 @@ def _escribir_hoja_pad(ws, doc, label):
             ws.cell(row=10, column=col, value=q['num'])
         if ap:
             curve_row = 10 if label == 'OXIDOS' else 11
-            for i, value in enumerate(q['rec'], start=curve_row):
-                ws.cell(row=i, column=col, value=round(value * 100.0 / ap, 6))
+            for i, value in enumerate(q.get('rec_curve', q['rec']), start=curve_row):
+                ws.cell(row=i, column=col, value=(round(value * 100.0 / ap, 6)
+                                                        if value is not None else None))
 
     if label == 'OXIDOS':
         for i in range(max((q['n'] for q in pilas), default=0)):
@@ -574,7 +749,7 @@ def graficos(w, doc, label):
     ws.cell(row=1, column=COL_T, value='dia')
     for j, q in enumerate(P):
         ws.cell(row=1, column=COL_T + 1 + j, value=q['p'])
-        for i, v in enumerate(q['rec']):
+        for i, v in enumerate(q.get('rec_curve', q['rec'])):
             ws.cell(row=2 + i, column=COL_T + 1 + j, value=v)
     for i in range(nmax):
         ws.cell(row=2 + i, column=COL_T, value=i + 1)
@@ -620,6 +795,7 @@ def notas(doc):
         ('Inicio de ciclo', 'primer dia con riego > 0 despues de terminado el apilado de esa '
                             'campana. Reproduce exacto el Ciclos de planta en las pilas de un '
                             'solo bloque de riego.'),
+        ('Recuperacion primaria', 'La curva de Recuperaciones_pad ya es recuperacion neta en porcentaje: se usa como ancla antes del primer caso de la campana y no se vuelve a restar el Cu de riego. Entre lecturas primarias, los incrementos proxy rellenan los huecos. El prefijo anterior a la primera lectura se conserva en toneladas para el total operativo, pero no se presenta como curva medida ni fija Recuperacion max.'),
         ('Extraccion diaria', 'ext [t Cu/dia] = (Q_dren * Cu_PLS - Q_riego * Cu_refino) * 0,024. '
                               'El 0,024 es solo conversion de unidades: Q en m3/h por 24 h/dia '
                               'por 1000 L/m3 dividido por 1e6 g/t. Dentro de las ventanas con '

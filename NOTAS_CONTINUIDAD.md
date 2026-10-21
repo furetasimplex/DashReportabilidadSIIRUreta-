@@ -401,3 +401,14 @@ only47+5WITH, sin persistencia/SP. Evidencia auditorias/cierre_transferencias_20
 Para proceso ya iniciado: reiniciar servidor y recalcular; no se reinició desde
 el agente. Sin commit/push. No confundir40.502s del diagnóstico completo sin
 caché+reporte con tiempo UI Calcular.
+
+## 2026-10-21 - Recuperaciones oficiales y saldo historico del reporte
+Por instruccion del usuario se cargaron1181 filas faltantes de todas las pilas
+OX/SU disponibles en oficial, rango2026-01-01..2026-10-01 inclusivo.
+Transaccion confirmada con verificacion1181/1181; no se reemplazaron555
+valores validos diferentes ni se cargaron blancos/errores de formula.
+Campanias reales id11=496,id4=93,id10=592. Evidencia ignorada porGit:
+auditorias/recuperaciones_oficiales_20261021/{summary,apply_audit}.json.
+Reporte usa recuperacion primaria preCaso por campania y mantiene netos
+reconciliados diarios; corrige prefijo reconstruido inflado, no escala aloficial.
+167pruebas pasan17.09s. MotorF25/F29 sin cambios. Sin commit/push de estefix.
