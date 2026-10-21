@@ -338,3 +338,21 @@ Se probaron Caso8/run47 (22–31 agosto) y Caso7/run50 (15–21 agosto), usando 
 
 ## Rendimiento Reconstitución Caso8 — 13/10/2026
 Perfil online de analyze_db para Caso8/run47/22–31 agosto: antes 8.546/14.398 s (ticks 7.120/13.007 s, fetch incluido); después 0.274/0.266 s. Caso sin masa publicada, por lo tanto cálculo y gráfico no se alcanzan. Ahora masa primero, sin cobertura global en modoCaso, sin apilado/ticks cuando masa vacía, y mensaje específico MissingCaseMassError. Cobertura del Caso con masa se deriva de frames observados; la ruta sinCaso mantiene clipping previo. Cinco SELECTs de datos pasan a uno para caso vacío. No son tiempos totales de UI. Cambios aplicados en engine/db_source/panel/test_casos; 66 tests offline pasan y main.py intacto. Evidencia: docs/diagnosticos/rendimiento_reconstitucion_caso8_20261013/PERFIL_CASO8.md y JSONs. Sin escriturasDB, SP, XLSX, commits o push.
+
+## Curvas: integración y reporte — 20/10/2026
+Se separó el contrato de flujos de los modelos 120 y 125, validando código, versión y cantidad. El catálogo oficial se consulta sin caché; las anclas se identifican por run. La descarga valida Caso/run/ventana/modelo para rechazar resultados desactualizados.
+SQL y caché respetan el rango solicitado. Los 60 días corresponden al margen previo de química, nunca al límite de la campaña. El reporte conserva la historia desde el inicio de campaña, acota apilado al corte y reutiliza la lectura de riego. Se probó una campaña de más de 1000 días. Excel de planta opcional, descarga repetible durante TTL y limpieza de temporales incluso al fallar el envío.
+115 pruebas pasaron. La optimización reduce lecturas y caché; no elimina el costo del motor. El reporte consulta fuentes históricas al exportar: no congela todas en una instantánea. No se cambió la rampa ni se implementó un nuevo balance de inventario. main.py, recon_engine.py y tabs/tab_curvas.py se preservaron. Sin escrituras DB ni SP, sin commit ni push. Los payloads internos de DB no se copiaron a estas notas ni al directorio de diagnósticos.
+
+## Reporte de curvas y hoja Prod — 20/10/2026
+Se adaptó el escritor al formato de recuperaciones de la referencia del 12 de octubre: cabeceras distintas por pad (OX curva desde fila 10; SU desde fila 11), Arial y colores de referencia, cuatro hojas existentes más Prod. Prod contiene Cu neto diario reconstruido por pila, con fechas desde el inicio de su campaña; no representa cátodos. Las sumas diarias coinciden con Aporte Parcelas. Recuperación máxima usa el máximo de la curva y el aporte conserva el acumulado terminal. Lector reconoce parcelas por identificador, excluye encabezados de las curvas y conserva huecos internos. Gráficos separados para evitar superposición.
+Indicación explícita del usuario: algunas curvas de la referencia suman varias pilas; esa agrupación se utiliza SOLO para la comparación externa, nunca como regla del reporte. Reporte/Prod y sus series continúan individuales por pila. Los archivos de contraste y la salida Excel quedan en la carpeta de trabajo; no se copian payloads internos DB al repositorio.
+Validación: 119 pruebas offline pasaron y se verificaron las cinco hojas, cuatro gráficos, referencias de series y sumas de Prod con el escritor real. Prueba de motor online fue SELECT-only; no se ejecutó callback de persistencia ni SP. main.py no se modificó. Sin commit ni push.
+
+## Casos del PAD - 2026-10-20
+
+`load_casos()` ya no acota IDs: conserva la oficializacion y el run `success`,
+la union al modelo y ordena por `fecha_inicio DESC, id DESC`. El dropdown y el
+guardado de calculo ya no reimponen un rango de IDs. Asi, Casos futuros con run
+oficial se incluyen y el mas reciente por fecha queda primero. Prueba offline
+captura SQL sin conexion y verifica filtro, orden e identidad de modelo.

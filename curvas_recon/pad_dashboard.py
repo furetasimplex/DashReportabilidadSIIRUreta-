@@ -14,6 +14,7 @@ import tempfile
 import time
 import uuid
 import threading
+from collections import OrderedDict
 from functools import wraps
 from datetime import datetime, timedelta
 
@@ -40,11 +41,13 @@ from .recon_engine import (
     load_drena_cu, load_produccion, compute_wz_week, material_cutoff,
     reconcile_week_flowsheet_dash, N_TRANSIENT_DEFAULT, clear_curve_cache,
     active_pilas_by_riego, resolve_window, clear_actividad_cache,
+    _fechas_actividad,
 )
+from .input_preparation import prepare_recon_inputs
 from .db_pipeline import (
     connect, get_material_id, load_pila_daily_history, load_pila_history, load_week_totals, save_run,
     sync_all, data_freshness, load_casos, load_caso_anchor,
-    caso_anchor_completo, CASO_ID_MIN, CASO_ID_MAX,
+    caso_anchor_completo,
 )
 # Todo lo que se lee de la DB pasa por un cache local en disco (`local_cache.py`).
 # El boton 'Actualizar datos' lo bota entero para forzar la bajada de nuevo.
@@ -90,7 +93,7 @@ def _recon_raw_path(token):
 
 
 def _clean_recon_raw_cache():
-    """Borra payloads vencidos; una descarga exitosa borra el suyo al instante."""
+    """Borra payloads vencidos; payloads descargados siguen disponibles hasta vencer."""
     if not os.path.isdir(_RECON_RAW_DIR):
         return
     cutoff = time.time() - _RECON_RAW_TTL_SECONDS
@@ -172,6 +175,11 @@ RECON_PRODUCCION = pd.Series(dtype=float)
 RAW_CURVES_BY_MATERIAL = {'OXIDOS': {}, 'SULFUROS': {}}
 _ACTIVE_OX, _ACTIVE_SU = set(), set()
 _DATA_LOCK = threading.RLock()
+# Figuras por pila aisladas por token de corrida y ventana oficial.
+_PILA_FIGURE_CACHE = OrderedDict()
+_PILA_FIGURE_CACHE_LOCK = threading.RLock()
+_PILA_FIGURE_CACHE_TTL = 180
+_PILA_FIGURE_CACHE_MAX = 96
 
 
 def _callback(*args, **kwargs):
@@ -221,16 +229,13 @@ def _view_data(cycles_map: dict, campana_idx: int) -> dict:
 
 
 def _load_caso_options():
-    """Casos oficiales 1..8, opciones del dropdown e id por defecto."""
+    """Casos oficiales disponibles, ordenados por fecha descendente."""
     try:
         casos = load_casos()
     except Exception:
         raise RuntimeError('No se pudo cargar la lista de Casos oficiales.') from None
-    # Defensa adicional frente a implementaciones antiguas de ``load_casos``
-    # o datos inyectados en pruebas: la UI nunca ofrece casos fuera del
-    # alcance ni casos sin oficializacion.
-    casos = [c for c in casos
-             if CASO_ID_MIN <= c['id'] <= CASO_ID_MAX and c.get('run_id')]
+    # Solo se ofrecen casos con run oficial exitoso.
+    casos = [c for c in casos if c.get('run_id')]
     options = []
     for c in casos:
         dias = (c['fecha_fin'] - c['fecha_inicio']).days + 1
@@ -282,6 +287,8 @@ def refresh_data_caches(bajar_de_nuevo=False):
     global CASOS, CASO_OPTIONS, DEFAULT_CASO_ID
     global _ACTIVE_OX, _ACTIVE_SU
 
+    with _PILA_FIGURE_CACHE_LOCK:
+        _PILA_FIGURE_CACHE.clear()
     clear_curve_cache()
     # Historico de riego/drenaje con que se detectan las pilas que arrancan:
     # tampoco expira solo, hay que botarlo junto con el resto.
@@ -497,7 +504,8 @@ def _build_kpis(combined: dict, totals: dict = None):
     ], className='kpi-grid')
 
 
-def _week_pila_metrics(conn, label, p, week_start, mat, wz_p, week_end=None):
+def _week_pila_metrics(conn, label, p, week_start, mat, wz_p, week_end=None,
+                       daily_override=None):
     """Metricas medido/reconciliado de UNA pila para la semana reconciliada
     ACTUAL (usadas por el bar chart de subtabs): masa Cu fino (t), caudal
     TOTAL semanal (m3, suma de q*24h) y Cu riego/PLS PROMEDIO semanal (g/L)
@@ -547,9 +555,17 @@ def _week_pila_metrics(conn, label, p, week_start, mat, wz_p, week_end=None):
     if wz_complete and W is not None and Z is not None:
         mass_med = FDRENA_MAX * W - Z
 
-    material_id = get_material_id(conn, label)
     daily = []
-    for row in load_pila_daily_history(conn, material_id, p):
+    if daily_override is None:
+        material_id = get_material_id(conn, label)
+        daily_source = load_pila_daily_history(conn, material_id, p)
+    else:
+        # El callback de calculo acaba de persistir estas mismas filas y
+        # `_save_recon_raw` conserva el resultado diario bajo raw_token. Usar
+        # esa fuente evita releer/copiar el historial completo del pad por
+        # cada pila al construir la barra.
+        daily_source = daily_override
+    for row in daily_source:
         if _as_date(pd.Timestamp(row['semana_lunes'])) != _as_date(ws):
             continue
         # La tabla retiene la corrida más reciente por lunes, que puede ser
@@ -569,6 +585,8 @@ def _week_pila_metrics(conn, label, p, week_start, mat, wz_p, week_end=None):
             for r in daily if r['fdrena'] is not None
         )
     else:
+        if daily_override is not None:
+            material_id = get_material_id(conn, label)
         hist_row = next((r for r in load_pila_history(conn, material_id, p)
                           if _as_date(pd.Timestamp(r['semana_lunes'])) == _as_date(ws)), None)
         if hist_row:
@@ -675,7 +693,59 @@ def _build_bar(data: dict, tab_value: str) -> go.Figure:
     labels_x, y_med, y_rec, y_med2, y_rec2 = [], [], [], [], []
     ws, we, _n_days = _store_window(data)
 
-    conn = connect()
+    # El token identifica el resultado crudo generado por este mismo click.
+    # Solo se usa si Caso y ventana coinciden; para Stores antiguos, expirados
+    # o incompletos se conserva el camino historico de DB como fallback.
+    daily_by_pile = {}
+    raw, _ = _load_recon_raw(data.get('raw_token'), data.get('caso_id'))
+    raw_matches = False
+    if raw:
+        raw_case = raw.get('caso')
+        try:
+            raw_matches = (
+                isinstance(raw_case, dict)
+                and data.get('caso_run_id') is not None
+                and raw_case.get('run_id') == data.get('caso_run_id')
+                and _as_date(pd.Timestamp(raw.get('ws'))) == _as_date(ws)
+                and _as_date(pd.Timestamp(raw.get('we'))) == _as_date(we)
+            )
+        except (TypeError, ValueError, OverflowError):
+            raw_matches = False
+    if raw_matches:
+        raw_res = raw.get('res')
+        raw_daily = raw_res.get('daily') if isinstance(raw_res, dict) else None
+        if isinstance(raw_daily, list):
+            parsed = {}
+            valid = True
+            for row in raw_daily:
+                try:
+                    date = _as_date(pd.Timestamp(row['date']))
+                    offset = (date - _as_date(ws)).days
+                    if not 0 <= offset < _n_days:
+                        valid = False
+                        break
+                    q = float(row['q_riego_final'] or 0.0)
+                    q_pls = float(row['q_pls_final'] or 0.0)
+                    parsed.setdefault((row['label'], row['parcela']), []).append({
+                        'semana_lunes': ws, 'dia_offset': offset,
+                        'fdrena': q_pls / q if q else FDRENA_MAX,
+                        'q': q, 'q_pls': q_pls,
+                        'cu_drena': row.get('cu_pls_recon'),
+                        'cu_riego': row.get('cu_riego_recon'),
+                    })
+                except (KeyError, TypeError, ValueError):
+                    valid = False
+                    break
+            if valid:
+                daily_by_pile = parsed
+
+    needs_db_history = any(
+        not daily_by_pile.get((label, p))
+        for label in ('OXIDOS', 'SULFUROS')
+        for p in data.get(label, {}).get('active', [])
+    )
+
+    conn = connect() if needs_db_history else None
     try:
         for label, short in (('OXIDOS', 'Ox'), ('SULFUROS', 'Su')):
             sub = data.get(label, {})
@@ -684,7 +754,10 @@ def _build_bar(data: dict, tab_value: str) -> go.Figure:
             wz = sub.get('wz', {})
             for p in active:
                 labels_x.append(f'{short}-{p}')
-                m = _week_pila_metrics(conn, label, p, ws, mat, wz.get(p, {}), week_end=we)
+                m = _week_pila_metrics(
+                    conn, label, p, ws, mat, wz.get(p, {}), week_end=we,
+                    daily_override=daily_by_pile.get((label, p)),
+                )
                 if tab_value == 'tab-flujo':
                     y_med.append(m['q_total_med'])
                     y_rec.append(m['q_total_rec'])
@@ -697,7 +770,8 @@ def _build_bar(data: dict, tab_value: str) -> go.Figure:
                     y_med.append(m['mass_med'])
                     y_rec.append(m['mass_rec'])
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
     fig = go.Figure()
     if tab_value == 'tab-cus':
@@ -1240,61 +1314,217 @@ def recovery_series(label, num, week_start=None, week_end=None):
     return out
 
 
-def _build_recovery_chart(selected_pila, week_start=None, week_end=None) -> go.Figure:
-    """Curva de recuperacion medida (SOLO ciclo activo, mismo criterio que la
-    pestana Curvas) vs. reconciliada (recalculada dia a dia, acotada a la
-    ventana del Caso, repartiendo el delta de planta proporcional al aporte
-    individual de Cu Fino de esta pila — ver `recovery_series` y
-    `curve_recalc.build_extra_lookup`)."""
+def _reconstructed_campaign_series(label, num, week_start, week_end, raw=None):
+    """Recuperación histórica neta; gaps permanecen como None.
+
+    Fuera del Caso comparte con report_metodo la base FDRENA_MAX=0.95; dentro
+    del Caso usa únicamente los flujos diarios de la corrida validada.
+    """
+    empty = {'xs': [], 'ys': [], 'sources': [], 'cu_tf': None, 'capped': False}
+    p = f'P{num:02d}'
+    info = WIP_META.get(label, {}).get(p) or {}
+    cu_tf = info.get('CuTf')
+    cu_tf_t = cu_tf_toneladas(cu_tf)
+    try:
+        ws, we = pd.Timestamp(week_start).normalize(), pd.Timestamp(week_end).normalize()
+    except (TypeError, ValueError):
+        return empty
+    if cu_tf_t is None or pd.isna(ws) or pd.isna(we) or we < ws:
+        return empty
+    measured = _measured_cycles(label, num)
+    try:
+        start = pd.Timestamp(info.get('ini_aporte'))
+    except (TypeError, ValueError):
+        start = pd.NaT
+    if pd.isna(start):
+        # Sin inicio de campaña válido no atribuimos lecturas viejas a WIP.
+        # Solo se permite extender desde el tramo medido más reciente.
+        if not measured or not measured[-1].get('dates'):
+            return empty
+        start = pd.Timestamp(measured[-1]['dates'][0]).normalize()
+    else:
+        start = start.normalize()
+    anchors = []
+    for cycle in measured:
+        for day, pct in zip(cycle.get('dates') or [], cycle.get('values') or []):
+            day = pd.Timestamp(day).normalize()
+            try:
+                pct = float(pct)
+            except (TypeError, ValueError):
+                continue
+            if start <= day < ws and np.isfinite(pct):
+                anchors.append((day, pct))
+    if anchors:
+        anchor, pct = max(anchors, key=lambda x: x[0])
+        cum_cu = pct * cu_tf_t / 100.0
+        first = anchor + pd.Timedelta(days=1)
+        xs, ys, sources = [anchor], [pct], ['medido (ancla)']
+    else:
+        first, cum_cu = start, 0.0
+        xs, ys, sources = [], [], []
+    end = min(we, pd.Timestamp(JOINT_DATA_CUTOFF).normalize()) if JOINT_DATA_CUTOFF is not None else we
+    if end < first:
+        return empty
+    mat = _load_material_window(label, first, end)
+    riego, cu_riego, drena_cu = mat['riego'], mat['cu_riego'], mat['drena_cu']
+    reconciled = {}
+    if isinstance(raw, dict):
+        for pile in (raw.get('res') or {}).get('piles', []):
+            parcela = pile.get('parcela', pile.get('p'))
+            if isinstance(parcela, str):
+                parcela = parcela.strip().upper().removeprefix('P')
+            try:
+                parcela_num = int(parcela)
+            except (TypeError, ValueError):
+                continue
+            if pile.get('label', label) != label or parcela_num != num:
+                continue
+            for row in pile.get('daily', []):
+                try:
+                    d = pd.Timestamp(row['date']).normalize()
+                    fp, fr = row.get('fino_pls_final'), row.get('fino_riego_final')
+                    if fp is not None and fr is not None and np.isfinite(float(fp)) and np.isfinite(float(fr)):
+                        reconciled[d] = (float(fp) - float(fr)) * 0.024
+                except (KeyError, TypeError, ValueError):
+                    continue
+    from . import report_metodo
+    d = first
+    while d <= end:
+        source, inc = 'Reconstruido · FDRENA_MAX 0,95 (proxy)', None
+        if ws <= d <= we and isinstance(raw, dict):
+            source, inc = 'Reconciliado del Caso', reconciled.get(d)
+        elif d in riego.index and p in riego.columns:
+            q = riego.at[d, p]
+            cd = drena_cu.at[d, p] if p in drena_cu.columns and d in drena_cu.index else None
+            cr = cu_riego.at[d] if d in cu_riego.index else None
+            inc = report_metodo.net_recovery_increment(q, cd, cr)
+        if inc is not None and np.isfinite(inc):
+            cum_cu += float(inc)
+            value = cum_cu / cu_tf_t * 100.0
+        else:
+            value = None
+        xs.append(d)
+        ys.append(value)
+        sources.append(source)
+        d += pd.Timedelta(days=1)
+    valid = [v for v in ys if v is not None and np.isfinite(v)]
+    return dict(xs=xs, ys=ys, sources=sources, cu_tf=cu_tf,
+                capped=bool(valid) and max(valid) >= 100.0)
+
+
+def _measured_cycles(label, num):
+    cycles = (CYCLES_OX if label == 'OXIDOS' else CYCLES_SU).get(num) or []
+    return [cycle for cycle in cycles if cycle.get('dates')]
+
+
+def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=None,
+                          caso_id=None) -> go.Figure:
+    """Medido por tramos y serie reconstruida/reconciliada del Caso."""
     if not selected_pila:
         return empty_figure()
     pad_id, num_str = selected_pila.split('-P')
     num = int(num_str)
-    p = f'P{num:02d}'
     label = _PAD_TO_LABEL.get(pad_id)
     if label is None:
         return empty_figure()
-
-    rs = recovery_series(label, num, week_start, week_end)
-    cyc = rs['cyc']
-    if not cyc.get('dates'):
+    measured = _measured_cycles(label, num)
+    raw = None
+    if isinstance(data, dict) and data.get('raw_token'):
+        try:
+            raw, _ = _load_recon_raw(data.get('raw_token'), caso_id or data.get('caso_id'))
+            if (not raw or raw.get('caso', {}).get('run_id') != data.get('caso_run_id')
+                    or pd.Timestamp(raw.get('ws')).normalize() != pd.Timestamp(week_start).normalize()
+                    or pd.Timestamp(raw.get('we')).normalize() != pd.Timestamp(week_end).normalize()):
+                raw = None
+        except Exception:
+            raw = None
+    rs = _reconstructed_campaign_series(label, num, week_start, week_end, raw=raw)
+    if not measured and not rs['xs']:
         return empty_figure()
-
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=cyc['dates'], y=cyc['values'], mode='lines',
-                              name='Recuperación (medido)', line=dict(color='#9CA3AF', width=1.5)))
-
+    for idx, campaign in enumerate(measured, start=1):
+        dates, values = campaign['dates'], campaign['values']
+        label_text = 'Medido - tramo %d (%s a %s)' % (
+            idx, pd.Timestamp(dates[0]).strftime('%d/%m/%Y'),
+            pd.Timestamp(dates[-1]).strftime('%d/%m/%Y'))
+        fig.add_trace(go.Scatter(x=dates, y=values, mode='lines', name=label_text,
+                                 line=dict(color='#9CA3AF' if idx == len(measured) else '#C5CBD3',
+                                           width=1.8 if idx == len(measured) else 1.2),
+                                 connectgaps=False))
     if rs['xs']:
-        fig.add_trace(go.Scatter(x=rs['xs'], y=rs['ys'], mode='lines',
-                                  name='Recuperación (reconciliado)',
-                                  line=dict(color='#2a78d6', width=2.5)))
-        # La curva se acota a 100 %. Si toca el tope, el aviso dice por que:
-        # el Cu que los flujos del dia implican supera el Cu fino de la
-        # campana. Es inconsistencia del dato (Cu PLS crudo de hasta 48 g/L
-        # en pilas recien apiladas, o CuTf subestimado), no del ajuste, y
-        # sin el aviso la curva plana en 100 se lee como un error del motor.
+        fig.add_trace(go.Scatter(
+            x=rs['xs'], y=rs['ys'], mode='lines',
+            name='Reconstruido (Fdrena proxy 0,95) / reconciliado',
+            line=dict(color='#2a78d6', width=2.5), connectgaps=False,
+            customdata=rs['sources'],
+            hovertemplate='%{x|%d/%m/%Y}<br>%{y:.2f}%<br>%{customdata}<extra></extra>'))
         if rs['capped']:
-            fig.add_annotation(
-                x=0.5, y=1.0, xref='paper', yref='paper', yanchor='bottom',
-                showarrow=False, font=dict(color='#B45309', size=11),
-                text='⚠ acotada en 100 %: los flujos reconciliados implican '
-                     'más Cu que el CuTf de la campaña')
-
+            fig.add_annotation(x=0.5, y=1.0, xref='paper', yref='paper', yanchor='bottom',
+                               showarrow=False, font=dict(color='#B45309', size=11),
+                               text='La serie supera 100 % segun Cu neto acumulado y CuTf de campana')
     _add_week_zoom_box(fig, week_start, week_end)
-
     fig.update_layout(
-        title=f'{label} — {p}: Recuperación acumulada — medido vs. reconciliado',
+        title=f'{label} - P{num:02d}: Recuperacion acumulada - medido / reconstruido / reconciliado',
         paper_bgcolor=CHART_SURFACE, plot_bgcolor=CHART_SURFACE,
         font=dict(color=CHART_INK_PRIMARY, family='Inter, system-ui, sans-serif'),
-        yaxis_title='Recuperación (%)', legend=dict(bgcolor='rgba(0,0,0,0)'),
-        hovermode='x unified', uirevision='keep',
-        margin=dict(l=50, r=20, t=40, b=40),
-        xaxis=dict(gridcolor='#E5E7EB'), yaxis=dict(gridcolor='#E5E7EB'),
-    )
+        yaxis_title='Recuperacion (%)', legend=dict(bgcolor='rgba(0,0,0,0)'),
+        hovermode='x unified', uirevision='keep', margin=dict(l=50, r=20, t=40, b=40),
+        xaxis=dict(gridcolor='#E5E7EB'), yaxis=dict(gridcolor='#E5E7EB'))
     return fig
 
 
-# ── Layout ────────────────────────────────────────────────────────────────────────
+def _pila_chart_cache_key(data, selected_pila, caso_id, week_start, week_end):
+    if not selected_pila or not _store_matches_case(data, caso_id):
+        return None
+    token = data.get('raw_token')
+    caso = _caso_by_id(caso_id)
+    result_run_id = data.get('caso_run_id')
+    if (not token or not caso or not caso.get('run_id')
+            or result_run_id != caso.get('run_id')):
+        return None
+    pad_id, num_text = selected_pila.split('-P', 1)
+    label = _PAD_TO_LABEL.get(pad_id)
+    if label is None:
+        return None
+    cycles = _measured_cycles(label, int(num_text))
+    cycle_identity = tuple(
+        (str(c['dates'][0]), str(c['dates'][-1]), len(c['dates'])) for c in cycles
+    )
+    ws, we, _ = _store_window(data)
+    return (
+        str(token), int(caso_id), int(result_run_id),
+        str(caso.get('modelo_codigo')), str(caso.get('modelo_version')),
+        int(caso.get('total_flujos') or 0),
+        str(ws.date() if ws is not None else week_start),
+        str(we.date() if we is not None else week_end),
+        selected_pila, cycle_identity,
+    )
+
+
+def _get_cached_pila_figures(key):
+    if key is None:
+        return None
+    now = time.monotonic()
+    with _PILA_FIGURE_CACHE_LOCK:
+        for old_key, (stamp, _) in list(_PILA_FIGURE_CACHE.items()):
+            if now - stamp > _PILA_FIGURE_CACHE_TTL:
+                _PILA_FIGURE_CACHE.pop(old_key, None)
+        item = _PILA_FIGURE_CACHE.get(key)
+        if item is None:
+            return None
+        _PILA_FIGURE_CACHE.move_to_end(key)
+        return item[1]
+
+
+def _cache_pila_figures(key, figures):
+    if key is None:
+        return
+    with _PILA_FIGURE_CACHE_LOCK:
+        _PILA_FIGURE_CACHE[key] = (time.monotonic(), figures)
+        _PILA_FIGURE_CACHE.move_to_end(key)
+        while len(_PILA_FIGURE_CACHE) > _PILA_FIGURE_CACHE_MAX:
+            _PILA_FIGURE_CACHE.popitem(last=False)
+
 
 TAB_STYLE = {
     'padding': '10px 18px', 'fontWeight': '600', 'color': '#6B7280',
@@ -1651,11 +1881,13 @@ def compute_recon(_n_clicks, caso_id):
     redondea a lunes ni se recorta a 7 dias. Sin eso el resultado por pila no
     es comparable con el flowsheet global del Caso, que es justamente para lo
     que sirve el ancla."""
+    profile_total_t0 = time.perf_counter()
     caso = _caso_by_id(caso_id)
-    if (caso is None or not (CASO_ID_MIN <= caso['id'] <= CASO_ID_MAX)
-            or not caso.get('run_id')):
+    if caso is None or not caso.get('run_id'):
         raise dash.exceptions.PreventUpdate
+    phase_t0 = time.perf_counter()
     ensure_full_data()
+    phase_full_data = time.perf_counter() - phase_t0
     ws, week_end, n_days = resolve_window(caso['fecha_inicio'], caso['fecha_fin'])
     # Se reconcilian TODAS las pilas activas, sin filtro de dias activos: el
     # corte transiente/SS ya no lo decide el operador. `active_days` queda solo
@@ -1666,24 +1898,42 @@ def compute_recon(_n_clicks, caso_id):
     solve = reconcile_week_flowsheet_dash
     tag = method
 
-    # Ancla POR PAD (oxidos F39/F48, sulfuros F44/F50+F49). Esta ruta es
-    # exclusivamente oficial: si falta una magnitud no se permite que el
-    # motor mezcle el run con su fallback sintetico.
-    anchor = load_caso_anchor(caso['run_id'])
+    # El significado de los flujos depende del modelo oficial del Caso.
+    phase_t0 = time.perf_counter()
+    anchor = load_caso_anchor(
+        caso['run_id'], caso['modelo_codigo'], caso['modelo_version'],
+        caso['total_flujos'])
     if not caso_anchor_completo(anchor):
         raise RuntimeError(
             f'Caso #{caso["id"]}: el run oficial {caso["run_id"]} no contiene '
             'un ancla completa y positiva para OXIDOS y SULFUROS.')
-    materials = {label: _load_material_window(label, ws, week_end) for label in ('SULFUROS', 'OXIDOS')}
+    phase_anchor = time.perf_counter() - phase_t0
+    phase_t0 = time.perf_counter()
+    labels = ('SULFUROS', 'OXIDOS')
+    metadata = {
+        label: dict(wip=WIP_META[label], rec_curves=REC_META[label][0],
+                    max_rec=REC_META[label][1], ciclo_d=REC_META[label][2])
+        for label in labels
+    }
+    materials, activity_dates = prepare_recon_inputs(
+        labels, ws, week_end, metadata,
+        {'riego': load_riego, 'cu_riego': load_cu_riego, 'drena_cu': load_drena_cu},
+        activity_loader=_fechas_actividad,
+    )
+    phase_materials = time.perf_counter() - phase_t0
 
     conn = connect()
+    phase_t0 = time.perf_counter()
     try:
         joint = solve(ws, materials, RECON_PRODUCCION, conn, active_days=active_days,
                       force_all_active=force_all_active, week_end=week_end,
                       anchor=anchor, caso_id=caso['id'])
     finally:
         conn.close()
+    phase_solve_and_persist = time.perf_counter() - phase_t0
+    phase_t0 = time.perf_counter()
     raw_token = _save_recon_raw(joint.get('res'), caso, ws, week_end)
+    phase_raw = time.perf_counter() - phase_t0
 
     print(f'[{tag}] caso=#{caso["id"]} {caso["nombre"]!r} ventana={ws.date()}..{week_end.date()} '
           f'({n_days} d) run_oficial={caso["run_id"]} ancla={sorted(anchor)} '
@@ -1709,6 +1959,7 @@ def compute_recon(_n_clicks, caso_id):
     if targets:
         print(f'[{tag}] targets sinteticos: cu_riego={targets.get("cu_riego")}')
 
+    phase_t0 = time.perf_counter()
     out = dict(
         week_start=ws.isoformat(), week_end=week_end.isoformat(), n_days=n_days,
         caso_id=caso['id'], caso_nombre=caso['nombre'], caso_run_id=caso['run_id'],
@@ -1729,6 +1980,19 @@ def compute_recon(_n_clicks, caso_id):
         wz_base = compute_wz_week(ws, sub['active'], mat['riego'], mat['cu_riego'], mat['drena_cu'],
                                    week_end=week_end)
         out[label] = _serialize_result(sub, wz_base)
+    phase_store = time.perf_counter() - phase_t0
+    engine_phases = joint.get('_phase_seconds') or {}
+    print(
+        '[RECON_PERF] '
+        f'total={time.perf_counter() - profile_total_t0:.3f}s '
+        f'full_data={phase_full_data:.3f}s anchor={phase_anchor:.3f}s '
+        f'materials={phase_materials:.3f}s '
+        f'activity_prefetched={len(activity_dates)} '
+        f'solve={float(engine_phases.get("solve", 0.0)):.3f}s '
+        f'save_run={float(engine_phases.get("persist", 0.0)):.3f}s '
+        f'solve_plus_persist={phase_solve_and_persist:.3f}s '
+        f'raw_pickle={phase_raw:.3f}s store_serialization={phase_store:.3f}s'
+    )
     return out
 
 
@@ -1838,11 +2102,17 @@ def render_recon_pila_charts(data, selected_pila, caso_id):
     if selected_pila:
         ensure_full_data()
     ws, we, _n = _store_window(data)
-    return (
-        _build_recovery_chart(selected_pila, ws, we),
+    cache_key = _pila_chart_cache_key(data, selected_pila, caso_id, ws, we)
+    cached = _get_cached_pila_figures(cache_key)
+    if cached is not None:
+        return cached
+    figures = (
+        _build_recovery_chart(selected_pila, ws, we, data, caso_id),
         _build_flujo_chart(selected_pila, ws, we),
         _build_pila_chart(selected_pila, ws, we),
     )
+    _cache_pila_figures(cache_key, figures)
+    return figures
 
 
 @_callback(
@@ -1903,62 +2173,93 @@ def enable_report_btn(data, caso_id):
     Output('curvas-recon-week-report-download', 'data'),
     Input('curvas-recon-report-btn', 'n_clicks'),
     State('curvas-recon-store', 'data'),
+    State('curvas-recon-caso', 'value'),
     prevent_initial_call=True,
 )
-def generate_week_report(_n_clicks, data):
+def generate_week_report(_n_clicks, data, selected_case_id):
     """El libro `Reporte_Recuperaciones_Metodo_Reconciliado.xlsx`, armado con
     la corrida que se acaba de reconciliar.
 
     Es el MISMO formato del pipeline (`pipeline/p4_reporte_xlsx.py`): Rec Ox,
-    Rec Sulfuro y las dos hojas de graficos, nada mas. Las hojas Resumen,
+    Rec Sulfuro, las dos hojas de graficos y Prod (Cu neto diario por pila).
+    Las hojas Resumen,
     Comparacion planta y Metodo se sacaron del libro: repetian lo que el
     dashboard ya muestra en pantalla. La curva de cada pila sale de `report_metodo.construir_doc`: Q y Cu
     reconciliados por el motor DENTRO de la ventana del Caso, y leyes medidas
     con el Fdrenaje base fuera de ella, hasta el ultimo dia con datos
     (`JOINT_DATA_CUTOFF`)."""
-    if not data:
+    selected_case = _caso_by_id(selected_case_id)
+    if (not isinstance(data, dict)
+            or not _store_matches_case(data, selected_case_id)
+            or not selected_case
+            or not selected_case.get('run_id')
+            or data.get('caso_run_id') != selected_case.get('run_id')):
         return html.Div('Ejecuta una reconciliación primero.', style={'color': '#B45309'}), None
-    raw, raw_path = _load_recon_raw(data.get('raw_token'), data.get('caso_id'))
+    try:
+        raw, _raw_path = _load_recon_raw(data.get('raw_token'), data.get('caso_id'))
+    except Exception:
+        raw = None
     if not raw:
         return html.Div(
             'La corrida ya no está disponible en este servidor; reconcíliala nuevamente para generar el reporte.',
             style={'color': '#B45309'}), None
-    res, caso, ws, we = raw['res'], raw['caso'], raw['ws'], raw['we']
+    if not isinstance(raw, dict) or any(k not in raw for k in ('res', 'caso', 'ws', 'we')):
+        return html.Div('La corrida ya no está disponible en este servidor; reconcíliala nuevamente para generar el reporte.',
+                        style={'color': '#B45309'}), None
+    try:
+        res, caso = raw['res'], raw['caso']
+        ws, we = pd.Timestamp(raw['ws']), pd.Timestamp(raw['we'])
+        if not isinstance(caso, dict):
+            raise ValueError('Identidad de Caso inválida')
+    except (TypeError, ValueError, KeyError, AttributeError):
+        return html.Div('La identidad de la corrida cambió; vuelve a ejecutar la reconciliación.',
+                        style={'color': '#B45309'}), None
+    try:
+        stored_ws, stored_we, _ = _store_window(data)
+        selected_ws, selected_we, _ = resolve_window(
+            selected_case.get('fecha_inicio'), selected_case.get('fecha_fin'))
+    except (TypeError, ValueError, KeyError, AttributeError, OverflowError):
+        return html.Div(
+            'La identidad de la corrida cambió; vuelve a ejecutar la reconciliación.',
+            style={'color': '#B45309'}), None
+    if (caso.get('run_id') != data.get('caso_run_id')
+            or any(caso.get(key) != selected_case.get(key)
+                   for key in ('modelo_codigo', 'modelo_version', 'total_flujos'))
+            or ws != stored_ws or we != stored_we
+            or ws != selected_ws or we != selected_we):
+        return html.Div(
+            'La identidad de la corrida cambió; vuelve a ejecutar la reconciliación.',
+            style={'color': '#B45309'}), None
     tmp_path = None
     try:
-        from .report_metodo import construir_doc, escribir_libro, XL_PLANTA
-        if not os.path.isfile(XL_PLANTA):
-            return html.Div('El informe requiere el libro de recuperaciones de planta. '
-                            'Configura RECON_PLANTA_XLSX para habilitar la descarga.',
-                            style={'color': '#B45309'}), None
+        from . import report_metodo
         runs = {caso['id']: dict(
             ws=ws, we=we, caso=caso,
             pads={label: {'res': res} for label in ('OXIDOS', 'SULFUROS')},
         )}
-        doc = construir_doc(runs, end=JOINT_DATA_CUTOFF)
+        doc = report_metodo.construir_doc(runs, end=JOINT_DATA_CUTOFF)
         n_pilas = sum(len(v['pilas']) for v in doc['pads'].values())
         if not n_pilas:
             return html.Div('La reconciliación no dejó ninguna pila con curva.',
                              style={'color': '#B45309'}), None
         fd, tmp_path = tempfile.mkstemp(suffix='.xlsx')
         os.close(fd)
-        escribir_libro(doc, tmp_path)
+        report_metodo.escribir_libro(doc, tmp_path)
+        stamp = datetime.now().strftime('%Y%m%d_%H%M')
+        download = dcc.send_file(
+            tmp_path,
+            filename=f'Reporte_Recuperaciones_Metodo_Reconciliado_Caso{caso["id"]}_{stamp}.xlsx')
     except Exception:
+        return html.Div('No se pudo generar el informe. Revisa los datos fuente y, si existe, el libro de planta.',
+                        style={'color': '#DC2626'}), None
+    finally:
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
-        return html.Div('No se pudo generar el informe. Revisa el libro de planta '
-                        'y la conexión de datos.', style={'color': '#DC2626'}), None
-    stamp = datetime.now().strftime('%Y%m%d_%H%M')
-    download = dcc.send_file(
-        tmp_path,
-        filename=f'Reporte_Recuperaciones_Metodo_Reconciliado_Caso{caso["id"]}_{stamp}.xlsx')
-    os.remove(tmp_path)
-    if raw_path and os.path.exists(raw_path):
-        os.remove(raw_path)
+    comparacion = ('con comparación planta' if os.path.isfile(report_metodo.XL_PLANTA)
+                   else 'sin comparación planta')
     return html.Div(
-        f'Reporte generado ({n_pilas} pilas, curva hasta {JOINT_DATA_CUTOFF.date()}).',
+        f'Reporte generado ({n_pilas} pilas, curva hasta {JOINT_DATA_CUTOFF.date()}, {comparacion}).',
         style={'color': '#2E9E5B'}), download
-
 
 def build_layout():
     """Return a lazy section shell, without opening a SQL connection."""

@@ -1,0 +1,899 @@
+{
+  "caso": {
+    "id": 10013,
+    "nombre_caso": "Caso hidrometalurgia oct 2",
+    "fecha_inicio": "2026-10-01",
+    "fecha_fin": "2026-10-12",
+    "estado": "reconciliado",
+    "modelo_id": 2
+  },
+  "run": {
+    "id": 10104,
+    "estado": "success",
+    "caso_id": 10013
+  },
+  "modelo": {
+    "id": 2,
+    "codigo": "hidrometalurgia_125_v2",
+    "version": "v2",
+    "nombre": "Hidrometalurgia completa - 125 flujos"
+  },
+  "total_flujos": 125,
+  "flujos_run": [
+    {
+      "codigo_flujo": "F1",
+      "masa_medida": "30630.600000",
+      "masa_reconciliada": "30630.957531",
+      "fino_cu_medido": "152.561217",
+      "fino_cu_reconciliado": "152.472668"
+    },
+    {
+      "codigo_flujo": "F10",
+      "masa_medida": "142032.250000",
+      "masa_reconciliada": "150613.040520",
+      "fino_cu_medido": "767.734023",
+      "fino_cu_reconciliado": "811.631033"
+    },
+    {
+      "codigo_flujo": "F100",
+      "masa_medida": "1504769.714870",
+      "masa_reconciliada": "1504684.204300",
+      "fino_cu_medido": "64786.039302",
+      "fino_cu_reconciliado": "64587.531748"
+    },
+    {
+      "codigo_flujo": "F101",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F102",
+      "masa_medida": "1504769.714870",
+      "masa_reconciliada": "1502310.944500",
+      "fino_cu_medido": "62137.148030",
+      "fino_cu_reconciliado": "62214.271963"
+    },
+    {
+      "codigo_flujo": "F103",
+      "masa_medida": "2373.259784",
+      "masa_reconciliada": "2373.259784",
+      "fino_cu_medido": "2373.259784",
+      "fino_cu_reconciliado": "2373.259784"
+    },
+    {
+      "codigo_flujo": "F104",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F105",
+      "masa_medida": "2202.771000",
+      "masa_reconciliada": "2202.771000",
+      "fino_cu_medido": "2202.771000",
+      "fino_cu_reconciliado": "2202.771000"
+    },
+    {
+      "codigo_flujo": "F106",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F107",
+      "masa_medida": "170.488784",
+      "masa_reconciliada": "170.488784",
+      "fino_cu_medido": "170.488784",
+      "fino_cu_reconciliado": "170.488784"
+    },
+    {
+      "codigo_flujo": "F108",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F109",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F11",
+      "masa_medida": "142032.250000",
+      "masa_reconciliada": "164208.453110",
+      "fino_cu_medido": "767.734023",
+      "fino_cu_reconciliado": "884.136402"
+    },
+    {
+      "codigo_flujo": "F110",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F111",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F112",
+      "masa_medida": "2202.771000",
+      "masa_reconciliada": "2202.771000",
+      "fino_cu_medido": "2202.771000",
+      "fino_cu_reconciliado": "2202.771000"
+    },
+    {
+      "codigo_flujo": "F113",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F114",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F115",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F116",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F117",
+      "masa_medida": "21557.506216",
+      "masa_reconciliada": "21551.659770",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F118",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F119",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F12",
+      "masa_medida": "12461.820000",
+      "masa_reconciliada": "12461.820000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F120",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F121",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F122",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F123",
+      "masa_medida": "2769.856494",
+      "masa_reconciliada": "2769.856494",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F124",
+      "masa_medida": "25532.023934",
+      "masa_reconciliada": "25532.023934",
+      "fino_cu_medido": "6.340112",
+      "fino_cu_reconciliado": "6.340112"
+    },
+    {
+      "codigo_flujo": "F125",
+      "masa_medida": "-4155.357263",
+      "masa_reconciliada": "-4155.357263",
+      "fino_cu_medido": "-1.231025",
+      "fino_cu_reconciliado": "-1.231025"
+    },
+    {
+      "codigo_flujo": "F13",
+      "masa_medida": "5822.778326",
+      "masa_reconciliada": "5910.108932",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F14",
+      "masa_medida": "7489.661674",
+      "masa_reconciliada": "7643.019484",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F15",
+      "masa_medida": "-1091.350000",
+      "masa_reconciliada": "-1091.350000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F16",
+      "masa_medida": "410720.362600",
+      "masa_reconciliada": "410074.782140",
+      "fino_cu_medido": "2274.228470",
+      "fino_cu_reconciliado": "2276.118265"
+    },
+    {
+      "codigo_flujo": "F17",
+      "masa_medida": "317342.044700",
+      "masa_reconciliada": "317987.625160",
+      "fino_cu_medido": "1647.804914",
+      "fino_cu_reconciliado": "1645.910240"
+    },
+    {
+      "codigo_flujo": "F18",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F19",
+      "masa_medida": "728062.407300",
+      "masa_reconciliada": "728062.407300",
+      "fino_cu_medido": "3922.035785",
+      "fino_cu_reconciliado": "3922.028504"
+    },
+    {
+      "codigo_flujo": "F2",
+      "masa_medida": "368959.500000",
+      "masa_reconciliada": "369010.927740",
+      "fino_cu_medido": "2160.077082",
+      "fino_cu_reconciliado": "2074.001747"
+    },
+    {
+      "codigo_flujo": "F20",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F21",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F22",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F23",
+      "masa_medida": "728062.407300",
+      "masa_reconciliada": "728062.407300",
+      "fino_cu_medido": "3922.028504",
+      "fino_cu_reconciliado": "3922.028504"
+    },
+    {
+      "codigo_flujo": "F24",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F25",
+      "masa_medida": "266.684411",
+      "masa_reconciliada": "279.357528",
+      "fino_cu_medido": "266.684411",
+      "fino_cu_reconciliado": "279.357528"
+    },
+    {
+      "codigo_flujo": "F26",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F27",
+      "masa_medida": "-266.684411",
+      "masa_reconciliada": "-279.285067",
+      "fino_cu_medido": "-266.684411",
+      "fino_cu_reconciliado": "-279.285067"
+    },
+    {
+      "codigo_flujo": "F28",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F29",
+      "masa_medida": "1699.658852",
+      "masa_reconciliada": "1781.682732",
+      "fino_cu_medido": "1699.658852",
+      "fino_cu_reconciliado": "1781.682732"
+    },
+    {
+      "codigo_flujo": "F3",
+      "masa_medida": "399590.100000",
+      "masa_reconciliada": "399641.900230",
+      "fino_cu_medido": "2312.635696",
+      "fino_cu_reconciliado": "2226.382956"
+    },
+    {
+      "codigo_flujo": "F30",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F31",
+      "masa_medida": "-1699.658852",
+      "masa_reconciliada": "-1781.645100",
+      "fino_cu_medido": "-1699.658852",
+      "fino_cu_reconciliado": "-1781.645100"
+    },
+    {
+      "codigo_flujo": "F32",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F33",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F34",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F35",
+      "masa_medida": "307964.374515",
+      "masa_reconciliada": "307964.389260",
+      "fino_cu_medido": "973.971210",
+      "fino_cu_reconciliado": "973.966669"
+    },
+    {
+      "codigo_flujo": "F36",
+      "masa_medida": "188013.075532",
+      "masa_reconciliada": "188013.075530",
+      "fino_cu_medido": "594.612033",
+      "fino_cu_reconciliado": "594.611748"
+    },
+    {
+      "codigo_flujo": "F37",
+      "masa_medida": "-495977.450047",
+      "masa_reconciliada": "-495977.450050",
+      "fino_cu_medido": "-1568.578284",
+      "fino_cu_reconciliado": "-1568.578284"
+    },
+    {
+      "codigo_flujo": "F38",
+      "masa_medida": "326893.106250",
+      "masa_reconciliada": "307964.404000",
+      "fino_cu_medido": "1033.835407",
+      "fino_cu_reconciliado": "973.966725"
+    },
+    {
+      "codigo_flujo": "F39",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F4",
+      "masa_medida": "389915.170000",
+      "masa_reconciliada": "399664.793740",
+      "fino_cu_medido": "2256.641845",
+      "fino_cu_reconciliado": "2226.421808"
+    },
+    {
+      "codigo_flujo": "F40",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F41",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F42",
+      "masa_medida": "321.065137",
+      "masa_reconciliada": "341.006123",
+      "fino_cu_medido": "321.065137",
+      "fino_cu_reconciliado": "341.006123"
+    },
+    {
+      "codigo_flujo": "F43",
+      "masa_medida": "-321.065137",
+      "masa_reconciliada": "-340.931432",
+      "fino_cu_medido": "-321.065137",
+      "fino_cu_reconciliado": "-340.931432"
+    },
+    {
+      "codigo_flujo": "F44",
+      "masa_medida": "288840.335115",
+      "masa_reconciliada": "296740.607710",
+      "fino_cu_medido": "366.315978",
+      "fino_cu_reconciliado": "377.984235"
+    },
+    {
+      "codigo_flujo": "F45",
+      "masa_medida": "0.798417",
+      "masa_reconciliada": "0.798417",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F46",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F47",
+      "masa_medida": "670881.926020",
+      "masa_reconciliada": "680522.845990",
+      "fino_cu_medido": "961.595191",
+      "fino_cu_reconciliado": "971.029808"
+    },
+    {
+      "codigo_flujo": "F48",
+      "masa_medida": "130434.000000",
+      "masa_reconciliada": "134962.677870",
+      "fino_cu_medido": "935.244389",
+      "fino_cu_reconciliado": "1002.404831"
+    },
+    {
+      "codigo_flujo": "F49",
+      "masa_medida": "160224.425740",
+      "masa_reconciliada": "160284.849230",
+      "fino_cu_medido": "319.804749",
+      "fino_cu_reconciliado": "320.092081"
+    },
+    {
+      "codigo_flujo": "F5",
+      "masa_medida": "-22.847420",
+      "masa_reconciliada": "-22.847420",
+      "fino_cu_medido": "-0.138361",
+      "fino_cu_reconciliado": "-0.138361"
+    },
+    {
+      "codigo_flujo": "F50",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F51",
+      "masa_medida": "275611.910200",
+      "masa_reconciliada": "277445.203330",
+      "fino_cu_medido": "446.761394",
+      "fino_cu_reconciliado": "450.635289"
+    },
+    {
+      "codigo_flujo": "F52",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F53",
+      "masa_medida": "69224.042650",
+      "masa_reconciliada": "69224.042650",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F54",
+      "masa_medida": "268619.175276",
+      "masa_reconciliada": "270455.022030",
+      "fino_cu_medido": "436.374536",
+      "fino_cu_reconciliado": "440.349951"
+    },
+    {
+      "codigo_flujo": "F55",
+      "masa_medida": "576.000000",
+      "masa_reconciliada": "573.982211",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F56",
+      "masa_medida": "-323.602895",
+      "masa_reconciliada": "-323.602895",
+      "fino_cu_medido": "-0.544688",
+      "fino_cu_reconciliado": "-0.544688"
+    },
+    {
+      "codigo_flujo": "F57",
+      "masa_medida": "839183.851342",
+      "masa_reconciliada": "853105.433600",
+      "fino_cu_medido": "1898.217088",
+      "fino_cu_reconciliado": "1978.002632"
+    },
+    {
+      "codigo_flujo": "F58",
+      "masa_medida": "-15949.580570",
+      "masa_reconciliada": "-15949.580570",
+      "fino_cu_medido": "-50.013419",
+      "fino_cu_reconciliado": "-50.013419"
+    },
+    {
+      "codigo_flujo": "F59",
+      "masa_medida": "946.800000",
+      "masa_reconciliada": "939.951919",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F6",
+      "masa_medida": "261198.450926",
+      "masa_reconciliada": "239956.176170",
+      "fino_cu_medido": "1506.496022",
+      "fino_cu_reconciliado": "1392.081562"
+    },
+    {
+      "codigo_flujo": "F60",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F61",
+      "masa_medida": "-12593.601583",
+      "masa_reconciliada": "-12593.601583",
+      "fino_cu_medido": "-9.823009",
+      "fino_cu_reconciliado": "-9.823009"
+    },
+    {
+      "codigo_flujo": "F62",
+      "masa_medida": "770.400000",
+      "masa_reconciliada": "766.371488",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F63",
+      "masa_medida": "683389.151546",
+      "masa_reconciliada": "694204.486130",
+      "fino_cu_medido": "910.117170",
+      "fino_cu_reconciliado": "971.205684"
+    },
+    {
+      "codigo_flujo": "F64",
+      "masa_medida": "2986.800000",
+      "masa_reconciliada": "2910.412663",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F65",
+      "masa_medida": "-16592.052801",
+      "masa_reconciliada": "-16592.052801",
+      "fino_cu_medido": "-0.175876",
+      "fino_cu_reconciliado": "-0.175876"
+    },
+    {
+      "codigo_flujo": "F66",
+      "masa_medida": "18384.000000",
+      "masa_reconciliada": "18382.801629",
+      "fino_cu_medido": "121.334400",
+      "fino_cu_reconciliado": "121.302512"
+    },
+    {
+      "codigo_flujo": "F67",
+      "masa_medida": "48700.838212",
+      "masa_reconciliada": "960.784759",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F68",
+      "masa_medida": "15202.122901",
+      "masa_reconciliada": "7690.711104",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F69",
+      "masa_medida": "1588045.095447",
+      "masa_reconciliada": "1563209.201300",
+      "fino_cu_medido": "579.969949",
+      "fino_cu_reconciliado": "575.948532"
+    },
+    {
+      "codigo_flujo": "F7",
+      "masa_medida": "169487.016374",
+      "masa_reconciliada": "159731.524120",
+      "fino_cu_medido": "880.071502",
+      "fino_cu_reconciliado": "834.378871"
+    },
+    {
+      "codigo_flujo": "F70",
+      "masa_medida": "297302.120197",
+      "masa_reconciliada": "294642.952510",
+      "fino_cu_medido": "88.700088",
+      "fino_cu_reconciliado": "87.596827"
+    },
+    {
+      "codigo_flujo": "F71",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F72",
+      "masa_medida": "955632.764232",
+      "masa_reconciliada": "952586.309330",
+      "fino_cu_medido": "395.651077",
+      "fino_cu_reconciliado": "384.201364"
+    },
+    {
+      "codigo_flujo": "F73",
+      "masa_medida": "23387.320622",
+      "masa_reconciliada": "25531.924196",
+      "fino_cu_medido": "6.340303",
+      "fino_cu_reconciliado": "6.440112"
+    },
+    {
+      "codigo_flujo": "F74",
+      "masa_medida": "352936.626267",
+      "masa_reconciliada": "347185.948120",
+      "fino_cu_medido": "100.544586",
+      "fino_cu_reconciliado": "108.844743"
+    },
+    {
+      "codigo_flujo": "F75",
+      "masa_medida": "1644.000000",
+      "masa_reconciliada": "1644.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F76",
+      "masa_medida": "-14826.692731",
+      "masa_reconciliada": "-14826.692731",
+      "fino_cu_medido": "-9.903489",
+      "fino_cu_reconciliado": "-9.903489"
+    },
+    {
+      "codigo_flujo": "F77",
+      "masa_medida": "344514.887713",
+      "masa_reconciliada": "346328.167170",
+      "fino_cu_medido": "125.696257",
+      "fino_cu_reconciliado": "109.529241"
+    },
+    {
+      "codigo_flujo": "F78",
+      "masa_medida": "255.600000",
+      "masa_reconciliada": "255.844016",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F79",
+      "masa_medida": "601.884002",
+      "masa_reconciliada": "601.884002",
+      "fino_cu_medido": "-0.584502",
+      "fino_cu_reconciliado": "-0.584502"
+    },
+    {
+      "codigo_flujo": "F8",
+      "masa_medida": "-22.847420",
+      "masa_reconciliada": "-22.847420",
+      "fino_cu_medido": "-0.138361",
+      "fino_cu_reconciliado": "-0.138361"
+    },
+    {
+      "codigo_flujo": "F80",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F81",
+      "masa_medida": "6740.337819",
+      "masa_reconciliada": "6739.878161",
+      "fino_cu_medido": "10.931480",
+      "fino_cu_reconciliado": "10.929958"
+    },
+    {
+      "codigo_flujo": "F82",
+      "masa_medida": "15374.425740",
+      "masa_reconciliada": "15374.425740",
+      "fino_cu_medido": "101.471056",
+      "fino_cu_reconciliado": "101.471056"
+    },
+    {
+      "codigo_flujo": "F83",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F84",
+      "masa_medida": "11824.000000",
+      "masa_reconciliada": "11828.109812",
+      "fino_cu_medido": "9.822906",
+      "fino_cu_reconciliado": "9.831848"
+    },
+    {
+      "codigo_flujo": "F85",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F86",
+      "masa_medida": "124000.000000",
+      "masa_reconciliada": "124109.387540",
+      "fino_cu_medido": "96.999000",
+      "fino_cu_reconciliado": "97.418349"
+    },
+    {
+      "codigo_flujo": "F87",
+      "masa_medida": "2466.000000",
+      "masa_reconciliada": "2418.322069",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F88",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F89",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F9",
+      "masa_medida": "283844.178457",
+      "masa_reconciliada": "314821.466070",
+      "fino_cu_medido": "1534.277130",
+      "fino_cu_reconciliado": "1695.866450"
+    },
+    {
+      "codigo_flujo": "F90",
+      "masa_medida": "28031.043140",
+      "masa_reconciliada": "39399.882813",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F91",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F92",
+      "masa_medida": "16380.873789",
+      "masa_reconciliada": "16380.873789",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F93",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F94",
+      "masa_medida": "1891.667608",
+      "masa_reconciliada": "1891.667608",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F95",
+      "masa_medida": "2769.856494",
+      "masa_reconciliada": "2769.856666",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F96",
+      "masa_medida": "2144.703312",
+      "masa_reconciliada": "2769.756954",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F97",
+      "masa_medida": "358579.267864",
+      "masa_reconciliada": "356452.257400",
+      "fino_cu_medido": "17381.538354",
+      "fino_cu_reconciliado": "17127.706153"
+    },
+    {
+      "codigo_flujo": "F98",
+      "masa_medida": "0.000000",
+      "masa_reconciliada": "0.000000",
+      "fino_cu_medido": "0.000000",
+      "fino_cu_reconciliado": "0.000000"
+    },
+    {
+      "codigo_flujo": "F99",
+      "masa_medida": "358579.267864",
+      "masa_reconciliada": "354078.997620",
+      "fino_cu_medido": "14832.294351",
+      "fino_cu_reconciliado": "14754.446369"
+    }
+  ]
+}

@@ -189,6 +189,7 @@ Motor de reconciliacion de pilas de lixiviacion. Combina en un solo modulo:
        hay Fdrena reconciliado.
 """
 import hashlib
+import time
 
 import numpy as np
 import pandas as pd
@@ -529,24 +530,28 @@ def _fechas_actividad(label):
     riego = _fechas(f"""
         SELECT p.nombre AS pila, r.fecha
         FROM (
-            SELECT parcela_id, fecha, caudal_m3h FROM {SCHEMA}.riego_diario
+            SELECT parcela_id, fecha FROM {SCHEMA}.riego_diario
+            WHERE caudal_m3h > 0
             UNION
-            SELECT parcela_id, fecha, caudal_m3h FROM {SCHEMA}.vw_riego_diario_ingest
+            SELECT parcela_id, fecha FROM {SCHEMA}.vw_riego_diario_ingest
+            WHERE caudal_m3h > 0
         ) r
         JOIN {SCHEMA}.parcela p ON p.id_parcela = r.parcela_id
         JOIN {SCHEMA}.material m ON m.id = p.id_pad
-        WHERE m.nombre = :material AND r.caudal_m3h > 0
+        WHERE m.nombre = :material
     """)
     drena = _fechas(f"""
         SELECT p.nombre AS pila, d.fecha
         FROM (
-            SELECT parcela_id, fecha, cu_gl FROM {SCHEMA}.drena_cu_diario
+            SELECT parcela_id, fecha FROM {SCHEMA}.drena_cu_diario
+            WHERE cu_gl > 0
             UNION
-            SELECT parcela_id, fecha, cu_gl FROM {SCHEMA}.vw_drena_quimica_ingest
+            SELECT parcela_id, fecha FROM {SCHEMA}.vw_drena_quimica_ingest
+            WHERE cu_gl > 0
         ) d
         JOIN {SCHEMA}.parcela p ON p.id_parcela = d.parcela_id
         JOIN {SCHEMA}.material m ON m.id = p.id_pad
-        WHERE m.nombre = :material AND d.cu_gl > 0
+        WHERE m.nombre = :material
     """)
     _ACTIVIDAD_CACHE[label] = (riego, drena)
     return riego, drena
@@ -703,13 +708,10 @@ def ultimo_riego(label, pilas, before):
     Sirve para calificar una pila que no rego en la ventana: si el ultimo
     riego fue hace meses la pila esta EN REPOSO (ciclo terminado, campana
     todavia abierta en el WIP), y si fue anteayer es una caida de medicion.
-    Los dos casos se ven identicos mirando solo la ventana, y el warning que
-    salia antes ("activa sin riego medido") se leia como perdida de dato
-    cuando casi siempre es reposo.
 
-    La consolidada `riego_diario` y la vista de ingesta traen 0.0 EXPLICITO
-    para la pila apagada -- no NULL y no ausencia de fila -- asi que el corte
-    es `caudal_m3h > 0`, no `IS NOT NULL`.
+    La consolidada y la vista de ingesta traen 0.0 EXPLICITO para la pila
+    apagada, asi que el corte es `caudal_m3h > 0`, no IS NOT NULL. Se calcula
+    el maximo de ambas fuentes en SQL y se devuelve una fila por pila.
     """
     if not pilas:
         return {}
@@ -718,20 +720,33 @@ def ultimo_riego(label, pilas, before):
     binds = {f'p{i}': n for i, n in enumerate(nombres)}
     lista = ', '.join(f':{k}' for k in binds)
     params = dict(binds, material=material, before=before)
-    out = {}
-    for source in ('riego_diario', 'vw_riego_diario_ingest'):
-        df = _sql_df(get_engine(), text(f"""
+    query = f"""
+        SELECT x.pila, MAX(x.ultima) AS ultima
+        FROM (
             SELECT p.nombre AS pila, MAX(r.fecha) AS ultima
-            FROM {SCHEMA}.{source} r
+            FROM {SCHEMA}.riego_diario r
             JOIN {SCHEMA}.parcela p ON p.id_parcela = r.parcela_id
             JOIN {SCHEMA}.material m ON m.id = p.id_pad
             WHERE m.nombre = :material AND p.nombre IN ({lista})
               AND r.fecha < :before AND r.caudal_m3h > 0
-            GROUP BY p.nombre"""), params)
-        for _, row in df.iterrows():
-            f = pd.Timestamp(row['ultima'])
-            if pd.notna(f) and (row['pila'] not in out or f > out[row['pila']]):
-                out[row['pila']] = f
+            GROUP BY p.nombre
+            UNION ALL
+            SELECT p.nombre AS pila, MAX(r.fecha) AS ultima
+            FROM {SCHEMA}.vw_riego_diario_ingest r
+            JOIN {SCHEMA}.parcela p ON p.id_parcela = r.parcela_id
+            JOIN {SCHEMA}.material m ON m.id = p.id_pad
+            WHERE m.nombre = :material AND p.nombre IN ({lista})
+              AND r.fecha < :before AND r.caudal_m3h > 0
+            GROUP BY p.nombre
+        ) x
+        GROUP BY x.pila
+    """
+    df = _sql_df(get_engine(), text(query), params)
+    out = {}
+    for _, row in df.iterrows():
+        f = pd.Timestamp(row['ultima'])
+        if pd.notna(f):
+            out[row['pila']] = f
     return out
 
 
@@ -2813,13 +2828,17 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
     planta). `force_all_active=True` fuerza TODAS las pilas activas al pool
     transiente/reconciliado, ignorando el corte TRANS/SS por dia_ciclo."""
     week_start, week_end, n_days = resolve_window(week_start, week_end)
+    solve_started = time.perf_counter()
     res = reconcile_flowsheet(week_start, materials, n_transient=active_days, sigma_rel=sigma_rel,
                                force_all_active=force_all_active, week_end=week_end, anchor=anchor)
+    solve_seconds = time.perf_counter() - solve_started
     # Se persiste EL MISMO `res` que se devuelve para pintar; no se
     # recalcula (ver `res=` en `reconcile_week_flowsheet_db`).
+    persist_started = time.perf_counter()
     reconcile_week_flowsheet_db(week_start, materials, conn, n_transient=active_days, sigma_rel=sigma_rel,
                                  force_all_active=force_all_active, week_end=week_end,
                                  anchor=anchor, caso_id=caso_id, res=res)
+    persist_seconds = time.perf_counter() - persist_started
 
     # Misma senal que reconcile_week_flowsheet_db: sin caudal repartido o sin
     # pilas activas, no hay reconciliacion real que mostrar en verde.
@@ -2904,6 +2923,7 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
         # metodo reconciliado (`report_metodo.construir_doc`), que reconstruye
         # la curva de cada pila con el Q y el Cu reconciliados dia a dia.
         res=res,
+        _phase_seconds=dict(solve=solve_seconds, persist=persist_seconds),
     )
 
 

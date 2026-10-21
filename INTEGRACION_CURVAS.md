@@ -78,3 +78,13 @@ dependencias de autenticación: se instaló passlib==1.7.4, declarado en
 requirements.txt. Las pruebas offline sustituyen el chequeo SQL de arranque
 y las conexiones crudas usadas por otros paneles únicamente en el fixture;
 main.py conserva su validación real de arranque.
+
+## Curvas: integración y reporte — 20/10/2026
+Se separó el contrato de flujos de los modelos 120 y 125, validando código, versión y cantidad. El catálogo oficial se consulta sin caché; las anclas se identifican por run. La descarga valida Caso/run/ventana/modelo para rechazar resultados desactualizados.
+SQL y caché respetan el rango solicitado. Los 60 días corresponden al margen previo de química, nunca al límite de la campaña. El reporte conserva la historia desde el inicio de campaña, acota apilado al corte y reutiliza la lectura de riego. Se probó una campaña de más de 1000 días. Excel de planta opcional, descarga repetible durante TTL y limpieza de temporales incluso al fallar el envío.
+115 pruebas pasaron. La optimización reduce lecturas y caché; no elimina el costo del motor. El reporte consulta fuentes históricas al exportar: no congela todas en una instantánea. No se cambió la rampa ni se implementó un nuevo balance de inventario. main.py, recon_engine.py y tabs/tab_curvas.py se preservaron. Sin escrituras DB ni SP, sin commit ni push. Los payloads internos de DB no se copiaron a estas notas ni al directorio de diagnósticos.
+
+## Reporte de curvas y hoja Prod — 20/10/2026
+Se adaptó el escritor al formato de recuperaciones de la referencia del 12 de octubre: cabeceras distintas por pad (OX curva desde fila 10; SU desde fila 11), Arial y colores de referencia, cuatro hojas existentes más Prod. Prod contiene Cu neto diario reconstruido por pila, con fechas desde el inicio de su campaña; no representa cátodos. Las sumas diarias coinciden con Aporte Parcelas. Recuperación máxima usa el máximo de la curva y el aporte conserva el acumulado terminal. Lector reconoce parcelas por identificador, excluye encabezados de las curvas y conserva huecos internos. Gráficos separados para evitar superposición.
+Indicación explícita del usuario: algunas curvas de la referencia suman varias pilas; esa agrupación se utiliza SOLO para la comparación externa, nunca como regla del reporte. Reporte/Prod y sus series continúan individuales por pila. Los archivos de contraste y la salida Excel quedan en la carpeta de trabajo; no se copian payloads internos DB al repositorio.
+Validación: 119 pruebas offline pasaron y se verificaron las cinco hojas, cuatro gráficos, referencias de series y sumas de Prod con el escritor real. Prueba de motor online fue SELECT-only; no se ejecutó callback de persistencia ni SP. main.py no se modificó. Sin commit ni push.

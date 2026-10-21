@@ -1,5 +1,6 @@
 import os
 import urllib.parse
+import math
 import pandas as pd
 from sqlalchemy import create_engine, text
 
@@ -69,36 +70,19 @@ def _ensure_reconciliation_tables():
 # INSERT/UPDATE/DELETE sobre `recon_*`.
 HIDRO_SCHEMA = 'DEV_SIIR.hidro'
 
-# Alcance oficial de esta aplicacion. Los casos posteriores pertenecen a
-# pruebas/escenarios del flowsheet y no deben aparecer en el dashboard PAD.
-CASO_ID_MIN = 1
-CASO_ID_MAX = 8
-
-# Flujos del modelo `hidrometalurgia_120_completo` que anclan cada pad.
+# Flujos que anclan cada pad, versionados por el codigo del modelo. El mismo
+# codigo F cambia de significado entre catalogos; no inferir version por
+# numeracion ni por nombre del pad.
 #
-#   riego -> lo que entra por la superficie de la pila
-#   pls   -> lo que sale por el fondo de la pila
+# En el modelo 125, los caudales de riego conservan sus sumas por origen:
+# OXIDOS F70+F60+F81; SULFUROS F72+F66.
+# La salida total drenada para curvas incluye las transferencias especificadas
+# para cada pad: OXIDOS F44+F45; SULFUROS F47+F48+F49. F50 es inventario y
+# no forma parte del total drenado que se reparte entre pilas. F45/F49 son
+# codigos requeridos aunque su Cu pueda ser cero en una corrida.
 #
-# Sulfuros sale por DOS flujos: F50 (a piscina PLS Su) y F49 (bleed a la
-# piscina PLS de oxidos). Los dos salen del MISMO fondo de pila, asi que el
-# ancla de drenaje del pad es la suma. Con F50 solo, el factor de drenaje da
-# 0.778 medido -- fisicamente imposible; con F50+F49 da 0.950000 exacto,
-# que es FDRENA_MAX. F42 (agua de aglomeracion) NO entra en el riego: con el
-# incluido el ancla deja de calzar con Sum(riego)x24.
-#
-# El riego NO es un solo flujo: `sp_calcular_balance_flujos` lo parte por
-# NATURALEZA DE LA SOLUCION que entra al pad (vista v_riego_parcelas_origen):
-#
-#   OXIDOS   REFINO -> F39   ILS -> F41   DPLS -> F46
-#   SULFUROS REFINO -> F44   ILS -> F45
-#
-# El motor riega la pila sin importar de donde viene la solucion, asi que el
-# ancla de riego de un pad es la SUMA de sus flujos de origen. Anclando solo
-# a F39/F44 la cobertura quedaba en 102.88 % (caso 18 OX) porque al pad le
-# faltaba el DPLS; con la suma da 100.0000 % exacto al centavo en los casos
-# 18, 19 y 20, en los dos pads. Consistente con el resto del modelo, que
-# define F48 = 0.95*(F39+F41+F46) y F50+F49 = 0.95*(F44+F45).
-CASO_FLUJOS = {
+# La matriz 120 conserva su mapeo historico independiente.
+CASO_FLUJOS_120 = {
     'OXIDOS':   dict(riego=['F39', 'F41', 'F46'], pls=['F48']),
     'SULFUROS': dict(riego=['F44', 'F45'], pls=['F50', 'F49']),
 }
@@ -107,11 +91,41 @@ CASO_FLUJOS = {
 # igual conserva su ancla. Los runs viejos (caso 17, generado antes de que
 # existiera el split por origen) no tienen fila F46 y sin esto se quedarian
 # sin ancla de un dia para otro.
-CASO_FLUJOS_OPCIONALES = {'F41', 'F45', 'F46'}
+CASO_FLUJOS_125 = {
+    'OXIDOS':   dict(riego=['F70', 'F60', 'F81'], pls=['F44', 'F45']),
+    'SULFUROS': dict(riego=['F72', 'F66'], pls=['F47', 'F48', 'F49']),
+}
+
+CASO_FLUJOS_POR_MODELO = {
+    'hidrometalurgia_120_completo': ('v1', 120, CASO_FLUJOS_120,
+                                     {'F41', 'F45', 'F46'}),
+    'hidrometalurgia_125_v2': ('v2', 125, CASO_FLUJOS_125, set()),
+}
+
+
+def _caso_flows_for_model(model_code, model_version=None, total_flows=None):
+    """Resolve flow semantics from the authoritative catalog code."""
+    try:
+        expected_version, expected_count, flows, optional = CASO_FLUJOS_POR_MODELO[str(model_code)]
+    except KeyError as exc:
+        raise ValueError(
+            f'Modelo de reconciliacion sin mapping de ancla: {model_code!r}.'
+        ) from exc
+    if model_version is not None and str(model_version) != expected_version:
+        raise ValueError(
+            f'Version de modelo incompatible con el mapping de ancla: '
+            f'{model_code!r} version {model_version!r}.'
+        )
+    if total_flows is not None and int(total_flows) != expected_count:
+        raise ValueError(
+            f'Catalogo de {model_code!r} declara {total_flows} flujos; '
+            f'el mapping requiere {expected_count}.'
+        )
+    return flows, optional
 
 
 def load_casos():
-    """Casos 1..8 con run oficial exitoso, mas nuevos primero.
+    """Casos dentro del alcance PAD con run oficial exitoso, mas nuevos primero.
 
     La relacion de oficializacion cambia fuera de esta aplicacion. Por eso
     esta lectura corta y barata evita deliberadamente ``local_cache``: un
@@ -120,27 +134,27 @@ def load_casos():
     """
     query = text(f"""
         SELECT c.id, c.nombre_caso, c.fecha_inicio, c.fecha_fin, c.estado,
-               o.solver_run_id AS run_id
+               o.solver_run_id AS run_id, m.codigo AS modelo_codigo,
+               m.version AS modelo_version, m.total_flujos
         FROM {HIDRO_SCHEMA}.recon_caso c
         JOIN {HIDRO_SCHEMA}.recon_caso_oficial o ON o.caso_id = c.id
-        JOIN {HIDRO_SCHEMA}.recon_solver_run r ON r.id = o.solver_run_id
-        WHERE c.id BETWEEN :caso_min AND :caso_max
-          AND r.estado = 'success'
+        JOIN {HIDRO_SCHEMA}.recon_solver_run r
+          ON r.id = o.solver_run_id AND r.caso_id = c.id
+        JOIN {HIDRO_SCHEMA}.recon_modelo m ON m.id = c.modelo_id
+        WHERE r.estado = 'success'
         ORDER BY c.fecha_inicio DESC, c.id DESC
     """)
     with get_engine().connect() as conn:
-        rows = conn.execute(query, {
-            'caso_min': CASO_ID_MIN,
-            'caso_max': CASO_ID_MAX,
-        }).fetchall()
+        rows = conn.execute(query).fetchall()
     return [dict(
         id=int(r[0]), nombre=r[1], fecha_inicio=pd.Timestamp(r[2]).normalize(),
         fecha_fin=pd.Timestamp(r[3]).normalize(), estado=r[4],
-        run_id=int(r[5]),
+        run_id=int(r[5]), modelo_codigo=r[6], modelo_version=r[7],
+        total_flujos=int(r[8]) if r[8] is not None else None,
     ) for r in rows]
 
 
-def load_caso_anchor(run_id):
+def load_caso_anchor(run_id, model_code, model_version=None, total_flows=None):
     """Ancla POR PAD desde los flujos del run oficial de un Caso.
 
     Devuelve {'OXIDOS': {...}, 'SULFUROS': {...}} con las claves que espera
@@ -154,7 +168,9 @@ def load_caso_anchor(run_id):
     """
     if run_id is None:
         return {}
-    codes = sorted({c for f in CASO_FLUJOS.values() for c in f['riego'] + f['pls']})
+    caso_flujos, flujos_opcionales = _caso_flows_for_model(
+        model_code, model_version, total_flows)
+    codes = sorted({c for f in caso_flujos.values() for c in f['riego'] + f['pls']})
     query = text(f"""
         SELECT codigo_flujo, masa_medida, masa_reconciliada,
                fino_cu_medido, fino_cu_reconciliado
@@ -167,15 +183,15 @@ def load_caso_anchor(run_id):
     by_code = {r[0]: tuple(float(v) if v is not None else None for v in r[1:]) for r in rows}
 
     out = {}
-    for label, flows in CASO_FLUJOS.items():
+    for label, flows in caso_flujos.items():
         needed = [c for c in flows['riego'] + flows['pls']
-                  if c not in CASO_FLUJOS_OPCIONALES]
+                  if c not in flujos_opcionales]
         if any(c not in by_code for c in needed):
             print(f'[db_pipeline] load_caso_anchor(run={run_id}): {label} sin ancla, '
                   f'faltan flujos {[c for c in needed if c not in by_code]}.')
             continue
         faltan_opt = [c for c in flows['riego'] + flows['pls']
-                      if c in CASO_FLUJOS_OPCIONALES and c not in by_code]
+                      if c in flujos_opcionales and c not in by_code]
         if faltan_opt:
             print(f'[db_pipeline] load_caso_anchor(run={run_id}): {label} sin '
                   f'{faltan_opt} en el run, se asumen 0. El ancla de riego puede '
@@ -208,7 +224,7 @@ def caso_anchor_completo(anchor):
     no puede construir la razon oficial/recon y caeria en su fallback
     sintetico. Esta ruta no admite esa mezcla silenciosa.
     """
-    if set(anchor or {}) != set(CASO_FLUJOS):
+    if set(anchor or {}) != set(CASO_FLUJOS_120):
         return False
     denominadores = {
         'q_riego_medido', 'q_pls_medido',
@@ -219,7 +235,10 @@ def caso_anchor_completo(anchor):
             value = valores.get(key)
             if value is None or not pd.notna(value):
                 return False
-            if key in denominadores and float(value) <= 0:
+            number = float(value)
+            if not math.isfinite(number) or number < 0:
+                return False
+            if key in denominadores and number <= 0:
                 return False
     return True
 

@@ -7,17 +7,10 @@ cambia entre clicks.
 
 El cache NO envuelve a los loaders sino a la lectura cruda, una capa mas
 abajo. Es a proposito: los loaders hacen pivot, mezcla con la vista de ingesta
-y `ffill()` al final, y el `ffill()` NO se puede reproducir cortando su
-resultado -- una ventana corta deja NaN en la cabecera donde la ventana larga
-ya venia arrastrando un valor viejo. Cacheando el crudo, cada loader vuelve a
-correr sus transformaciones sobre la ventana que le toca y devuelve exactamente
-lo mismo que devolveria la query directa; lo unico que desaparece es la ida al
-servidor.
-
-Como el WHERE de esas queries es solo un filtro de fechas, se baja el rango
-COMPLETO una vez por query y despues se corta por `fecha` en pandas. Asi
-tambien aciertan las ventanas que nunca se habian pedido, que es el caso
-normal: cada callback pide una ventana distinta.
+y `ffill()` al final. Sus consultas ya incluyen los limites efectivos y el
+lookback de 60 dias necesario para Cu. Se cachea el resultado crudo por
+consulta, material y ventana; repetir el mismo Caso no vuelve al servidor y
+una ventana corta no transfiere todo el historico.
 
 Persiste en `.cache_datos/` con pickle, asi que reiniciar el proceso tampoco
 vuelve a bajar nada. `limpiar()` borra memoria y disco, y la llama el boton
@@ -40,8 +33,8 @@ DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cache_datos')
 ACTIVA = os.environ.get('RECON_SIN_CACHE', '') not in ('1', 'true', 'True')
 TTL_S = float(os.environ.get('RECON_CACHE_TTL_H', '24')) * 3600
 
-# Rango que se baja de una. Abarca todo lo que existe y lo que va a existir,
-# asi que cualquier ventana que pidan cae adentro y se resuelve cortando.
+# Límites usados por la antigua cache `@completo`; se conservan para reconocer
+# claves heredadas en inspecciones. La cache por ventanas no los consulta.
 RANGO_INI = pd.Timestamp('2000-01-01')
 RANGO_FIN = pd.Timestamp('2035-01-01')
 
@@ -152,26 +145,11 @@ def sql_df(engine, query, params=None, date_col='fecha'):
         k = _clave(et, (str(query), sorted((a, str(b)) for a, b in otros.items())))
         return _traer(k, lambda: pd.read_sql(query, engine, params=params)).copy()
 
-    # Rango completo una sola vez, y despues se corta por fecha. El WHERE solo
-    # filtra fechas, asi que el corte da fila por fila lo mismo que la query.
-    full_p = dict(otros)
-    if 'start' in fechas:
-        full_p['start'] = RANGO_INI
-    if 'end' in fechas:
-        full_p['end'] = RANGO_FIN
-    k = _clave(et + '@completo',
-               (str(query), sorted((a, str(b)) for a, b in otros.items())))
-    full = _traer(k, lambda: pd.read_sql(query, engine, params=full_p))
-
-    if not len(full) or date_col not in full.columns:
-        return full.copy()
-    f = pd.to_datetime(full[date_col])
-    m = pd.Series(True, index=full.index)
-    if 'start' in fechas:
-        m &= f >= pd.Timestamp(params['start'])
-    if 'end' in fechas:
-        m &= f <= pd.Timestamp(params['end'])
-    return full[m].copy()
+    # Loaders already pass their effective range, including Cu lookback.
+    # Fetching 2000..2035 here transferred full history for every short Case.
+    k = _clave(et + '@ventana',
+               (str(query), sorted((a, str(b)) for a, b in params.items())))
+    return _traer(k, lambda: pd.read_sql(query, engine, params=params)).copy()
 
 
 def sql_rows(engine, query, params=None, etiqueta=None):
