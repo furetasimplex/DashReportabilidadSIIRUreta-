@@ -1,4 +1,4 @@
-"""Genera auditoria_reclamo/mapeo_reclamo_diario.html desde el canvas de mapeo."""
+"""Genera auditorias/archivo/auditoria_reclamo/mapeo_reclamo_diario.html desde el canvas de mapeo."""
 from __future__ import annotations
 
 import json
@@ -14,7 +14,7 @@ CANVAS = (
     / "canvases"
     / "reclamo-diario-mapeo.canvas.tsx"
 )
-OUT = ROOT / "auditoria_reclamo" / "mapeo_reclamo_diario.html"
+OUT = ROOT / "auditorias/archivo/auditoria_reclamo" / "mapeo_reclamo_diario.html"
 
 
 def extraer_objetos(src: str) -> list[dict]:

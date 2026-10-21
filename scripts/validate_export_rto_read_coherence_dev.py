@@ -32,7 +32,7 @@ def main(argv=None):
     parser.add_argument('--execute-rollback', action='store_true')
     parser.add_argument('--fail-fetch', type=int, choices=range(1, 8), default=None,
                         help='Fallar deliberadamente antes del fetch 1..7 de Excel')
-    parser.add_argument('--output', type=Path, default=Path('scripts/diagnosticos/fase4b3a/manual_dev.json'))
+    parser.add_argument('--output', type=Path, default=Path('auditorias/archivo/scripts/diagnosticos/fase4b3a/manual_dev.json'))
     args = parser.parse_args(argv)
     if not args.execute_rollback:
         print('SAFE: no se conecta ni escribe. Requiere --execute-rollback.')

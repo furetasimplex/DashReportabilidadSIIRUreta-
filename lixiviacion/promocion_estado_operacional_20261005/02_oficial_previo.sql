@@ -1,1 +1,0 @@
--- El objeto oficial no existía en DEV al realizar este precheck.

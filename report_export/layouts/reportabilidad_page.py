@@ -85,12 +85,13 @@ def _report_card(title, description, tipo):
                 html.I(className="bi bi-file-earmark-pdf me-2"),
                 "Exportar PDF",
             ], id={"type": "report-pdf-btn", "tipo": tipo},
-               className="rp-btn-pdf", n_clicks=0),
+               className="rp-btn-pdf", n_clicks=0, disabled=(tipo == "balance")),
         ]
 
     balance_selector = html.Div()
     if tipo == "balance":
         balance_selector = html.Div([
+            dcc.Store(id="report-balance-context", data=None),
             dbc.Label("Caso oficial", className="rp-fecha-label"),
             dcc.Dropdown(
                 id="report-balance-caso",
@@ -98,6 +99,9 @@ def _report_card(title, description, tipo):
                 value=None,
                 clearable=False,
                 placeholder="Seleccione un Caso oficial",
+                className="rp-balance-selector",
+                maxHeight=240,
+                optionHeight=38,
             ),
             html.Div(
                 dbc.Alert(
@@ -106,9 +110,9 @@ def _report_card(title, description, tipo):
                     className="mb-0 py-2",
                 ),
                 id="report-balance-status",
-                className="mt-3",
+                className="rp-balance-status mt-2",
             ),
-        ], className="mb-3")
+        ], className="rp-balance-selection mb-2")
 
     return dbc.Card([
         dbc.CardBody([
@@ -147,8 +151,10 @@ def _report_card(title, description, tipo):
                 else html.Div(),
                 *botones_pdf,
             ], className="d-flex flex-wrap gap-2"),
+            html.Small(id="report-balance-pdf-note", className="rp-balance-pdf-note")
+            if tipo == "balance" else None,
         ])
-    ], className="rp-card h-100")
+    ], className="rp-card h-100" + (" rp-balance-card" if tipo == "balance" else ""))
 
 
 def layout():
@@ -271,9 +277,9 @@ def layout():
                     children=dbc.Row([
                         dbc.Col(_report_card(
                             "Balance Semanal",
-                            "Balance semanal promedio de producción catódica por período seleccionado.",
+                            "Reporte de Balance de Masa de Planta Hidrometalúrgica, correspondiente al caso oficial y período seleccionado.",
                             "balance",
-                        ), md=4, className="mb-4"),
+                        ), md=4, className="mb-4 rp-balance-column"),
                         dbc.Col(_report_card(
                             "Conciliación Mensual",
                             "Conciliación mensual acumulada de producción catódica.",

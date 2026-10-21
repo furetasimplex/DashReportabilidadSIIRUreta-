@@ -41,3 +41,92 @@
 .lix-composition-table th { font-size: 12px; color: #64717c; }
 .lix-composition-table th:last-child, .lix-composition-table td:last-child { text-align: right; width: 65px; }
 @media (max-width: 767px) { .lix-map-block { padding: 16px 12px; } .lix-detail-grid { grid-template-columns: 1fr; } }
+
+/* V2 aislado: colores de fase y marcadores secundarios; legacy intacto. */
+.lix-operational .wetting { --lix-state: #72a6b5; }
+.lix-operational .draining { --lix-state: #3e777a; }
+.lix-operational button.lix-parcel { position: relative; }
+.lix-operational .lix-parcel-cell { position:relative; }
+.lix-v2-markers { position:absolute; top:4px; right:4px; display:flex; flex-direction:column; gap:3px; }
+.lix-v2-mark { display:block; font-size:11px; font-weight:800; width:15px; height:15px; line-height:15px; text-align:center; border-radius:50%; z-index:2; }
+.lix-v2-mark.admin { background:#f2fff5; color:#22673c; }
+.lix-v2-mark.review { background:#fff4cc; color:#704a00; }
+.lix-v2-mark.pause { background:#ffedcc; color:#7c4400; }
+.lix-v2-coverage { flex-basis:100%; padding:10px 12px; border:1px solid #aab3b7; border-radius:6px; color:#fff; background:#383e42; font-size:12px; line-height:1.5; }
+.lix-v2-phase-heading { padding:16px 0 10px; color:#263e4b; }
+.lix-v2-phase-heading small { display:block; font-size:11px; text-transform:uppercase; }
+.lix-v2-phase-heading h4 { font-size:22px; margin:4px 0; font-weight:700; }
+.lix-v2-review-secondary { font-size:12px; }
+.lix-detail-section { min-width:0; }
+.lix-v2-scroll-hint { display:block; font-size:11px; color:#526776; margin-bottom:6px; }
+.lix-v2-module-scroll { min-width:0; width:100%; scrollbar-width:auto; scrollbar-color:#718595 #edf0f3; border:1px solid #dce2e7; }
+.lix-v2-module-scroll:focus-visible { outline:2px solid #e86d1f; outline-offset:2px; }
+.lix-v2-module-scroll::-webkit-scrollbar { height:12px; }
+.lix-v2-module-scroll::-webkit-scrollbar-thumb { background:#718595; border-radius:6px; }
+.lix-v2-module-scroll .lix-v2-modules { border-collapse:separate; border-spacing:0; margin:0; }
+.lix-v2-modules th, .lix-v2-modules td { white-space:nowrap; background:#fafbfd; }
+.lix-v2-modules th:nth-child(1), .lix-v2-modules td:nth-child(1) { position:sticky; left:0; min-width:80px; width:80px; max-width:80px; z-index:2; }
+.lix-v2-modules th:nth-child(2), .lix-v2-modules td:nth-child(2) { position:sticky; left:80px; min-width:145px; width:145px; max-width:145px; z-index:2; white-space:normal; }
+.lix-v2-modules th:nth-child(2), .lix-v2-modules td:nth-child(2) { border-right:2px solid #dce2e7; }
+.lix-v2-admin { padding:22px; border:1px solid #dce2e7; border-radius:10px; margin:20px 0; background:#fafbfd; }
+.lix-v2-admin h5 { color:#1f4e78; }
+.lix-v2-scroll { overflow-x:auto; max-width:100%; }
+.lix-v2-scroll table { font-size:12px; min-width:650px; }
+.lix-v2-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.lix-v2-modules td { min-width:85px; }
+@media(max-width:767px){.lix-v2-admin{padding:14px}.lix-v2-actions button{flex:1 1 150px}}
+
+/* Confirmación: contexto compacto; diagnóstico completo en el drawer existente. */
+.lix-confirm-identity { display:flex; flex-wrap:wrap; gap:4px 18px; font-size:13px; color:#526776; margin-bottom:16px; }
+.lix-confirm-summary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 24px; margin:0 0 12px; }
+.lix-confirm-summary-grid dt { font-size:11px; text-transform:uppercase; color:#64717c; margin-bottom:3px; }
+.lix-confirm-summary-grid dd { margin:0; color:#263e4b; font-size:14px; font-weight:600; overflow-wrap:anywhere; }
+.lix-confirm-summary-grid .lix-confirm-auto dd { font-size:21px; line-height:1.25; }
+.lix-confirm-notice { font-size:12px; color:#704a00; padding:7px 10px; border-left:3px solid #e9aa40; margin:8px 0; overflow-wrap:anywhere; }
+.lix-confirm-links { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.lix-confirm-links .btn { padding-left:0; color:#1f4e78; }
+.lix-confirm-current { padding:12px; border:1px solid #dce2e7; border-radius:6px; margin-bottom:14px; }
+.lix-confirm-current h6 { font-size:12px; color:#526776; }
+.lix-confirm-form-title { padding-top:14px; border-top:1px solid #dce2e7; color:#526776; font-size:12px; text-transform:uppercase; margin-bottom:12px; }
+.lix-confirm-form { max-width:100%; min-width:0; }
+.lix-confirm-form .Select, .lix-confirm-form textarea, .lix-confirm-form input { max-width:100%; }
+.lix-confirm-history ol { list-style:none; padding:0; margin:0; }
+.lix-confirm-history-item { padding:12px; border:1px solid #dce2e7; border-radius:6px; margin-bottom:10px; }
+.lix-confirm-history-item > strong { display:block; font-size:13px; margin-bottom:8px; }
+@media(max-width:767px){.lix-confirm-summary-grid{grid-template-columns:1fr;gap:10px}.lix-confirm-identity{flex-direction:column}}
+
+/* Estados visuales locales: inactivo nunca conserva el naranja de acción. */
+.lix-v2-actions .btn:disabled,
+.lix-v2-actions .btn:disabled:hover,
+.lix-v2-actions .btn:disabled:active {
+  background:#e4e8ed; border-color:#cbd2d9; color:#53606d; opacity:1;
+  cursor:not-allowed; pointer-events:auto; box-shadow:none; transform:none; transition:none;
+}
+.lix-confirm-readonly-notice { color:#263e4b; background:#edf3f8; border:1px solid #c8d5df; border-left:4px solid #5485a1; font-size:13px; }
+.lix-confirm-form.is-readonly { background:#f0f3f6; border:1px solid #cbd3db; border-radius:6px; padding:12px; }
+.lix-confirm-form.is-readonly label { color:#465764; }
+.lix-confirm-form.is-readonly input:disabled,
+.lix-confirm-form.is-readonly textarea:disabled,
+.lix-confirm-form.is-readonly .Select.is-disabled > .Select-control,
+.lix-confirm-form.is-readonly .SingleDatePickerInput__disabled {
+  background:#e7ecf1; color:#465764; opacity:1; cursor:not-allowed; font-style:normal;
+}
+.lix-confirm-form.is-readonly .Select.is-disabled .Select-placeholder,
+.lix-confirm-form.is-readonly .Select.is-disabled .Select-value-label { color:#53606d; }
+.lix-confirm-form.is-readonly input:disabled::placeholder,
+.lix-confirm-form.is-readonly textarea:disabled::placeholder { color:#53606d; opacity:1; }
+
+/* Diagnóstico: análisis del período primero; QA puntual al final. */
+.lix-diagnostic-shell { min-width:0; max-width:100%; }
+.lix-diagnostic-shell .row > * { min-width:0; }
+.lix-diagnostic-method { margin:0; padding:0 16px 12px; font-size:12px; color:#526776; }
+.lix-diagnostic-advanced { margin-top:22px; border:1px solid #dce2e7; border-radius:8px; background:#fafbfd; min-width:0; }
+.lix-diagnostic-advanced > summary { padding:14px 16px; cursor:pointer; color:#1f4e78; }
+.lix-diagnostic-advanced > summary > span { font-weight:600; }
+.lix-diagnostic-advanced > summary > small { display:block; margin-top:5px; font-size:12px; color:#526776; }
+.lix-diagnostic-advanced-body { padding:0 16px 16px; min-width:0; }
+.lix-diagnostic-shell .dash-graph { min-width:0; max-width:100%; }
+@media(max-width:767px){
+  .lix-diagnostic-shell .DateRangePickerInput { display:flex; flex-wrap:wrap; align-items:center; max-width:100%; }
+  .lix-diagnostic-shell .DateRangePicker, .lix-diagnostic-shell .DateInput { max-width:100%; }
+}

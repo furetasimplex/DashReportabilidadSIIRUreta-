@@ -7,7 +7,7 @@ from pathlib import Path
 from sqlalchemy import text
 from .db import _connection
 
-OUT = Path(__file__).with_name('promocion_estado_operacional_20261005')
+OUT = (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion/promocion_estado_operacional_20261005')
 TEST = 'inventar_SpcHidr.fn_estado_operacional_parcela_diario_test_v2'
 OFFICIAL = 'inventar_SpcHidr.fn_estado_operacional_parcela_diario'
 
@@ -15,7 +15,7 @@ OFFICIAL = 'inventar_SpcHidr.fn_estado_operacional_parcela_diario'
 def run():
     if os.getenv('SQLSERVER_DB','').lower() != 'inventar_spchidr':
         raise RuntimeError('Solo DEV.')
-    OUT.mkdir(exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     if (OUT/'precheck.json').exists():
         raise RuntimeError('Evidencia previa existente; no sobrescribir respaldos.')
     with _connection() as conn:

@@ -269,7 +269,7 @@ def run(engine, guard, lock, text, evidence):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--execute-rollback', action='store_true')
-    parser.add_argument('--output', type=Path, default=ROOT / 'scripts/diagnosticos/reclamo_publicar_factor_dev.json')
+    parser.add_argument('--output', type=Path, default=ROOT / 'auditorias/archivo/scripts/diagnosticos/reclamo_publicar_factor_dev.json')
     args = parser.parse_args(argv)
     if not args.execute_rollback:
         parser.error('Falta --execute-rollback. No se ha conectado a SQL.')

@@ -13,8 +13,10 @@ import dash_bootstrap_components as dbc
 
 from report_export.report_export import (
     BalanceReportError,
+    BalanceValidationError,
     refrescar_dependencias_datos_conciliados_emision,
     fetch_recon_balance_official_cases,
+    fetch_balance_case_model,
     fetch_report_data,
     refrescar_historico_apilado_report,
     actualizar_datos_conciliados_report,
@@ -83,7 +85,7 @@ from report_export.balance_service import (
     build_balance_official_report,
     get_balance_case_status,
 )
-from report_export.balance_contract import build_balance_report_identity
+from report_export.balance_contract import build_balance_report_identity, get_balance_template_path
 _NOMBRE_REPORTE_REPRESENTATIVIDAD_TORRES = "Representatividad Torres"
 _TEXTO_CONFIRMACION_BORRADO = "confirmar borrado"
 
@@ -1234,66 +1236,137 @@ def cargar_casos_oficiales_balance(tab_activo, caso_actual):
         seen.add(case_id)
         start = pd.to_datetime(row["fecha_inicio"]).date()
         end = pd.to_datetime(row["fecha_fin"]).date()
+        model = row.get("modelo_id")
+        version = f"V{int(model)}" if pd.notna(model) else "Modelo no informado"
+        compact = f"Caso {case_id} · {version} · {_balance_compact_period(start, end)}"
+        full_name = row.get("nombre_caso") or "Sin nombre"
         options.append({
-            "label": (
-                f"Caso {case_id} — {row.get('nombre_caso') or 'Sin nombre'} — "
-                f"{start:%d/%m/%Y} al {end:%d/%m/%Y}"
-            ),
+            "label": html.Span(compact, className="rp-balance-option"),
             "value": case_id,
+            "search": f"{compact} {full_name}",
+            "title": f"Caso {case_id} — {full_name} — {start:%d/%m/%Y} al {end:%d/%m/%Y}",
         })
     values = {option["value"] for option in options}
     selected = caso_actual if caso_actual in values else options[0]["value"]
     return options, selected
 
 
+def _balance_compact_period(start, end):
+    """Fechas de presentacion sin depender del locale del servidor."""
+    months = ("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
+    if (start.year, start.month) == (end.year, end.month):
+        days = f"{start.day:02}–{end.day:02}" if start != end else f"{start.day:02}"
+        return f"{days} {months[end.month - 1]} {end.year}"
+    left = f"{start.day:02} {months[start.month - 1]}"
+    if start.year != end.year:
+        left += f" {start.year}"
+    return f"{left}–{end.day:02} {months[end.month - 1]} {end.year}"
+
+
 def _balance_status_content(status):
     available = bool(status["mtd_disponible"])
+    period = f"{status['fecha_inicio']:%d-%m-%Y} al {status['fecha_fin']:%d-%m-%Y}"
+    header = html.Div([
+        html.Strong(f"Caso {status['caso_id']} — {status.get('nombre_caso') or 'Sin nombre'}",
+                    className="rp-balance-case__name"),
+        html.Span(f"Período operacional · {period}", className="rp-balance-case__period"),
+    ], className="rp-balance-case__header")
     items = [
-        (
-            "Caso seleccionado",
-            f"Caso {status['caso_id']} — {status.get('nombre_caso') or 'Sin nombre'}",
-        ),
-        (
-            "Período",
-            f"{status['fecha_inicio']:%d-%m-%Y} al {status['fecha_fin']:%d-%m-%Y}",
-        ),
         ("Run oficial", str(status["solver_run_id"])),
-        ("Estado Run", str(status.get("estado_run") or "Sin estado")),
+        ("Estado registrado", str(status.get("estado_run") or "Sin estado")),
     ]
-    if available:
-        items.extend([
-            (
-                "Período acumulado",
-                f"{status['mtd_fecha_inicio']:%d-%m-%Y} al "
-                f"{status['mtd_fecha_fin']:%d-%m-%Y}",
-            ),
-            ("Casos MTD", ", ".join(map(str, status["mtd_casos"]))),
-        ])
     rows = [
         html.Div([
-            html.Small(label, className="text-muted d-block"),
-            html.Span(value, className="fw-semibold"),
-        ], className="mb-2")
+            html.Small(label, className="rp-balance-case__label"),
+            html.Span(value, className="rp-balance-case__value"),
+        ], className="rp-balance-case__item")
         for label, value in items
     ]
-    rows.insert(4, html.Div([
-        html.Small("Acumulado MTD", className="text-muted d-block"),
+    rows.append(html.Div([
+        html.Small("Acumulado MTD", className="rp-balance-case__label"),
         dbc.Badge(
             "Disponible" if available else "No disponible",
             color="success" if available else "warning",
             pill=True,
         ),
-    ], className="mb-2"))
-    if not available:
-        rows.append(html.Div([
-            html.Small("Motivo", className="text-muted d-block"),
-            html.Span(status.get("mensaje_mtd") or "Cobertura MTD no disponible."),
-        ]))
+    ], className="rp-balance-case__item rp-balance-case__wide"))
+    if available:
+        accumulated = f"{status['mtd_fecha_inicio']:%d-%m-%Y} al {status['mtd_fecha_fin']:%d-%m-%Y}"
+        same = (status['fecha_inicio'], status['fecha_fin']) == (status['mtd_fecha_inicio'], status['mtd_fecha_fin'])
+        secondary = html.Div([
+            html.Span("Período acumulado: mismo período operacional" if same else f"Período acumulado: {accumulated}",
+                      title=accumulated),
+            html.Span(f" · Casos MTD: {', '.join(map(str, status['mtd_casos']))}"),
+        ], className="rp-balance-case__secondary")
+    else:
+        secondary = html.Div(status.get("mensaje_mtd") or "Cobertura MTD no disponible.",
+                             className="rp-balance-case__secondary")
+    content = [header, html.Div(rows, className="rp-balance-case__grid"), secondary]
+    content.append(_balance_solver_detail(status))
     return dbc.Alert(
-        rows,
+        content,
         color="success" if available else "warning",
-        className="mb-0 py-2",
+        className="rp-balance-case mb-0",
     )
+
+
+def _balance_solver_detail(status):
+    """Presentacion informativa: ausencia y false son estados distintos."""
+    import json
+    raw = status.get("solver_metadata_json")
+    metadata = {}
+    missing = raw is None or raw == ""
+    invalid = False
+    if not missing:
+        try:
+            metadata = json.loads(raw) if isinstance(raw, str) else dict(raw)
+            if not isinstance(metadata, dict):
+                metadata = {}
+                invalid = True
+        except (TypeError, ValueError):
+            invalid = True
+    observed = bool(
+        status.get("observacion_solver") or metadata.get("warning_message")
+        or metadata.get("has_solver_warning") is True
+        or metadata.get("solver_converged") is False
+        or metadata.get("officializable") is False
+    )
+    def value(key):
+        if key not in metadata:
+            return "No informado"
+        return "No informado (null)" if metadata[key] is None else str(metadata[key])
+    fields = [("Estado registrado", str(status.get("estado_run") or "No informado")),
+              ("solver_converged", value("solver_converged")),
+              ("officializable", value("officializable"))]
+    advanced_fields = []
+    if missing:
+        advanced_fields.append(("Metadatos", "No disponibles; no equivale a False."))
+    elif invalid:
+        advanced_fields.append(("Metadatos", "Disponibles pero no interpretables como objeto."))
+    fields.append(("Advertencia técnica", metadata.get("warning_message") or "Sin advertencia técnica informada."))
+    # La observacion derivada repite los flags y el significado del aviso original.
+    # Se conserva cualquier texto distinto, pero no se duplica esa sintesis conocida.
+    observation = status.get("observacion_solver")
+    derived = observation and observation.startswith("Seleccion oficial SQL con observaciones del solver:")
+    if observation and not derived and observation != metadata.get("warning_message"):
+        advanced_fields.append(("Observación disponible", status["observacion_solver"]))
+    extras = {key: val for key, val in metadata.items()
+              if key not in {"solver_converged", "officializable", "warning_message"}}
+    advanced_fields.extend((key, json.dumps(val, ensure_ascii=False) if isinstance(val, (dict, list)) else str(val))
+                           for key, val in extras.items())
+    return html.Div([
+        html.P("Corrida oficial con observaciones del solver", className="rp-balance-solver__notice") if observed else None,
+        html.Details([
+            html.Summary("Ver detalle técnico"),
+            html.P("La selección oficial SQL no certifica convergencia matemática.", className="rp-balance-solver__meaning"),
+            html.Dl([html.Div([html.Dt(label), html.Dd(text)]) for label, text in fields]),
+            html.Details([
+                html.Summary("Mostrar metadatos avanzados"),
+                html.Dl([html.Div([html.Dt(label), html.Dd(text)]) for label, text in advanced_fields])
+                if advanced_fields else html.P("Sin metadatos adicionales disponibles."),
+            ], open=False, className="rp-balance-solver__advanced"),
+        ], open=False, className="rp-balance-solver__details"),
+    ], className="rp-balance-solver" + (" rp-balance-solver--observed" if observed else ""))
 
 
 @callback(
@@ -1303,6 +1376,7 @@ def _balance_status_content(status):
         "disabled",
         allow_duplicate=True,
     ),
+    Output("report-balance-context", "data"),
     Input("report-balance-caso", "value"),
     prevent_initial_call=True,
 )
@@ -1314,11 +1388,13 @@ def actualizar_estado_balance(caso_id):
                 color="secondary",
                 className="mb-0 py-2",
             ),
-            True,
+            True, None,
         )
     print(f"[BALANCE UI] caso seleccionado={caso_id}")
     try:
         status = get_balance_case_status(int(caso_id))
+    except BalanceValidationError as exc:
+        return dbc.Alert(str(exc), color="danger", className="mb-0 py-2"), True, None
     except Exception as exc:
         import traceback
         traceback.print_exc()
@@ -1330,13 +1406,38 @@ def actualizar_estado_balance(caso_id):
                 color="danger",
                 className="mb-0 py-2",
             ),
-            True,
+            True, None,
         )
     print(f"[BALANCE UI] run oficial={status['solver_run_id']}")
     print(f"[BALANCE UI] mtd_disponible={status['mtd_disponible']}")
     if status.get("mensaje_mtd"):
         print(f"[BALANCE UI] motivo={status['mensaje_mtd']}")
-    return _balance_status_content(status), not status["mtd_disponible"]
+    return _balance_status_content(status), not status["mtd_disponible"], {
+        "caso_id": status["caso_id"], "modelo_id": status.get("modelo_id"),
+    }
+
+
+_BALANCE_PDF_V2_MESSAGE = "PDF no disponible para el modelo 2. Utilice Exportar Excel."
+
+
+@callback(
+    Output({"type": "report-pdf-btn", "tipo": "balance"}, "disabled", allow_duplicate=True),
+    Output("report-balance-pdf-note", "children"),
+    Input("report-balance-context", "data"),
+    Input("report-balance-caso", "value"),
+    Input("report-status", "children"),
+    prevent_initial_call=True,
+)
+def actualizar_disponibilidad_pdf_balance(context, caso_id, _status=None):
+    # Tambien se reevalua al terminar una descarga, para conservar la politica
+    # frente al running generico de PDF y cambios de Caso durante una descarga.
+    if not context or context.get("caso_id") != caso_id:
+        return True, "Seleccione un Caso para consultar la disponibilidad del PDF."
+    if context.get("modelo_id") == 2:
+        return True, _BALANCE_PDF_V2_MESSAGE
+    if context.get("modelo_id") == 1:
+        return False, ""
+    return True, "PDF no disponible para el modelo seleccionado."
 
 
 @callback(
@@ -7898,7 +7999,8 @@ def exportar_excel(
                 df_periodo,
                 df_acumulado,
                 metadata,
-                BALANCE_TEMPLATE_XLSX_PATH,
+                (get_balance_template_path(2) if int(metadata.get("modelo_id", 1)) == 2
+                 else BALANCE_TEMPLATE_XLSX_PATH),
             )
             filename = identity["filename"]
             print(f"[BALANCE EXPORT] output={filename}")
@@ -7907,6 +8009,8 @@ def exportar_excel(
                 f"{identity['caso_label']} | {identity['run_label']} | "
                 f"{identity['periodo_label']} | {identity['mtd_label']}"
             )
+            if metadata.get("observacion_solver"):
+                status += " | " + metadata["observacion_solver"]
             return (
                 _enviar_descarga(xbytes, filename), status, _done, False, no_update
             )
@@ -8040,6 +8144,7 @@ def _clear_progress_on_viz(_):
     Input({"type": "report-pdf-btn", "tipo": ALL}, "n_clicks"),
     State("report-fecha-inicio", "date"),
     State("report-fecha-final", "date"),
+    State("report-balance-caso", "value"),
     prevent_initial_call=True,
     running=[
         (
@@ -8049,7 +8154,7 @@ def _clear_progress_on_viz(_):
         ),
     ],
 )
-def generar_pdf(n_clicks_list, f_ini, f_fin):
+def generar_pdf(n_clicks_list, f_ini, f_fin, balance_caso_id=None):
     triggered = ctx.triggered_id
     if not triggered or not isinstance(triggered, dict):
         return no_update, no_update, no_update, False, no_update
@@ -8058,6 +8163,16 @@ def generar_pdf(n_clicks_list, f_ini, f_fin):
 
     tipo = triggered["tipo"]
     _done = html.Div()
+
+    if tipo == "balance":
+        try:
+            model = fetch_balance_case_model(balance_caso_id)
+        except BalanceReportError as exc:
+            return no_update, str(exc), _done, False, no_update
+        if model == 2:
+            return no_update, _BALANCE_PDF_V2_MESSAGE, _done, False, no_update
+        if model != 1:
+            return no_update, "PDF no disponible para el modelo seleccionado.", _done, False, no_update
 
     print(f"[PDF] tipo={tipo} | ini={f_ini} | fin={f_fin}")
 

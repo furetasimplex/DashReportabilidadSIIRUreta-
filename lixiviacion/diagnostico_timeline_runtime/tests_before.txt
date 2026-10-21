@@ -1,3 +1,0 @@
-Comando: .\venv\Scripts\python.exe -m pytest lixiviacion -q
-Antes de editar runtime y agregar los tests de integración:
-56 passed in 1.85s

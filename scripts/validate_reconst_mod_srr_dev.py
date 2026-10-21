@@ -21,9 +21,9 @@ from report_export import report_export as reports
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARTIFACTS = ROOT / "report_export/exports/reconst_mod_srr_validation"
+ARTIFACTS = ROOT / "auditorias/archivo/report_export/exports/reconst_mod_srr_validation"
 START, END = date(2026, 8, 1), date(2026, 9, 1)
-TARGET = ROOT / "report_export/exports/Analisis_Torres_de_Muestreo_20260801_20260831.xlsx"
+TARGET = ROOT / "auditorias/archivo/report_export/exports/Analisis_Torres_de_Muestreo_20260801_20260831.xlsx"
 BASELINE = Path.home() / "Downloads/Analisis_Torres_de_Muestreo_20260801_20260831 (1).xlsx"
 
 

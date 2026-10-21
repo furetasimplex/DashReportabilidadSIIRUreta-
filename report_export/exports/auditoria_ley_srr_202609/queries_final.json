@@ -1,1 +1,0 @@
-{"dc_final": "SELECT * FROM inventar_SpcHidr.Datos_conciliados_of WHERE Fecha>='20260901' AND Fecha<'20261001' ORDER BY Fecha", "objeto_firmas_final": "SELECT s.name AS esquema,o.name,o.type_desc,m.definition FROM sys.objects o JOIN sys.schemas s ON s.schema_id=o.schema_id JOIN sys.sql_modules m ON m.object_id=o.object_id"}

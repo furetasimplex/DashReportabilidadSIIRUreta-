@@ -12,7 +12,7 @@ from monitor_pi_tum.db import _engine_dev, _assert_dev_connection
 from scripts.validate_factor_nominales_dev import lock, snapshot, same, rows
 
 MIG = ROOT / 'docs/migrations/factor_camiones_nominales_dev'
-OUT = ROOT / 'report_export/exports/validacion_nbreak_textual_20260930'
+OUT = ROOT / 'auditorias/archivo/report_export/exports/validacion_nbreak_textual_20260930'
 OBJECTS = {
     'fn_resolver_vueltas_camiones_test': '04_resolver_vueltas.sql',
     'v_vueltas_camiones_diarias_test': '05_vueltas_diarias.sql',

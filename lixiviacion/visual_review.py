@@ -20,8 +20,8 @@ def run():
     from main import app
     from werkzeug.serving import make_server
     from playwright.sync_api import sync_playwright
-    output = Path(__file__).with_name('visual_promocion')
-    output.mkdir(exist_ok=True)
+    output = (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion/visual_promocion')
+    output.mkdir(parents=True, exist_ok=True)
     with app.server.test_client() as client:
         with client.session_transaction() as session:
             session['user'] = 'revision-local-dev'

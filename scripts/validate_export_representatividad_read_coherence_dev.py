@@ -16,7 +16,7 @@ TABLES = ('Control_Apilado_TMH_v2_test', 'Historico_Apilado_Diario',
           'Clays_CuFe_trazabilidad', 'reporte_turno_cache_emision_test',
           'trazabilidad_analitos_tm_emision_test', 'Resumen_Intervalo_TotTM',
           'representatividad_torres_resultado', 'BD_Ton')
-# Inspección local: report_export/exports/fase4c/manual_dev.json (antes/después).
+# Inspección local: auditorias/archivo/report_export/exports/fase4c/manual_dev.json (antes/después).
 # Política de avance de Clays auditada posteriormente en F4B3A.
 ALLOWED_IDENTITIES = {'Clays_CuFe_trazabilidad.id_trazabilidad'}
 FETCHES = ('fetch_representatividad_torres_report', 'fetch_pesos_representatividad_report',
@@ -43,7 +43,7 @@ def main(argv=None):
     parser.add_argument('--execute-rollback', action='store_true')
     parser.add_argument('--editor', action='store_true', help='Paquete editor; default paquete oficial Excel/PDF')
     parser.add_argument('--fail-fetch', type=int, help='Ordinal de fetch real; evidencia registra fallback si existe')
-    parser.add_argument('--output', type=Path, default=Path('scripts/diagnosticos/fase4b3c/manual_dev.json'))
+    parser.add_argument('--output', type=Path, default=Path('auditorias/archivo/scripts/diagnosticos/fase4b3c/manual_dev.json'))
     args = parser.parse_args(argv)
     if not args.execute_rollback:
         print('SAFE: no se conecta ni escribe. Requiere --execute-rollback.')

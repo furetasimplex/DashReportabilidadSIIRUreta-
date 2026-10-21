@@ -11,11 +11,15 @@ except Exception as e:
     raise RuntimeError("No se pudo importar get_engine desde db_connection.py") from e
 
 from sqlalchemy import text as _sa_text
-from report_export.balance_contract import BALANCE_RECON_SOURCE
+from report_export.balance_contract import BALANCE_RECON_SOURCE, get_balance_model_contract, is_finite_balance_number
 
 
 class BalanceReportError(ValueError):
     """Error de validacion del reporte Balance apto para mostrar en Dash."""
+
+
+class BalanceValidationError(BalanceReportError):
+    """Integridad o contrato de Balance: mensaje seguro para la interfaz."""
 
 
 def _get_engine():
@@ -131,43 +135,64 @@ def fetch_recon_balance_run_report(run_id: int):
 
 
 def validate_recon_balance_result(df_run, metadata, identifier):
-    """Valida el contrato comun de cualquier Run de Balance F1-F120."""
-    if df_run is None or len(df_run) != 120:
+    """Valida integridad del resultado seleccionado, segun el modelo del Caso."""
+    try:
+        contract = get_balance_model_contract(metadata.get("modelo_id", 1))
+    except ValueError as exc:
+        raise BalanceValidationError(str(exc)) from exc
+    count_expected = contract["flow_count"]
+    if df_run is None or len(df_run) != count_expected:
         count = 0 if df_run is None else len(df_run)
-        raise BalanceReportError(
-            f"{identifier} posee {count} flujos; se esperaban 120."
+        raise BalanceValidationError(
+            f"{identifier} posee {count} flujos; se esperaban {count_expected}."
         )
     if "codigo_flujo" not in df_run.columns:
-        raise BalanceReportError(f"{identifier} no devolvio codigo_flujo.")
+        raise BalanceValidationError(f"{identifier} no devolvio codigo_flujo.")
     codes = df_run["codigo_flujo"]
     if codes.isna().any():
-        raise BalanceReportError(f"{identifier} contiene codigo_flujo NULL.")
+        raise BalanceValidationError(f"{identifier} contiene codigo_flujo NULL.")
     codes = codes.astype(str).str.strip()
     duplicates = sorted(codes[codes.duplicated(keep=False)].unique())
     if duplicates:
-        raise BalanceReportError(
+        raise BalanceValidationError(
             f"{identifier} contiene codigos duplicados: "
             + ", ".join(duplicates)
             + "."
         )
-    expected = {f"F{i}" for i in range(1, 121)}
+    expected = {f"F{i}" for i in range(1, count_expected + 1)}
     received = set(codes)
     missing = sorted(expected - received, key=lambda value: int(value[1:]))
     extras = sorted(received - expected)
     if missing:
-        raise BalanceReportError("Faltan flujos: " + ", ".join(missing) + ".")
+        raise BalanceValidationError("Faltan flujos: " + ", ".join(missing) + ".")
     if extras:
-        raise BalanceReportError(
+        raise BalanceValidationError(
             "Existen flujos no esperados: " + ", ".join(extras) + "."
         )
     state = str(metadata.get("estado_run", "")).strip().lower()
     if state != "success":
-        raise BalanceReportError(
+        raise BalanceValidationError(
             f"{identifier} no finalizo con estado success."
         )
+    if metadata.get("run_caso_id") is not None and int(metadata["run_caso_id"]) != int(metadata["caso_id"]):
+        raise BalanceValidationError("La corrida oficial pertenece a otro Caso.")
+    for flag in ("flujo_modelo_coherente", "resultado_caso_coherente"):
+        if flag in df_run and not df_run[flag].eq(1).all():
+            raise BalanceValidationError(f"{identifier} tiene asociaciones inconsistentes: {flag}.")
+    if "resultado_run_id" in df_run and not df_run["resultado_run_id"].eq(int(metadata["solver_run_id"])).all():
+        raise BalanceValidationError("La seleccion oficial cambio durante la lectura; vuelva a exportar.")
+    fields = ("masa_medida", "masa_reconciliada", "ley_cu_medida",
+              "ley_cu_reconciliada", "fino_cu_medido", "fino_cu_reconciliado",
+              "tolerancia_masa", "tolerancia_ley")
+    if contract["modelo_id"] == 2:
+        for field in fields:
+            if field not in df_run or not df_run[field].map(is_finite_balance_number).all():
+                raise BalanceValidationError(f"{identifier} contiene {field} faltante o no finito.")
     validated = df_run.copy()
     validated["codigo_flujo"] = codes
-    return validated.set_index("codigo_flujo", drop=False)
+    return validated.set_index("codigo_flujo", drop=False).loc[
+        [f"F{i}" for i in range(1, count_expected + 1)]
+    ]
 
 
 def fetch_recon_balance_official_cases():
@@ -198,6 +223,21 @@ def fetch_recon_balance_official_cases():
         ) from exc
 
 
+def fetch_balance_case_model(caso_id):
+    """Lectura minima para controlar PDF, sin cambiar el circuito historico."""
+    if caso_id is None:
+        raise BalanceValidationError("Seleccione un Caso oficial para consultar la disponibilidad del PDF.")
+    sql = _sa_text(f"SELECT id, modelo_id FROM {BALANCE_RECON_SOURCE}.recon_caso WHERE id = :caso_id")
+    try:
+        with _get_engine().connect() as conn:
+            frame = pd.read_sql_query(sql, conn, params={"caso_id": int(caso_id)})
+    except Exception as exc:
+        raise BalanceReportError("No fue posible consultar el modelo del Caso para exportar PDF.") from exc
+    if len(frame) != 1:
+        raise BalanceValidationError("El Caso seleccionado no identifica un modelo unico para exportar PDF.")
+    return int(frame.iloc[0]["modelo_id"])
+
+
 def fetch_recon_balance_official_case(caso_id):
     """Resuelve caso_id -> Run oficial y devuelve sus 120 resultados."""
     try:
@@ -222,6 +262,8 @@ def fetch_recon_balance_official_case(caso_id):
             sr.estado AS estado_run,
             sr.solver_name,
             sr.solver_version,
+            sr.caso_id AS run_caso_id,
+            sr.metadata_json AS solver_metadata_json,
             sr.started_at,
             sr.finished_at,
             co.oficializado_en,
@@ -229,9 +271,8 @@ def fetch_recon_balance_official_case(caso_id):
         FROM {BALANCE_RECON_SOURCE}.recon_caso AS c
         INNER JOIN {BALANCE_RECON_SOURCE}.recon_caso_oficial AS co
             ON co.caso_id = c.id
-        INNER JOIN {BALANCE_RECON_SOURCE}.recon_solver_run AS sr
+        LEFT JOIN {BALANCE_RECON_SOURCE}.recon_solver_run AS sr
             ON sr.id = co.solver_run_id
-           AND sr.caso_id = c.id
         WHERE c.id = :caso_id
     """)
     sql_flows = _sa_text(f"""
@@ -244,7 +285,13 @@ def fetch_recon_balance_official_case(caso_id):
             rf.ley_cu_medida,
             rf.ley_cu_reconciliada,
             rf.fino_cu_medido,
-            rf.fino_cu_reconciliado
+            rf.fino_cu_reconciliado,
+            rf.error_masa,
+            rf.error_ley_cu,
+            rf.run_id AS resultado_run_id,
+            CASE WHEN fm.modelo_id = c.modelo_id AND fm.codigo_flujo = rf.codigo_flujo
+                 THEN 1 ELSE 0 END AS flujo_modelo_coherente,
+            CASE WHEN rf.caso_id = c.id THEN 1 ELSE 0 END AS resultado_caso_coherente
         FROM {BALANCE_RECON_SOURCE}.recon_caso AS c
         INNER JOIN {BALANCE_RECON_SOURCE}.recon_caso_oficial AS co
             ON co.caso_id = c.id
@@ -253,7 +300,8 @@ def fetch_recon_balance_official_case(caso_id):
            AND sr.caso_id = c.id
         INNER JOIN {BALANCE_RECON_SOURCE}.recon_resultado_flujo AS rf
             ON rf.run_id = sr.id
-           AND rf.caso_id = c.id
+        LEFT JOIN {BALANCE_RECON_SOURCE}.recon_flujo_modelo AS fm
+            ON fm.id = rf.flujo_modelo_id
         WHERE c.id = :caso_id
     """)
     try:
@@ -265,7 +313,7 @@ def fetch_recon_balance_official_case(caso_id):
                 sql_metadata, conn, params={"caso_id": caso_id}
             )
             flows = pd.read_sql_query(
-                sql_flows, conn, params={"caso_id": caso_id}
+                sql_flows, conn, params={"caso_id": caso_id}, coerce_float=False
             )
     except Exception as exc:
         raise BalanceReportError(
@@ -273,15 +321,19 @@ def fetch_recon_balance_official_case(caso_id):
         ) from exc
 
     if exists.empty:
-        raise BalanceReportError(f"El Caso {caso_id} no existe.")
+        raise BalanceValidationError(f"El Caso {caso_id} no existe.")
     if metadata_df.empty:
-        raise BalanceReportError(f"El Caso {caso_id} no posee un Run oficial.")
+        raise BalanceValidationError(f"El Caso {caso_id} no posee un Run oficial.")
     if len(metadata_df) != 1:
-        raise BalanceReportError(
+        raise BalanceValidationError(
             f"El Caso {caso_id} posee {len(metadata_df)} Runs oficiales; "
             "se esperaba exactamente uno."
         )
     metadata = metadata_df.iloc[0].to_dict()
+    if pd.isna(metadata.get("solver_run_id")):
+        raise BalanceValidationError("La seleccion oficial referencia una corrida inexistente.")
+    if metadata.get("run_caso_id") is not None and int(metadata["run_caso_id"]) != caso_id:
+        raise BalanceValidationError("La corrida oficial pertenece a otro Caso.")
     metadata["es_oficial"] = True
     validated = validate_recon_balance_result(
         flows, metadata, f"El Run oficial {int(metadata['solver_run_id'])}"
@@ -302,6 +354,8 @@ def fetch_recon_balance_mtd_candidates(modelo_id, fecha_inicio, fecha_fin):
             sr.estado AS estado_run,
             sr.solver_name,
             sr.solver_version,
+            sr.caso_id AS run_caso_id,
+            sr.metadata_json AS solver_metadata_json,
             co.oficializado_en,
             rf.codigo_flujo,
             rf.tolerancia_masa,
@@ -311,7 +365,13 @@ def fetch_recon_balance_mtd_candidates(modelo_id, fecha_inicio, fecha_fin):
             rf.ley_cu_medida,
             rf.ley_cu_reconciliada,
             rf.fino_cu_medido,
-            rf.fino_cu_reconciliado
+            rf.fino_cu_reconciliado,
+            rf.error_masa,
+            rf.error_ley_cu,
+            rf.run_id AS resultado_run_id,
+            CASE WHEN fm.modelo_id = c.modelo_id AND fm.codigo_flujo = rf.codigo_flujo
+                 THEN 1 ELSE 0 END AS flujo_modelo_coherente,
+            CASE WHEN rf.caso_id = c.id THEN 1 ELSE 0 END AS resultado_caso_coherente
         FROM {BALANCE_RECON_SOURCE}.recon_caso AS c
         INNER JOIN {BALANCE_RECON_SOURCE}.recon_caso_oficial AS co
             ON co.caso_id = c.id
@@ -320,7 +380,8 @@ def fetch_recon_balance_mtd_candidates(modelo_id, fecha_inicio, fecha_fin):
            AND sr.caso_id = c.id
         INNER JOIN {BALANCE_RECON_SOURCE}.recon_resultado_flujo AS rf
             ON rf.run_id = sr.id
-           AND rf.caso_id = c.id
+        LEFT JOIN {BALANCE_RECON_SOURCE}.recon_flujo_modelo AS fm
+            ON fm.id = rf.flujo_modelo_id
         WHERE c.modelo_id = :modelo_id
           AND c.fecha_fin >= :fecha_inicio
           AND c.fecha_inicio <= :fecha_fin
@@ -336,6 +397,7 @@ def fetch_recon_balance_mtd_candidates(modelo_id, fecha_inicio, fecha_fin):
                     "fecha_inicio": fecha_inicio,
                     "fecha_fin": fecha_fin,
                 },
+                coerce_float=False,
             )
     except Exception as exc:
         raise BalanceReportError(

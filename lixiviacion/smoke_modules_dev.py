@@ -7,6 +7,7 @@ from . import map_db
 
 
 def run():
+    (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion').mkdir(parents=True, exist_ok=True)
     assert os.getenv('SQLSERVER_DB','').lower()=='inventar_spchidr'
     with map_db._connection() as conn:
         assert conn.execute(text('SELECT DB_NAME()')).scalar_one().lower()=='inventar_spchidr'
@@ -22,7 +23,7 @@ def run():
         assert [(int(m['nombre_modulo']),m['estado_modulo']) for m in modules]==expected
         report['cases'].append({'pad':pad,'parcela':number,'modulos_total':row['modulos_total'],'modules':modules})
     report['passed']=True
-    Path(__file__).with_name('SMOKE_MODULES_DEV.json').write_text(json.dumps(report,ensure_ascii=False,indent=2,default=str)+'\n',encoding='utf-8')
+    (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion/SMOKE_MODULES_DEV.json').write_text(json.dumps(report,ensure_ascii=False,indent=2,default=str)+'\n',encoding='utf-8')
     print(json.dumps(report,ensure_ascii=False,indent=2,default=str))
 
 

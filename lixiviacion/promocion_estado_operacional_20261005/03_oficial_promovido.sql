@@ -1,4 +1,0 @@
--- NO PROMOVIDO / NO EJECUTADO.
--- El precheck detectó discrepancia del criterio canónico: RIEGO vs RIEGO_DRENAJE.
--- El objeto oficial no existe. No se genera aquí un DDL para ejecución prematura.
--- Fuente exacta para una futura promoción: 01_test_v2_original.sql.

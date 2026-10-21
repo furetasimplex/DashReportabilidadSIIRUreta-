@@ -31,7 +31,7 @@ def main(argv=None):
     parser.add_argument('--execute-rollback', action='store_true')
     parser.add_argument('--fail-fetch', type=int, choices=range(1, 5), default=None,
                         help='Fallar deliberadamente antes del fetch 1..4 de Excel (mensual: 1..3)')
-    parser.add_argument('--output', type=Path, default=Path('scripts/diagnosticos/fase4b3b/manual_dev.json'))
+    parser.add_argument('--output', type=Path, default=Path('auditorias/archivo/scripts/diagnosticos/fase4b3b/manual_dev.json'))
     parser.add_argument('--monthly', action='store_true', help='Contrato F2: 2026-09-01 a 2026-09-30')
     args = parser.parse_args(argv)
     if not args.execute_rollback:

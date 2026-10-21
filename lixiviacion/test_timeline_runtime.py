@@ -6,10 +6,10 @@ from pathlib import Path
 import re
 from unittest.mock import patch
 from . import db
-from .diagnostico_timeline_runtime.prepare import expressions,output_name
+from test_fixtures.lixiviacion.timeline_helpers import expressions,output_name
 from .test_diagnostic_operational import fake_connection,row
 
-P=Path(__file__).parent/'diagnostico_timeline_runtime'
+P=Path(__file__).resolve().parents[1]/'test_fixtures/lixiviacion/diagnostico_timeline_runtime'
 
 
 def test_timeline_uses_generic_bound_query_without_daily_function():
@@ -39,12 +39,15 @@ def test_case_thresholds_and_null_semantics_unchanged():
     assert original_quality in db.OP_TIMELINE_SQL
 
 
-def test_only_timeline_assignment_changed_in_runtime_module():
+def test_only_authorized_timeline_and_filter_parser_changed_in_runtime_module():
     def tree(path):
         t=ast.parse(path.read_text(encoding='utf-8'))
         t.body=[n for n in t.body if not (isinstance(n,ast.Assign) and any(isinstance(x,ast.Name) and x.id=='OP_TIMELINE_SQL' for x in n.targets))]
+        # Corrección independiente autorizada del contrato DataTable (2026-10-16).
+        # Su alcance completo se protege en test_table_filter_contract.py.
+        t.body=[n for n in t.body if not (isinstance(n,ast.FunctionDef) and n.name=='table_predicate')]
         return ast.dump(t,include_attributes=False)
-    assert tree(P/'db_before.py')==tree(P.parent/'db.py')
+    assert tree(P/'db_before.py')==tree(Path(__file__).parent/'db.py')
 
 
 def test_live_before_after_evidence_exact_null_safe_and_bidirectional():

@@ -1,0 +1,32 @@
+/* Exclusivo de Contingencia Balance M6: no afecta Monitoreo ni Reportabilidad. */
+.m6ct-shell{font-family:Inter,sans-serif;color:#1A1A2E;background:#F5F6FA;padding:24px 0;font-size:14px;line-height:1.55;min-width:0}
+.m6ct-shell header{padding:0 4px 20px;max-width:1000px}
+.m6ct-shell h3{font-size:25px;font-weight:700;margin:6px 0 12px}
+.m6ct-shell h4{font-size:19px;font-weight:650;margin-bottom:18px}
+.m6ct-shell h5{font-size:16px;font-weight:650;margin:20px 0 12px}
+.m6ct-shell .m6ct-eyebrow{color:#A94B12;font-size:12px;font-weight:700;letter-spacing:.08em}
+.m6ct-shell .m6ct-card{background:white;border:1px solid #E5E7EB;border-radius:12px;padding:24px;margin-bottom:20px;min-width:0;box-shadow:0 2px 5px #1a1a2e04}
+.m6ct-shell label{font-weight:550;margin:10px 0 6px}
+.m6ct-shell .m6ct-muted{color:#596375;font-size:13px;margin:10px 0}
+.m6ct-shell .m6ct-scope{border-left:3px solid #E86D1F;padding:7px 12px;font-size:14px;background:#FFF9F3}
+.m6ct-shell .m6ct-query-grid{display:grid;grid-template-columns:minmax(320px,2fr) minmax(110px,1fr) minmax(110px,1fr);gap:16px;margin-bottom:12px}
+.m6ct-shell .m6ct-actions{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
+.m6ct-shell .m6ct-actions label{margin:0 12px 0 0;font-weight:400}
+.m6ct-shell .m6ct-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:12px 0 20px}
+.m6ct-shell .m6ct-metric{border:1px solid #E5E7EB;border-radius:8px;background:#FAFBFC;padding:14px;min-width:0}
+.m6ct-shell .m6ct-metric-label{display:block;font-size:12px;color:#596375;margin-bottom:5px}
+.m6ct-shell .m6ct-metric strong{font-size:19px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.m6ct-shell details{margin:12px 0;padding:9px 0}
+.m6ct-shell summary{cursor:pointer;color:#544433;font-weight:550;padding:5px 0}
+.m6ct-shell .m6ct-column-options{display:flex;flex-wrap:wrap;gap:8px 20px}
+.m6ct-shell .m6ct-column-options label{font-weight:400}
+.m6ct-shell :is(button,a,input,textarea,summary,[tabindex]):focus-visible{outline:3px solid #9D450F;outline-offset:3px}
+.m6ct-shell .btn-primary{background:#E86D1F;border-color:#E86D1F;color:#1A1A2E;font-weight:600}
+.m6ct-shell .btn-primary:hover{background:#BE5010;border-color:#BE5010;color:#fff}
+.m6ct-shell .dash-table-container{margin:12px 0;max-width:100%;overflow-x:auto}
+.m6ct-shell .dash-spreadsheet td.dash-cell.column-0{font-variant-numeric:tabular-nums}
+.m6ct-shell .DateInput_input{font-size:14px;padding:10px;width:130px}
+.m6ct-shell .DateInput{width:130px}
+.m6ct-shell .alert{margin:12px 0;padding:10px 14px}
+@media(max-width:1100px){.m6ct-shell .m6ct-query-grid{grid-template-columns:1fr 1fr}.m6ct-shell .m6ct-query-grid>div:first-child{grid-column:1/-1}.m6ct-shell .m6ct-card{padding:18px}}
+@media(max-width:600px){.m6ct-shell{padding:16px 0}.m6ct-shell h3{font-size:21px}.m6ct-shell .m6ct-card{padding:14px}.m6ct-shell .m6ct-metrics{grid-template-columns:1fr 1fr;gap:8px}.m6ct-shell .m6ct-metric{padding:10px}.m6ct-shell .m6ct-metric strong{font-size:16px}.m6ct-shell .m6ct-actions>.btn{width:100%}.m6ct-shell .DateInput_input,.m6ct-shell .DateInput{width:112px}}

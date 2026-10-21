@@ -1,1 +1,0 @@
-SELECT fecha,pad_id,parcela_id,numero_parcela,campana_id,numero_campana,estado_operacional,calidad_estado,tiene_dato_riego,riego_activo,tiene_dato_drenaje,drenaje_activo FROM inventar_SpcHidr.fn_estado_operacional_parcela_diario(:fecha) WHERE pad_id=:pad_id AND parcela_id=:parcela_id

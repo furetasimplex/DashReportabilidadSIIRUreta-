@@ -1,8 +1,0 @@
-Exit code: 0
-warning: in the working copy of 'monitor_pi_tum/db.py', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'monitor_pi_tum/panel.py', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'reclamo/db.py', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'report_export/export_to_excel.py', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'report_export/tests/test_orquestacion_reporte_turno.py', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'report_export/tests/test_paquete_reporte_turno.py', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'report_export/tests/test_reconst_mod_srr.py', LF will be replaced by CRLF the next time Git touches it

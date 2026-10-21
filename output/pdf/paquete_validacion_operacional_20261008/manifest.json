@@ -1,0 +1,100 @@
+{
+  "fecha": "2026-10-08",
+  "salidas": [
+    {
+      "archivo": "01_Informe_tecnico_operacional.pdf",
+      "paginas": 6,
+      "bytes": 71056,
+      "sha256": "bbdb7984661cdb4f4c18b4ec20fe9d8dbfae4cdfa6314bcb8e15f416e435fa49"
+    },
+    {
+      "archivo": "02_Resumen_ejecutivo.pdf",
+      "paginas": 2,
+      "bytes": 63106,
+      "sha256": "6773428e8e6752998a1cb1a879bf2a0baaabb544f5e057d8dba497da76bf09a5"
+    },
+    {
+      "archivo": "03_Matriz_decisiones_reunion.pdf",
+      "paginas": 2,
+      "bytes": 63854,
+      "sha256": "31a88dd4ed3391a8444cf215fb1b7a30444fe1693c7fd7d8b190dbe9187937f9"
+    },
+    {
+      "archivo": "04_Fichas_ocho_fases.pdf",
+      "paginas": 4,
+      "bytes": 66457,
+      "sha256": "2ed2b25af578e5536a3ef67a1488eab92b51bb569632deb71dae8c641d44c19c"
+    },
+    {
+      "archivo": "05_Casos_reales_resumidos.pdf",
+      "paginas": 4,
+      "bytes": 67280,
+      "sha256": "f51b910b85187994d39ecd33cb3eb3caa10655d2bab506686d8975d7fc4653c3"
+    },
+    {
+      "archivo": "06_Datos_hitos_requeridos.pdf",
+      "paginas": 2,
+      "bytes": 62709,
+      "sha256": "373ea60823b195aece785cfa385b613fc7553832bb37da2a79434236cb9aa3bf"
+    },
+    {
+      "archivo": "07_Checklist_aprobacion.pdf",
+      "paginas": 1,
+      "bytes": 60630,
+      "sha256": "4fa166ba8741a8e922f4def17143deb3761902995824dfe7220b26b0df37b991"
+    }
+  ],
+  "decisiones": 14,
+  "fases": 8,
+  "casos": 6,
+  "respuestas_operacionales": "PENDIENTES",
+  "nueva_auditoria_SQL": false,
+  "codigo_modificado": false,
+  "SQL_modificado": false,
+  "PROD": false,
+  "commit_push": false,
+  "validacion": {
+    "paginas_revisadas_visualmente": 21,
+    "resumen_ejecutivo_paginas": 2,
+    "fuentes": [
+      {
+        "archivo": "validacion_ocho_fases_20261008/Informe_validacion_ocho_fases.txt",
+        "sha256": "112f88b730a5bcb708fe3ab68aabd72d7c1596d748776ca68f50f4397ef751fa"
+      },
+      {
+        "archivo": "validacion_ocho_fases_20261008/casos_seleccionados.json",
+        "sha256": "136c4e9c23f9f4c8511e307ee87c72ef5ae99a35d7ccc08aa9292feb7fa1e9af"
+      },
+      {
+        "archivo": "validacion_ocho_fases_20261008/casos_diarios.json.gz",
+        "sha256": "f5b4b434ebbe832c6c8c0e1dd8e91adb93b8ecf64c71a93810fc1418dc100eb5"
+      },
+      {
+        "archivo": "validacion_ocho_fases_20261008/timelines_10_campanas.json",
+        "sha256": "84828d263fd2067c8c4cad0b5c3ae0815317ab63f773a04962e65deb80c31382"
+      },
+      {
+        "archivo": "validacion_ocho_fases_20261008/pausas_retorno.json",
+        "sha256": "0cc29416fb64a0209b192b4f637b5d582dca18bc5ecd2fc68a346ef5a9c075b8"
+      }
+    ],
+    "archivos_codigo_verificados": 868,
+    "cambios_codigo": [],
+    "archivos_mapa": [
+      {
+        "archivo": "lixiviacion/map_db.py",
+        "intacto": true
+      },
+      {
+        "archivo": "lixiviacion/map_states.py",
+        "intacto": true
+      },
+      {
+        "archivo": "lixiviacion/map_panel.py",
+        "intacto": true
+      }
+    ],
+    "SQL_consultado_en_esta_etapa": false,
+    "escrituras_DB": 0
+  }
+}

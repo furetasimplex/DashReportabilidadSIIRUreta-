@@ -1,8 +1,0 @@
-{
-  "harness_null_safe": true,
-  "duplicate_detection": true,
-  "terminal_reversals": true,
-  "select_only_candidates": true,
-  "literal_state_case": true,
-  "runtime_unchanged": true
-}

@@ -15,7 +15,7 @@ from report_export.report_export import (
 )
 
 
-OUTPUT = Path("report_export/exports/Analisis_Torres_de_Muestreo_20260801_20260804_ACUMULADOS.xlsx")
+OUTPUT = Path("auditorias/archivo/report_export/exports/Analisis_Torres_de_Muestreo_20260801_20260804_ACUMULADOS.xlsx")
 
 
 def main() -> None:

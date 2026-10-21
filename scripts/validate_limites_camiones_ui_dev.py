@@ -84,7 +84,7 @@ def main():
             assert {name:read(conn,name) for name in names}==before
             conn.rollback()
         evidence['restauracion_exacta_filas']=True
-        output=Path('docs/diagnosticos/factor_camiones_fase2a1')
+        output=Path('auditorias/archivo/docs/diagnosticos/factor_camiones_fase2a1')
         output.mkdir(parents=True,exist_ok=True)
         (output/'validacion_ui_dev.json').write_text(json.dumps(evidence,default=str,ensure_ascii=False,indent=2),encoding='utf-8')
         print('DEV: callbacks futuro y retroactivo OK. Control V2 y vista intactos; seed 380/265 y auditoría restaurados por ROLLBACK.')

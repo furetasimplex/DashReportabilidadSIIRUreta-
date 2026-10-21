@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 from . import postprocesar_tum_contingencia as post
 from .test_postprocesar_tum_contingencia import Resultado
 
-ROOT=Path(__file__).parent/'validacion/expansion_v1/cierre'
+ROOT=Path(__file__).resolve().parents[1]/'test_fixtures/monitor_pi_tum'
 
 class CierreExpansionTests(unittest.TestCase):
     @classmethod

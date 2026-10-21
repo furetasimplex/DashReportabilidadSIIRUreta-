@@ -17,7 +17,7 @@ from monitor_pi_tum.db import _engine_dev, _assert_dev_connection
 
 MIGRATION = ROOT / 'docs/migrations/factor_camiones_nominales_dev'
 BACKUP = MIGRATION / 'backup'
-EVIDENCE = ROOT / 'report_export/exports/validacion_factor_nominales_20260930'
+EVIDENCE = ROOT / 'auditorias/archivo/report_export/exports/validacion_factor_nominales_20260930'
 OBJECTS = (
     'sp_registrar_limite_factor_camiones_vigencia_test',
     'tr_factor_camiones_vigencia_solapamiento_test',

@@ -23,7 +23,7 @@ class Sentinel(Exception):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--execute-rollback', action='store_true')
-    parser.add_argument('--output', type=Path, default=ROOT / 'scripts/diagnosticos/reclamo_publicar_lock_dev.json')
+    parser.add_argument('--output', type=Path, default=ROOT / 'auditorias/archivo/scripts/diagnosticos/reclamo_publicar_lock_dev.json')
     args = parser.parse_args()
     if not args.execute_rollback:
         parser.error('Falta --execute-rollback; no se ha conectado a SQL.')

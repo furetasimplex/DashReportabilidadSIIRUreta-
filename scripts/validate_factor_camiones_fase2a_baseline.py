@@ -40,7 +40,7 @@ def compare(before, after):
 
 
 def main():
-    folder = Path("docs/diagnosticos/factor_camiones_fase2a") / ("baseline_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
+    folder = Path("auditorias/archivo/docs/diagnosticos/factor_camiones_fase2a") / ("baseline_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
     engine = _engine_dev()
     with engine.connect() as conn:
         _assert_dev_connection(conn)

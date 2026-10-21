@@ -211,3 +211,6 @@ __marimo__/
 scripts/sync_web.py
 scripts/sync_modules_dev_to_prod.py
 backups/
+
+# Auditorías e informes locales (no versionar evidencias pesadas)
+/auditorias/

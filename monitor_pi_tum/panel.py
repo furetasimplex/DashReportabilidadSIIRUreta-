@@ -7,6 +7,8 @@ from dash import Input, Output, State, callback, dcc, html
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
+from balance_m6_contingencia import panel as m6_panel
+from lixiviacion.phase_flags import is_dev
 from . import db
 from . import gestion
 from . import factor_camiones_panel
@@ -76,6 +78,7 @@ def layout():
             ], label="Diagnóstico de Correas", tab_id="pitum-diagnostico"),
             dbc.Tab(gestion.layout(),
                     label="Gestión PI / TUM", tab_id="pitum-gestion"),
+            *([dbc.Tab(m6_panel.layout(), label="Contingencia Balance M6", tab_id="pitum-contingencia-m6")] if is_dev() else []),
         ], id="pitum-tabs", active_tab="pitum-diagnostico"),
     ], fluid=True)
 

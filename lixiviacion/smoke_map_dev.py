@@ -8,6 +8,7 @@ from . import map_db
 
 
 def run():
+    (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion').mkdir(parents=True, exist_ok=True)
     if os.getenv('SQLSERVER_DB','').lower() != 'inventar_spchidr':
         raise RuntimeError('Solo DEV.')
     with map_db._connection() as conn:
@@ -32,7 +33,7 @@ def run():
     next_day=map_db.snapshot('2026-09-11')
     report={'fecha':'2026-09-10','filas':len(rows),'distribucion':distribution,
             'casos':checked,'filas_11_09':len(next_day),'passed':True}
-    Path(__file__).with_name('SMOKE_MAP_DEV.json').write_text(json.dumps(report,ensure_ascii=False,indent=2,default=str)+'\n',encoding='utf-8')
+    (Path(__file__).resolve().parents[1] / 'auditorias/archivo/lixiviacion/SMOKE_MAP_DEV.json').write_text(json.dumps(report,ensure_ascii=False,indent=2,default=str)+'\n',encoding='utf-8')
     print(json.dumps({'filas':len(rows),'distribucion':distribution,'casos':len(checked),'passed':True},ensure_ascii=False))
 
 

@@ -43,7 +43,7 @@ def _flows(mass=Decimal("100"), fine=Decimal("1"), count=120):
     } for number in range(1, count + 1)])
 
 
-def _metadata(case_id, run_id, start, end, model=7):
+def _metadata(case_id, run_id, start, end, model=1):
     return {
         "caso_id": case_id,
         "solver_run_id": run_id,
@@ -59,7 +59,7 @@ def _metadata(case_id, run_id, start, end, model=7):
     }
 
 
-def _candidate(case_id, run_id, start, end, mass, fine, model=7):
+def _candidate(case_id, run_id, start, end, mass, fine, model=1):
     frame = _flows(mass, fine)
     meta = _metadata(case_id, run_id, start, end, model)
     for key, value in meta.items():
@@ -568,6 +568,7 @@ class BalanceDashPhase2Tests(unittest.TestCase):
             {
                 "caso_id": 24,
                 "nombre_caso": "Caso hidrometalurgia Agosto",
+                "modelo_id": 2,
                 "fecha_inicio": date(2026, 8, 1),
                 "fecha_fin": date(2026, 8, 23),
             },
@@ -585,13 +586,14 @@ class BalanceDashPhase2Tests(unittest.TestCase):
         self.assertEqual(selected, 24)
         self.assertEqual(options[0]["value"], 24)
         self.assertEqual(
-            options[0]["label"],
-            "Caso 24 — Caso hidrometalurgia Agosto — 01/08/2026 al 23/08/2026",
+            options[0]["label"].children,
+            "Caso 24 · V2 · 01–23 ago 2026",
         )
+        self.assertIn("Caso hidrometalurgia Agosto", options[0]["search"])
 
     def test_estado_sin_caso_no_consulta_y_deshabilita(self):
         with patch.object(cb, "get_balance_case_status") as service:
-            card, disabled = cb.actualizar_estado_balance(None)
+            card, disabled, _context = cb.actualizar_estado_balance(None)
         service.assert_not_called()
         self.assertTrue(disabled)
         self.assertEqual(card.color, "secondary")
@@ -613,7 +615,7 @@ class BalanceDashPhase2Tests(unittest.TestCase):
             "mensaje_mtd": None,
         }
         with patch.object(cb, "get_balance_case_status", return_value=status) as service:
-            card, disabled = cb.actualizar_estado_balance(24)
+            card, disabled, _context = cb.actualizar_estado_balance(24)
         service.assert_called_once_with(24)
         self.assertFalse(disabled)
         self.assertEqual(card.color, "success")
@@ -637,7 +639,7 @@ class BalanceDashPhase2Tests(unittest.TestCase):
             "mensaje_mtd": "El Caso 21 termina 08-08-2026 y debia terminar 07-08-2026.",
         }
         with patch.object(cb, "get_balance_case_status", return_value=status):
-            card, disabled = cb.actualizar_estado_balance(22)
+            card, disabled, _context = cb.actualizar_estado_balance(22)
         self.assertTrue(disabled)
         self.assertEqual(card.color, "warning")
         self.assertIn("debia terminar 07-08-2026", str(card.children))
@@ -646,7 +648,7 @@ class BalanceDashPhase2Tests(unittest.TestCase):
         with patch.object(
             cb, "get_balance_case_status", side_effect=BalanceReportError("DB inaccesible")
         ):
-            card, disabled = cb.actualizar_estado_balance(24)
+            card, disabled, _context = cb.actualizar_estado_balance(24)
         self.assertTrue(disabled)
         self.assertEqual(card.color, "danger")
         self.assertNotIn("DB inaccesible", str(card.children))

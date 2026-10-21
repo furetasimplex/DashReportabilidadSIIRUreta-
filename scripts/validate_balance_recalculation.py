@@ -14,7 +14,7 @@ from report_export.balance_service import build_balance_official_report
 from report_export.export_to_excel import export_balance_reconciliacion_to_template
 
 TEMPLATE = Path('reporte/Template_Balance_Planta_Hidrometalurgia.xlsx')
-EXPORTS = Path('report_export/exports')
+EXPORTS = Path('auditorias/archivo/report_export/exports')
 NS = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
 
 

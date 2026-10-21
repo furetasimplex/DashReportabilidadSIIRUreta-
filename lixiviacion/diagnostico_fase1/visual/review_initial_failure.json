@@ -1,6 +1,0 @@
-{
-  "page_errors": [],
-  "callback_errors": [],
-  "cases": [],
-  "failure": "Locator.click: Timeout 60000ms exceeded.\nCall log:\n  - waiting for locator(\"#nav-lixiviacion\")\n"
-}

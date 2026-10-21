@@ -6,7 +6,7 @@ from openpyxl import Workbook
 from report_export.callbacks.reportabilidad_cb import _agregar_hoja_grafico_gestion_fy
 
 
-OUTPUT = Path("report_export/exports/prueba_etiquetas_fy27.xlsx")
+OUTPUT = Path("auditorias/archivo/report_export/exports/prueba_etiquetas_fy27.xlsx")
 
 
 workbook = Workbook()

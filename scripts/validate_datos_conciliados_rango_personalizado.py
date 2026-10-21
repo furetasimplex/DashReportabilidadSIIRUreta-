@@ -14,7 +14,7 @@ from report_export.report_export import (
 
 
 OUTPUT = Path(
-    "report_export/exports/Reporte_DatosConciliados_20260801_20260804_RANGO_CORREGIDO.xlsx"
+    "auditorias/archivo/report_export/exports/Reporte_DatosConciliados_20260801_20260804_RANGO_CORREGIDO.xlsx"
 )
 
 

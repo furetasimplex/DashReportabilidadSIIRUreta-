@@ -17,6 +17,21 @@ if not re.fullmatch(r"[\w.]+", LOGIN_TABLE):
     raise ValueError(f"LOGIN_DATABASE inválido: {LOGIN_TABLE!r}")
 
 
+def user_is_admin(username):
+    """Permiso administrativo vigente del usuario Django existente; fail closed."""
+    if not isinstance(username, str) or not username.strip():
+        return False
+    try:
+        with get_engine().connect() as conn:
+            allowed = conn.execute(text(
+                f"SELECT CASE WHEN is_staff=1 OR is_superuser=1 THEN 1 ELSE 0 END "
+                f"FROM {LOGIN_TABLE} WHERE username=:u AND is_active=1"
+            ), {"u": username.strip()}).scalar()
+        return allowed == 1
+    except Exception:
+        return False
+
+
 @auth_bp.route("/login_page")
 def login_page():
     return render_template("login.html")

@@ -10,7 +10,7 @@ from dash import Dash, Input, Output, dcc, html
 import dash_bootstrap_components as dbc
 from monitor_pi_tum import db, factor_camiones_panel as panel
 
-OUT = ROOT / 'report_export/exports/factor_ui_tms_20260930'
+OUT = ROOT / 'auditorias/archivo/report_export/exports/factor_ui_tms_20260930'
 DAYS = ('2026-09-16', '2026-09-21', '2026-09-22', '2026-09-02', '2026-09-20')
 
 

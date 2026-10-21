@@ -4,6 +4,8 @@ from datetime import date, datetime
 import hashlib
 import os
 import re
+import math
+from pathlib import Path
 from env_loader import load_app_env
 
 
@@ -38,6 +40,56 @@ BALANCE_RECON_SOURCE = (
     f"[{BALANCE_RECON_DATABASE}].[{BALANCE_RECON_SCHEMA}]"
 )
 
+BALANCE_MODELS = {
+    1: {"flow_count": 120, "template": "Template_Balance_Planta_Hidrometalurgia.xlsx",
+        "sha256": BALANCE_TEMPLATE_SHA256, "code": "hidrometalurgia_120_completo"},
+    2: {"flow_count": 125, "template": "Template_Balance_Planta_Hidrometalurgia_V2.xlsx",
+        "sha256": "B39FE64FD479F4CC0C096B0D5FF790126BA3093F9EF5B19D028D1CE3260447CD",
+        "code": "hidrometalurgia_125_v2"},
+}
+
+
+def get_balance_model_contract(modelo_id=1):
+    try:
+        model = int(modelo_id)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("El Caso no identifica un modelo compatible de Balance.") from exc
+    if model not in BALANCE_MODELS:
+        raise ValueError(f"El modelo {model} no dispone de plantilla compatible de Balance.")
+    if model == 2 and BALANCE_RECON_DATABASE.upper() != "DEV_SIIR":
+        raise ValueError("La exportacion del modelo 2 esta habilitada solo en DEV_SIIR.")
+    return dict(BALANCE_MODELS[model], modelo_id=model)
+
+
+def get_balance_template_path(modelo_id):
+    contract = get_balance_model_contract(modelo_id)
+    return str(Path(__file__).resolve().parents[1] / "reporte" / contract["template"])
+
+
+def balance_solver_observation(metadata):
+    """Describe el estado persistido sin cambiar la seleccion oficial ni bloquearla."""
+    import json
+    raw = metadata.get("solver_metadata_json") or metadata.get("metadata_json") or {}
+    try:
+        details = json.loads(raw) if isinstance(raw, str) else dict(raw)
+    except (ValueError, TypeError):
+        return "Metadata del solver no interpretable; se exporta la seleccion oficial SQL."
+    if not isinstance(details, dict):
+        return "Metadata del solver sin estructura de objeto; se exporta la seleccion oficial SQL."
+    if details.get("solver_converged") is False or details.get("officializable") is False:
+        return ("Seleccion oficial SQL con observaciones del solver: "
+                f"solver_converged={details.get('solver_converged')}; "
+                f"officializable={details.get('officializable')}. "
+                "No constituye certificacion matematica.")
+    return ""
+
+
+def is_finite_balance_number(value):
+    try:
+        return value is not None and math.isfinite(float(value))
+    except (ValueError, TypeError, OverflowError):
+        return False
+
 
 def _as_date(value, label):
     if isinstance(value, datetime):
@@ -68,7 +120,9 @@ def build_balance_report_identity(metadata):
         raise ValueError("La identidad del Balance contiene fechas invertidas.")
     return {
         "filename": (
-            "Balance_Planta_Hidrometalurgia_"
+            ("Balance_Planta_Hidrometalurgia_V2_" if int(metadata.get("modelo_id", 1)) == 2
+             else "Balance_Planta_Hidrometalurgia_")
+            +
             f"{start:%Y%m%d}_{end:%Y%m%d}_Caso{caso_id}_Run{run_id}.xlsx"
         ),
         "caso_label": f"Caso {caso_id}",
@@ -84,13 +138,13 @@ def build_balance_report_identity(metadata):
     }
 
 
-def validate_balance_template_hash(template_path):
+def validate_balance_template_hash(template_path, modelo_id=1):
     digest = hashlib.sha256()
     with open(template_path, "rb") as source:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     actual = digest.hexdigest().upper()
-    if actual != BALANCE_TEMPLATE_SHA256:
+    if actual != get_balance_model_contract(modelo_id)["sha256"]:
         raise ValueError(
             "El template maestro de Balance fue modificado y no coincide "
             "con la version validada."

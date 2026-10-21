@@ -100,11 +100,11 @@ def test_sidebar_keeps_all_existing_sections_and_new_one():
     toggle.decorator_list=[]
     module=ast.fix_missing_locations(ast.Module(body=[toggle],type_ignores=[]))
     context=SimpleNamespace(triggered_id=None)
-    namespace={'dash': SimpleNamespace(ctx=context)}
+    namespace={'dash': SimpleNamespace(ctx=context,no_update=object())}
     exec(compile(module,'layout.py','exec'),namespace)
     for i, nav in enumerate(['nav-reportabilidad','nav-reclamo','nav-powerbi','nav-monitor-pitum','nav-lixiviacion']):
         context.triggered_id=nav
-        result=namespace['toggle_subtabs'](0,0,0,0,0)
-        assert len(result)==10
+        result=namespace['toggle_subtabs'](0,0,0,0,0,0,0,0,None,None)
+        assert len(result)==19
         assert [j for j,v in enumerate(result[:5]) if v['display']=='block']==[i]
-        assert [j for j,v in enumerate(result[5:]) if v.endswith(' active')]==[i]
+        assert [j for j,v in enumerate(result[10:18]) if v.endswith(' active')]==[i]

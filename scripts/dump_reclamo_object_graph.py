@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 
 from db_connection import get_engine
 
-OUT = ROOT / "auditoria_reclamo"
+OUT = ROOT / "auditorias/archivo/auditoria_reclamo"
 
 APP_INVENTAR = {
     "disponible_rotopalas",

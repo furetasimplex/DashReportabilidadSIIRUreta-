@@ -314,22 +314,39 @@ def overview(filters):
 
 
 def table_predicate(query):
-    """Gramática restringida: expresiones {columna} operador valor unidas por &&."""
+    """Gramática restringida de DataTable; valores siempre enlazados, nunca SQL."""
     clauses, params = [], {}
     if not query:
         return clauses, params
     operators = {'eq': '=', 'ne': '<>', 'ge': '>=', 'le': '<=', 'gt': '>', 'lt': '<',
                  '=': '=', '!=': '<>', '>=': '>=', '<=': '<=', '>': '>', '<': '<'}
-    for i, fragment in enumerate(query.split('&&')):
-        match = re.fullmatch(r'\s*\{(\w+)\}\s*(contains|datestartswith|eq|ne|ge|le|gt|lt|>=|<=|!=|=|>|<)\s*(.*?)\s*', fragment)
+    # Dash 3.1.1 SingleColumnSyntaxTree.getFilterLexeme antepone s/i al
+    # operador. Normalizar solo ese token; conservar la collation SQL vigente.
+    # Consumir valores entre comillas antes de interpretar && como conjunción.
+    fragment = re.compile(
+        r'\s*\{(\w+)\}\s*'
+        r'([si]?(?:contains|eq|ne|ge|le|gt|lt)(?=\s)|datestartswith(?=\s)|'
+        r'[si]?(?:>=|<=|!=|=|>|<))(?![=<>!])\s*'
+        r'''("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|'''
+        r'''(?![=<>!])(?:(?!&&)[^"'`{}|])+?)\s*(&&|$)''', re.IGNORECASE)
+    position = 0
+    while position < len(query):
+        match = fragment.match(query, position)
         if not match or match[1] not in DETAIL:
-            raise ValueError('Filtro de tabla no válido. Use =, >=, <= o contains; combine con &&.')
-        col, op, value = match.groups()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in '\"\'':
-            value = value[1:-1]
+            raise ValueError('Filtro no válido. Use =, >, >=, <, <= o contains; combine con &&.')
+        col, op, value, conjunction = match.groups()
+        position = match.end()
+        value = value.strip()
+        if not value or value[0] in '=<>!' or (conjunction and not query[position:].strip()):
+            raise ValueError('Filtro no válido. Use =, >, >=, <, <= o contains; combine con &&.')
+        op = op.lower()
+        if op.startswith(('s', 'i')):
+            op = op[1:]
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in '\"\'`':
+            value = re.sub(r'\\(.)', r'\1', value[1:-1])
         if col == 'estado':
             value = {label: code for code, label in HYDRAULIC_LABELS.items()}.get(value, value)
-        key = f'tf{i}'
+        key = f'tf{len(params)}'
         if op in ('contains', 'datestartswith'):
             value = value.replace('~', '~~').replace('%', '~%').replace('_', '~_').replace('[', '~[')
             params[key] = ('%' if op == 'contains' else '') + value + '%'
