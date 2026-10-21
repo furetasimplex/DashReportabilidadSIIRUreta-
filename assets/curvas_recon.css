@@ -77,6 +77,39 @@
 .curvas-recon-shell .status-column { align-self: center; }
 .curvas-recon-shell .status-badge { display: inline-flex; align-items: center; min-height: 32px; }
 
+/* Avance de carga / cálculo (poll desde Interval) */
+.curvas-recon-shell .curvas-progress {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--cr-border);
+  border-radius: 10px;
+  background: var(--cr-paper);
+  box-shadow: 0 1px 5px rgba(26, 26, 46, .045);
+}
+.curvas-recon-shell .curvas-progress.is-idle { display: none; }
+.curvas-recon-shell .curvas-progress.is-busy { display: block; }
+.curvas-recon-shell .curvas-progress-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 8px;
+}
+.curvas-recon-shell .curvas-progress-label {
+  color: var(--cr-dark); font-size: .86rem; font-weight: 700;
+}
+.curvas-recon-shell .curvas-progress-pct {
+  color: var(--cr-orange); font-size: .8rem; font-weight: 700; white-space: nowrap;
+}
+.curvas-recon-shell .curvas-progress-bar {
+  height: 7px; border-radius: 999px; background: #E7EAF0; overflow: hidden;
+}
+.curvas-recon-shell .curvas-progress-bar > span {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #E86D1F, #F0A060);
+  transition: width .28s ease;
+}
+.curvas-recon-shell .curvas-progress-detail {
+  margin-top: 7px; color: #596978; font-size: .74rem; line-height: 1.4;
+}
+
 /* Freshness and methodology notes */
 .curvas-recon-shell .freshness-wrap { margin: 13px 0 0; }
 .curvas-recon-shell .freshness-wrap > div { display: flex; flex-wrap: wrap; gap: 6px; }

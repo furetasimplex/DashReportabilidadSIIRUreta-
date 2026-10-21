@@ -14,8 +14,11 @@ arrancar el servidor. No hay un segundo servidor de curvas ni un iframe.
 
 La conexión se obtiene de `db_connection.get_engine()` del dashboard SIIR.
 Opcionalmente `RECON_SQLALCHEMY_URL` selecciona otra conexión y
-`RECON_SQL_SCHEMA` otro esquema. No se distribuye un `.env` en este paquete.
-Las dependencias de cálculo ya están en `requirements.txt` de SIIR.
+`RECON_SQL_SCHEMA` otro esquema. Los casos oficiales se leen desde
+`HIDRO_SIIR_DB.hidro` (o `RECON_HIDRO_SCHEMA` completo); por defecto
+`SQLSERVER_DB` con sufijo `_PROD` implica `PROD_SIIR`, el resto `DEV_SIIR`.
+No se distribuye un `.env` en este paquete. Las dependencias de cálculo ya
+están en `requirements.txt` de SIIR.
 
 Las tablas de reconciliación deben existir previamente. Navegar por la sección
 no crea ni modifica tablas. **Ejecutar cálculo** conserva el comportamiento
