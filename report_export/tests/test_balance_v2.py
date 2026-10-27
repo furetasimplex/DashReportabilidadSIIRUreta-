@@ -87,7 +87,8 @@ def test_formulas_objetos_y_fechas_preservados(exported):
                 count+=len(formulas(a.read(name)))
             elif name.startswith('xl/media/') or name.endswith('.rels') or name.startswith('xl/drawings/') and name not in [f'xl/drawings/drawing{k}.xml' for k in (1,2,3)]:
                 assert a.read(name)==b.read(name)
-        assert count==3113
+        # Nodo General: se retiraron solo las 26 formulas TMS de G43:G68.
+        assert count==3087
     validate_balance_output_package(output,2)
     wb=load_workbook(io.BytesIO(output),data_only=False)
     for ws in wb:
@@ -96,6 +97,42 @@ def test_formulas_objetos_y_fechas_preservados(exported):
                 if isinstance(cell.value,str) and not cell.value.startswith('='):
                     assert 'Agosto' not in cell.value
     assert wb.calculation.fullCalcOnLoad and wb.calculation.forceFullCalc
+
+
+def test_modelo_completo_nodo_general_solo_tmf_y_diagrama_pdf(exported):
+    """La fuente basal aplica el formato en cada exportacion sin tocar G global."""
+    wb = load_workbook(io.BytesIO(exported[3]), data_only=False)
+    ws = wb['Modelo Completo']
+    assert ws['E42'].value is None
+    assert ws['F42'].value == 'Nodo General'
+    assert ws['G42'].value is None and ws['H42'].value == 'tmf'
+    assert ws['F43'].value == 'Entrada' and ws['G43'].value == 25
+    assert ws['G58'].value == 101 and ws['G59'].value == 104
+    assert ws['H43'].value == '=SUMIFS($Q$16:$Q$35,$N$16:$N$35,G43)'
+    assert ws['H68'].value == '=H46-H49-H67'
+    assert all(ws.cell(r, 7).data_type != 'f' for r in range(42, 69))
+    # Las columnas de tonelaje de periodo/acumulado de la tabla principal siguen.
+    assert ws['P15'].value == 'Tonelaje  [tms]'
+    assert ws['R15'].value == 'Tonelaje  [tms]'
+    assert ws['P16'].data_type == ws['R16'].data_type == 'f'
+    with ZipFile(io.BytesIO(exported[3])) as archive:
+        drawing = ET.fromstring(archive.read('xl/drawings/drawing8.xml'))
+        ns = {'d': 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'}
+        pictures = drawing.findall('.//d:pic', ns)
+        assert len(pictures) == 2  # Logo existente y un solo diagrama oficial.
+        assert len(drawing.findall('.//d:sp', ns)) == 0
+        assert sum(p.find('d:nvPicPr/d:cNvPr', ns).attrib.get('name') == 'Modelo Hidro M6'
+                   for p in pictures) == 1
+        assert 'xl/media/modelo_hidro_m6.png' in archive.namelist()
+        # Excel usa sheetId, que no coincide necesariamente con el numero de parte.
+        book = ET.fromstring(archive.read('xl/workbook.xml'))
+        sid = next(s.attrib['sheetId'] for s in book.find('m:sheets', NS)
+                   if s.attrib['name'] == 'Modelo Completo')
+        current = None
+        for cell in ET.fromstring(archive.read('xl/calcChain.xml')):
+            current = cell.attrib.get('i', current)
+            assert not (current == sid and cell.attrib['r'] in
+                        {f'G{r}' for r in range(43, 69)})
 
 
 @pytest.mark.parametrize('kind',['missing','duplicate','nan','inf','wrong_model','wrong_case','changed_run'])
