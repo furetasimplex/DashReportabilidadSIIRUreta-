@@ -1,13 +1,15 @@
 """Sección SIIR. Montaje/import seguro; SQL únicamente al pulsar Cargar datos."""
 from threading import RLock
 from uuid import uuid4
+from io import BytesIO
+import base64
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from dash import Input, Output, State, dcc, html, no_update
 
-from . import engine as e, db_source as dbs, validacion as val
+from . import engine as e, db_source as dbs, validacion as val, informe_modulos as im
 from .modelo_flujos import FlowCaseError
 from .presentacion import C, SANS, MONO, kpi, tabla_itinerario, tabla_detalle_modulo, detalle_itinerario, _itinerary_frame, panel_calidad, gantt_labels, timestamp_text, resolution_label
 
@@ -190,6 +192,16 @@ def build_layout(start_date=None, end_date=None):
                                 display_format='DD-MM-YYYY', first_day_of_week=1),
             html.Button('Cargar datos', id='reconstitucion-cargar', n_clicks=0, className='reconstitucion-button')], className='reconstitucion-controls'),
         html.Div(id='reconstitucion-estado', children='Actualiza los Casos, selecciona uno y carga su reconstitución.'),
+        html.Div([
+            dcc.Dropdown(id='reconstitucion-informe-pad', options=[
+                {'label': 'Oxidos', 'value': 1}, {'label': 'Sulfuros', 'value': 2}],
+                value=2, clearable=False, style={'width': '180px'}),
+            html.Button('Descargar informe de modulos (XLSX)',
+                id='reconstitucion-informe-descargar', n_clicks=0, disabled=True,
+                className='reconstitucion-button'),
+            dcc.Download(id='reconstitucion-informe-download'),
+            html.Span(id='reconstitucion-informe-estado'),
+        ], className='reconstitucion-controls'),
         dcc.Loading(html.Div(id='reconstitucion-resultados'), type='circle', color=C['accent'])], className='reconstitucion-shell')
 
 
@@ -199,12 +211,13 @@ def _resolve_loader(loader=None):
     return lambda **kwargs: e.analyze_db(use_intraday=True, **kwargs)
 
 
-def register_callbacks(app, loader=None, case_loader=None):
+def register_callbacks(app, loader=None, case_loader=None, report_quality_loader=None):
     """Registro idempotente; loader inyectable para pruebas y vista offline."""
     if getattr(app, '_reconstitucion_registered', False):
         return
     app._reconstitucion_registered = True
     load = _resolve_loader(loader)
+    quality_loader = report_quality_loader or im.calidad_turno
 
     @app.callback(Output('reconstitucion-casos', 'data'), Output('reconstitucion-caso', 'options'),
         Output('reconstitucion-caso', 'value'), Output('reconstitucion-estado-casos', 'children'),
@@ -276,6 +289,49 @@ def register_callbacks(app, loader=None, case_loader=None):
             res = _results.get(token)
         case = caso_actual(cases, case_id)
         return res if res is not None and case is not None and res.get('caso') == case else None
+
+    @app.callback(Output('reconstitucion-informe-descargar', 'disabled'),
+        Input('reconstitucion-token', 'data'), Input('reconstitucion-caso', 'value'),
+        Input('reconstitucion-casos', 'data'))
+    def estado_informe(token, case_id, cases):
+        res = resultado_actual(token, case_id, cases)
+        return res is None or not bool(res.get('fuente_modelo'))
+
+    @app.callback(Output('reconstitucion-informe-download', 'data'),
+        Output('reconstitucion-informe-estado', 'children'),
+        Input('reconstitucion-informe-descargar', 'n_clicks'),
+        State('reconstitucion-token', 'data'), State('reconstitucion-informe-pad', 'value'),
+        State('reconstitucion-caso', 'value'), State('reconstitucion-casos', 'data'),
+        prevent_initial_call=True,
+        running=[(Output('reconstitucion-informe-descargar', 'children'),
+                  'Generando informe...', 'Descargar informe de modulos (XLSX)')])
+    def descargar_informe(n, token, pad, case_id, cases):
+        res = resultado_actual(token, case_id, cases)
+        if not n or res is None or not res.get('fuente_modelo') or pad not in dbs.PADS:
+            return None, 'Carga el Caso seleccionado antes de descargar.'
+        case = res['caso']
+        try:
+            with _lock:
+                frame = res.get('_informe_modulos_por_pad', {}).get(pad)
+            if frame is None:
+                has_modules = res['apilado']['pad_id'].eq(pad).any()
+                quality = (quality_loader(pad, engine=dbs.get_engine(),
+                    fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'])
+                    if has_modules else pd.DataFrame())
+                frame = im.preparar_modulos_desde_resultado(res, pad, quality,
+                    fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'])
+                with _lock:
+                    res.setdefault('_informe_modulos_por_pad', {})[pad] = frame
+            output = BytesIO()
+            im.exportar_desde_dataframe(frame, output, pad=pad, detalle=True, caso=case)
+        except Exception:
+            return None, 'No se pudo generar el informe. Verifica la conexion de calidad y reintenta.'
+        material = 'oxidos' if pad == dbs.PAD_OXIDOS else 'sulfuros'
+        filename = f"informe_modulos_{material}_caso_{int(case_id)}_run_{case['run_id']}.xlsx"
+        return {'content': base64.b64encode(output.getvalue()).decode('ascii'),
+            'filename': filename, 'base64': True,
+            'type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}, (
+                f"Informe listo: {len(frame)} modulos del Caso {int(case_id)}.")
 
     @app.callback(Output('reconstitucion-resultados', 'children'),
         Input('reconstitucion-token', 'data'), Input('reconstitucion-grupo', 'value'),

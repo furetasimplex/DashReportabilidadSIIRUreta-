@@ -42,7 +42,7 @@ class IntegrationModule(unittest.TestCase):
             count = len(app.callback_map)
             panel.register_callbacks(app)
             self.assertEqual(len(app.callback_map), count)
-            self.assertEqual(count, 7)
+            self.assertEqual(count, 9)
 
     def test_gantt_sin_horario_no_inventa_barras_de_medicion(self):
         fig = panel.fig_gantt(sample())
