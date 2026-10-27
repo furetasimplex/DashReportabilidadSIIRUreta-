@@ -219,12 +219,14 @@ class IntegracionSIIR(unittest.TestCase):
         grid = next(v for k, v in self.app.callback_map.items()
                     if 'curvas-recon-grid-container.children' in k)
         self.assertNotIn('curvas-recon-pila-store', [i['id'] for i in grid['inputs']])
-        styles = self.module.highlight_recon_pila('rox-P23',
-                    [dict(pad='rox', num=23), dict(pad='rox', num=24)],
-                    [{'backgroundColor': 'green'}, {'backgroundColor': 'orange'}])
+        with patch.object(self.module, '_ACTIVE_OX', {23, 24}):
+            styles = self.module.highlight_recon_pila('rox-P23', None, [],
+                        {'OXIDOS': {'ss': ['P23', 'P24']}},
+                        [dict(pad='rox', num=23), dict(pad='rox', num=24)],
+                        [{'backgroundColor': 'green'}, {'backgroundColor': 'orange'}])
         self.assertEqual(styles[0]['border'], '2px solid #f57c00')
         self.assertEqual(styles[1]['border'], '2px solid #ced4da')
-        self.assertEqual(styles[0]['backgroundColor'], 'green')
+        self.assertEqual(styles[0]['backgroundColor'], self.module.RECON_STATUS_COLORS['activa'])
         self.sql.assert_not_called()
 
     def test_10_carga_global_solo_observa_montaje_y_avisos_en_modal(self):

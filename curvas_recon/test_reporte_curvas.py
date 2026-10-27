@@ -30,6 +30,7 @@ def no_sql(monkeypatch):
         raise AssertionError('SQL prohibido')
     monkeypatch.setattr(Engine, 'connect', forbidden)
     monkeypatch.setattr(report, '_campaign_recovery_points', lambda label: {})
+    monkeypatch.setattr(report, 'leer_dump', lambda asof: [])
 
 
 @pytest.fixture
@@ -39,6 +40,9 @@ def export_case(monkeypatch, tmp_path):
                 fecha_inicio=start, fecha_fin=end, modelo_codigo='hidrometalurgia_125_v2',
                 modelo_version='v2', total_flujos=125)
     monkeypatch.setattr(dashboard, 'CASOS', [case])
+    monkeypatch.setattr(dashboard, 'CASO_OPTIONS', [])
+    monkeypatch.setattr(dashboard, 'DEFAULT_CASO_ID', case['id'])
+    monkeypatch.setattr(dashboard, '_load_caso_options', lambda: ([case], [], case['id']))
     monkeypatch.setattr(dashboard, 'JOINT_DATA_CUTOFF', end)
     monkeypatch.setattr(dashboard, '_RECON_RAW_DIR', str(tmp_path / 'raw'))
     token = dashboard._save_recon_raw({'piles': []}, case, start, end)
@@ -57,7 +61,7 @@ def test_descarga_real_sin_libro_planta_y_repetible(export_case):
         assert 'sin comparaci' in str(status)
         assert raw_path.is_file()
         book = load_workbook(BytesIO(base64.b64decode(download['content'])))
-        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros']
+        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros']
         assert book['Rec Ox']['B12'].value == 4.0
         assert book['Rec Ox']['C12'].value == 2.0
         assert book['Rec Ox']['B7'].value is None
@@ -267,3 +271,27 @@ def test_apilado_excluye_campanas_futuras_antes_de_agrupar(monkeypatch):
     assert 'WHERE Parcela IS NOT NULL AND Fecha < :hasta_exclusivo' in str(sql)
     assert params == {'hasta_exclusivo': pd.Timestamp('2026-10-13')}
     conn.__exit__.assert_called_once()
+
+
+def test_report_includes_inactive_campaign_history_without_case_adjustment(monkeypatch, tmp_path):
+    days = pd.date_range('2026-08-01', periods=3)
+    apilado = {(1, num): dict(camp=17, f0=days[0], f1=days[0], fin=100.,
+                            tms=1000., ley=10.) for num in (1, 2)}
+    monkeypatch.setattr(report, 'leer_apilado', lambda **kw: apilado)
+    monkeypatch.setattr(report.E, 'load_riego', lambda *a: pd.DataFrame({'P01':10., 'P02':[10.,0.,0.]}, index=days))
+    monkeypatch.setattr(report.E, 'load_cu_riego', lambda *a: pd.Series(1., index=days))
+    monkeypatch.setattr(report.E, 'load_drena_cu', lambda *a: pd.DataFrame({'P01':2.,'P02':2.},index=days))
+    monkeypatch.setattr(report.E, 'FDRENA_MAX', .95)
+    raw={'piles':[dict(label='OXIDOS',parcela='P01',daily=[dict(date=days[1],fino_pls_final=30.,fino_riego_final=10.)])]}
+    runs={10013:dict(ws=days[1],we=days[1],caso={'run_id':10104},pads={'OXIDOS':{'res':raw}})}
+    doc=report.construir_doc(runs,end=days[-1],xl=str(tmp_path/'absent.xlsx'),verbose=False)
+    piles={p['num']:p for p in doc['pads']['OXIDOS']['pilas']}
+    assert set(piles)=={1,2}
+    assert piles[1]['rec']==pytest.approx([.216,.696,.912])
+    assert piles[2]['rec']==pytest.approx([.216,.216,.216])
+    out=tmp_path/'all.xlsx'
+    report.escribir_libro(doc,out)
+    book=load_workbook(out)
+    assert [book['Rec Ox'].cell(9,c).value for c in range(2,34)]==list(range(1,33))
+    assert book['Rec Ox']['C12'].value==pytest.approx(.216)
+    assert book['Rec Ox']['D10'].value is None

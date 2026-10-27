@@ -117,23 +117,6 @@ def acum_descuadrado(ap):
     return d
 
 
-def tasa_implicita(m):
-    """t/h de masa seca que implica el horometro de cada dia.
-
-    El horometro no se puede verificar contra si mismo — cualquier valor entre
-    H_OP_MIN y 24 h se acepta. Dividir la masa del dia por sus horas si lo
-    verifica: pregunta si la maquina que ese par describe existe. NaN en los
-    dias cuyo horometro no pretende medir la maquina (mismo filtro que
-    engine.dias_tasa, que son los dias que de verdad mueven la tasa)."""
-    if not {"TMS", "H_op"} <= set(m.columns):
-        return pd.Series(np.nan, index=m.index, dtype=float)
-    h = pd.to_numeric(m["H_op"], errors="coerce")
-    ok = h >= u.H_OP_MIN
-    if "H_op_src" in m.columns:
-        ok &= m["H_op_src"].isin(u.HOROMETROS_OK)
-    if "turnos_ok" in m.columns:
-        ok &= m["turnos_ok"].fillna(False).astype(bool)
-    return (pd.to_numeric(m["TMS"], errors="coerce") / h).where(ok)
 
 
 def pares_corridos(daily, umbral=u.DESVIO_SEM_MAX, dias_min=u.DIAS_SEM_MIN):
@@ -376,19 +359,6 @@ def revisar_masa(m):
                            f"TMS_T1 + TMS_T2 se aparta de TMS mas de "
                            f"{u.TOL_CUADRATURA:g} (peor caso {err.max():.2e})", n))
 
-    # El horometro contra la maquina que describe. Un valor entre H_OP_MIN y
-    # 24 h pasa todos los rangos; lo que no puede pasar es implicar una correa
-    # que no existe. Ver tasa_implicita.
-    tph = tasa_implicita(m).dropna()
-    n = _n_fuera(tph, u.TASA_MIN, u.TASA_MAX)
-    if n:
-        peor = tph[~tph.between(u.TASA_MIN, u.TASA_MAX)]
-        a.append(Aviso("dato", "tasa_imposible",
-                       f"la masa del dia dividida por su horometro cae fuera de "
-                       f"[{u.TASA_MIN:,.0f}, {u.TASA_MAX:,.0f}] t/h "
-                       f"(peor caso {peor.abs().max():,.0f}): el horometro o la "
-                       "masa de ese dia estan mal", n))
-
     # H_op son las horas de la torre que apila; H_torres, las de todas. Una no
     # puede superar a la otra. Sin violaciones en la ventana medida: es un
     # guardia, no un hallazgo.
@@ -405,7 +375,7 @@ def revisar_masa(m):
         if n:
             a.append(Aviso("info", "sin_horometro_torre",
                            f"dias sin horometro de {'/'.join(u.HOROMETROS_OK)}: "
-                           "no miden la tasa de maquina", n))
+                           "la fuente no corresponde al horómetro de apilado", n))
     if "turnos_ok" in m.columns:
         n = int((~m["turnos_ok"].astype(bool)).sum())
         if n:
@@ -418,9 +388,7 @@ def revisar_masa(m):
 # ─────────────────────────── validador de salida ───────────────────────────
 
 def revisar_resultado(res):
-    """Revisa lo que el motor produjo, no lo que recibio. Detecta lo que la
-    validacion de entrada no puede ver: densidades imposibles que aparecen al
-    dividir, ventanas sin dias con horometro, promedios sobre series ruidosas."""
+    """Revisa saldos y densidades semanales producidos por el motor."""
     a = []
     st = res.get("shift_table")
     balance = res.get('cuadratura')
@@ -448,17 +416,6 @@ def revisar_resultado(res):
         if n:
             a.append(Aviso('info', 'turnos_sin_frontera',
                            'Sin frontera de turnos conocida; reparto de respaldo estimado al 50%', int(n)))
-
-    tasa = res.get("tasa") or {}
-    nd = int(tasa.get("n_dias_tasa", 0) or 0)
-    if not nd:
-        a.append(Aviso("dato", "sin_dias_tasa",
-                       f"ningun dia con horometro de torre >= {u.H_OP_MIN:g} h "
-                       "y los dos turnos pesados: la tasa de maquina es NaN y "
-                       "no se muestra una fecha proyectada sin datos suficientes"))
-    elif nd < u.DIAS_SEM_MIN:
-        a.append(Aviso("info", "pocos_dias_tasa",
-                       f"la tasa de maquina se midio sobre {nd} dia(s)", nd))
 
     wk = res.get("weekly")
     if wk is not None and len(wk) and "densidad_sem" in wk.columns:
@@ -495,22 +452,4 @@ def revisar_resultado(res):
                            f"{u.DESVIO_SEM_MAX:.0%} y que NO se explican "
                            "moviendo el dia del borde", n))
 
-    it = res.get("itinerario")
-    if it is not None and len(it) and "rho_proy" in it.columns:
-        v = it["rho_proy"]
-        n = int((~rho_plausible(v) & v.notna()).sum())
-        if n:
-            a.append(Aviso("dato", "rho_proy_implausible",
-                           f"modulos proyectados con densidad fuera de "
-                           f"[{u.RHO_MIN}, {u.RHO_MAX}] t/m3", n))
-        n = int(v.isna().sum())
-        if n:
-            a.append(Aviso("dato", "rho_proy_nula",
-                           "modulos sin densidad para proyectar", n))
-        if "avance_final" in it.columns:
-            n = int((it["avance_final"].fillna(0.0) < u.AVANCE_OK).sum())
-            if n:
-                a.append(Aviso("info", "modulo_sin_cerrar",
-                               f"modulos bajo AVANCE_OK ({u.AVANCE_OK}): no "
-                               "encadenan al siguiente, la cadena se re-ancla", n))
     return a

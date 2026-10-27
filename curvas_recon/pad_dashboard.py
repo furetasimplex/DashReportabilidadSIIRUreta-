@@ -27,6 +27,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from . import vista_todas_reconciliadas as vista_todas_rec
 from .pad_data import load_oxido, load_sulfuro
 from .pad_layout import build_pad, STATUS_COLORS, RECON_STATUS_COLORS
 from .pad_selection import toggle_selection
@@ -45,11 +46,16 @@ from .recon_engine import (
 )
 from .input_preparation import prepare_recon_inputs
 from .perf_trace import record_phase, set_trace_id, reset_trace_id
+from .curve_aggregation import (
+    combine_recovery_series, save_local_group, delete_local_group, restore_local_groups,
+)
 from .db_pipeline import (
     connect, get_material_id, load_pila_daily_history, load_pila_history, load_week_totals, save_run,
     load_casos, load_caso_anchor,
     caso_anchor_completo, diagnose_caso_anchor, HIDRO_SCHEMA,
 )
+from .history_recovery import HistoryReader, calendar_rows
+from .rl_series import visible_xaxis_range
 
 # Todo lo que se lee de la DB pasa por un cache local en disco (`local_cache.py`).
 from .local_cache import limpiar as limpiar_cache_local, estado as estado_cache_local
@@ -249,6 +255,38 @@ _PILA_FIGURE_CACHE = OrderedDict()
 _PILA_FIGURE_CACHE_LOCK = threading.RLock()
 _PILA_FIGURE_CACHE_TTL = 180
 _PILA_FIGURE_CACHE_MAX = 96
+_RECOVERY_HISTORY_READER = HistoryReader()
+_RECOVERY_HISTORY_LOCK = threading.RLock()
+_RECOVERY_HISTORY_FAILURES = OrderedDict()
+_RECOVERY_HISTORY_FAILURE_TTL = 30.0
+_OFFICIAL_HISTORY_CACHE = {}
+
+
+def _load_official_recovery_history(week_start):
+    """Load only manifest-verified official daily values strictly pre-Case."""
+    start = pd.Timestamp(week_start).normalize()
+    key = start.date()
+    if key not in _OFFICIAL_HISTORY_CACHE:
+        from pathlib import Path
+        from .history_recovery import load_validated_official_history
+        fixture = (Path(__file__).parent / 'test_fixtures'
+                   / 'historico_oficial_validado_20260901_20261001.csv')
+        try:
+            _OFFICIAL_HISTORY_CACHE[key] = load_validated_official_history(fixture, start.date())
+        except Exception:
+            _OFFICIAL_HISTORY_CACHE[key] = []
+    return list(_OFFICIAL_HISTORY_CACHE[key])
+_GROUP_RAW_CACHE = {}
+_GROUP_RAW_LOCK = threading.Lock()
+_GROUP_MEMBER_CACHE = OrderedDict()
+_GROUP_MEMBER_CACHE_LOCK = threading.RLock()
+_GROUP_MEMBER_CACHE_MAX = 96
+_RL_TMS_CACHE = {}
+_RL_TMS_CACHE_LOCK = threading.RLock()
+_RL_DAILY_CACHE = OrderedDict()
+_RL_DAILY_CACHE_LOCK = threading.RLock()
+_RL_RIEGO_CACHE = OrderedDict()
+_RL_RIEGO_CACHE_LOCK = threading.RLock()
 
 
 def _callback(*args, **kwargs):
@@ -310,6 +348,44 @@ def ensure_full_data(force=False):
                     _progress_end()
 
 
+def _refresh_primary_recovery_curves():
+    """Refresh only the primary measurements and their cycle projections."""
+    global DATA_OX, DATA_SU, CYCLES_OX, CYCLES_SU
+    global GLOBAL_MIN_DATE, GLOBAL_MAX_DATE, MAX_CAMPANAS, CAMPANA_OPTIONS
+    global RAW_CURVES_BY_MATERIAL
+    with _DATA_LOCK:
+        clear_curve_cache()
+        DATA_OX = load_oxido()
+        DATA_SU = load_sulfuro()
+        last_ox, last_su = _global_last_date(DATA_OX), _global_last_date(DATA_SU)
+        CYCLES_OX = {num: split_into_cycles(p['dates'], p['values'], last_ox)
+                     for num, p in DATA_OX.items()}
+        CYCLES_SU = {num: split_into_cycles(p['dates'], p['values'], last_su)
+                     for num, p in DATA_SU.items()}
+        all_dates = [d for p in list(DATA_OX.values()) + list(DATA_SU.values())
+                     for d in p['dates']]
+        GLOBAL_MIN_DATE = min(all_dates) if all_dates else None
+        GLOBAL_MAX_DATE = max(all_dates) if all_dates else None
+        MAX_CAMPANAS = max(
+            [len(c) for c in list(CYCLES_OX.values()) + list(CYCLES_SU.values())] + [1]
+        )
+        CAMPANA_OPTIONS = [
+            {'label': f'Campaña {i}', 'value': i}
+            for i in range(1, MAX_CAMPANAS + 1)
+        ]
+        RAW_CURVES_BY_MATERIAL = {'OXIDOS': DATA_OX, 'SULFUROS': DATA_SU}
+        with _PILA_FIGURE_CACHE_LOCK:
+            _PILA_FIGURE_CACHE.clear()
+        with _GROUP_MEMBER_CACHE_LOCK:
+            _GROUP_MEMBER_CACHE.clear()
+        with _RL_TMS_CACHE_LOCK:
+            _RL_TMS_CACHE.clear()
+        with _RL_DAILY_CACHE_LOCK:
+            _RL_DAILY_CACHE.clear()
+        with _RL_RIEGO_CACHE_LOCK:
+            _RL_RIEGO_CACHE.clear()
+
+
 # ── Curvas: helpers ──────────────────────────────────────────────────────────────
 
 def _view_data(cycles_map: dict, campana_idx: int) -> dict:
@@ -348,6 +424,15 @@ def _caso_by_id(caso_id):
     return next((c for c in (CASOS or []) if c['id'] == caso_id), None)
 
 
+def _refresh_case_catalog():
+    """Refresh official run identity at calculation/report boundaries only."""
+    global CASOS, CASO_OPTIONS, DEFAULT_CASO_ID
+    refreshed = _load_caso_options()
+    with _DATA_LOCK:
+        CASOS, CASO_OPTIONS, DEFAULT_CASO_ID = refreshed
+    return refreshed
+
+
 def _store_window(data):
     """(inicio, fin, n_dias) de la ventana guardada en `recon-store`.
 
@@ -372,7 +457,7 @@ def refresh_data_caches(bajar_de_nuevo=False):
     la tab de Reconciliacion, y sin este refresco quedan congeladas en lo que
     había al arrancar el proceso.
 
-    Se llama antes de usar resultados/c?lculos; los flujos internos pueden
+    Se llama antes de usar resultados/cálculos; los flujos internos pueden
     solicitar una recarga forzada cuando corresponda.
 
     `bajar_de_nuevo` bota ademas el cache local en disco (`local_cache.py`).
@@ -385,6 +470,12 @@ def refresh_data_caches(bajar_de_nuevo=False):
 
     with _PILA_FIGURE_CACHE_LOCK:
         _PILA_FIGURE_CACHE.clear()
+    with _RL_TMS_CACHE_LOCK:
+        _RL_TMS_CACHE.clear()
+    with _RL_DAILY_CACHE_LOCK:
+        _RL_DAILY_CACHE.clear()
+    with _RL_RIEGO_CACHE_LOCK:
+        _RL_RIEGO_CACHE.clear()
     clear_curve_cache()
     # Historico de riego/drenaje con que se detectan las pilas que arrancan:
     # tampoco expira solo, hay que botarlo junto con el resto.
@@ -394,25 +485,8 @@ def refresh_data_caches(bajar_de_nuevo=False):
         limpiar_cache_local()
 
     _progress_set('Curvas de óxido', 'Leyendo recuperaciones…', 12)
-    DATA_OX = load_oxido()
-    _progress_set('Curvas de sulfuro', 'Leyendo recuperaciones…', 28)
-    DATA_SU = load_sulfuro()
-
-    _progress_set('Campañas', 'Partiendo ciclos por pila…', 38)
-    last_ox, last_su = _global_last_date(DATA_OX), _global_last_date(DATA_SU)
-    CYCLES_OX = {num: split_into_cycles(p['dates'], p['values'], last_ox)
-                 for num, p in DATA_OX.items()}
-    CYCLES_SU = {num: split_into_cycles(p['dates'], p['values'], last_su)
-                 for num, p in DATA_SU.items()}
-
-    _all_curve_dates = [d for p in list(DATA_OX.values()) + list(DATA_SU.values()) for d in p['dates']]
-    GLOBAL_MIN_DATE = min(_all_curve_dates) if _all_curve_dates else None
-    GLOBAL_MAX_DATE = max(_all_curve_dates) if _all_curve_dates else None
-
-    MAX_CAMPANAS = max(
-        [len(c) for c in list(CYCLES_OX.values()) + list(CYCLES_SU.values())] + [1]
-    )
-    CAMPANA_OPTIONS = [{'label': f'Campaña {i}', 'value': i} for i in range(1, MAX_CAMPANAS + 1)]
+    _refresh_primary_recovery_curves()
+    _progress_set('Campañas', 'Campañas primarias listas', 38)
 
     # WIP (parcela/campana actual) y curvas de recuperacion: tablas chicas,
     # sin escala de fecha relevante para el recon semanal.
@@ -935,7 +1009,8 @@ def _status_view(res: dict, max_num: int, active_set: set) -> dict:
     return view
 
 
-def _build_status_grid(res_s: dict, res_o: dict, n_days: int, selected_pila=None):
+def _build_status_grid(res_s: dict, res_o: dict, n_days: int, selected_pila=None,
+                      groups=None, selected_group=None):
     selected = [selected_pila] if selected_pila else []
     view_o = _status_view(res_o, 32, _ACTIVE_OX)
     view_s = _status_view(res_s, 28, _ACTIVE_SU)
@@ -957,7 +1032,26 @@ def _build_status_grid(res_s: dict, res_o: dict, n_days: int, selected_pila=None
         html.Span('  (click en una pila activa para comparar medido vs. reconciliado)',
                    style={'color': '#6B7280', 'fontStyle': 'italic'}),
     ], className='pad-legend')
-    return html.Div([legend, html.Div([pad_o, pad_s], className='pad-grid')])
+    group_tiles = []
+    for group in groups or []:
+        group_id = group.get('id')
+        if not group_id:
+            continue
+        active = group_id == selected_group
+        group_tiles.append(dbc.Button(
+            group.get('name') or 'Grupo',
+            id={'type': 'curvas-group-cell', 'group': group_id}, n_clicks=0,
+            color='secondary', outline=True, className='me-2 mb-2',
+            title='Mostrar la suma de curvas de recuperacion',
+        ))
+    group_scheme = html.Div([
+        html.Div('Curvas sumadas', className='pad-group-title'),
+        html.Div(group_tiles or html.Small('Guarda una suma para verla en el esquema.',
+                                           className='text-muted'),
+                 className='pad-group-tiles'),
+    ], className='pad-group-scheme')
+    return html.Div([legend, html.Div([pad_o, pad_s], className='pad-grid'),
+                     group_scheme])
 
 
 def _build_warnings(data: dict):
@@ -1420,7 +1514,120 @@ def recovery_series(label, num, week_start=None, week_end=None):
     return out
 
 
-def _reconstructed_campaign_series(label, num, week_start, week_end, raw=None):
+def _load_recovery_history(label, num, week_start, cache_token):
+    """Load stored, official reconciliation rows before this Case (SELECT only)."""
+    from . import db_pipeline
+    key = (str(cache_token or 'no-token'), pd.Timestamp(week_start).date())
+    now = time.monotonic()
+    with _RECOVERY_HISTORY_LOCK:
+        failed_at = _RECOVERY_HISTORY_FAILURES.get(key)
+        if failed_at is not None and now - failed_at < _RECOVERY_HISTORY_FAILURE_TTL:
+            _RECOVERY_HISTORY_FAILURES.move_to_end(key)
+            return [], 'No se pudo consultar el historial reconciliado anterior al Caso.'
+        if failed_at is not None:
+            _RECOVERY_HISTORY_FAILURES.pop(key, None)
+    try:
+        with _RECOVERY_HISTORY_LOCK:
+            rows = _RECOVERY_HISTORY_READER.load(
+                db_pipeline.get_engine(), db_pipeline.SCHEMA, db_pipeline.HIDRO_SCHEMA,
+                cache_token or f'{label}:{num}:{pd.Timestamp(week_start).date()}',
+                pd.Timestamp(week_start).date())
+        pile = f'P{int(num):02d}'
+        with _RECOVERY_HISTORY_LOCK:
+            _RECOVERY_HISTORY_FAILURES.pop(key, None)
+        return [row for row in rows
+                if str(row.get('label', '')).upper() == label.upper()
+                and str(row.get('parcela', '')).upper() == pile], ''
+    except Exception:
+        with _RECOVERY_HISTORY_LOCK:
+            _RECOVERY_HISTORY_FAILURES[key] = now
+            _RECOVERY_HISTORY_FAILURES.move_to_end(key)
+            while len(_RECOVERY_HISTORY_FAILURES) > 128:
+                _RECOVERY_HISTORY_FAILURES.popitem(last=False)
+        return [], 'No se pudo consultar el historial reconciliado anterior al Caso.'
+
+
+def _historical_recovery_values(label, num, start, week_start, cu_tf_t,
+                                measured_cycles, rows, official_rows,
+                                return_sources=False):
+    """Cumulative historical recon points; gaps break the cumulative until an observed anchor."""
+    ws = pd.Timestamp(week_start).normalize()
+    start = pd.Timestamp(start).normalize()
+    if ws <= start or (not rows and not measured_cycles and not official_rows):
+        result = ({}, None, set())
+        return (*result, {}) if return_sources else result
+    points = {}
+    point_sources = {}
+    increments = {pd.Timestamp(row['date']).normalize(): row.get('increment_tcu')
+                  for row in rows}
+    anchors = {}
+    anchor_pct = {}
+    audited_official = {}
+    official_by_day = {pd.Timestamp(row['date']).normalize(): row['value_pct']
+                       for row in official_rows
+                       if row.get('label') == label.upper()
+                       and row.get('parcela') == f'P{int(num):02d}'}
+    for cycle in measured_cycles:
+        for day, pct in zip(cycle.get('dates') or [], cycle.get('values') or []):
+            try:
+                stamp, value = pd.Timestamp(day).normalize(), float(pct)
+                if start <= stamp < ws and np.isfinite(value):
+                    anchors[stamp] = value * cu_tf_t / 100.0
+                    anchor_pct[stamp] = value
+            except (TypeError, ValueError, OverflowError):
+                continue
+    audited_official = {
+        day: float(row['value_pct']) for row in official_rows
+        if str(row.get('label', '')).upper() == label.upper()
+        and str(row.get('parcela', '')).upper() == f'P{int(num):02d}'
+        and (day := pd.Timestamp(row['date']).normalize()) in anchor_pct
+        and abs(anchor_pct[day] - float(row['value_pct'])) <= 0.0001
+    }
+    day = start
+    cumulative = None
+    last = ws - pd.Timedelta(days=1)
+    while day <= last:
+        # Use dated official values only from the hash-validated fixture.
+        # These are separately sourced historical reconciliation values.
+        if day in audited_official:
+            official_pct = audited_official[day]
+            points[day] = official_pct
+            point_sources[day] = 'Histórico reconciliado (oficial)'
+            cumulative = official_pct * cu_tf_t / 100.0
+            audited_official[day] = official_pct
+            day += pd.Timedelta(days=1)
+            continue
+        # An observed primary reading is a numerical anchor only when the
+        # reconciled cumulative is already unknown; it never resets a valid
+        # persisted reconciliation.
+        if cumulative is None and day in anchors:
+            cumulative = anchors[day]
+            points[day] = None
+            day += pd.Timedelta(days=1)
+            continue
+        inc = increments.get(day)
+        if cumulative is None or inc is None or not np.isfinite(float(inc)):
+            cumulative = None
+            points[day] = None
+        else:
+            cumulative += float(inc)
+            points[day] = cumulative / cu_tf_t * 100.0
+            point_sources[day] = 'Histórico reconciliado guardado'
+        day += pd.Timedelta(days=1)
+    # Primary fallback is visual only. Capture the existing baseline first so
+    # it cannot change the Case's initial Cu state.
+    baseline = points.get(last)
+    for day in anchors:
+        if points.get(day) is None:
+            points[day] = anchor_pct[day]
+            point_sources[day] = 'Histórico reconciliado (registro histórico)'
+    result = (points, baseline * cu_tf_t / 100.0 if baseline is not None else None,
+              set(audited_official))
+    return (*result, point_sources) if return_sources else result
+
+
+def _reconstructed_campaign_series(label, num, week_start, week_end, raw=None,
+                                   history_token=None, material=None):
     """Recuperación histórica neta; gaps permanecen como None.
 
     Fuera del Caso comparte con report_metodo la base FDRENA_MAX=0.95; dentro
@@ -1471,50 +1678,170 @@ def _reconstructed_campaign_series(label, num, week_start, week_end, raw=None):
     end = min(we, pd.Timestamp(JOINT_DATA_CUTOFF).normalize()) if JOINT_DATA_CUTOFF is not None else we
     if end < first:
         return empty
-    mat = _load_material_window(label, first, end)
+    mat = material if material is not None else _load_material_window(label, first, end)
     riego, cu_riego, drena_cu = mat['riego'], mat['cu_riego'], mat['drena_cu']
     reconciled = {}
+    measured_case = {}
     if isinstance(raw, dict):
-        for pile in (raw.get('res') or {}).get('piles', []):
-            parcela = pile.get('parcela', pile.get('p'))
+        res = raw.get('res') or {}
+        # Current payloads may store all pile-days under res.daily, while
+        # older payloads nest them under res.piles[].daily. Read both forms;
+        # absent or invalid daily values remain gaps below.
+        rows = list(res.get('daily') or [])
+        if not rows:
+            rows = [dict(row,
+                         label=row.get('label', pile.get('label')),
+                         parcela=row.get('parcela', row.get('p',
+                                     pile.get('parcela', pile.get('p')))))
+                    for pile in (res.get('piles') or [])
+                    for row in (pile.get('daily') or [])]
+        for row in rows:
+            parcela = row.get('parcela', row.get('p', ''))
             if isinstance(parcela, str):
                 parcela = parcela.strip().upper().removeprefix('P')
             try:
                 parcela_num = int(parcela)
-            except (TypeError, ValueError):
-                continue
-            if pile.get('label', label) != label or parcela_num != num:
-                continue
-            for row in pile.get('daily', []):
-                try:
-                    d = pd.Timestamp(row['date']).normalize()
-                    fp, fr = row.get('fino_pls_final'), row.get('fino_riego_final')
-                    if fp is not None and fr is not None and np.isfinite(float(fp)) and np.isfinite(float(fr)):
-                        reconciled[d] = (float(fp) - float(fr)) * 0.024
-                except (KeyError, TypeError, ValueError):
+                d = pd.Timestamp(row['date']).normalize()
+                fp, fr = row.get('fino_pls_final'), row.get('fino_riego_final')
+                if (row.get('label', label) != label or parcela_num != num
+                        or d < ws or d > we):
                     continue
+                # A zero final flow has exactly zero fine-Cu contribution even
+                # when its undefined concentration/fino fields are NULL.
+                qpf, qrf = row.get('q_pls_final'), row.get('q_riego_final')
+                if (fp is None and qpf is not None and np.isfinite(float(qpf))
+                        and float(qpf) == 0.0):
+                    fp = 0.0
+                if (fr is None and qrf is not None and np.isfinite(float(qrf))
+                        and float(qrf) == 0.0):
+                    fr = 0.0
+                if (fp is not None and fr is not None
+                        and np.isfinite(float(fp)) and np.isfinite(float(fr))):
+                    reconciled[d] = (float(fp) - float(fr)) * 0.024
+                try:
+                    qr = float(row['q_riego_medido'])
+                    qp = float(row['q_pls_medido'])
+                    cr, cp = row.get('cu_riego_medido'), row.get('cu_pls_medido')
+                    riego_fine = 0.0 if qr == 0 else qr * float(cr)
+                    pls_fine = 0.0 if qp == 0 else qp * float(cp)
+                    if all(np.isfinite(v) for v in (qr, qp, riego_fine, pls_fine)):
+                        measured_case[d] = (pls_fine - riego_fine) * 0.024
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    pass
+            except (KeyError, TypeError, ValueError, OverflowError):
+                continue
+    history_token = (history_token or (raw or {}).get('raw_token')
+                     or (raw or {}).get('caso', {}).get('run_id'))
+    history_rows, history_error = _load_recovery_history(label, num, ws, history_token)
+    official_history_rows = _load_official_recovery_history(ws)
+    historical_points, historical_baseline, official_history_days, historical_point_sources = _historical_recovery_values(
+        label, num, start, ws, cu_tf_t, measured, history_rows, official_history_rows,
+        return_sources=True)
     from . import report_metodo
-    d = first
+    prior_anchors = {}
+    for cycle in measured:
+        for day, pct in zip(cycle.get('dates') or [], cycle.get('values') or []):
+            try:
+                stamp, numeric = pd.Timestamp(day).normalize(), float(pct)
+                if start <= stamp < ws and np.isfinite(numeric):
+                    prior_anchors[stamp] = numeric * cu_tf_t / 100.0
+            except (TypeError, ValueError, OverflowError):
+                continue
+    if historical_baseline is not None:
+        cum_cu = historical_baseline
+    else:
+        # The observed cycle value remains a numerical base for comparing
+        # Case increments. This fallback is never rendered as pre-Case history.
+        d = first
+        while d < ws and d <= end:
+            if d in riego.index and p in riego.columns:
+                q = riego.at[d, p]
+                cd = drena_cu.at[d, p] if p in drena_cu.columns and d in drena_cu.index else None
+                cr = cu_riego.at[d] if d in cu_riego.index else None
+                base_inc = report_metodo.net_recovery_increment(q, cd, cr)
+                if base_inc is not None and np.isfinite(base_inc) and cum_cu is not None:
+                    cum_cu += float(base_inc)
+                else:
+                    cum_cu = None
+            if d in prior_anchors:
+                cum_cu = prior_anchors[d]
+            d += pd.Timedelta(days=1)
+    measured_cum_cu = cum_cu
+    case_anchors = {}
+    for cycle in measured:
+        for day, pct in zip(cycle.get('dates') or [], cycle.get('values') or []):
+            try:
+                stamp, numeric = pd.Timestamp(day).normalize(), float(pct)
+                if ws <= stamp <= we and np.isfinite(numeric):
+                    case_anchors[stamp] = numeric * cu_tf_t / 100.0
+            except (TypeError, ValueError, OverflowError):
+                continue
+    measured_values = {}
+    # The historical calendar already owns any pre-Case measured anchor.
+    # Keep its value as numerical state, but don't append a second point with
+    # source `medido (ancla)` that can overwrite the validated history point.
+    # `cum_cu` and `first` remain unchanged for Case-day calculations.
+    xs, ys, sources = [], [], []
+    d = max(first, ws)
     while d <= end:
         source, inc = 'Medido', None
-        if ws <= d <= we and isinstance(raw, dict):
-            source, inc = 'Reconciliado del Caso', reconciled.get(d)
+        if ws <= d <= we:
+            if isinstance(raw, dict):
+                source, inc = 'Reconciliado del Caso', reconciled.get(d)
+            else:
+                source = 'Reconciliación no disponible'
         elif d in riego.index and p in riego.columns:
             q = riego.at[d, p]
             cd = drena_cu.at[d, p] if p in drena_cu.columns and d in drena_cu.index else None
             cr = cu_riego.at[d] if d in cu_riego.index else None
             inc = report_metodo.net_recovery_increment(q, cd, cr)
-        if inc is not None and np.isfinite(inc):
+        if inc is not None and np.isfinite(inc) and cum_cu is not None:
             cum_cu += float(inc)
             value = cum_cu / cu_tf_t * 100.0
         else:
+            cum_cu = None
             value = None
+        if ws <= d <= we and isinstance(raw, dict):
+            measured_inc = measured_case.get(d)
+        elif d in riego.index and p in riego.columns:
+            q = riego.at[d, p]
+            cd = drena_cu.at[d, p] if p in drena_cu.columns and d in drena_cu.index else None
+            cr = cu_riego.at[d] if d in cu_riego.index else None
+            measured_inc = report_metodo.net_recovery_increment(q, cd, cr)
+        else:
+            measured_inc = None
+        if measured_inc is not None and np.isfinite(measured_inc) and measured_cum_cu is not None:
+            measured_cum_cu += float(measured_inc)
+            measured_values[d] = measured_cum_cu / cu_tf_t * 100.0
+        else:
+            measured_cum_cu = None
+            measured_values[d] = None
+        # Recovery readings are numerical anchors for following dates, but the
+        # anchor itself remains visibly measured and is not relabeled as recon.
+        if d in case_anchors:
+            if cum_cu is None:
+                cum_cu = case_anchors[d]
+            # The measured stream may use its own primary anchor; the
+            # reconciled cumulative above is never reset while still valid.
+            measured_cum_cu = case_anchors[d]
         xs.append(d)
         ys.append(value)
         sources.append(source)
         d += pd.Timedelta(days=1)
     valid = [v for v in ys if v is not None and np.isfinite(v)]
-    return dict(xs=xs, ys=ys, sources=sources, cu_tf=cu_tf,
+    measured_ys = [measured_values.get(day) for day in xs]
+    historical_days = list(pd.date_range(start, ws - pd.Timedelta(days=1), freq='D'))
+    combined_xs = historical_days + xs
+    combined_ys = [historical_points.get(day) for day in historical_days] + ys
+    historical_source_days = {day for day, value in historical_points.items()
+                              if value is not None and np.isfinite(float(value))}
+    combined_sources = [historical_point_sources.get(day, 'Sin histórico reconciliado')
+                        for day in historical_days] + sources
+    combined_measured = [None] * len(historical_days) + measured_ys
+    valid = [v for v in combined_ys if v is not None and np.isfinite(v)]
+    return dict(xs=combined_xs, ys=combined_ys, measured_ys=combined_measured,
+                sources=combined_sources, cu_tf=cu_tf, historical_error=history_error,
+                historical_available=bool(historical_source_days),
                 capped=bool(valid) and max(valid) >= 100.0)
 
 
@@ -1624,6 +1951,280 @@ def _measured_cycles_active_in_window(label, num, week_start, week_end):
     return [cycle for idx, cycle in enumerate(cycles) if idx in selected]
 
 
+def _combined_member_series(member_id, raw, ws, we):
+    """Return separate measured, Case, and historical series for aggregation."""
+    try:
+        pad_id, num_text = member_id.split('-P')
+        label, num = _PAD_TO_LABEL[pad_id], int(num_text)
+        pile = f'P{num:02d}'
+        info = WIP_META.get(label, {}).get(pile) or {}
+        cu_tf_t = cu_tf_toneladas(info.get('CuTf'))
+        if cu_tf_t is None or cu_tf_t <= 0 or not isinstance(raw, dict):
+            return None
+        ws, we = pd.Timestamp(ws).normalize(), pd.Timestamp(we).normalize()
+        if pd.isna(ws) or pd.isna(we) or we < ws:
+            return None
+        token = raw.get('raw_token') or (raw.get('caso') or {}).get('run_id')
+        cycles = _measured_cycles(label, num)
+        source_signature = tuple((tuple(pd.Timestamp(day).isoformat() for day in cycle.get('dates') or []),
+                                  tuple(cycle.get('values') or [])) for cycle in cycles)
+        cache_key = (token, raw.get('caso', {}).get('run_id'), member_id,
+                     ws.isoformat(), we.isoformat(), float(cu_tf_t),
+                     str(info.get('ini_aporte')), source_signature,
+                     id(WIP_META), _RECON_RAW_PAYLOAD_VERSION)
+        with _GROUP_MEMBER_CACHE_LOCK:
+            cached = _GROUP_MEMBER_CACHE.get(cache_key)
+            if cached is not None:
+                _GROUP_MEMBER_CACHE.move_to_end(cache_key)
+                return cached
+
+        primary = _measured_cycles_active_in_window(label, num, ws, we)
+        reconstructed = _reconstructed_campaign_series(
+            label, num, ws, we, raw=raw, history_token=token)
+        source_points = {}
+        for day, value, source in zip(reconstructed.get('xs') or [],
+                                      reconstructed.get('ys') or [],
+                                      reconstructed.get('sources') or []):
+            stamp = pd.Timestamp(day).normalize()
+            try:
+                number = float(value) if value is not None else None
+            except (TypeError, ValueError, OverflowError):
+                number = None
+            if number is not None and not np.isfinite(number):
+                number = None
+            source_points[stamp] = (number, source)
+
+        measured_map = {}
+        for day, value in zip(reconstructed.get('xs') or [],
+                              reconstructed.get('measured_ys') or []):
+            stamp = pd.Timestamp(day).normalize()
+            if ws <= stamp <= we:
+                try:
+                    measured_map[stamp] = float(value) if value is not None else None
+                except (TypeError, ValueError, OverflowError):
+                    measured_map[stamp] = None
+        for cycle in primary:
+            for day, pct in zip(cycle.get('dates') or [], cycle.get('values') or []):
+                try:
+                    stamp, number = pd.Timestamp(day).normalize(), float(pct)
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if ws <= stamp <= we and np.isfinite(number):
+                    measured_map[stamp] = number  # A valid primary point wins.
+
+        case_days = list(pd.date_range(ws, we, freq='D'))
+        historical_days = [day for day in sorted(source_points) if day < ws]
+        ordered = historical_days + case_days
+        reconciled_map = {
+            day: (source_points.get(day, (None, None))[0]
+                  if source_points.get(day, (None, None))[1] == 'Reconciliado del Caso'
+                  else None)
+            for day in case_days
+        }
+        official_map = {
+            day: (source_points.get(day, (None, None))[0]
+                  if 'oficial' in str(source_points.get(day, (None, None))[1]).lower()
+                  else None)
+            for day in historical_days
+        }
+        solver_map = {
+            day: (source_points.get(day, (None, None))[0]
+                  if ('guardado' in str(source_points.get(day, (None, None))[1]).lower()
+                      or 'registro histórico' in str(source_points.get(day, (None, None))[1]).lower())
+                  else None)
+            for day in historical_days
+        }
+
+        def curve(days, values, source):
+            return {'xs': days, 'ys': values, 'sources': [source] * len(days)}
+
+        default_hist = [official_map[day]
+                        if 'oficial' in str(source_points.get(day, (None, None))[1]).lower()
+                        else solver_map.get(day) for day in historical_days]
+        default_sources = [
+            (source_points.get(day, (None, 'Sin histórico reconciliado'))[1]
+             if source_points.get(day, (None, None))[0] is not None
+             else 'Sin histórico reconciliado') for day in historical_days
+        ]
+        unified_history = curve(historical_days, default_hist, 'Histórico reconciliado')
+        initial_points = [(pd.Timestamp(day).normalize(), float(value))
+                          for cycle in primary
+                          for day, value in zip(cycle.get('dates') or [], cycle.get('values') or [])
+                          if value is not None and np.isfinite(float(value))
+                          and (pd.isna(pd.Timestamp(info.get('ini_aporte')))
+                               or pd.Timestamp(day).normalize() >= pd.Timestamp(info.get('ini_aporte')).normalize())
+                          and pd.Timestamp(day).normalize() <= we]
+        result = {
+            'id': member_id, 'cu_tf_t': float(cu_tf_t),
+            'initial_recovery_pct': (min(initial_points, key=lambda point: point[0])[1]
+                                     if initial_points else None),
+            'series': {
+                'xs': ordered,
+                'ys': default_hist + [reconciled_map.get(day) for day in case_days],
+                'sources': default_sources + ['Reconciliado del Caso'] * len(case_days),
+            },
+            'measured_series': curve(case_days, [measured_map.get(day) for day in case_days], 'Medido'),
+            'reconciled_series': curve(
+                case_days, [reconciled_map.get(day) for day in case_days], 'Reconciliado del Caso'),
+            'official_history_series': curve(
+                historical_days, [official_map.get(day) for day in historical_days],
+                'Histórico reconciliado (oficial)'),
+            'solver_history_series': curve(
+                historical_days, [solver_map.get(day) for day in historical_days],
+                'Histórico reconciliado guardado'),
+            'history_series': unified_history,
+        }
+        with _GROUP_MEMBER_CACHE_LOCK:
+            _GROUP_MEMBER_CACHE[cache_key] = result
+            _GROUP_MEMBER_CACHE.move_to_end(cache_key)
+            while len(_GROUP_MEMBER_CACHE) > _GROUP_MEMBER_CACHE_MAX:
+                _GROUP_MEMBER_CACHE.popitem(last=False)
+        return result
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+
+def _get_group_raw(data, caso_id):
+    if not _store_matches_case(data, caso_id):
+        return None
+    token = data.get('raw_token')
+    if not token:
+        return None
+    with _GROUP_RAW_LOCK:
+        if token not in _GROUP_RAW_CACHE:
+            try:
+                raw, _ = _load_recon_raw(token, caso_id)
+            except Exception:
+                raw = None
+            # One bounded entry: avoid holding several full local payloads.
+            _GROUP_RAW_CACHE.clear()
+            _GROUP_RAW_CACHE[token] = raw
+        raw = _GROUP_RAW_CACHE[token]
+        stored_ws, stored_we, _ = _store_window(data)
+        try:
+            valid = (isinstance(raw, dict)
+                     and raw.get('caso', {}).get('id') == caso_id
+                     and raw.get('caso', {}).get('run_id') == data.get('caso_run_id')
+                     and pd.Timestamp(raw.get('ws')).normalize() == pd.Timestamp(stored_ws).normalize()
+                     and pd.Timestamp(raw.get('we')).normalize() == pd.Timestamp(stored_we).normalize())
+        except (TypeError, ValueError):
+            valid = False
+        if not valid:
+            return None
+        # Keep browser token on a shallow per-request copy, never mutate the
+        # shared raw payload loaded from disk.
+        return dict(raw, raw_token=token)
+
+
+def _join_recovery_boundary(fig, initial_recovery=None):
+    """Connect adjacent observed endpoints within the existing history trace.
+
+    No extra trace, synthetic day or interpolation across missing dates.
+    Calendar timestamps are used consistently by individual and group charts.
+    """
+    for trace in fig.data:
+        trace.x = [pd.Timestamp(day).normalize() for day in trace.x]
+    # Set the recovery scale from the current campaign's observed initial
+    # value, even if only later official historical points are displayed.
+    # This changes the axis, never the plotted recovery values or dates.
+    if initial_recovery is not None and np.isfinite(float(initial_recovery)):
+        visible = [float(v) for t in fig.data for v in t.y
+                   if v is not None and np.isfinite(float(v))]
+        if visible:
+            lower = min(float(initial_recovery), min(visible))
+            upper = max(max(visible), float(initial_recovery))
+            upper += max((upper - lower) * 0.04, 0.1)
+            fig.update_yaxes(range=[lower, upper], autorange=False,
+                             uirevision=f'campaign-initial-{lower}')
+    history = next((t for t in fig.data if t.name == 'Curva reconciliada histórica'), None)
+    case = next((t for t in fig.data if t.name == 'Recuperación reconciliada'), None)
+    if history is None or case is None or not len(history.x) or not len(case.x):
+        return
+    # Only the actual edge samples qualify; never skip an explicit missing day.
+    left, right = history.y[-1], case.y[0]
+    if (left is None or right is None or not np.isfinite(float(left))
+            or not np.isfinite(float(right))
+            or case.x[0] - history.x[-1] != pd.Timedelta(days=1)):
+        return
+    history.x = list(history.x) + [case.x[0]]
+    history.y = list(history.y) + [right]
+    if history.customdata is not None:
+        custom = list(case.customdata) if case.customdata is not None else []
+        history.customdata = list(history.customdata) + [custom[0] if custom else None]
+
+
+def _build_combined_recovery_chart(group, data, caso_id):
+    fig = go.Figure()
+    if not isinstance(group, dict) or not _store_matches_case(data, caso_id):
+        return fig, ''
+    if not _FULL_DATA_READY:
+        ensure_full_data()
+    ws, we, _ = _store_window(data)
+    raw = _get_group_raw(data, caso_id)
+    if not isinstance(raw, dict):
+        return fig, 'No hay datos locales válidos para el Caso seleccionado.'
+    active_ids = set()
+    for pile in (raw.get('res') or {}).get('piles', []):
+        label = pile.get('label')
+        num = pile.get('parcela', pile.get('p'))
+        if isinstance(num, str):
+            num = num.strip().upper().removeprefix('P')
+        try:
+            pid = 'rox' if label == 'OXIDOS' else 'rsu' if label == 'SULFUROS' else None
+            if pid:
+                active_ids.add(f'{pid}-P{int(num):02d}')
+        except (TypeError, ValueError):
+            continue
+    requested = list(dict.fromkeys(group.get('members') or []))
+    if len(requested) < 2 or any(mid not in active_ids for mid in requested):
+        return fig, 'El grupo requiere al menos dos pilas activas en el Caso actual.'
+    members = [_combined_member_series(mid, raw, ws, we) for mid in requested]
+    if any(member is None for member in members):
+        return fig, 'Falta CuTf válido para una o más pilas del grupo.'
+    curve_specs = [
+        ('measured_series', 'Recuperación medida', '#6B7280'),
+        ('history_series', 'Curva reconciliada histórica', '#9CA3AF'),
+        ('reconciled_series', 'Recuperación reconciliada', '#2a78d6'),
+    ]
+    rendered = 0
+    for series_key, name, color in curve_specs:
+        inputs = [{'id': member['id'], 'cu_tf_t': member['cu_tf_t'],
+                   'series': member.get(series_key) or {'xs': [], 'ys': []}}
+                  for member in members]
+        combined = combine_recovery_series(inputs)
+        if not combined['xs'] or not any(value is not None for value in combined['ys']):
+            continue
+        rendered += 1
+        fig.add_trace(go.Scatter(
+            x=combined['xs'], y=combined['ys'], mode='lines', name=name,
+            connectgaps=False, line=dict(color=color, width=2.5),
+            customdata=[[r, t] if r is not None else [None, None]
+                        for r, t in zip(combined['recovered_cu_t'], combined['cu_tf_t'])],
+            hovertemplate='%{x|%d/%m/%Y}<br>Recuperación: %{y:.2f}%'
+                          '<br>Cu fino recuperado: %{customdata[0]:.2f} t'
+                          '<br>Cu apilado: %{customdata[1]:.2f} t<extra></extra>'))
+    if not rendered:
+        return fig, 'No hay fechas comunes con datos completos para las pilas seleccionadas.'
+    initial_members = [member.get('initial_recovery_pct') for member in members]
+    initial_recovery = None
+    if all(value is not None for value in initial_members):
+        total_cu = sum(member['cu_tf_t'] for member in members)
+        initial_recovery = sum(value * member['cu_tf_t']
+                               for value, member in zip(initial_members, members)) / total_cu
+    _join_recovery_boundary(fig, initial_recovery)
+    _add_week_zoom_box(fig, ws, we)
+
+    fig.update_layout(title=f"{group.get('name', 'Grupo')}: recuperación combinada",
+        paper_bgcolor=CHART_SURFACE, plot_bgcolor=CHART_SURFACE,
+        font=dict(color=CHART_INK_PRIMARY, family='Inter, system-ui, sans-serif'),
+        yaxis_title='Recuperación (%)', xaxis_title='Fecha calendario',
+        hovermode='x unified', uirevision='recovery-full-history-v3', margin=dict(l=50, r=20, t=40, b=40),
+        xaxis=dict(type='date', gridcolor='#E5E7EB'), yaxis=dict(gridcolor='#E5E7EB'))
+    visible_range = visible_xaxis_range([(trace.x, trace.y) for trace in fig.data])
+    if visible_range:
+        fig.update_xaxes(range=visible_range)
+    return fig, ''
+
+
 def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=None,
                           caso_id=None) -> go.Figure:
     """Medido por tramos y serie reconstruida/reconciliada del Caso."""
@@ -1645,21 +2246,39 @@ def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=No
                 raw = None
         except Exception:
             raw = None
-    rs = _reconstructed_campaign_series(label, num, week_start, week_end, raw=raw)
+    rs = _reconstructed_campaign_series(
+        label, num, week_start, week_end, raw=raw,
+        history_token=(data or {}).get('raw_token') if isinstance(data, dict) else None)
     if not _operational_activity_in_window(label, num, week_start, week_end) and raw is None:
         rs = dict(xs=[], ys=[], sources=[], cu_tf=rs.get('cu_tf'), capped=rs.get('capped', False))
     if not measured and not rs['xs']:
-        return empty_figure()
+        return empty_figure(
+            'No hay serie disponible para esta pila. El historial reconciliado previo al Caso requiere consulta histórica.')
     fig = go.Figure()
-    for idx, campaign in enumerate(measured, start=1):
-        dates, values = campaign['dates'], campaign['values']
-        label_text = 'Medido - tramo %d (%s a %s)' % (
-            idx, pd.Timestamp(dates[0]).strftime('%d/%m/%Y'),
-            pd.Timestamp(dates[-1]).strftime('%d/%m/%Y'))
-        fig.add_trace(go.Scatter(x=dates, y=values, mode='lines', name=label_text,
-                                 line=dict(color='#9CA3AF' if idx == len(measured) else '#C5CBD3',
-                                           width=1.8 if idx == len(measured) else 1.2),
-                                 connectgaps=False))
+    case_start = pd.Timestamp(week_start).normalize()
+    case_end = pd.Timestamp(week_end).normalize()
+    measured_primary = {}
+    for campaign in measured:
+        for day, value in zip(campaign.get('dates') or [], campaign.get('values') or []):
+            try:
+                stamp, numeric = pd.Timestamp(day).normalize(), float(value)
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if case_start <= stamp <= case_end and np.isfinite(numeric):
+                measured_primary[stamp] = numeric
+    measured_daily = {}
+    for day, value in zip(rs.get('xs') or [], rs.get('measured_ys') or []):
+        stamp = pd.Timestamp(day).normalize()
+        if case_start <= stamp <= case_end:
+            measured_daily[stamp] = (float(value) if value is not None else None)
+    measured_daily.update(measured_primary)
+    case_dates = sorted(measured_daily)
+    measured_case = [measured_daily[day] for day in case_dates]
+    if any(value is not None and np.isfinite(value) for value in measured_case):
+        fig.add_trace(go.Scatter(
+            x=case_dates, y=measured_case, mode='lines', name='Recuperación medida',
+            line=dict(color='#9CA3AF', width=1.8), connectgaps=False,
+            hovertemplate='%{x|%d/%m/%Y}<br>%{y:.2f}%<extra>Recuperación medida</extra>'))
     if rs['xs']:
         case_start = pd.Timestamp(week_start).normalize()
         case_end = pd.Timestamp(week_end).normalize()
@@ -1669,7 +2288,8 @@ def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=No
         in_case = [case_start <= day <= case_end for day in dates]
 
         def add_operational_segment(indices, name, color):
-            if not indices:
+            if not indices or not any(values[idx] is not None
+                                      and np.isfinite(values[idx]) for idx in indices):
                 return
             fig.add_trace(go.Scatter(
                 x=[rs['xs'][idx] for idx in indices],
@@ -1680,35 +2300,62 @@ def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=No
                 customdata=[sources[idx] for idx in indices],
                 hovertemplate='%{x|%d/%m/%Y}<br>%{y:.2f}%<br>%{customdata}<extra></extra>'))
 
-        before = [i for i, day in enumerate(dates) if day < case_start]
+        before = [i for i, day in enumerate(dates)
+                  if day < case_start and (sources[i].startswith('Hist')
+                      or sources[i] == 'Sin histórico reconciliado')]
         after = [i for i, day in enumerate(dates) if day > case_end]
         inside = [i for i, active in enumerate(in_case) if active]
         # Carry only the exact observed endpoint into the adjacent gray segment.
         # No interpolation is added, and None gaps remain visible in all traces.
         if inside:
-            first_inside, last_inside = inside[0], inside[-1]
-            if first_inside > 0 and dates[first_inside - 1] < case_start:
-                before.append(first_inside)
+            _first_inside, last_inside = inside[0], inside[-1]
             if last_inside + 1 < len(dates) and dates[last_inside + 1] > case_end:
                 after.insert(0, last_inside)
-        add_operational_segment(before, 'Medido (fuera del Caso)', '#9CA3AF')
-        case_name = ('Reconciliado del Caso'
-                     if any(sources[idx] == 'Reconciliado del Caso' for idx in inside)
-                     else 'Medido en Caso')
+        case_name = ('Recuperación reconciliada'
+                     if any(sources[idx] == 'Reconciliado del Caso'
+                            and values[idx] is not None and np.isfinite(values[idx])
+                            for idx in inside)
+                     else 'Recuperación medida')
+        add_operational_segment(before, 'Curva reconciliada histórica', '#9CA3AF')
         add_operational_segment(inside, case_name, '#2a78d6')
         add_operational_segment(after, 'Medido (fuera del Caso)', '#9CA3AF')
+        if inside and not any(values[idx] is not None and np.isfinite(values[idx])
+                              for idx in inside):
+            fig.add_annotation(x=0.5, y=0.96, xref='paper', yref='paper', yanchor='bottom',
+                               showarrow=False, font=dict(color='#B45309', size=10),
+                               text='Sin Cu acumulado válido en la ventana del Caso; se conservan los vacíos')
+        historical_indexes = [i for i, day in enumerate(dates) if day < case_start]
+        historical_has_points = any(values[i] is not None and np.isfinite(values[i])
+                                     for i in historical_indexes)
+        if not rs.get('historical_available') or rs.get('historical_error') or not historical_has_points:
+            fig.add_annotation(x=0.5, y=1.0, xref='paper', yref='paper', yanchor='bottom',
+                               showarrow=False, font=dict(color='#B45309', size=10),
+                               text=(rs.get('historical_error') or
+                                     'Sin filas reconciliadas históricas válidas antes de la ventana del Caso.'))
         if rs['capped']:
             fig.add_annotation(x=0.5, y=1.0, xref='paper', yref='paper', yanchor='bottom',
                                showarrow=False, font=dict(color='#B45309', size=11),
                                text='La serie supera 100 % segun Cu neto acumulado y CuTf de campana')
+    campaign_start = pd.Timestamp((globals().get('WIP_META', {}).get(label, {}).get(f'P{num:02d}') or {}).get('ini_aporte'))
+    initial_points = [(pd.Timestamp(day).normalize(), float(value))
+                      for cycle in measured
+                      for day, value in zip(cycle.get('dates') or [], cycle.get('values') or [])
+                      if value is not None and np.isfinite(float(value))
+                      and (pd.isna(campaign_start) or pd.Timestamp(day).normalize() >= campaign_start)
+                      and pd.Timestamp(day).normalize() <= case_end]
+    initial_recovery = min(initial_points, key=lambda point: point[0])[1] if initial_points else None
+    _join_recovery_boundary(fig, initial_recovery)
     _add_week_zoom_box(fig, week_start, week_end)
     fig.update_layout(
         title=f'{label} - P{num:02d}: Recuperacion acumulada - medido / reconciliado',
         paper_bgcolor=CHART_SURFACE, plot_bgcolor=CHART_SURFACE,
         font=dict(color=CHART_INK_PRIMARY, family='Inter, system-ui, sans-serif'),
         yaxis_title='Recuperacion (%)', legend=dict(bgcolor='rgba(0,0,0,0)'),
-        hovermode='x unified', uirevision='keep', margin=dict(l=50, r=20, t=40, b=40),
-        xaxis=dict(gridcolor='#E5E7EB'), yaxis=dict(gridcolor='#E5E7EB'))
+        hovermode='x unified', uirevision='recovery-full-history-v3', margin=dict(l=50, r=20, t=40, b=40),
+        xaxis=dict(type='date', gridcolor='#E5E7EB'), yaxis=dict(gridcolor='#E5E7EB'))
+    visible_range = visible_xaxis_range([(trace.x, trace.y) for trace in fig.data])
+    if visible_range:
+        fig.update_xaxes(range=visible_range)
     return fig
 
 
@@ -1775,6 +2422,7 @@ TAB_SELECTED_STYLE = {
 }
 
 def _build_content_layout():
+    all_rec_components = vista_todas_rec.layout_components(dbc, dcc, html, go)
     curvas_tab = html.Div([
         dbc.Row([
             dbc.Col(dbc.Switch(id='curvas-compare-switch', label='Comparar', value=False), width='auto'),
@@ -1831,6 +2479,9 @@ def _build_content_layout():
                        color='secondary', outline=True, className='action-secondary'),
             xs=12, sm='auto',
         ),
+        dbc.Col(dbc.Button('Suma de curvas', id='curvas-grupos-open', n_clicks=0,
+                           color='secondary', outline=True, className='action-secondary'),
+                xs=12, sm='auto'),
         dbc.Col(
             dbc.Button('Consideraciones', id='curvas-recon-consideraciones-btn', n_clicks=0,
                        color='secondary', outline=True, className='action-secondary'),
@@ -1846,6 +2497,8 @@ def _build_content_layout():
         dcc.Tab(label='Curvas de Recuperación', value='tab-rec', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
         dcc.Tab(label='Flujos', value='tab-flujo', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
         dcc.Tab(label='Concentraciones', value='tab-cus', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
+        dcc.Tab(label='Recuperaci\u00f3n y tasa de lixiviaci\u00f3n', value='tab-rl', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
+        dcc.Tab(label='Recuperación vs RL', value='tab-rl-acum', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
     ])
 
     recon_tab = html.Div([
@@ -1859,6 +2512,7 @@ def _build_content_layout():
                 ]),
             ], className='page-heading'),
             html.Div(recon_controls, className='controls-card'),
+            html.Div(all_rec_components[1:]),
         ], className='overview-card'),
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle('Consideraciones')),
@@ -1885,6 +2539,7 @@ def _build_content_layout():
         ], id='curvas-recon-error-modal', is_open=False, centered=True,
            className='curvas-recon-shell'),
         dcc.Store(id='curvas-recon-store', data=None),
+        dcc.Store(id='curvas-grupos-store', storage_type='local', data=[]),
         dcc.Loading(
             html.Div(id='curvas-recon-report-status', className='report-status'),
             type='default', color='#E86D1F',
@@ -1897,13 +2552,52 @@ def _build_content_layout():
         # dependa de la seleccion: parecia que se recargaba media pagina.
         html.Div(id='curvas-recon-grid-container', className='siir-card result-card'),
         html.Div(id='curvas-recon-kpis'),
+        html.Div(all_rec_components[0], className='mb-3'),
         html.Div(recon_pila_tabs, className='chart-tabs-wrap'),
-        dcc.Loading(html.Div([
+        html.Div([
+            dcc.Dropdown(id='curvas-grupo-picker', options=[], value=None, clearable=True,
+                         placeholder='Curvas individuales (predeterminado)', className='mb-2'),
+            html.Div(id='curvas-grupo-warning', className='text-warning mb-2'),
+            html.Div(dcc.Graph(id='curvas-grupo-chart', figure=go.Figure()),
+                id='curvas-grupo-chart-wrap', style={'display': 'none'}),
+            dbc.Modal([
+                dbc.ModalHeader(dbc.ModalTitle('Suma de curvas')),
+                dbc.ModalBody([
+                    html.Label('Grupo guardado'),
+                    dcc.Dropdown(id='curvas-grupo-edit-picker', options=[], value=None, clearable=True),
+                    dbc.Input(id='curvas-grupo-name', placeholder='Nombre del grupo', className='mt-2'),
+                    dcc.Dropdown(id='curvas-grupo-members', options=[], value=[], multi=True,
+                                 placeholder='Selecciona dos o más pilas activas', className='mt-2'),
+                    html.Div(id='curvas-grupo-validation', className='text-warning mt-2'),
+                    html.Small('Suma Cu apilado y Cu fino recuperado por fecha calendario. '
+                               'Los datos quedan en este navegador.', className='text-muted'),
+                ]),
+                dbc.ModalFooter([
+                    dbc.Button('Nueva suma', id='curvas-grupo-new', n_clicks=0,
+                               color='secondary', outline=True, className='action-secondary'),
+                    dbc.Button('Guardar grupo', id='curvas-grupo-save', n_clicks=0,
+                               color='primary', className='action-primary'),
+                    dbc.Button('Quitar', id='curvas-grupo-delete', n_clicks=0,
+                               color='secondary', outline=True, className='action-secondary'),
+                    dbc.Button('Restaurar individuales', id='curvas-grupo-reset', n_clicks=0,
+                               color='secondary', outline=True, className='action-secondary'),
+                    dbc.Button('Cerrar', id='curvas-grupos-close', n_clicks=0,
+                               color='secondary', outline=True, className='action-secondary'),
+                ]),
+            ], id='curvas-grupos-modal', is_open=False, size='lg', centered=True,
+               className='curvas-recon-shell'),
+        ], id='curvas-grupos-controls', className='siir-card chart-card')
+        ,dcc.Loading(html.Div([
             html.Div(dcc.Graph(id='curvas-recon-chart-rec', figure=empty_figure()), id='curvas-recon-chart-rec-wrap'),
             html.Div(dcc.Graph(id='curvas-recon-chart-flujo', figure=empty_figure()), id='curvas-recon-chart-flujo-wrap',
                      style={'display': 'none'}),
             html.Div(dcc.Graph(id='curvas-recon-chart-cus', figure=empty_figure()), id='curvas-recon-chart-cus-wrap',
                      style={'display': 'none'}),
+            html.Div([
+                dcc.Graph(id='curvas-recon-chart-rl', figure=empty_figure()),
+            ], id='curvas-recon-chart-rl-wrap', style={'display': 'none'}),
+            html.Div(dcc.Graph(id='curvas-recon-chart-rl-acum', figure=empty_figure()),
+                     id='curvas-recon-chart-rl-acum-wrap', style={'display': 'none'}),
         ]), type='default', color='#E86D1F'),
         html.Div(dcc.Graph(id='curvas-recon-bar', figure=empty_figure(
             'Ejecuta el cálculo para ver el resumen del Caso')), className='siir-card chart-card'),
@@ -2069,9 +2763,15 @@ def compute_recon(_n_clicks, caso_id):
     profile_total_t0 = time.perf_counter()
     perf_trace_id = uuid.uuid4().hex
     record_phase('compute.start', 0.0, trace_id=perf_trace_id)
+    try:
+        _refresh_case_catalog()
+    except Exception:
+        return (dash.no_update, True,
+                _error_modal_body('No se pudo verificar el Caso oficial actual.', None, []))
     caso = _caso_by_id(caso_id)
     if caso is None or not caso.get('run_id'):
-        raise dash.exceptions.PreventUpdate
+        return (dash.no_update, True,
+                _error_modal_body('El Caso seleccionado ya no tiene un run oficial exitoso.', None, []))
 
     _progress_begin(
         'Ejecutando calculo',
@@ -2110,7 +2810,11 @@ def compute_recon(_n_clicks, caso_id):
 
             phase_t0 = time.perf_counter()
             _progress_set('Historico y metadatos', 'Asegurando caches...', 28)
+            primary_curves_were_ready = _FULL_DATA_READY
             ensure_full_data()
+            if primary_curves_were_ready:
+                _progress_set('Histórico y metadatos', 'Actualizando recuperaciones primarias…', 38)
+                _refresh_primary_recovery_curves()
             phase_full_data = time.perf_counter() - phase_t0
             record_phase('compute.full_data', phase_full_data, trace_id=perf_trace_id)
 
@@ -2156,14 +2860,14 @@ def compute_recon(_n_clicks, caso_id):
         except Exception as exc:
             record_phase('compute.error', time.perf_counter() - profile_total_t0,
                          trace_id=perf_trace_id, error_type=type(exc).__name__)
-            print(f'[curvas] error en c?lculo caso=#{caso["id"]}: {exc}')
-            mensaje = str(exc).strip() or 'Error inesperado durante el c?lculo.'
+            print(f'[curvas] error en cálculo caso=#{caso["id"]}: {exc}')
+            mensaje = str(exc).strip() or 'Error inesperado durante el cálculo.'
             if 'password' in mensaje.lower() or 'pwd=' in mensaje.lower():
                 mensaje = 'Error de conexi?n o de datos. Revisa el servidor y reintenta.'
             return (
                 dash.no_update,
                 True,
-                _error_modal_body('No se pudo ejecutar el c?lculo', mensaje),
+                _error_modal_body('No se pudo ejecutar el cálculo', mensaje),
             )
     finally:
         _progress_end()
@@ -2250,6 +2954,10 @@ def render_recon(data, tab_value, caso_id):
             empty_figure('Ejecuta el cálculo para ver el resumen del Caso'),
             None,
         )
+    if ctx.triggered_id == 'curvas-recon-pila-tabs' and tab_value in ('tab-rl', 'tab-rl-acum'):
+        return dash.no_update, dash.no_update, dash.no_update
+    if not _FULL_DATA_READY:
+        ensure_full_data()
     if ctx.triggered_id == 'curvas-recon-pila-tabs':
         return dash.no_update, _build_bar(data, tab_value), dash.no_update
     combined = _combine(data)
@@ -2262,30 +2970,53 @@ def render_recon(data, tab_value, caso_id):
 
 @_callback(
     Output('curvas-recon-pila-store', 'data'),
+    Output('curvas-grupo-picker', 'value'),
     Input({'type': 'curvas-recon-cell', 'pad': ALL, 'num': ALL}, 'n_clicks'),
+    Input({'type': 'curvas-group-cell', 'group': ALL}, 'n_clicks'),
+    Input('curvas-grupos-store', 'data'),
+    State({'type': 'curvas-recon-cell', 'pad': ALL, 'num': ALL}, 'id'),
+    State({'type': 'curvas-group-cell', 'group': ALL}, 'id'),
     State('curvas-recon-pila-store', 'data'),
+    State('curvas-grupo-picker', 'value'),
     prevent_initial_call=True,
 )
-def select_recon_pila(_n_clicks_list, current):
+def select_recon_pila(_pile_clicks, _group_clicks, groups, pile_ids, group_ids,
+                      current, selected_group):
     trig = ctx.triggered_id
-    if not isinstance(trig, dict) or trig.get('type') != 'curvas-recon-cell':
+    # Dash's ctx.triggered value can be None for ALL inputs. Match the actual
+    # triggered component to its id and n_clicks instead of checking whether
+    # any other, previously clicked cell has a nonzero count.
+    if trig == 'curvas-grupos-store':
+        valid_ids = {group.get('id') for group in (groups or [])}
+        if selected_group and selected_group not in valid_ids:
+            return current, None
         raise dash.exceptions.PreventUpdate
-    # Montar la grilla crea controles con n_clicks=0; no es una seleccion.
-    if not any(value for value in (_n_clicks_list or [])):
-        raise dash.exceptions.PreventUpdate
-    clicked_id = f"{trig['pad']}-P{trig['num']}"
-    return None if clicked_id == current else clicked_id
+    if isinstance(trig, dict) and trig.get('type') == 'curvas-group-cell':
+        clicked = next((count for item_id, count in zip(group_ids or [], _group_clicks or [])
+                        if item_id == trig), 0)
+        if clicked <= 0:
+            raise dash.exceptions.PreventUpdate
+        return None, trig.get('group')
+    if isinstance(trig, dict) and trig.get('type') == 'curvas-recon-cell':
+        clicked = next((count for item_id, count in zip(pile_ids or [], _pile_clicks or [])
+                        if item_id == trig), 0)
+        if clicked <= 0:
+            raise dash.exceptions.PreventUpdate
+        clicked_id = f"{trig['pad']}-P{trig['num']}"
+        return (None if clicked_id == current else clicked_id), None
+    raise dash.exceptions.PreventUpdate
 
 
 @_callback(
     Output('curvas-recon-grid-container', 'children'),
     Input('curvas-recon-store', 'data'),
     Input('curvas-recon-caso', 'value'),
+    Input('curvas-grupos-store', 'data'),
     State('curvas-recon-pila-store', 'data'),
     prevent_initial_call=False,
 )
 @_trace_render('render.grid')
-def render_recon_grid(data, caso_id, selected_pila):
+def render_recon_grid(data, caso_id, groups, selected_pila):
     """Reconstruye la grilla solo al calcular o cambiar de Caso."""
     if not _store_matches_case(data, caso_id):
         return html.Div([
@@ -2295,21 +3026,37 @@ def render_recon_grid(data, caso_id, selected_pila):
         ], className='empty-state')
     ensure_full_data()
     return _build_status_grid(data['SULFUROS'], data['OXIDOS'],
-                              int(data.get('n_days') or 0), selected_pila)
+                              int(data.get('n_days') or 0), selected_pila,
+                              groups)
 
 
 @_callback(
     Output({'type': 'curvas-recon-cell', 'pad': ALL, 'num': ALL}, 'style'),
     Input('curvas-recon-pila-store', 'data'),
+    Input('curvas-grupo-picker', 'value'),
+    Input('curvas-grupos-store', 'data'),
+    Input('curvas-recon-store', 'data'),
     State({'type': 'curvas-recon-cell', 'pad': ALL, 'num': ALL}, 'id'),
     State({'type': 'curvas-recon-cell', 'pad': ALL, 'num': ALL}, 'style'),
     prevent_initial_call=True,
 )
-def highlight_recon_pila(selected_pila, cell_ids, styles):
-    """Cambia solo el borde, conservando los controles y sus n_clicks."""
-    return [dict(style or {}, border='2px solid ' + (
-        '#f57c00' if f"{cell['pad']}-P{cell['num']}" == selected_pila else '#ced4da'))
-        for cell, style in zip(cell_ids, styles)]
+def highlight_recon_pila(selected_pila, selected_group, groups, data, cell_ids, styles):
+    """Actualiza estilo in situ y conserva estado de actividad y n_clicks."""
+    group = next((item for item in (groups or [])
+                  if item.get('id') == selected_group), None)
+    members = set((group or {}).get('members') or [])
+    view_s = _status_view((data or {}).get('SULFUROS') or {}, 28, _ACTIVE_SU)
+    view_o = _status_view((data or {}).get('OXIDOS') or {}, 32, _ACTIVE_OX)
+    result = []
+    for cell, style in zip(cell_ids or [], styles or []):
+        pile_id = f"{cell['pad']}-P{cell['num']}"
+        view = view_o if cell['pad'] == 'rox' else view_s
+        status = view.get(int(cell['num']), {}).get('status', 'inactiva')
+        updated = dict(style or {})
+        updated['backgroundColor'] = '#2a78d6' if pile_id in members else RECON_STATUS_COLORS[status]
+        updated['border'] = '2px solid ' + ('#f57c00' if pile_id == selected_pila else '#ced4da')
+        result.append(updated)
+    return result
 
 
 @_callback(
@@ -2329,15 +3076,24 @@ def toggle_consideraciones(_open_clicks, _close_clicks):
     Input('curvas-recon-store', 'data'),
     Input('curvas-recon-pila-store', 'data'),
     Input('curvas-recon-caso', 'value'),
+    Input('curvas-grupo-picker', 'value'),
+    Input('curvas-grupos-store', 'data'),
     prevent_initial_call=False,
 )
 @_trace_render('render.pile_charts')
-def render_recon_pila_charts(data, selected_pila, caso_id):
+def render_recon_pila_charts(data, selected_pila, caso_id, group_id=None, groups=None):
     """Los tres graficos por pila. Lo unico que depende de la seleccion y lo
     unico que muestra spinner al hacer click."""
     if not _store_matches_case(data, caso_id):
         prompt = 'Ejecuta el cálculo del Caso seleccionado para consultar las pilas'
         return empty_figure(prompt), empty_figure(prompt), empty_figure(prompt)
+    group = next((g for g in (groups or []) if g.get('id') == group_id), None)
+    if group is not None:
+        ensure_full_data()
+        from .group_solution_charts import build_group_solution_charts
+        import sys
+        flows, concentrations = build_group_solution_charts(sys.modules[__name__], group, data, caso_id)
+        return dash.no_update, flows, concentrations
     if selected_pila:
         ensure_full_data()
     ws, we, _n = _store_window(data)
@@ -2358,14 +3114,411 @@ def render_recon_pila_charts(data, selected_pila, caso_id):
     Output('curvas-recon-chart-rec-wrap', 'style'),
     Output('curvas-recon-chart-flujo-wrap', 'style'),
     Output('curvas-recon-chart-cus-wrap', 'style'),
-    Input('curvas-recon-pila-tabs', 'value'),
+    Output('curvas-grupo-chart-wrap', 'style'),
+    Output('curvas-grupos-controls', 'style'),
+    Output('curvas-recon-chart-rl-wrap', 'style'),
+    Output('curvas-recon-chart-rl-acum-wrap', 'style'),
+    Input('curvas-recon-pila-tabs', 'value'), Input('curvas-grupo-picker', 'value'),
     prevent_initial_call=False,
 )
-def switch_recon_pila_tab(tab_value):
+def switch_recon_pila_tab(tab_value, group_id):
     show, hide = {'display': 'block'}, {'display': 'none'}
-    styles = {'tab-rec': (show, hide, hide), 'tab-flujo': (hide, show, hide), 'tab-cus': (hide, hide, show)}
-    return styles.get(tab_value, styles['tab-rec'])
+    if tab_value == 'tab-rec':
+        return ((hide, hide, hide, show, show, hide, hide) if group_id
+                else (show, hide, hide, hide, show, hide, hide))
+    if tab_value == 'tab-flujo':
+        return hide, show, hide, hide, hide, hide, hide
+    if tab_value == 'tab-cus':
+        return hide, hide, show, hide, hide, hide, hide
+    if tab_value == 'tab-rl':
+        return hide, hide, hide, hide, hide, show, hide
+    if tab_value == 'tab-rl-acum':
+        return hide, hide, hide, hide, hide, hide, show
+    return hide, hide, hide, hide, hide, hide, hide
 
+
+
+
+def _rl_tms_by_pile(asof, token):
+    """Lazy authoritative stack TMS map, one report_metodo read per Case token/cut."""
+    from .rl_series import cached_tms_map
+    key = (str(token), str(pd.Timestamp(asof).normalize().date()))
+    with _RL_TMS_CACHE_LOCK:
+        def load():
+            from .report_metodo import leer_apilado
+            stack = leer_apilado(asof=pd.Timestamp(asof).normalize())
+            return {('OXIDOS' if pid == 1 else 'SULFUROS', int(num)): row
+                    for (pid, num), row in stack.items() if pid in (1, 2)}
+        result = cached_tms_map(_RL_TMS_CACHE, key, load)
+        while len(_RL_TMS_CACHE) > 12:
+            _RL_TMS_CACHE.pop(next(iter(_RL_TMS_CACHE)))
+        return result
+
+
+def _rl_member_daily(label, num, stack_row, raw, ws, we, token, mode='reconciliado', riego_frame=None):
+    """Use measured Q for full pre-Case history and selected Case Q inside it."""
+    f0 = pd.Timestamp(stack_row.get('f0')).normalize()
+    ws, we = pd.Timestamp(ws).normalize(), pd.Timestamp(we).normalize()
+    if pd.isna(f0) or f0 > we or we < ws:
+        return None, False
+    frame_bounds = (str(pd.Timestamp(riego_frame.index.min()).normalize()),
+                    str(pd.Timestamp(riego_frame.index.max()).normalize())) if (
+                        riego_frame is not None and not riego_frame.empty) else None
+    key = (str(token), label, int(num), str(f0.date()), str(ws.date()), str(we.date()), str(mode),
+           'history-v3' if riego_frame is not None else 'case-only', frame_bounds)
+    with _RL_DAILY_CACHE_LOCK:
+        cached = _RL_DAILY_CACHE.get(key)
+        if cached is not None:
+            _RL_DAILY_CACHE.move_to_end(key)
+            daily, history_complete = cached
+            return dict(daily), history_complete
+    measured = {}
+    if riego_frame is not None and f0 < ws:
+        frame = riego_frame.copy()
+        frame.index = pd.DatetimeIndex(frame.index).normalize()
+        pile = f'P{int(num):02d}'
+        if pile in frame.columns:
+            measured = {pd.Timestamp(day).normalize(): (float(value) if pd.notna(value) else None)
+                        for day, value in frame[pile].items()
+                        if f0 <= pd.Timestamp(day).normalize() < ws}
+    history_days = list(pd.date_range(f0, ws - pd.Timedelta(days=1), freq='D'))
+    history_complete = all(day in measured and measured[day] is not None for day in history_days)
+    daily = {}
+    for day in history_days:
+        value = measured.get(day)
+        try:
+            daily[day] = float(value) if value is not None and np.isfinite(float(value)) and float(value) >= 0 else None
+        except (TypeError, ValueError, OverflowError):
+            daily[day] = None
+    from .rl_series import case_irrigation_rows, measured_irrigation_rows
+    if mode == 'reconciliado':
+        case_q = case_irrigation_rows(raw, label, num, ws, we)
+    elif mode == 'medido':
+        case_q = measured_irrigation_rows(raw, label, num, ws, we)
+    else:
+        raise ValueError("RL mode must be 'medido' or 'reconciliado'")
+    for day in pd.date_range(ws, we, freq='D'):
+        value = case_q.get(day)
+        try:
+            daily[day] = float(value) if value is not None and np.isfinite(float(value)) and float(value) >= 0 else None
+        except (TypeError, ValueError, OverflowError):
+            daily[day] = None
+    with _RL_DAILY_CACHE_LOCK:
+        _RL_DAILY_CACHE[key] = (dict(daily), history_complete)
+        _RL_DAILY_CACHE.move_to_end(key)
+        while len(_RL_DAILY_CACHE) > 192:
+            _RL_DAILY_CACHE.popitem(last=False)
+    return daily, history_complete
+
+
+def _rl_chart_for_members(member_ids, data, caso_id, recovery_fig, title, accumulated=False):
+    from .rl_series import cumulative_rl, aggregate_weighted_rl, align_values_to_calendar
+    if not _store_matches_case(data, caso_id) or not data.get('raw_token'):
+        return empty_figure('Ejecuta el c\u00e1lculo del Caso seleccionado para consultar la tasa de lixiviaci\u00f3n')
+    raw = _get_group_raw(data, caso_id)
+    if not isinstance(raw, dict):
+        return empty_figure('No hay payload local válido para el Caso seleccionado')
+    ws, we, _ = _store_window(data)
+    try:
+        stack = _rl_tms_by_pile(we, data.get('raw_token'))
+    except Exception:
+        fig = go.Figure(recovery_fig)
+        fig.add_annotation(text='No se pudo obtener TMS de apilado; gráfico no disponible',
+                           x=0.5, y=0, xref='paper', yref='paper', showarrow=False)
+        return fig
+    member_daily_by_mode = {'medido': {}, 'reconciliado': {}}
+    member_full_by_mode = {'medido': {}, 'reconciliado': {}}
+    member_history = {}
+    member_tms = {}
+    member_meta = {}
+    for member in member_ids:
+        try:
+            pad_id, num_text = member.split('-P', 1)
+            label, num = _PAD_TO_LABEL[pad_id], int(num_text)
+            stack_row = stack.get((label, num))
+            if not stack_row or not float(stack_row.get('tms') or 0) > 0:
+                fig = go.Figure(recovery_fig)
+                fig.add_annotation(text=f'Falta TMS v\u00e1lido de la pila {member}; gráfico no disponible',
+                                   x=0.5, y=0, xref='paper', yref='paper', showarrow=False)
+                return fig
+            member_meta[member] = (label, num, stack_row)
+        except (KeyError, TypeError, ValueError, OverflowError):
+            fig = go.Figure(recovery_fig)
+            fig.add_annotation(text='Falta TMS v\u00e1lido de una pila; gráfico no disponible',
+                               x=0.5, y=0, xref='paper', yref='paper', showarrow=False)
+            return fig
+    # Historical RL uses the operational history accepted by the application,
+    # labeled reconciled historical by convention. Load each pad prefix once.
+    recovery_dates = [pd.Timestamp(day).normalize() for t in recovery_fig.data
+                      for day in (list(t.x) if t.x is not None else [])]
+    chart_start = min(recovery_dates) if recovery_dates else pd.Timestamp(ws).normalize()
+    riego_frames = {}
+    for label in {meta[0] for meta in member_meta.values()}:
+        earliest = min(pd.Timestamp(meta[2]['f0']).normalize()
+                       for meta in member_meta.values() if meta[0] == label)
+        if not accumulated:
+            earliest = max(chart_start, earliest)
+        history_end = pd.Timestamp(ws).normalize() - pd.Timedelta(days=1)
+        if earliest > history_end:
+            continue
+        key = (str(data['raw_token']), label, str(earliest.date()), str(history_end.date()))
+        with _RL_RIEGO_CACHE_LOCK:
+            frame = _RL_RIEGO_CACHE.get(key)
+            if frame is not None:
+                _RL_RIEGO_CACHE.move_to_end(key)
+        if frame is None:
+            from .recon_engine import load_riego
+            frame = load_riego(label, start=earliest.date(), end=history_end.date())
+            with _RL_RIEGO_CACHE_LOCK:
+                _RL_RIEGO_CACHE[key] = frame
+                while len(_RL_RIEGO_CACHE) > 24:
+                    _RL_RIEGO_CACHE.popitem(last=False)
+        riego_frames[label] = frame
+    for member, (label, num, stack_row) in member_meta.items():
+        member_tms[member] = float(stack_row['tms'])
+        for mode, member_daily in member_daily_by_mode.items():
+            daily, _ = _rl_member_daily(
+                label, num, stack_row, raw, ws, we, data['raw_token'],
+                mode=mode, riego_frame=riego_frames.get(label))
+            if daily is None:
+                daily = {}
+            member_full_by_mode[mode][member] = dict(daily)
+            if mode == 'reconciliado':
+                member_history[member] = {
+                    pd.Timestamp(day).normalize(): value for day, value in daily.items()
+                    if (pd.Timestamp(stack_row['f0']).normalize() if accumulated else chart_start)
+                    <= pd.Timestamp(day).normalize() < pd.Timestamp(ws).normalize()}
+            member_daily[member] = {
+                pd.Timestamp(day).normalize(): value for day, value in daily.items()
+                if pd.Timestamp(ws).normalize() <= pd.Timestamp(day).normalize()
+                <= pd.Timestamp(we).normalize()}
+    dates = list(pd.date_range(pd.Timestamp(ws).normalize(), pd.Timestamp(we).normalize(), freq='D'))
+    fig = go.Figure(recovery_fig)
+    for trace in fig.data:
+        trace.yaxis = 'y'
+        if trace.name == 'Reconciliado del Caso':
+            trace.name = 'Recuperaci\u00f3n reconciliada'
+        elif trace.name == 'Medido en Caso':
+            trace.name = 'Recuperación medida'
+    fig.update_layout(yaxis_title='Recuperaci\u00f3n reconciliada (%)',
+                      yaxis={'gridcolor': '#E5E7EB'},
+                      yaxis2={'title': 'Tasa de lixiviaci\u00f3n (m\u00b3/t/d\u00eda)', 'overlaying': 'y',
+                              'side': 'right', 'showgrid': False},
+                      xaxis_title='Fecha calendario', xaxis={'type': 'date'}, hovermode='x unified')
+    history_rl = (cumulative_rl(next(iter(member_history.values())), next(iter(member_tms.values())))
+                  if len(member_history) == 1 else aggregate_weighted_rl(member_history, member_tms))
+    history_dates = sorted(history_rl)
+    history_values = [history_rl[day] for day in history_dates]
+    for mode, member_daily in member_daily_by_mode.items():
+        if len(member_daily) == 1:
+            rl = cumulative_rl(next(iter(member_daily.values())), next(iter(member_tms.values())))
+        else:
+            rl = aggregate_weighted_rl(member_daily, member_tms)
+        values = [rl.get(day) for day in dates]
+        if (mode == 'reconciliado' and history_dates and dates
+                and dates[0] - history_dates[-1] == pd.Timedelta(days=1)
+                and history_values[-1] is not None and values[0] is not None):
+            history_dates.append(dates[0])
+            history_values.append(values[0])
+        if any(value is not None for value in values):
+            fig.add_trace(go.Scatter(
+                x=dates, y=values, mode='lines',
+                name='Tasa de lixiviaci\u00f3n medida' if mode == 'medido' else 'Tasa de lixiviaci\u00f3n reconciliada',
+                line={'color': '#8B5CF6' if mode == 'medido' else '#E86D1F',
+                      'width': 2.5, 'dash': 'solid'},
+                connectgaps=False, yaxis='y2',
+            hovertemplate='Fecha: %{x|%d-%m-%Y}<br>Tasa de lixiviaci\u00f3n: %{y:.3f} m\u00b3/t/d\u00eda<extra>%{fullData.name}</extra>'))
+    if any(v is not None for v in history_values):
+        fig.add_trace(go.Scatter(
+            x=history_dates, y=history_values, mode='lines',
+            name='Curva de tasa de lixiviaci\u00f3n reconciliada hist\u00f3rica',
+            line={'color': '#C49A6C', 'width': 2.5}, connectgaps=False, yaxis='y2',
+            hovertemplate='Fecha: %{x|%d-%m-%Y}<br>Tasa de lixiviaci\u00f3n: %{y:.3f} m\u00b3/t/d\u00eda<extra>%{fullData.name}</extra>'))
+    calendar_days = {pd.Timestamp(day).normalize() for trace in fig.data
+                     for day in (list(trace.x) if trace.x is not None else [])}
+    full_calendar = (list(pd.date_range(min(calendar_days), max(calendar_days), freq='D'))
+                     if calendar_days else [])
+    for trace in fig.data:
+        source_dates = list(trace.x) if trace.x is not None else []
+        source_values = list(trace.y) if trace.y is not None else []
+        trace.x = full_calendar
+        trace.y = align_values_to_calendar(source_dates, source_values, full_calendar)
+        if trace.customdata is not None:
+            trace.customdata = align_values_to_calendar(
+                source_dates, list(trace.customdata), full_calendar)
+        trace.connectgaps = False
+
+    # Leading RL zeros alone do not establish the displayed campaign start.
+    # Recovery (including an observed zero) or positive RL does. Keep actual
+    # zeros and missing days after this start, without masking recovery.
+    axis_series = []
+    for trace in fig.data:
+        values = list(trace.y)
+        if trace.yaxis == 'y2':
+            values = [v if v is not None and np.isfinite(float(v)) and float(v) > 0
+                      else None for v in values]
+        axis_series.append((trace.x, values))
+    visible_range = visible_xaxis_range(axis_series)
+    if visible_range:
+        full_range = visible_xaxis_range([(t.x, t.y) for t in fig.data])
+        if full_range:
+            visible_range[1] = full_range[1]
+        fig.update_xaxes(range=visible_range)
+    else:
+        fig.update_xaxes(range=[pd.Timestamp(ws).isoformat(), pd.Timestamp(we).isoformat()])
+    fig.update_layout(uirevision='rl-full-history-v7')
+
+    rl_note = 'Tasa de lixiviaci\u00f3n diaria = volumen de riego del d\u00eda / TMS apiladas; hist\u00f3rico y comparaci\u00f3n del Caso.'
+
+    fig.add_annotation(text=rl_note, x=0, y=-0.28, xref='paper', yref='paper',
+                       showarrow=False, xanchor='left', yanchor='top',
+                       font={'size': 11, 'color': '#6B7280'})
+    fig.update_layout(title={'text': title, 'x': 0.05, 'y': 0.98, 'yanchor': 'top'},
+                      margin={'l': 50, 'r': 100, 't': 110, 'b': 150},
+                      legend={'orientation': 'h', 'x': 0, 'xanchor': 'left',
+                              'y': 1.03, 'yanchor': 'bottom',
+                              'entrywidth': 0.5, 'entrywidthmode': 'fraction',
+                              'font': {'size': 11}})
+    if accumulated:
+        from .rl_series import cumulative_campaign_rl
+        f0_by_member = {member: meta[2]['f0'] for member, meta in member_meta.items()}
+        fig = go.Figure(layout=recovery_fig.layout)
+        # Date rectangles and ranges from the recovery/time chart do not
+        # describe this numerical X axis. Preserve its theme and Y scale.
+        fig.layout.shapes = []
+        specs = [
+            ('Curva reconciliada histórica', 'reconciliado', '#9CA3AF'),
+            ('Recuperación medida', 'medido', '#8B5CF6'),
+            ('Recuperación reconciliada', 'reconciliado', '#2a78d6'),
+        ]
+        accumulated_by_mode = {
+            mode: cumulative_campaign_rl(member_full_by_mode[mode], member_tms, f0_by_member)
+            for mode in ('medido', 'reconciliado')
+        }
+        for rec_name, mode, color in specs:
+            source = next((trace for trace in recovery_fig.data if trace.name == rec_name), None)
+            if source is None:
+                continue
+            xs, ys, hover_dates = [], [], []
+            for day, recovery in zip(list(source.x) if source.x is not None else [],
+                                     list(source.y) if source.y is not None else []):
+                value = accumulated_by_mode[mode].get(pd.Timestamp(day).normalize())
+                if value is None or recovery is None:
+                    xs.append(None); ys.append(None)
+                else:
+                    xs.append(value); ys.append(recovery)
+                hover_dates.append(pd.Timestamp(day).date().isoformat())
+            if any(value is not None for value in xs):
+                fig.add_trace(go.Scatter(x=xs, y=ys, customdata=hover_dates,
+                    mode='lines', name=rec_name,
+                    hovertemplate='Fecha: %{customdata}<br>RL: %{x:.3f} m³/t'
+                                  '<br>Recuperación: %{y:.2f}%<extra>%{fullData.name}</extra>',
+                    line={'color': color, 'width': 2.5}, connectgaps=False))
+        fig.update_layout(title={'text': title, 'x': 0.05, 'y': 0.98, 'yanchor': 'top'},
+            xaxis_title='RL (m³/t)', yaxis_title='Recuperación (%)',
+            xaxis={'type': 'linear', 'range': None, 'autorange': True,
+                   'rangemode': 'nonnegative', 'gridcolor': '#E5E7EB'},
+            yaxis={'gridcolor': '#E5E7EB'}, hovermode='closest',
+            margin={'l': 50, 'r': 30, 't': 110, 'b': 95},
+            legend={'orientation': 'h', 'x': 0, 'xanchor': 'left',
+                    'y': 1.03, 'yanchor': 'bottom', 'entrywidth': 0.5,
+                    'entrywidthmode': 'fraction', 'font': {'size': 11}},
+            uirevision='rec-vs-rl-acumulada-v1')
+        # Reconciliation window expressed as accumulated dose on this X axis.
+        bounds = []
+        for cumulative in accumulated_by_mode.values():
+            previous = ws - pd.Timedelta(days=1)
+            left = cumulative.get(previous)
+            if left is None and cumulative and previous < min(cumulative):
+                left = 0.0
+            right = cumulative.get(we)
+            if left is not None and right is not None and np.isfinite(float(left)) and np.isfinite(float(right)):
+                bounds.append((float(left), float(right)))
+        if bounds:
+            fig.add_vrect(x0=min(b[0] for b in bounds), x1=max(b[1] for b in bounds),
+                          fillcolor='#E86D1F', opacity=0.08, line_width=1,
+                          line_color='#E86D1F', layer='below')
+        fig.add_annotation(text='RL = volumen de riego desde el inicio de campaña / TMS.',
+                           x=0, y=-0.25, xref='paper', yref='paper', showarrow=False,
+                           xanchor='left', yanchor='top', font={'size': 11, 'color': '#6B7280'})
+        if not fig.data:
+            fig.add_annotation(text='No hay recuperación y RL disponibles en las mismas fechas.',
+                               x=0.5, y=0.5, xref='paper', yref='paper', showarrow=False)
+        return fig
+    return fig
+
+
+@_callback(
+    Output('curvas-recon-chart-rl', 'figure'),
+    Input('curvas-recon-pila-tabs', 'value'),
+    Input('curvas-recon-store', 'data'),
+    Input('curvas-recon-pila-store', 'data'),
+    Input('curvas-grupo-picker', 'value'),
+    Input('curvas-grupos-store', 'data'),
+    Input('curvas-recon-caso', 'value'),
+    prevent_initial_call=False,
+)
+def render_rl_chart(tab_value, data, selected_pila, group_id, groups, caso_id):
+    # No stack read, history scan, or unrelated figure render until this tab is selected.
+    if tab_value != 'tab-rl':
+        return empty_figure('Selecciona Recuperaci\u00f3n y tasa de lixiviaci\u00f3n')
+    if not _store_matches_case(data, caso_id):
+        return empty_figure('Ejecuta el c\u00e1lculo del Caso seleccionado para consultar la tasa de lixiviaci\u00f3n')
+    group = next((g for g in (groups or []) if g.get('id') == group_id), None) if group_id else None
+    if group:
+        members = list(dict.fromkeys(group.get('members') or []))
+        if len(members) < 2:
+            return empty_figure('El grupo requiere al menos dos pilas')
+        rec_fig, warning = _build_combined_recovery_chart(group, data, caso_id)
+        if warning:
+            return empty_figure(warning)
+        return _rl_chart_for_members(members, data, caso_id, rec_fig, group.get('name', 'Grupo'))
+    if not selected_pila:
+        return empty_figure('Selecciona una pila')
+    ws, we, _ = _store_window(data)
+    cache_key = _pila_chart_cache_key(data, selected_pila, caso_id, ws, we)
+    cached_figures = _get_cached_pila_figures(cache_key)
+    rec_fig = cached_figures[0] if cached_figures is not None else _build_recovery_chart(
+        selected_pila, ws, we, data, caso_id)
+    return _rl_chart_for_members([selected_pila], data, caso_id, rec_fig, selected_pila)
+
+
+@_callback(
+    Output('curvas-recon-chart-rl-acum', 'figure'),
+    Input('curvas-recon-pila-tabs', 'value'),
+    Input('curvas-recon-store', 'data'),
+    Input('curvas-recon-pila-store', 'data'),
+    Input('curvas-grupo-picker', 'value'),
+    Input('curvas-grupos-store', 'data'),
+    Input('curvas-recon-caso', 'value'),
+    prevent_initial_call=False,
+)
+def render_rl_acumulada_chart(tab_value, data, selected_pila, group_id, groups, caso_id):
+    if tab_value != 'tab-rl-acum':
+        return empty_figure('Selecciona Recuperación vs RL')
+    if not _store_matches_case(data, caso_id):
+        return empty_figure('Ejecuta el cálculo del Caso seleccionado para consultar RL')
+    if not _FULL_DATA_READY:
+        ensure_full_data()
+    group = next((g for g in (groups or []) if g.get('id') == group_id), None) if group_id else None
+    if group:
+        members = list(dict.fromkeys(group.get('members') or []))
+        if len(members) < 2:
+            return empty_figure('El grupo requiere al menos dos pilas')
+        rec_fig, warning = _build_combined_recovery_chart(group, data, caso_id)
+        if warning:
+            return empty_figure(warning)
+        return _rl_chart_for_members(members, data, caso_id, rec_fig,
+                                     group.get('name', 'Grupo'), accumulated=True)
+    if not selected_pila:
+        return empty_figure('Selecciona una pila')
+    ws, we, _ = _store_window(data)
+    cache_key = _pila_chart_cache_key(data, selected_pila, caso_id, ws, we)
+    cached_figures = _get_cached_pila_figures(cache_key)
+    rec_fig = cached_figures[0] if cached_figures is not None else _build_recovery_chart(
+        selected_pila, ws, we, data, caso_id)
+    return _rl_chart_for_members([selected_pila], data, caso_id, rec_fig,
+                                 selected_pila, accumulated=True)
 
 @_callback(
     Output('curvas-recon-status-badge', 'children'),
@@ -2413,9 +3566,10 @@ def enable_report_btn(data, caso_id):
     Input('curvas-recon-report-btn', 'n_clicks'),
     State('curvas-recon-store', 'data'),
     State('curvas-recon-caso', 'value'),
+    State('curvas-grupos-store', 'data'),
     prevent_initial_call=True,
 )
-def generate_week_report(_n_clicks, data, selected_case_id):
+def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
     """El libro `Reporte_Recuperaciones_Metodo_Reconciliado.xlsx`, armado con
     la corrida que se acaba de reconciliar.
 
@@ -2427,6 +3581,11 @@ def generate_week_report(_n_clicks, data, selected_case_id):
     reconciliados por el motor DENTRO de la ventana del Caso, y leyes medidas
     con el Fdrenaje base fuera de ella, hasta el ultimo dia con datos
     (`JOINT_DATA_CUTOFF`)."""
+    try:
+        _refresh_case_catalog()
+    except Exception:
+        return html.Div('No se pudo verificar el Caso oficial actual.',
+                        style={'color': '#B45309'}), None
     selected_case = _caso_by_id(selected_case_id)
     if (not isinstance(data, dict)
             or not _store_matches_case(data, selected_case_id)
@@ -2483,7 +3642,15 @@ def generate_week_report(_n_clicks, data, selected_case_id):
                              style={'color': '#B45309'}), None
         fd, tmp_path = tempfile.mkstemp(suffix='.xlsx')
         os.close(fd)
-        report_metodo.escribir_libro(doc, tmp_path)
+        if groups is not None and groups != []:
+            from .virtual_pile_report import VirtualGroupError
+            try:
+                report_metodo.escribir_libro(doc, tmp_path, groups=groups)
+            except VirtualGroupError as exc:
+                return html.Div(f'No se pudo exportar la pila virtual: {exc}',
+                                style={'color': '#B45309'}), None
+        else:
+            report_metodo.escribir_libro(doc, tmp_path)
         stamp = datetime.now().strftime('%Y%m%d_%H%M')
         download = dcc.send_file(
             tmp_path,
@@ -2497,7 +3664,8 @@ def generate_week_report(_n_clicks, data, selected_case_id):
     comparacion = ('con comparación planta' if os.path.isfile(report_metodo.XL_PLANTA)
                    else 'sin comparación planta')
     return html.Div(
-        f'Reporte generado ({n_pilas} pilas, curva hasta {JOINT_DATA_CUTOFF.date()}, {comparacion}).',
+        f'Reporte generado ({n_pilas} pilas, {len(groups or [])} pilas virtuales, '
+        f'curva hasta {JOINT_DATA_CUTOFF.date()}, {comparacion}).',
         style={'color': '#2E9E5B'}), download
 
 def build_layout():
@@ -2552,6 +3720,132 @@ def poll_progress(_n_intervals):
     return _progress_children(snap), 'curvas-progress is-busy'
 
 
+@_callback(
+    Output('curvas-grupos-modal', 'is_open'),
+    Input('curvas-grupos-open', 'n_clicks'), Input('curvas-grupos-close', 'n_clicks'),
+    prevent_initial_call=True,
+)
+def toggle_grupos(_open, _close):
+    return ctx.triggered_id == 'curvas-grupos-open'
+
+
+def highlight_group_tiles(selected_group, tile_ids):
+    # Mark the selected saved group without rebuilding the pad grid.
+    colors, outlines = [], []
+    for tile in tile_ids or []:
+        active = tile.get('group') == selected_group
+        colors.append('primary' if active else 'secondary')
+        outlines.append(not active)
+    return colors, outlines
+
+
+@_callback(
+    Output({'type': 'curvas-group-cell', 'group': ALL}, 'color'),
+    Output({'type': 'curvas-group-cell', 'group': ALL}, 'outline'),
+    Input('curvas-grupo-picker', 'value'),
+    State({'type': 'curvas-group-cell', 'group': ALL}, 'id'),
+    prevent_initial_call=False,
+)
+def update_group_tile_selection(selected_group, tile_ids):
+    return highlight_group_tiles(selected_group, tile_ids)
+
+
+@_callback(
+    Output('curvas-grupo-members', 'options'),
+    Output('curvas-grupo-edit-picker', 'options'),
+    Output('curvas-grupo-picker', 'options'),
+    Input('curvas-recon-store', 'data'), Input('curvas-recon-caso', 'value'),
+    Input('curvas-grupos-store', 'data'),
+    prevent_initial_call=False,
+)
+def group_editor_options(data, caso_id, groups):
+    options, raw = [], None
+    if _store_matches_case(data, caso_id):
+        if not _FULL_DATA_READY:
+            ensure_full_data()
+        raw = _get_group_raw(data, caso_id)
+    if isinstance(raw, dict):
+        for pile in (raw.get('res') or {}).get('piles', []):
+            label = pile.get('label')
+            num = pile.get('parcela', pile.get('p'))
+            if isinstance(num, str):
+                num = num.strip().upper().removeprefix('P')
+            try:
+                num = int(num)
+                pid = ('rox' if label == 'OXIDOS' else 'rsu' if label == 'SULFUROS' else None)
+                if pid and WIP_META.get(label, {}).get(f'P{num:02d}'):
+                    options.append({'label': f"{label.title()} P{num:02d}", 'value': f'{pid}-P{num:02d}'})
+            except (TypeError, ValueError):
+                continue
+    group_options = [{'label': g.get('name', 'Grupo'), 'value': g.get('id')}
+                     for g in (groups or []) if g.get('id')]
+    return options, group_options, group_options
+
+
+@_callback(
+    Output('curvas-grupo-edit-picker', 'value'),
+    Input('curvas-grupos-store', 'data'),
+    State('curvas-grupo-edit-picker', 'value'), prevent_initial_call=True,
+)
+def keep_group_editor_selection(groups, current):
+    ids = [g.get('id') for g in (groups or [])]
+    return current if current in ids else (ids[-1] if ids else None)
+
+
+@_callback(
+    Output('curvas-grupo-name', 'value'), Output('curvas-grupo-members', 'value'),
+    Input('curvas-grupo-edit-picker', 'value'), State('curvas-grupos-store', 'data'),
+    prevent_initial_call=True,
+)
+def load_group_editor(group_id, groups):
+    group = next((g for g in (groups or []) if g.get('id') == group_id), None)
+    return ((group or {}).get('name', ''), (group or {}).get('members', []))
+
+
+@_callback(
+    Output('curvas-grupos-store', 'data'), Output('curvas-grupo-validation', 'children'),
+    Input('curvas-grupo-save', 'n_clicks'), Input('curvas-grupo-delete', 'n_clicks'),
+    Input('curvas-grupo-reset', 'n_clicks'),
+    State('curvas-grupo-edit-picker', 'value'), State('curvas-grupo-name', 'value'),
+    State('curvas-grupo-members', 'value'), State('curvas-grupos-store', 'data'),
+    State('curvas-grupo-members', 'options'),
+    prevent_initial_call=True,
+)
+def edit_local_groups(_save, _delete, _reset, selected_id, name, members, groups, member_options):
+    action = ctx.triggered_id
+    if action == 'curvas-grupo-reset':
+        return restore_local_groups(), 'Se restauraron las curvas individuales.'
+    if action == 'curvas-grupo-delete':
+        return delete_local_group(groups, selected_id), 'Se quitó el grupo.'
+    if action == 'curvas-grupo-save':
+        active = {option.get('value') for option in (member_options or [])}
+        return save_local_group(groups, selected_id, name, members, active)
+    raise dash.exceptions.PreventUpdate
+
+
+@_callback(
+    Output('curvas-grupo-edit-picker', 'value', allow_duplicate=True),
+    Output('curvas-grupo-name', 'value', allow_duplicate=True),
+    Output('curvas-grupo-members', 'value', allow_duplicate=True),
+    Input('curvas-grupo-new', 'n_clicks'), prevent_initial_call=True,
+)
+def new_curve_sum(_clicks):
+    return None, '', []
+
+
+@_callback(
+    Output('curvas-grupo-chart', 'figure'), Output('curvas-grupo-warning', 'children'),
+    Input('curvas-grupo-picker', 'value'), Input('curvas-grupos-store', 'data'),
+    Input('curvas-recon-store', 'data'), Input('curvas-recon-caso', 'value'),
+    prevent_initial_call=False,
+)
+def render_combined_group(group_id, groups, data, caso_id):
+    group = next((g for g in (groups or []) if g.get('id') == group_id), None)
+    if not group_id:
+        return go.Figure(), ''
+    return _build_combined_recovery_chart(group, data, caso_id)
+
+
 def register_callbacks(app):
     """Install before server startup; safe if the host calls this twice."""
     registered = getattr(app, '_siir_curvas_callbacks_registered', False)
@@ -2564,6 +3858,12 @@ def register_callbacks(app):
                 raise dash.exceptions.PreventUpdate
             return _fn(*values, **callback_kwargs)
         app.callback(*args, **kwargs)(ready_callback)
+    vista_todas_rec.register_callbacks(
+        app, callback=app.callback, Input=Input, Output=Output, State=State, ctx=ctx,
+        build_kwargs=lambda: dict(
+            get_raw=_get_group_raw, ensure_full_data=ensure_full_data,
+            wip_meta=lambda: WIP_META, reconstruct=_reconstructed_campaign_series,
+            load_material=_load_material_window, cutoff=lambda: JOINT_DATA_CUTOFF))
     app._siir_curvas_callbacks_registered = True
 
 

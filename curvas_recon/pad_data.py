@@ -38,6 +38,35 @@ def _as_date(v):
     return v.date() if hasattr(v, 'date') else v
 
 
+def _primary_source_fingerprint(engine, pad):
+    """Firma fresca de Recuperaciones_pad para invalidar solo esta fuente.
+
+    COUNT/MAX detectan inserciones y backfills; CHECKSUM_AGG incluye el valor
+    medido para detectar updates que no cambian cantidad ni fecha maxima.
+    Esta lectura es directa, intencionalmente fuera de la propia cache.
+    """
+    query = text(f"""
+        SELECT COUNT_BIG(1), MAX(r.id_rec),
+               MAX(CAST(r.Fecha_drenaje AS DATE)),
+               CHECKSUM_AGG(BINARY_CHECKSUM(
+                   r.id_rec, r.Parcela, CAST(r.Fecha_drenaje AS DATE),
+                   r.Recuperacion_parcela))
+        FROM {SCHEMA}.Recuperaciones_pad AS r
+        WHERE r.PAD = :pad AND r.Recuperacion_parcela IS NOT NULL
+    """)
+    with engine.connect() as conn:
+        row = conn.execute(query, {"pad": pad}).fetchone()
+    if row is None:
+        values = (0, None, None, None)
+    else:
+        values = tuple(row)
+        if not values or values[0] is None:
+            values = (0, None, None, None)
+    count, max_id, max_date, checksum = values
+    max_date = max_date.isoformat() if hasattr(max_date, 'isoformat') else max_date
+    return ('rec-primary-v2', int(count or 0), max_id, max_date, checksum)
+
+
 # Descartes ya avisados en este proceso: (material, detalle). Ver el print.
 _AVISADOS = set()
 
@@ -74,8 +103,11 @@ def _load_material(material_nombre: str, max_parcela: int,
         WHERE r.PAD = :pad AND r.Recuperacion_parcela IS NOT NULL
         GROUP BY TRY_CAST(r.Parcela AS INT)
     """
-    rows = _sql_rows(get_engine(), text(query), params)
-    last_dates = _sql_rows(get_engine(), text(last_date_query), {"pad": pad})
+    engine = get_engine()
+    source_salt = _primary_source_fingerprint(engine, pad)
+    rows = _sql_rows(engine, text(query), params, cache_salt=source_salt)
+    last_dates = _sql_rows(engine, text(last_date_query), {"pad": pad},
+                            cache_salt=source_salt)
 
     global_last_date = max((_as_date(d) for _, d in last_dates if d is not None), default=None)
 

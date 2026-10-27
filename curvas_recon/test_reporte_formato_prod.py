@@ -100,12 +100,12 @@ def _series_formula(series, kind: str) -> str:
     return (numeric or string).f
 
 
-def test_libro_final_tiene_seis_hojas_layout_pad_curvas_y_prod(tmp_path):
+def test_libro_final_conserva_layout_pad_curvas_prod_y_agrega_rl(tmp_path):
     path = tmp_path / "reporte.xlsx"
     report.escribir_libro(_doc(), path)
     wb = load_workbook(path, data_only=False)
 
-    assert wb.sheetnames == ["Rec Ox", "Rec Sulfuro", "Curvas Ox", "Curvas Sulfuro", "Prod Oxidos", "Prod Sulfuros"]
+    assert wb.sheetnames == ["Rec Ox", "Rec Sulfuro", "Curvas Ox", "Curvas Sulfuro", "Prod Oxidos", "Prod Sulfuros", "RL Oxidos", "RL Sulfuros"]
     ox, su = wb["Rec Ox"], wb["Rec Sulfuro"]
     # La hoja de óxidos conserva su fila 9 con números de pila y curva desde 10.
     assert ox["A1"].value == "Campana"

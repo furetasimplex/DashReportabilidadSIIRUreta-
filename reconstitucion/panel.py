@@ -9,7 +9,7 @@ from dash import Input, Output, State, dcc, html, no_update
 
 from . import engine as e, db_source as dbs, validacion as val
 from .modelo_flujos import FlowCaseError
-from .presentacion import C, SANS, MONO, kpi, tabla_itinerario, tabla_detalle_modulo, panel_calidad, gantt_labels
+from .presentacion import C, SANS, MONO, kpi, tabla_itinerario, tabla_detalle_modulo, detalle_itinerario, _itinerary_frame, panel_calidad, gantt_labels, timestamp_text, resolution_label
 
 _lock = RLock()
 _results = {}  # Tokens por sesión: no serializar el histórico en el navegador.
@@ -29,90 +29,100 @@ def remember(res):
     return token
 
 
-def fig_gantt(res):
-    """Un gráfico, dos carriles distintos: ventana de levantamiento y estimación.
+def _optional_number(value):
+    return None if pd.isna(value) else float(value)
 
-    Barras de medición NO representan horas efectivas. El eje/identidad incluye
-    pad y campaña; los días sin volumen se omiten en el carril medido.
-    """
-    it = res.get('itinerario')
-    fig = go.Figure()
-    if it is None or it.empty:
-        fig.update_layout(title='Sin módulos para esta selección')
+
+def fig_gantt(res):
+    """Reconstructed blue intervals split at TA/TB, with orange change markers."""
+    timeline=res.get('module_timeline')
+    fig=go.Figure()
+    if timeline is None or timeline.empty:
+        fig.update_layout(title='Sin modulos para esta seleccion')
         return fig
-    it = it.sort_values(['pad_id', 'campana', 'act_ini', 'modulo']).copy()
-    st = res['shift_table']
-    activity = {(int(r.pad_id), int(r.campana), int(r.modulo), pd.Timestamp(r.fecha)): r
-                for r in st.itertuples()}
-    measured = {'x': [], 'base': [], 'y': [], 'customdata': []}
-    projected = {'x': [], 'base': [], 'y': [], 'customdata': []}
-    rows, limits = [], []
-    for r in it.itertuples():
-        key = f'P{int(r.pad_id)} · C{int(r.campana)} · M{int(r.modulo)}'
-        valid_projection = pd.notna(r.proy_ini) and pd.notna(r.proy_fin)
-        rows.append(key + ' | Medido')
-        if valid_projection:
-            rows.append(key + ' | Proyectado')
-        # La presencia diaria se segmenta: no fingir actividad en días vacíos.
-        for day in pd.date_range(r.real_ini, r.real_fin, freq='D'):
-            if (int(r.pad_id), int(r.campana), int(r.modulo), day) not in activity:
+    pieces=_itinerary_frame(res)
+    bars={'x':[],'base':[],'y':[],'customdata':[]}
+    transitions={'x':[],'y':[],'customdata':[]}
+    rows=[]; limits=[]
+    def lane(pad,camp,mod,turn):
+        return f'P{int(pad)} / C{int(camp)} / M{int(mod)}'
+    if pieces is not None and not pieces.empty:
+        for seg in pieces.itertuples():
+            if pd.isna(seg.start) or pd.isna(seg.end) or pd.Timestamp(seg.end)<=pd.Timestamp(seg.start):
                 continue
-            start = day + pd.Timedelta(hours=e.SHIFT1_START)
-            end = start + pd.Timedelta(days=1)
-            measured['x'].append(86400000)
-            measured['base'].append(start.isoformat())
-            measured['y'].append(key + ' | Medido')
-            obs = activity[(int(r.pad_id), int(r.campana), int(r.modulo), day)]
-            measured['customdata'].append([int(r.pad_id), int(r.campana), int(r.modulo),
-                day.strftime('%d-%m-%Y'), float(obs.vol_diario),
-                None if pd.isna(obs.masa_total) else float(obs.masa_total)])
-            limits.extend((start, end))
-        if valid_projection:
-            projected['x'].append((r.proy_fin-r.proy_ini).total_seconds()*1000)
-            projected['base'].append(r.proy_ini.isoformat())
-            projected['y'].append(key + ' | Proyectado')
-            projected['customdata'].append([int(r.pad_id), int(r.campana), int(r.modulo),
-                r.proy_ini.strftime('%d-%m %H:%M'), r.proy_fin.strftime('%d-%m %H:%M'),
-                float(r.rho_proy)])
-            limits.extend((r.proy_ini, r.proy_fin))
-    fig.add_trace(go.Bar(**measured, name='Medido · días con volumen', orientation='h',
-        marker_color=C['accent'], hovertemplate='Pad %{customdata[0]} · campaña %{customdata[1]} · módulo %{customdata[2]}'
-        '<br>Día operacional %{customdata[3]} · 08:00–08:00'
-        '<br>Volumen del día %{customdata[4]:,.0f} m³'
-        '<br>Masa asignada del día %{customdata[5]:,.0f} t<extra>Ventana de levantamientos; no horas efectivas</extra>'))
-    if projected['x']:
-        fig.add_trace(go.Bar(**projected, name='Proyectado · estimación', orientation='h',
-            marker_color=C['shift2'], hovertemplate='Pad %{customdata[0]} · campaña %{customdata[1]} · módulo %{customdata[2]}'
-            '<br>%{customdata[3]} → %{customdata[4]}'
-            '<br>Densidad de proyección %{customdata[5]:.3f} t/m³<extra>Estimación, no medición</extra>'))
-    fig.update_layout(template='plotly_white', paper_bgcolor=C['panel'], plot_bgcolor=C['panel'],
-        font=dict(family=SANS, color=C['text'], size=12), barmode='overlay', bargap=.28,
-        height=max(310, len(rows)*25+95), margin=dict(l=160, r=20, t=60, b=40),
-        title='Itinerario por pad, campaña y módulo',
-        legend=dict(orientation='h', y=1.12), clickmode='event+select',
-        yaxis=dict(categoryorder='array', categoryarray=rows[::-1], showgrid=False),
-        xaxis=dict(type='date', tickformat='%d-%m', gridcolor=C['grid']),
-        uirevision='reconstitucion-itinerario')
+            start,end=pd.Timestamp(seg.start),pd.Timestamp(seg.end)
+            y=lane(seg.pad_id,seg.campana,seg.modulo,seg.turno)
+            if y not in rows: rows.append(y)
+            bars['x'].append((end-start).total_seconds()*1000); bars['base'].append(start.isoformat()); bars['y'].append(y)
+            bars['customdata'].append([int(seg.pad_id),int(seg.campana),int(seg.modulo),seg.turno,timestamp_text(start),timestamp_text(end),_optional_number(seg.masa_turno_asignada),str(seg.frontera_tipo) if hasattr(seg,'frontera_tipo') else ''])
+            limits.extend((start,end))
+    tl=timeline.sort_values(['pad_id','campana','start','modulo']).copy()
+    for _,group in tl.groupby(['pad_id','campana'],sort=False):
+        items=list(group.itertuples())
+        for prev,nxt in zip(items,items[1:]):
+            if int(prev.modulo)==int(nxt.modulo):
+                continue
+            t=pd.Timestamp(nxt.start)
+            opday=(t-pd.Timedelta(hours=8)).normalize()
+            turn='TA' if t < opday+pd.Timedelta(hours=20) else 'TB'
+            y=lane(nxt.pad_id,nxt.campana,nxt.modulo,turn)
+            if y not in rows: rows.append(y)
+            transitions['x'].append(t.isoformat()); transitions['y'].append(y)
+            transitions['customdata'].append([int(nxt.pad_id),int(nxt.campana),int(nxt.modulo),int(prev.modulo),timestamp_text(t),pd.Timestamp(nxt.fecha).strftime('%d-%m-%Y'),str(nxt.origen),str(nxt.resolucion)])
+            limits.append(t)
+    if bars['x']:
+        fig.add_trace(go.Bar(**bars,name='Horario reconstruido',orientation='h',marker_color=C['shift2'],
+            hovertemplate='P%{customdata[0]} / C%{customdata[1]} / M%{customdata[2]}<br>Turno %{customdata[3]}<br>Horario %{customdata[4]} a %{customdata[5]}<br>TMS asignada a este turno: %{customdata[6]:,.0f} t<br>Base de turno: %{customdata[7]}<br>Horario reconstruido; la masa humeda y la TMS diaria no se desglosan linealmente por tramo.<extra></extra>',
+            hoverlabel=dict(align='left',font=dict(size=10))))
+    if transitions['x']:
+        fig.add_trace(go.Scatter(x=transitions['x'],y=transitions['y'],mode='markers',name='Medicion asignada al cambio reconstruido',
+            marker=dict(symbol='line-ns',size=16,color=C['accent'],line=dict(color=C['accent'],width=3)),customdata=transitions['customdata'],
+            hovertemplate='Medicion asignada al cambio reconstruido<br>P%{customdata[0]} / C%{customdata[1]}<br>M%{customdata[3]} -> M%{customdata[2]}<br>Hora reconstruida %{customdata[4]}<br>Fecha original %{customdata[5]}<br>No hay evento de cambio registrado.<br>%{customdata[6]}<br>%{customdata[7]}<extra></extra>',
+            hoverlabel=dict(align='left',font=dict(size=10))))
+    rows=sorted(rows,key=lambda label:(int(label.split('/')[0].strip()[1:]),int(label.split('/')[1].strip()[1:]),int(label.split('/')[2].split('|')[0].strip()[1:]),0))
+    fig.update_layout(template='plotly_white',paper_bgcolor=C['panel'],plot_bgcolor=C['panel'],font=dict(family=SANS,color=C['text'],size=12),barmode='overlay',bargap=.28,height=max(310,len(rows)*25+95),margin=dict(l=190,r=20,t=60,b=55),title='Horario reconstruido por modulo; turnos en eje temporal',legend=dict(orientation='h',y=1.12),clickmode='event+select',yaxis=dict(categoryorder='array',categoryarray=rows[::-1],showgrid=False),xaxis=dict(type='date',gridcolor=C['grid']),uirevision='reconstitucion-itinerario')
     if limits:
-        fig.update_xaxes(range=[min(limits).isoformat(), max(limits).isoformat()])
-    if not projected['x']:
-        fig.add_annotation(text='Proyección no disponible: falta tasa o densidad válida.',
-            x=0, y=1.02, xref='paper', yref='paper', showarrow=False,
-            xanchor='left', font=dict(color=C['sub'], size=11))
+        low,high=min(limits),max(limits)
+        fig.update_xaxes(range=[low.isoformat(),high.isoformat()])
+        ticks=[]; labels=[]
+        for day in pd.date_range((low-pd.Timedelta(hours=8)).normalize(),high.normalize(),freq='D'):
+            for hour,label in ((8,'TA'),(20,'TB')):
+                t=day+pd.Timedelta(hours=hour)
+                if low<=t<=high:
+                    ticks.append(t.isoformat()); labels.append(f'{label} {hour:02d}:00<br>{t:%d-%m}')
+        fig.update_xaxes(tickmode='array',tickvals=ticks,ticktext=labels,tickangle=-25)
+    if not bars['x']:
+        fig.add_annotation(text='Horario no disponible para los tramos de esta seleccion.',x=0,y=1.02,xref='paper',yref='paper',showarrow=False,xanchor='left',font=dict(color=C['sub'],size=11))
+    elif not transitions['x']:
+        fig.add_annotation(text='No hay evento de cambio registrado; se muestra el horario reconstruido.',x=0,y=1.02,xref='paper',yref='paper',showarrow=False,xanchor='left',font=dict(color=C['sub'],size=11))
     return fig
 
 
-def select_result(res, key, mode, f0, f1):
+def select_result(res, key, f0, f1):
     cropped = e.recortar_rango(res, f0, f1)
-    if key and key != 'all':
-        pad, camp = (int(x) for x in key.split('|'))
-        return e.analyze_group(cropped, pad, camp, proy_modo=mode)
-    out = dict(cropped)
-    st = out['shift_table']
-    out.update(daily=e.daily_shift_summary(st), modules=e.module_summary(st),
-        weekly=e.weekly_summary(st), itinerario=e.module_itinerary(out['apilado'], st, mode,
-        tasa=out.get('tasa')))
-    out['avisos'] = out.get('avisos_entrada', []) + val.revisar_resultado(out)
+    timeline = cropped.get('module_timeline')
+    bits = [] if not key or key == 'all' else [int(x) for x in key.split('|')]
+    if bits:
+        pad, camp = bits[:2]
+        out = e.analyze_group(cropped, pad, camp)
+        if len(bits) == 3:
+            mod = bits[2]
+            out['shift_table'] = out['shift_table'].loc[out['shift_table'].modulo.eq(mod)].copy()
+            out['itinerario'] = out['itinerario'].loc[out['itinerario'].modulo.eq(mod)].copy()
+        timeline = timeline.loc[timeline.pad_id.eq(pad) & timeline.campana.eq(camp)] if timeline is not None else None
+        if len(bits) == 3 and timeline is not None:
+            timeline = timeline.loc[timeline.modulo.eq(bits[2])]
+    else:
+        out = dict(cropped)
+        st = out['shift_table']
+        out.update(daily=e.daily_shift_summary(st), modules=e.module_summary(st), weekly=e.weekly_summary(st), itinerario=timeline)
+        out['avisos'] = out.get('avisos_entrada', []) + val.revisar_resultado(out)
+    if timeline is not None:
+        timeline = timeline.copy()
+        timeline['fecha'] = pd.to_datetime(timeline.fecha).dt.normalize()
+        timeline = timeline.loc[timeline.fecha.between(pd.Timestamp(f0).normalize(), pd.Timestamp(f1).normalize())]
+        out['module_timeline'] = timeline
+        out['itinerario'] = timeline
     return out
 
 
@@ -121,9 +131,12 @@ def summary(res):
     balance = res.get('cuadratura')
     mass = st.masa_total.sum(min_count=1)
     pending = balance.masa_pendiente.sum(min_count=1) if balance is not None else np.nan
+    timeline = res.get('module_timeline')
+    n_modules = (timeline[['pad_id', 'campana', 'modulo']].drop_duplicates().shape[0]
+                 if timeline is not None and not timeline.empty else 0)
     cards = [kpi('Volumen', f'{st.vol_diario.sum():,.0f} m³'),
              kpi('Masa asignada', 'Sin dato' if pd.isna(mass) else f'{mass:,.0f} t'),
-             kpi('Módulos', str(len(res.get('itinerario', [])))),
+             kpi('Modulos', str(n_modules)),
              kpi('Masa pendiente global', 'Sin dato' if pd.isna(pending) else f'{pending:,.0f} t', C['amber'])]
     return html.Div(cards, className='reconstitucion-kpis')
 
@@ -138,20 +151,17 @@ def render(res):
     return html.Div([
         summary(res),
         html.P('Fuente de masa: ' + (', '.join(sources) if sources else 'Oficial validada'), className='reconstitucion-note'),
-        html.P('Naranja: días operacionales con volumen medido. Azul: itinerario estimado cuando existe evidencia. '
-               'Los huecos indican días sin volumen; cada módulo aparece una vez por tipo de dato.', className='reconstitucion-note'),
-        dcc.Graph(id='reconstitucion-gantt', figure=fig_gantt(res), config={'displaylogo': False}),
+        html.P('Azul: horario reconstruido desde el perfil TMH y la fraccion de volumen diaria del modulo. Las lineas verticales naranjas son mediciones asignadas al cambio reconstruido; no hay evento de cambio registrado. Selecciona una fila para abrir los datos del modulo y turno disponibles en esta carga. TMS diaria es un unico total y no se replica como TMS por tramo.', className='reconstitucion-note'),
+        html.Div(dcc.Graph(id='reconstitucion-gantt', figure=fig_gantt(res), config={'displaylogo': False}, style={'minWidth':'960px'}), style={'overflowX':'auto','maxWidth':'100%'}),
         html.Div(id='reconstitucion-detalle'),
-        html.Details([html.Summary('Ver tabla de itinerario'), tabla_itinerario(res)]),
+        html.Div(id='reconstitucion-tabla-popup'),
+        html.Button('Cerrar detalle de fila', id='reconstitucion-tabla-cerrar', n_clicks=0, style={'display':'none','position':'fixed','zIndex':1101,'top':'12%','right':'16%','background':'white','border':'1px solid #ddd','borderRadius':'6px','padding':'8px 12px','cursor':'pointer'}),
+        html.Div([html.P('Selecciona una fila para abrir sus datos de modulo y turno.',className='reconstitucion-note'),tabla_itinerario(res)]),
         html.Button('Consideraciones', id='reconstitucion-consideraciones', n_clicks=0, className='reconstitucion-button'),
         html.Div([html.Div([
             html.Button('Cerrar', id='reconstitucion-cerrar', n_clicks=0, className='reconstitucion-button'),
             html.H3('Consideraciones'),
-            html.P('La masa conserva el total reconciliado de cada pad. '
-                   'Un turno conocido en cero conserva cero. Días sin masa no se rellenan. '
-                   'El pendiente global no se atribuye a módulos sin evidencia de volumen. '
-                   'Los días medidos delimitan levantamientos, no horas efectivas de operación. '
-                   'Las fechas proyectadas requieren tasa y densidad válidas.'),
+            html.P('La masa conserva el total reconciliado de cada pad. Un turno conocido en cero conserva cero; dias sin masa no se rellenan. El pendiente global no se atribuye a modulos sin evidencia. Los levantamientos diarios no son horas efectivas. Las horas son estimaciones reconstruidas desde perfil TMH y reparto por fraccion de volumen; la resolucion y el origen usados aparecen en cada intervalo. La hora no es una observacion y el fin no acredita cierre fisico.'),
             html.P((
                 'Fuente: flujos solidos del Caso y su run oficial. La distribucion por dia y turno '
                 'se deriva del perfil operativo de correas y humedad; no es un nuevo pesaje por turno. '
@@ -176,9 +186,6 @@ def build_layout(start_date=None, end_date=None):
             dcc.Dropdown(id='reconstitucion-caso', options=[], placeholder='Caso oficial', clearable=False),
             html.Div(id='reconstitucion-estado-casos'),
             dcc.Dropdown(id='reconstitucion-grupo', options=[{'label': 'Todos los módulos', 'value': 'all'}], value='all', clearable=False),
-            dcc.Dropdown(id='reconstitucion-modo', options=[{'label': 'Calendario de apilado', 'value': 'apilado'},
-                {'label': 'Utilización de calendario', 'value': 'calendario'},
-                {'label': 'Calibración por campaña', 'value': 'campana'}], value='apilado', clearable=False),
             dcc.DatePickerRange(id='reconstitucion-rango', start_date=start_date, end_date=end_date, disabled=True,
                                 display_format='DD-MM-YYYY', first_day_of_week=1),
             html.Button('Cargar datos', id='reconstitucion-cargar', n_clicks=0, className='reconstitucion-button')], className='reconstitucion-controls'),
@@ -186,12 +193,18 @@ def build_layout(start_date=None, end_date=None):
         dcc.Loading(html.Div(id='reconstitucion-resultados'), type='circle', color=C['accent'])], className='reconstitucion-shell')
 
 
+def _resolve_loader(loader=None):
+    if loader is not None:
+        return loader
+    return lambda **kwargs: e.analyze_db(use_intraday=True, **kwargs)
+
+
 def register_callbacks(app, loader=None, case_loader=None):
     """Registro idempotente; loader inyectable para pruebas y vista offline."""
     if getattr(app, '_reconstitucion_registered', False):
         return
     app._reconstitucion_registered = True
-    load = loader or e.analyze_db
+    load = _resolve_loader(loader)
 
     @app.callback(Output('reconstitucion-casos', 'data'), Output('reconstitucion-caso', 'options'),
         Output('reconstitucion-caso', 'value'), Output('reconstitucion-estado-casos', 'children'),
@@ -247,9 +260,9 @@ def register_callbacks(app, loader=None, case_loader=None):
             # Caso nunca se presenta como la selección actual.
             res = dict(res, caso=dict(case))
             groups = res['shift_table'][['pad_id', 'campana']].drop_duplicates().sort_values(['pad_id', 'campana'])
-            options = [{'label': 'Todos los módulos', 'value': 'all'}] + [
-                {'label': f'Pad {int(r.pad_id)} · campaña {int(r.campana)}', 'value': f'{int(r.pad_id)}|{int(r.campana)}'}
-                for r in groups.itertuples()]
+            options = [{'label': 'Todos los m\u00f3dulos', 'value': 'all'}] + [
+                {'label': f'Pad {int(r.pad_id)} / campana {int(r.campana)} / modulo {int(r.modulo)}', 'value': f'{int(r.pad_id)}|{int(r.campana)}|{int(r.modulo)}'}
+                for r in res['shift_table'][['pad_id','campana','modulo']].drop_duplicates().sort_values(['pad_id','campana','modulo']).itertuples()]
             return remember(res), options, 'all', 'Carga finalizada. Los resultados identifican el Caso asociado.'
         except FlowCaseError as exc:
             return None, [], 'all', str(exc)
@@ -266,9 +279,9 @@ def register_callbacks(app, loader=None, case_loader=None):
 
     @app.callback(Output('reconstitucion-resultados', 'children'),
         Input('reconstitucion-token', 'data'), Input('reconstitucion-grupo', 'value'),
-        Input('reconstitucion-modo', 'value'), Input('reconstitucion-caso', 'value'),
+        Input('reconstitucion-caso', 'value'),
         Input('reconstitucion-casos', 'data'))
-    def resultados(token, group, mode, case_id, cases):
+    def resultados(token, group, case_id, cases):
         res = resultado_actual(token, case_id, cases)
         if res is None:
             return html.P('Carga la reconstitución del Caso seleccionado para mostrar el itinerario.')
@@ -276,13 +289,13 @@ def register_callbacks(app, loader=None, case_loader=None):
         return html.Div([
             html.P(f"Caso #{case_id} · {case['nombre']} · {pd.Timestamp(case['fecha_inicio']):%d-%m-%Y} a "
                    f"{pd.Timestamp(case['fecha_fin']):%d-%m-%Y}.", className='reconstitucion-note'),
-            render(select_result(res, group, mode, case['fecha_inicio'], case['fecha_fin']))])
+            render(select_result(res, group, case['fecha_inicio'], case['fecha_fin']))])
 
+    # Conserva el detalle del grafico y sus argumentos/guardas existentes.
     @app.callback(Output('reconstitucion-detalle', 'children'), Input('reconstitucion-gantt', 'clickData'),
         State('reconstitucion-token', 'data'), State('reconstitucion-grupo', 'value'),
-        State('reconstitucion-modo', 'value'), State('reconstitucion-caso', 'value'),
-        State('reconstitucion-casos', 'data'))
-    def detalle(click, token, group, mode, case_id, cases):
+        State('reconstitucion-caso', 'value'), State('reconstitucion-casos', 'data'))
+    def detalle(click, token, group, case_id, cases):
         res = resultado_actual(token, case_id, cases)
         if res is None or not click or not click.get('points'):
             return None
@@ -291,13 +304,31 @@ def register_callbacks(app, loader=None, case_loader=None):
             return None
         pad, camp, mod = map(int, data[:3])
         case = res['caso']
-        current = select_result(res, group, mode, case['fecha_inicio'], case['fecha_fin'])
-        it = current['itinerario']
-        if it is None or it.empty:
-            return None
-        d = it[it.pad_id.eq(pad)].sort_values(['pad_id', 'campana', 'act_ini'], ascending=[True, True, False])
-        labels = dict(zip(zip(d.campana.astype(int), d.modulo.astype(int)), gantt_labels(d)))
-        return tabla_detalle_modulo(current, labels.get((camp, mod)), pad=pad)
+        current = select_result(res, group, case['fecha_inicio'], case['fecha_fin'])
+        return tabla_detalle_modulo(current, (camp, mod), pad=pad)
+
+    @app.callback(Output('reconstitucion-tabla-popup', 'children'), Output('reconstitucion-tabla-cerrar','style'), Output('reconstitucion-itinerario','active_cell'),
+        Input('reconstitucion-itinerario', 'active_cell'), Input('reconstitucion-tabla-cerrar', 'n_clicks'),
+        State('reconstitucion-token', 'data'), State('reconstitucion-grupo', 'value'),
+        State('reconstitucion-caso', 'value'), State('reconstitucion-casos', 'data'), prevent_initial_call=True)
+    def detalle_fila(active_cell, closed, token, group, case_id, cases):
+        from dash import ctx
+        try:
+            triggered_id=ctx.triggered_id
+        except Exception:
+            triggered_id=None
+        if triggered_id == 'reconstitucion-tabla-cerrar':
+            return None, {'display':'none'}, None
+        res = resultado_actual(token, case_id, cases)
+        row_id = active_cell.get('row_id') if active_cell else None
+        if res is None or not row_id:
+            return None, {'display':'none'}, None
+        case = res['caso']
+        current = select_result(res, group, case['fecha_inicio'], case['fecha_fin'])
+        # La clave indexa filas recreadas desde el resultado server-side; no se acepta row_data.
+        detail=detalle_itinerario(current, row_id)
+        style={'display':'block','position':'fixed','zIndex':1101,'top':'12%','right':'16%','background':'white','border':'1px solid #ddd','borderRadius':'6px','padding':'8px 12px','cursor':'pointer'} if detail else {'display':'none'}
+        return detail, style, no_update
 
     @app.callback(Output('reconstitucion-modal', 'style'), Input('reconstitucion-consideraciones', 'n_clicks'),
         Input('reconstitucion-cerrar', 'n_clicks'), prevent_initial_call=True)

@@ -1,25 +1,33 @@
 """Regresiones portables del módulo, sin SQL ni archivos de datos externos."""
 import importlib
 import unittest
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
 from dash import Dash
-from . import panel
+APP = Path(__file__).resolve().parents[1]
+if str(APP) not in sys.path:
+    sys.path.insert(0, str(APP))
+try:
+    from . import panel
+except ImportError:
+    from reconstitucion import panel
 
 
-def sample(projected=False):
+def sample(with_timeline=False):
     days = pd.to_datetime(['2026-08-01', '2026-08-03'])
     st = pd.DataFrame([dict(pad_id=pad, campana=7, modulo=1, fecha=day,
                            vol_diario=1000, masa_total=1800)
                        for pad in [1, 2] for day in days])
-    it = pd.DataFrame([dict(pad_id=pad, campana=7, modulo=1, act_ini=days[0],
-        real_ini=days[0], real_fin=days[-1],
-        proy_ini=days[0] if projected else pd.NaT,
-        proy_fin=days[0]+pd.Timedelta(days=2) if projected else pd.NaT,
-        rho_proy=1.8) for pad in [1, 2]])
-    return dict(shift_table=st, itinerario=it, ventana=(days[0], days[-1]))
+    it = pd.DataFrame([dict(pad_id=pad, campana=7, modulo=1, fecha=days[0],
+        start=days[0]+pd.Timedelta(hours=8), end=days[0]+pd.Timedelta(hours=14),
+        mass_h=500., mass_dry=900., origen='TMH observado',
+        resolucion='totalizadores_10s_validados_con_TMH_turno')
+        for pad in [1, 2]]) if with_timeline else pd.DataFrame()
+    return dict(shift_table=st, module_timeline=it,
+                itinerario=it, ventana=(days[0], days[-1]))
 
 
 class IntegrationModule(unittest.TestCase):
@@ -34,29 +42,28 @@ class IntegrationModule(unittest.TestCase):
             count = len(app.callback_map)
             panel.register_callbacks(app)
             self.assertEqual(len(app.callback_map), count)
-            self.assertEqual(count, 6)
+            self.assertEqual(count, 7)
 
-    def test_gantt_no_repite_identidades_ni_rellena_dias_vacios(self):
-        res = sample()
-        fig = panel.fig_gantt(res)
+    def test_gantt_sin_horario_no_inventa_barras_de_medicion(self):
+        fig = panel.fig_gantt(sample())
+        self.assertEqual(len(fig.data), 0)
+        self.assertEqual(fig.layout.title.text, 'Sin modulos para esta seleccion')
+
+    def test_gantt_tiene_solo_horario_azul_y_turnos_reales(self):
+        fig = panel.fig_gantt(sample(with_timeline=True))
         self.assertEqual(len(fig.data), 1)
-        obs = fig.data[0].customdata
-        self.assertEqual(len(obs), len(res['shift_table']))
-        self.assertEqual(len(obs), len({tuple(d[:4]) for d in obs}))
-        self.assertNotIn('02-08-2026', [d[3] for d in obs])
-        self.assertEqual(sum(d[4] for d in obs), res['shift_table'].vol_diario.sum())
-        self.assertEqual(sum(d[5] for d in obs), res['shift_table'].masa_total.sum())
-        self.assertEqual(fig.data[0].marker.color.lower(), '#e86d1f')
-
-    def test_medicion_y_proyeccion_carriles_distintos(self):
-        fig = panel.fig_gantt(sample(projected=True))
-        self.assertEqual(len(fig.data), 2)
-        self.assertFalse(set(fig.data[0].y) & set(fig.data[1].y))
-        self.assertEqual(fig.data[1].marker.color.lower(), '#3b82f6')
+        bar = fig.data[0]
+        self.assertEqual(bar.name, 'Horario reconstruido')
+        self.assertEqual(bar.marker.color.lower(), '#3b82f6')
+        self.assertEqual(len(bar.x), 2)
+        self.assertEqual(len(set(bar.y)), 2)
+        self.assertTrue(all('| ' not in label for label in bar.y))
+        self.assertTrue(all('TB' not in label for label in bar.y))
         self.assertFalse(fig.layout.shapes)
 
     def test_css_encapsulado(self):
-        css = (Path(__file__).resolve().parents[1]/'assets/reconstitucion.css').read_text(encoding='utf-8')
+        root = APP if not (Path(__file__).resolve().parents[1]/'assets').exists() else Path(__file__).resolve().parents[1]
+        css = (root/'assets/reconstitucion.css').read_text(encoding='utf-8')
         self.assertIn('var(--siir-orange', css)
         self.assertTrue(all(rule.strip().startswith('.reconstitucion-shell')
                             for rule in css.splitlines() if rule.strip() and not rule.startswith('@media')))

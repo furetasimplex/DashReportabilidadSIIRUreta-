@@ -1,12 +1,15 @@
-﻿import sys
+import sys
 import unittest
 from pathlib import Path
 import numpy as np
 import pandas as pd
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from . import engine as e
-from . import db_source as db
-from . import validacion as v
+APP = Path(__file__).resolve().parents[1]
+if str(APP) not in sys.path:
+    sys.path.insert(0, str(APP))
+try:
+    from . import engine as e, db_source as db, validacion as v
+except ImportError:
+    from reconstitucion import engine as e, db_source as db, validacion as v
 from unittest.mock import patch
 
 def apilado(n=7, volumen=1000):
@@ -45,19 +48,15 @@ class Metodo(unittest.TestCase):
         self.assertEqual(w.n_dias_con_masa.iloc[0],1)
         self.assertFalse(w.sem_completa.iloc[0])
         self.assertTrue(e.rho_semanal(st).isna().all())
-        rho,glob=e._rho_proyeccion(e.module_summary(st),st,['pad_id','campana','modulo'],e.SEMANA_DEF)
-        self.assertTrue(rho.isna().all());self.assertTrue(np.isnan(glob))
     def test_semana_valida_conserva_densidad(self):
         st=e.shift_table(apilado(),masa())
         self.assertTrue(e.weekly_summary(st).sem_completa.iloc[0])
         self.assertAlmostEqual(e.rho_semanal(st).iloc[0],1.8)
-    def test_densidad_fuera_banda_no_proyecta(self):
+    def test_densidad_fuera_banda_sigue_observada_y_reportable(self):
         st=e.shift_table(apilado(),masa(tms=500))
-        rho,glob=e._rho_proyeccion(e.module_summary(st),st,['pad_id','campana','modulo'],e.SEMANA_DEF)
-        self.assertTrue(rho.isna().all());self.assertTrue(np.isnan(glob))
-        it=e.module_itinerary(apilado(),st,tasa={'rate_ref':100,'rate_masa_ref':200,'util':.5,'n_dias_tasa':7})
-        self.assertTrue(it.proy_h.isna().all())
-        self.assertTrue(it.proy_ini.isna().all());self.assertTrue(it.proy_fin.isna().all())
+        self.assertAlmostEqual(e.rho_semanal(st).iloc[0],.5)
+        codes=[a.codigo for a in v.revisar_resultado({'shift_table':st,'weekly':e.weekly_summary(st)})]
+        self.assertIn('densidad_sem_implausible',codes)
     def test_pendiente_cierra_balance_sin_inventar_modulos(self):
         ap=apilado(1,volumen=0);m=masa(1)
         st=e.shift_table(ap,m);b=e.cuadratura_masa(ap,m,st)
@@ -89,8 +88,7 @@ class Metodo(unittest.TestCase):
         m=db.preparar_frontera(masa());m['fuente_masa']=['OFICIAL']+['MEDIDA']*6
         st=e.shift_table(apilado(),m)
         self.assertFalse(e.weekly_summary(st).sem_completa.iloc[0])
-        rho,glob=e._rho_proyeccion(e.module_summary(st),st,['pad_id','campana','modulo'],e.SEMANA_DEF)
-        self.assertTrue(rho.isna().all());self.assertTrue(np.isnan(glob))
+        self.assertTrue(e.rho_semanal(st).isna().all())
     def test_loader_normaliza_y_recorta_sql_antes_de_agrupar(self):
         m=masa(1).drop(columns=['H_op','H_op_src']).assign(TMH_T1=900,TMH_T2=900,humedad=.1,sal=0,caso_id=21,caso=None,reporte_run_id='fixture')
         m['TMS_T1']=0;m['TMS_T2']=1790

@@ -70,3 +70,9 @@ Resultados reproducidos sin SQL desde el snapshot de agosto en
 `resultados_curvas/agosto_septiembre_2026_suavizado_20261011`.
 Septiembre conserva datos observados y PLS proxy 0,95 × riego, sin ajuste.
 El techo diario por edad sigue siendo un escenario experimental.
+
+## Flujo DB + Dash + metodologia metalurgica — 2026-10-26
+
+Aplicar el protocolo operativo de [docs/FLUJO_DB_DASH_METALURGIA.md](docs/FLUJO_DB_DASH_METALURGIA.md): contrato breve, responsable por archivo, revision del diff contra fuente activa, snapshot identificado y reutilizable, lecturas agrupadas por PAD/rango y pruebas proporcionales al riesgo. La verificacion visual va al final, con fuente y pruebas estables. Resumir evidencia y primera discrepancia; evitar volcados grandes y consultas repetidas. Un agente debe entregar trabajo verificado, no solo un plan, y el principal debe revisar su entrega.
+
+La tabla de seleccion flexible de modelos del protocolo es una recomendacion; se conservan las preferencias explicitas del usuario y las excepciones que autorice. No cambia configuracion global ni autoriza escrituras SQL, ejecucion de SP o pulsar Calcular durante QA de lectura.

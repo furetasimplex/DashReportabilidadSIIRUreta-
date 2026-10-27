@@ -1,12 +1,22 @@
 from contextlib import contextmanager
 from unittest.mock import patch
+import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
 
-from . import modelo_flujos as mf, engine as e, panel
-from .test_metodologia import apilado
-from .test_casos import callbacks, find, result
+APP = Path(__file__).resolve().parents[1]
+if str(APP) not in sys.path:
+    sys.path.insert(0, str(APP))
+try:
+    from . import modelo_flujos as mf, engine as e, panel, db_source
+    from .test_metodologia import apilado
+    from .test_casos import find, result
+except ImportError:
+    from reconstitucion import modelo_flujos as mf, engine as e, panel, db_source
+    from reconstitucion.test_metodologia import apilado
+    from reconstitucion.test_casos import find, result
 
 
 def case(i=10013, old=False):
@@ -75,25 +85,17 @@ def test_bad_profile_is_rejected_without_fallback(kind):
     with pytest.raises(mf.FlowCaseError): mf.distribute_profile(p,ap,targets,case())
 
 
-def test_full_engine_conserves_pad_day_global_totals_and_hours():
-    from . import db_source as source
+def test_full_engine_rejects_unidentified_simultaneous_pad_routes():
     ap,p,targets=inputs()
     hours=pd.DataFrame({'fecha':sorted(ap.fecha.unique()),'H_op':[10.,10.]})
     with patch.object(mf,'load_targets',return_value=targets), \
          patch.object(mf,'load_profile',return_value=p), \
          patch.object(mf,'load_hours',return_value=hours), \
-         patch.object(source,'load_apilado',return_value=ap), \
-         patch.object(source,'load_masa',side_effect=AssertionError('legacy mass forbidden')):
-        res=e.analyze_db(caso=case(),caso_id=10013,fecha_min=case()['fecha_inicio'],fecha_max=case()['fecha_fin'])
-    st=res['shift_table']
-    assert st.groupby('pad_id').masa_total.sum().to_dict()==pytest.approx({1:600.,2:400.})
-    assert res['daily'].TMS_dia.tolist()==pytest.approx([500.,500.])
-    assert res['daily'].vol_dia_total.tolist()==pytest.approx([300.,300.])
-    assert st.groupby('fecha').frac_vol.sum().tolist()==pytest.approx([1.,1.])
-    assert st.eval('frac_vol * H_op').sum()==pytest.approx(20.)
-    assert res['cuadratura'].masa_pendiente.abs().max()<1e-8
-    assert res['cuadratura_pad'].masa_pendiente.abs().max()<1e-8
-    assert not st.boundary_medida.any()
+         patch.object(db_source,'load_apilado',return_value=ap), \
+         patch.object(db_source,'load_masa',side_effect=AssertionError('Caso no usa masa legacy')):
+        with pytest.raises(ValueError, match='más de un PAD activo'):
+            e.analyze_db(caso=case(),caso_id=10013,fecha_min=case()['fecha_inicio'],
+                         fecha_max=case()['fecha_fin'])
 
 
 def test_panel_passes_official_run_metadata_to_loader():

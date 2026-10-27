@@ -152,7 +152,7 @@ def sql_df(engine, query, params=None, date_col='fecha'):
     return _traer(k, lambda: pd.read_sql(query, engine, params=params)).copy()
 
 
-def sql_rows(engine, query, params=None, etiqueta=None):
+def sql_rows(engine, query, params=None, etiqueta=None, cache_salt=None):
     """`conn.execute(...).fetchall()` cacheado, como lista de tuplas."""
     params = dict(params or {})
     def bajar():
@@ -160,8 +160,12 @@ def sql_rows(engine, query, params=None, etiqueta=None):
             return [tuple(r) for r in conn.execute(query, params).fetchall()]
     if not ACTIVA:
         return bajar()
-    k = _clave(etiqueta or _etiqueta(query),
-               (str(query), sorted((a, str(b)) for a, b in params.items())))
+    identidad = (str(query), sorted((a, str(b)) for a, b in params.items()))
+    # Mantener byte por byte las claves historicas para los callers sin salt.
+    # Fuentes versionadas agregan la firma al final y no invalidan otras tablas.
+    if cache_salt is not None:
+        identidad = identidad + (cache_salt,)
+    k = _clave(etiqueta or _etiqueta(query), identidad)
     return list(_traer(k, bajar))
 
 

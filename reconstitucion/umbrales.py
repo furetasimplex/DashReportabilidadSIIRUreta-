@@ -35,18 +35,9 @@ SHIFT1_FRAC = 0.5
 # Dos umbrales distintos sobre la misma columna 'avance'. No son el mismo
 # numero con ruido: responden preguntas distintas y por eso no se unifican.
 
-# AVANCE_OK — ¿este modulo cerro lo bastante como para fijar el arranque del
-# siguiente en la cadena proyectada? El apilador deja modulos a medias y vuelve
-# dias despues (11 reanudaciones en 2026, una por cada cambio de pad y por cada
-# parada de planta), y un modulo que no cerro no puede anclar al que sigue.
-# 0.99 y no 1.0: la planilla registra avances de 0.995-1.004 que son cierres
-# completos con ruido de levantamiento. Bajo 0.99 la data se corta sola: hay 23
-# modulos en (0, 0.99) y ninguno entre 0.99 y 0.995. Ver engine.tramo_cadena.
-AVANCE_OK = 0.99
-
 # AVANCE_CIERRE — ¿esta fila es un modulo ya terminado que la planilla sigue
 # arrastrando? Se aplica solo a filas con vol_diario = 0, donde no hubo
-# apiladora. Es mas estricto que AVANCE_OK porque aqui no se decide una cadena
+# apiladora. El avance se usa solo para marcar el estado de filas sin volumen.
 # sino una etiqueta de estado: en la duda, SIN_INICIO (que tampoco recibe masa)
 # es la respuesta segura. Ver engine.mark_status.
 AVANCE_CIERRE = 0.999
@@ -56,19 +47,8 @@ AVANCE_CIERRE = 0.999
 # Horometros que miden apilado de verdad. 'chancador' esta aguas arriba y satura
 # en 24 h; 'rotopala' es del circuito de reclamo, aguas abajo — el 2026-07-14 se
 # apilaron 91.9 kt en 23.4 h de torre mientras la rotopala marcaba 1 h y el
-# chancador 24 h. Ninguno de los dos sirve para medir la tasa del apilador.
+# chancador 24 h.
 HOROMETROS_OK = ("torre",)
-
-# Horas minimas de horometro para creerle al dia. Los dias de 0-1 h contra
-# 40-50 mil m3 apilados son huecos de registro, no jornadas cortas, y meterlos
-# dispara la tasa aparente a valores imposibles.
-H_OP_MIN = 4.0
-
-# Fraccion minima del volumen de un modulo que tiene que venir de dias con
-# horometro creible para publicar su tasa aparente. Bajo esto la cifra no dice
-# nada del modulo y se deja vacia en vez de mentir. Ver engine.module_itinerary.
-COB_HORAS_MIN = 0.5
-
 
 # ─────────────────────────── 4. Semana de reconstitucion ───────────────────────
 # El levantamiento topografico es DIARIO: el volumen de cada dia es una medicion,
@@ -101,7 +81,7 @@ DIAS_SEM_MIN = 5
 # semanal medida es 1.735 con CV 9.8%, asi que la banda deja fuera solo lo que
 # es error de dato (semanas cortadas, volumen sin su masa, division por un
 # levantamiento incompleto). Una densidad fuera de aqui no se corrige: se marca
-# y no se usa para proyectar.
+# y se conserva señalada para revisión.
 RHO_MIN = 1.20
 RHO_MAX = 2.30
 
@@ -165,18 +145,6 @@ TOL_ACUM = 1e-4
 # selecciona los pares candidatos; la confirmacion es la prueba de reparacion.
 DESVIO_SEM_MAX = 0.12
 
-# Banda de tasa de maquina fisicamente posible, t/h de masa seca. El horometro
-# de torre no se puede verificar contra si mismo: cualquier valor entre H_OP_MIN
-# y 24 h se acepta hoy. Lo que si se puede es dividir la masa del dia por sus
-# horas y preguntar si esa maquina existe. Medido sobre los 41 dias que pasan el
-# filtro de horometro: min 1791, p1 2042, p50 3315, p99 3891, max 3924 t/h — la
-# distribucion topa contra una pared cerca de 3900 que es el limite de la correa,
-# no una cola estadistica. La banda abre ~30% a cada lado de lo observado: marca
-# lo que la maquina no puede hacer, no lo que rara vez hace.
-TASA_MIN = 1200.0
-TASA_MAX = 4500.0
-
-
 # ─────────────────────────── 7. Selectores ───────────────────────────
 # Tecnica para cortar el dia en turno 1 / turno 2.
 BOUNDARY_SRC = {
@@ -188,10 +156,6 @@ BOUNDARY_SRC = {
     # corr 0.94, error medio 0.031, peor caso 0.12.
     "horas": "boundary_h",
 }
-
-# Cuanto calendario se le concede a la misma tasa de maquina al proyectar.
-PROY_MODOS = ("apilado", "calendario", "campana")
-
 
 def opcion(nombre, valor, validos):
     """Valida un selector y lo devuelve. Un selector mal escrito tiene que

@@ -112,22 +112,57 @@ def load_profile(start, end, engine=None):
         FROM wet w LEFT JOIN {dbs.SCHEMA}.fn_humedad_resuelta_tm_turno_test(
             :start, DATEADD(day,1,:end)) h ON h.Fecha=w.fecha AND h.Turno=w.turno
         ORDER BY w.fecha,w.turno,w.tm
+        OPTION (RECOMPILE)
     ''')
     return pd.read_sql(query, engine or dbs.get_engine(),
                        params={'start': pd.Timestamp(start).date(), 'end': pd.Timestamp(end).date()})
 
 
 def load_hours(start, end, engine=None):
-    # Calendar union across parallel towers; do not sum their elapsed hours.
+    """Union tower hours, bounding the scan with the preceding tick as context."""
     query = text(f'''
-        WITH ticks AS (
-            SELECT fecha, MAX(CAST(tick_efectivo AS int)) AS any_on
-            FROM {dbs.SCHEMA}.v_ticks_efectivos_torre_10s
-            WHERE fecha >= :start AND fecha < :end GROUP BY fecha
-        )
-        SELECT CAST(DATEADD(hour,-8,fecha) AS date) AS fecha,
-               SUM(any_on)*10.0/3600 AS H_op
-        FROM ticks GROUP BY CAST(DATEADD(hour,-8,fecha) AS date)
+WITH seed AS (
+    SELECT TOP (1) WITH TIES
+           fecha, tot_008, tot_108, tot_001
+    FROM {dbs.SCHEMA}.tot_TM
+    WHERE fecha IS NOT NULL AND fecha < :start
+    ORDER BY fecha DESC
+), bounded AS (
+    SELECT fecha, tot_008, tot_108, tot_001
+    FROM seed
+    UNION ALL
+    SELECT fecha, tot_008, tot_108, tot_001
+    FROM {dbs.SCHEMA}.tot_TM
+    WHERE fecha >= :start AND fecha < :end
+), raw AS (
+    SELECT Torre = 'T1', fecha, total_acum = CAST(tot_008 AS float) FROM bounded
+    UNION ALL
+    SELECT Torre = 'T2', fecha, total_acum = CAST(tot_108 AS float) FROM bounded
+    UNION ALL
+    SELECT Torre = 'SRR', fecha, total_acum = CAST(tot_001 AS float) FROM bounded
+), lagged AS (
+    SELECT Torre, fecha, total_acum,
+           total_ant = LAG(total_acum) OVER (PARTITION BY Torre ORDER BY fecha),
+           fecha_ant = LAG(fecha) OVER (PARTITION BY Torre ORDER BY fecha)
+    FROM raw
+), effective AS (
+    SELECT fecha,
+           tick_efectivo = CASE
+               WHEN total_ant IS NULL THEN 0
+               WHEN total_acum > total_ant THEN 1 ELSE 0 END
+    FROM lagged
+    WHERE (DATEDIFF(SECOND, fecha_ant, fecha) = 10 OR fecha_ant IS NULL)
+      AND fecha >= :start AND fecha < :end
+), per_timestamp AS (
+
+    SELECT fecha, any_on = MAX(tick_efectivo)
+    FROM effective
+    GROUP BY fecha
+)
+SELECT CAST(DATEADD(hour, -8, fecha) AS date) AS fecha,
+       SUM(any_on) * 10.0 / 3600 AS H_op
+FROM per_timestamp
+GROUP BY CAST(DATEADD(hour, -8, fecha) AS date)
     ''')
     return pd.read_sql(query, engine or dbs.get_engine(), params={
         'start': pd.Timestamp(start).normalize()+pd.Timedelta(hours=8),
@@ -140,7 +175,26 @@ def distribute_profile(profile, apilado, targets, caso):
     active['fecha'] = pd.to_datetime(active.fecha).dt.normalize()
     p = profile.copy()
     p['fecha'] = pd.to_datetime(p.fecha).dt.normalize()
+    # No reasignar a fechas con actividad una parte positiva del perfil que no
+    # tiene volumen observado en ningun PAD: no hay base para decidir el dia.
+    wet_all = pd.to_numeric(p['tmh'], errors='coerce')
+    humidity_all = pd.to_numeric(p['humedad'], errors='coerce')
+    p['__tms_perfil'] = wet_all * (1 - humidity_all / 100)
+    humedad_no_resuelta = (~np.isfinite(humidity_all) | humidity_all.lt(0)
+                           | humidity_all.ge(100))
+    posible_perfil_positivo = p['__tms_perfil'].gt(0) | (wet_all.gt(0) & humedad_no_resuelta)
+    profile_dates = set(p.loc[posible_perfil_positivo, 'fecha'].dropna())
+    volume_dates = set(active['fecha'].dropna())
+    unsupported = sorted(profile_dates - volume_dates)
+    if unsupported and any(float(t.get('masa_reconciliada', 0) or 0) > 0
+                           for t in targets.values()):
+        fechas = ', '.join(d.strftime('%Y-%m-%d') for d in unsupported[:5])
+        suffix = '…' if len(unsupported) > 5 else ''
+        raise FlowCaseError(
+            'El perfil operativo tiene masa positiva sin volumen de apilado '
+            f'en ningun PAD para {fechas}{suffix}; no se redistribuye a otras fechas.')
     p = p[p.fecha.isin(active.fecha)]
+    p = p.drop(columns=['__tms_perfil'])
     if p.duplicated(['fecha','turno','tm']).any():
         raise FlowCaseError('El perfil operativo repite fecha, turno y correa.')
     expected = pd.MultiIndex.from_product([active.fecha.unique(), ['A','B'], ['TM1','TM2']],
