@@ -214,3 +214,4 @@ backups/
 
 # Auditorías e informes locales (no versionar evidencias pesadas)
 /auditorias/
+/reporte

@@ -10,7 +10,7 @@ PHASES={
  'DRENAJE_RESIDUAL':('Drenaje residual','draining'),'ESPERA_RECLAMO':('Espera de reclamo','waiting'),
  'RECLAMO':('Reclamo','reclaiming'),'RECLAMADO':('Reclamado','reclaimed'),
  'MIXTO':('Mixto','mixed'),'SIN_COBERTURA':('Sin información del día','missing'),
- 'NO_EVALUABLE':('Sin información suficiente','missing')}
+ 'NO_EVALUABLE':('Fase no determinada','missing')}
 CONDITIONS={'RIEGO_ACTIVO':'Riego activo','RIEGO_DRENAJE':'Riego y aporte de drenaje',
  'RIEGO_PAUSADO_CON_DRENAJE':'Riego pausado con aporte de drenaje','PAUSA_HIDRAULICA':'Pausa hidráulica',
  'SIN_COBERTURA':'Sin información suficiente del día','SIN_ACTIVIDAD':'Sin actividad registrada'}

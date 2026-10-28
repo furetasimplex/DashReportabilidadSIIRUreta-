@@ -52,7 +52,7 @@ def test_backend_rejects_incomplete_before_transaction(field,value):
     tx.assert_not_called()
 
 @pytest.mark.parametrize('action',['CONFIRMAR','RECTIFICAR','CERRAR','RESOLVER_CONTRADICCION'])
-def test_direct_http_ordinary_user_cannot_write(action):
+def test_direct_http_unauthorized_user_cannot_write(action):
     app=Flask(__name__);app.secret_key='fixture-only'
     @app.post('/test-admin-action')
     def endpoint():
@@ -61,13 +61,13 @@ def test_direct_http_ordinary_user_cannot_write(action):
         return '',500
     client=app.test_client()
     with client.session_transaction() as s:s['user']='ordinary'
-    with patch.object(phase_db.phase_flags,'enabled',return_value=True),patch.object(auth,'user_is_admin',return_value=False) as permission,patch.object(phase_db,'_transaction') as tx:
+    with patch.object(phase_db.phase_flags,'enabled',return_value=True),patch.object(auth,'user_can_write_operational_decisions',return_value=False) as permission,patch.object(phase_db,'_transaction') as tx:
         assert client.post('/test-admin-action',json={'accion':action}).status_code==403
     permission.assert_called_once_with('ordinary');tx.assert_not_called()
 
 
 @pytest.mark.parametrize('button',['confirm','rectify','close','resolve'])
-def test_real_dash_endpoint_rejects_ordinary_user_with_forged_ui_permission(button):
+def test_real_dash_endpoint_rejects_unauthorized_user_with_forged_ui_permission(button):
     from dash import Dash,Input,Output,State
     app=Dash(__name__);app.server.secret_key='fixture-only'
     app.layout=phase_panel.layout()
@@ -80,7 +80,7 @@ def test_real_dash_endpoint_rejects_ordinary_user_with_forged_ui_permission(butt
     states=[preview(),str(uuid.uuid4()),'HUMECTACION','OTRO','Justificación','','',0]
     p=states[0];p.update(context_token='forged');p['revision'].update(evento=0)
     keys=[('preview','data'),('key','data'),('choice','value'),('reason','value'),('motive','value'),('observation','value'),('reference','value'),('refresh','data')]
-    with patch.object(phase_db.phase_flags,'enabled',return_value=True),patch.object(auth,'user_is_admin',return_value=False) as permission,patch.object(phase_db,'_transaction') as tx:
+    with patch.object(phase_db.phase_flags,'enabled',return_value=True),patch.object(auth,'user_can_write_operational_decisions',return_value=False) as permission,patch.object(phase_db,'_transaction') as tx:
         result=client.post('/_dash-update-component',json={
             'output':'..lix-phase-result.children...lix-phase-refresh.data..',
             'outputs':[dict(id='lix-phase-result',property='children'),dict(id='lix-phase-refresh',property='data')],
@@ -88,7 +88,7 @@ def test_real_dash_endpoint_rejects_ordinary_user_with_forged_ui_permission(butt
             'inputs':[dict(id='lix-phase-'+key,property='n_clicks',value=int(key==button)) for key in ['confirm','rectify','close','resolve']],
             'state':[dict(id='lix-phase-'+key,property=prop,value=value) for (key,prop),value in zip(keys,states)]})
     assert result.status_code==200
-    assert 'permiso administrativo' in result.get_data(as_text=True)
+    assert 'usuario activo con permiso' in result.get_data(as_text=True)
     permission.assert_called_once_with('ordinary');tx.assert_not_called()
 
 @pytest.mark.parametrize('admin',[0,1,None])
@@ -122,7 +122,7 @@ def test_backend_rechecks_active_decision_before_any_write(action,status,prior):
 
 def test_permission_is_rechecked_not_cached_in_session():
     app=Flask(__name__);app.secret_key='fixture-only'
-    with app.test_request_context('/',method='POST'),patch.object(phase_db.phase_flags,'enabled',return_value=True),patch.object(auth,'user_is_admin',side_effect=[True,False]):
+    with app.test_request_context('/',method='POST'),patch.object(phase_db.phase_flags,'enabled',return_value=True),patch.object(auth,'user_can_write_operational_decisions',side_effect=[True,False]):
         session['user']='admin'
         assert phase_db._actor()=='admin'
         with pytest.raises(PermissionError):phase_db._actor()
@@ -133,7 +133,8 @@ def test_missing_is_not_zero_in_drawer_and_no_data_is_mutated():
     a,b=text_content(phase_panel.detail(absent)),text_content(phase_panel.detail(zero))
     assert 'Sin información' in a and '0,000' in b and '123' in b
     assert zero==before and absent['caudal_operacional'] is None
-    assert 'Cu++ drenaje' in b and 'Último Cu++ positivo' in b and 'Estado del modelo anterior' in b
+    assert 'Cu++ drenaje' in b and 'Último Cu++ positivo' in b
+    assert ('Estado del modelo anterior' in b) is (not phase_panel.phase_flags.is_dev())
 
 def test_global_gap_suppresses_only_redundant_parcel_warning():
     r=row()

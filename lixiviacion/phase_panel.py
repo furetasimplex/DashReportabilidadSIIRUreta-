@@ -7,6 +7,7 @@ from dash import ALL,Input,Output,State,callback,clientside_callback,ctx,dcc,htm
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from . import phase_db,phase_flags
+from . import irrigation_modules_panel
 from .phase_model import PHASES,CONDITIONS,ALERTS,STATUSES,REASONS,EVENTS,ADMIN_PHASES,label
 from .map_states import ESTADOS,FASES
 log=logging.getLogger(__name__)
@@ -84,6 +85,8 @@ def detail(row):
               ('Drenaje',[('Cu++ drenaje',number(row.get('cu_pp'))),('Último Cu++ positivo',when(row.get('fecha_ultima_ley_cu_pp'))),('Primer aporte reconocido',when(row.get('fecha_primer_cu_pp_valido')))]),
               ('Modelo anterior',[('Fase del modelo anterior',legacy_phase_label(row.get('fase_visual_legacy'))),('Estado del modelo anterior',legacy)]),
               ('Confirmación',[('Fase confirmada',label(row.get('fase_administrativa')) if row.get('fase_administrativa') else 'Sin confirmación'),('Situación',label(row.get('override_status'),STATUSES) if row.get('override_id') else 'Sin confirmación'),('Usuario',row.get('usuario_creacion')),('Fecha efectiva',when(row.get('override_desde'))),('Registro',registered(row.get('fecha_creacion'))),('Motivo',row.get('motivo_texto'))])]
+    if phase_flags.is_dev():
+        sections=[section for section in sections if section[0]!='Modelo anterior']
     warnings=[review_text(row)]
     if row.get('proxy_previo_riego'):
         warnings.append('Existe una muestra anterior al primer riego reconocido; no se utiliza para iniciar Riego continuo.')
@@ -126,7 +129,7 @@ def confirmation_summary(row,revision):
             html.Div([html.Dt('Condición actual'),html.Dd(label(row.get('condicion_dia'),CONDITIONS))]),
             html.Div([html.Dt('Alerta'),html.Dd(label(row.get('nivel_alerta'),ALERTS))]),
             html.Div([html.Dt('Modelo anterior'),html.Dd(legacy_phase_label(row.get('fase_visual_legacy')),
-                title='Estado del modelo anterior: '+legacy_label(row.get('estado_operacional_SQL_original')))]),
+                title='Estado del modelo anterior: '+legacy_label(row.get('estado_operacional_SQL_original')))]) if not phase_flags.is_dev() else None,
         ],className='lix-confirm-summary-grid'),
         *notices,
         html.Div([dbc.Button('Ver detalle operacional',id={'type':'lix-phase-open-detail','section':'overview'},n_clicks=0,color='link',size='sm'),
@@ -154,6 +157,7 @@ def layout():
           ],id='lix-phase-form',className='lix-confirm-form is-readonly'),
           html.Div([dbc.Button(title,id='lix-phase-'+key,n_clicks=0,color=color,disabled=True) for key,title,color in [('confirm','Confirmar fase','primary'),('rectify','Rectificar','secondary'),('close','Cerrar confirmación','secondary'),('resolve','Resolver contradicción','warning')]],className='lix-v2-actions'),
           html.Div(id='lix-phase-result',className='mt-3'),html.H6('Historial de decisiones',className='mt-4'),html.Div(id='lix-phase-history'),
+          irrigation_modules_panel.layout(),
         ],id='lix-phase-admin',style={'display':'none'},className='lix-v2-admin')
     ])
 

@@ -1,0 +1,24 @@
+.imr-shell {font-family:Inter,sans-serif;border-top:1px solid #e2e5eb;margin-top:18px;padding-top:14px;color:#263445}
+.imr-shell h5,.imr-shell h6 {font-weight:650;letter-spacing:.03em}
+.imr-reference {background:#F5F6FA;border-left:3px solid #E86D1F;padding:10px 12px;margin:10px 0;font-size:.9rem}
+.imr-muted,.imr-shell small {color:#647184;font-size:.83rem}
+.imr-states,.imr-options {display:flex;gap:10px 20px;flex-wrap:wrap;margin:10px 0}
+.imr-states label,.imr-options label {display:flex;gap:7px;align-items:center}
+.imr-options label {background:#F5F6FA;border:1px solid #dfe3ea;border-radius:6px;padding:8px 12px}
+.imr-count {font-weight:600;margin:10px 0}.imr-actions {display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.imr-history-item {background:#fff;border:1px solid #e2e5eb;border-radius:7px;padding:12px;margin:8px 0;font-size:.88rem}
+.imr-readonly,.imr-warning {background:#fff3e8;color:#73411d;padding:8px 12px;border-radius:5px;margin:10px 0}
+.imr-warning {display:block}
+.imr-info-blocks {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px;margin:12px 0}
+.imr-info-blocks .imr-reference {margin:0}
+.imr-confirmation {border:1px solid #dfe3ea;border-radius:6px;padding:10px 12px;background:#fff;font-size:.9rem;min-width:0}
+.imr-info-blocks h6 {font-size:.76rem;margin:0 0 8px}
+.imr-info-blocks small {display:block;margin-top:6px}
+.imr-summary {display:block;margin:6px 0;font-size:.98rem}
+.imr-label {font-size:.85rem;font-weight:600;margin:8px 0 5px}
+.imr-chips {display:flex;flex-wrap:wrap;gap:5px;margin:5px 0}
+.imr-chip {background:#F5F6FA;border:1px solid #dfe3ea;border-radius:20px;padding:3px 9px;font-size:.83rem;max-width:100%;overflow-wrap:anywhere}
+.imr-available {margin:10px 0}.imr-readonly-label {display:block;text-align:right}
+.imr-form {border:1px solid #e2e5eb;border-radius:7px;padding:14px;background:#fff;max-width:760px}
+.imr-shell,.imr-editor,.imr-readonly-view,.imr-form,.imr-reference {min-width:0;max-width:100%;overflow-wrap:anywhere}
+@media(max-width:600px){.imr-states,.imr-actions{flex-direction:column}.imr-actions .btn{width:100%}}

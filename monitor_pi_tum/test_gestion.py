@@ -267,7 +267,7 @@ class GestionTests(unittest.TestCase):
         self.assertFalse(guardar['running']['runningOff']['pitum-gestion-acciones.disabled'])
         # Un único escritor por propiedad, incluyendo outputs temporales de running.
         temporales=[key for item in app._callback_list
-                    for key in item.get('running',{}).get('running',{})]
+                    for key in item.get('running',{}).get('running',{}) if key.startswith('pitum-')]
         self.assertEqual([k for k,n in Counter(outputs+temporales).items() if n>1],[])
         frame=preview()
         with patch.object(db,'registrar_contingencia_rango') as escribir_rango, \

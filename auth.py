@@ -32,6 +32,32 @@ def user_is_admin(username):
         return False
 
 
+def user_can_write_operational_decisions(username):
+    """TEMPORAL DEV POLICY: usuario existente y activo; fuera de DEV, admin.
+
+    El actor debe provenir de la sesión verificada por phase_db._actor().
+    No autoriza solicitudes por sí sola ni confía en permisos enviados por UI.
+    """
+    if not isinstance(username, str) or not username.strip():
+        return False
+    from lixiviacion import phase_flags
+    if os.getenv('ENVIRONMENT', '').strip().lower() == 'production' or not phase_flags.is_dev():
+        return user_is_admin(username)
+    # La relajación requiere tanto la conexión DEV efectiva como su auth DEV.
+    if LOGIN_TABLE.lower() != 'dev_siir.dbo.auth_user':
+        return False
+    try:
+        with get_engine().connect() as conn:
+            phase_flags.guard_connection(conn)
+            allowed = conn.execute(text(
+                f'SELECT CASE WHEN is_active=1 THEN 1 ELSE 0 END '
+                f'FROM {LOGIN_TABLE} WHERE username=:u'
+            ), {'u': username.strip()}).scalar_one_or_none()
+        return allowed == 1
+    except Exception:
+        return False
+
+
 @auth_bp.route("/login_page")
 def login_page():
     return render_template("login.html")

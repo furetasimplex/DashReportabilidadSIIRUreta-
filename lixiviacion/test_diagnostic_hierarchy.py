@@ -1,6 +1,6 @@
 """Jerarquía de Diagnóstico sin alterar consultas, métricas o figuras."""
 from unittest.mock import patch
-from . import panel,phase_panel,phase_db
+from . import panel,phase_panel,phase_db,callbacks
 from .test_ux_governance import components,row
 from .test_map import text_content
 
@@ -8,7 +8,8 @@ from .test_map import text_content
 def test_analysis_then_daily_then_technical_section_closed_by_default():
     layout=panel.diagnostic_layout();nodes=list(components(layout))
     ids=[getattr(n,'id',None) for n in nodes]
-    assert ids.index('lix-consultar')<ids.index('lix-kpi-flujo')<ids.index('lix-flujo')<ids.index('lix-tabla')<ids.index('lix-diagnostic-advanced')
+    assert ids.index('lix-consultar')<ids.index('lix-kpi-flujo')<ids.index('lix-diagnostic-charts')<ids.index('lix-tabla')<ids.index('lix-diagnostic-advanced')
+    assert not any(type(n).__name__=='Graph' for n in nodes)
     assert layout.children[-1].id=='lix-diagnostic-advanced'
     technical=next(n for n in nodes if getattr(n,'id',None)=='lix-diagnostic-advanced')
     assert technical.open is False
@@ -16,7 +17,8 @@ def test_analysis_then_daily_then_technical_section_closed_by_default():
     assert 'lix-phase-diagnostic' in children_ids and 'lix-operacional' in children_ids
     assert 'lix-kpi-flujo' not in children_ids and 'lix-tabla' not in children_ids
     summary=text_content(technical.children[0])
-    assert 'Validación puntual del modelo operacional' in summary and 'Herramienta técnica' in summary
+    assert ('Herramienta técnica QA (opcional)' in summary if phase_panel.phase_flags.is_dev() else
+            'Validación puntual del modelo operacional' in summary and 'Herramienta técnica' in summary)
 
 
 def test_filter_texts_and_methodology_are_explicit_without_new_syntax():
@@ -25,7 +27,8 @@ def test_filter_texts_and_methodology_are_explicit_without_new_syntax():
     assert table.filter_options=={'placeholder_text':'Filtrar...'}
     assert table.filter_action=='custom' and table.filter_query==''
     assert 'contains («contiene»)' in text and 'Combine condiciones con &&' in text
-    assert 'No ponderado por caudal' in text and 'valores ausentes se excluyen' in text
+    charts=text_content(panel.diagnostic_charts(callbacks.figures([])))
+    assert 'No ponderado por caudal' in charts and 'valores ausentes se excluyen' in charts
     assert 'Registros sin asignación hidráulica' in text
     hints=' '.join(str(getattr(n,'title','')) for n in nodes)
     assert 'Campaña hidráulica: registro asociado' in hints and 'Fuera de ventana hidráulica: registro existente' in hints

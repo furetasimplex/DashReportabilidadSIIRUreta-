@@ -71,7 +71,7 @@ def test_preview_optional_case_and_single_return_auto_are_read_only(auth,case,mo
     with patch.object(panel,'ctx') as context,patch.object(service,'load_rows',return_value=list(reversed(source()))),patch.object(service,'preview',return_value={'comparacion':comparison(),'huella_entradas':'B'*64}) as preview,patch.object(service,'persist') as persist:
         context.triggered_id='m6ct-preview'
         rendered,token,status,checked=panel.act(*a)
-        assert token and checked==[] and status==''
+        assert token and checked==[] and 'Previsualización completada' in dump(status)
         assert preview.call_args.args[2]==case
         keys=preview.call_args.args[3]
         assert len(keys)==1 and keys[0]['fecha_operacional']=='2026-10-04' and keys[0]['modo']==mode
@@ -91,7 +91,8 @@ def test_changed_inputs_expired_token_or_other_user_cannot_confirm(auth,change):
         if change=='user':session['user']='other'
         if change=='ttl':panel._pending[a[13]]['time']=time.monotonic()-panel.TTL-1
         context.triggered_id='m6ct-guardar';result=panel.handle_action(*a)
-        assert 'Preview vencido' in dump(result[2]) and result[4] is no_update
+        expected='Marque al menos un registro' if change=='selection' else 'Preview vencido'
+        assert expected in dump(result[2]) and result[4] is no_update
         persist.assert_not_called()
 
 def test_success_refresh_double_click_and_sql_rejection(auth):
@@ -122,3 +123,53 @@ def test_host_legacy_link_opens_same_monitor_tab_and_no_duplicate_tree():
 
 def test_unknown_selection_rejected():
     with pytest.raises(ValueError,match='fuera de la consulta'):panel.selected_records(source(),['fake-key'])
+
+
+def test_balance_mass_user_labels_preserve_source_column_contract():
+    labels=dict(ui.FIELDS)
+    assert labels['modo_visible']=='Modo · Fuente'
+    assert labels['fuente_m6']=='Fuente aplicada al balance'
+    assert labels['valor_m6']=='TMH aplicado al balance'
+    assert not any('M6' in label for _,label in ui.FIELDS)
+    rendered=dump(ui.layout())
+    for expected in ('BALANCE DE MASA · DEV','Confirmar decisiones','Historial de decisiones de fuente',
+                     'Confirmo guardar únicamente estas decisiones de fuente',
+                     'todos los casos que utilizan esta configuración de fuentes'):
+        assert expected in rendered
+    assert 'decisiones M6' not in rendered and 'Balance M6' not in rendered
+
+
+def test_simulation_headers_keep_internal_keys_and_original_values():
+    records=comparison();before=json.loads(json.dumps(records))
+    table=ui.table(records)
+    assert table.data==before and records==before
+    assert [c['id'] for c in table.columns]==list(records[0])
+    assert not any('M6' in c['name'] for c in table.columns)
+
+
+@pytest.mark.parametrize('trigger,path,route,expected',[
+    ('nav-monitor-pitum','/','',None),
+    ('page-url','/','#monitoreo-correas/diagnostico','pitum-diagnostico'),
+    ('page-url','/','#monitoreo-correas/gestion-pi-tum','pitum-gestion'),
+    ('page-url','/','#monitoreo-correas/contingencia-m6','pitum-contingencia-m6'),
+    ('page-url','/balance-m6','','pitum-contingencia-m6'),
+    ('page-url','/','#contingencia-m6','pitum-contingencia-m6'),
+])
+def test_monitor_navigation_without_redundant_sidebar_button(trigger,path,route,expected):
+    from types import SimpleNamespace
+    source=(Path(__file__).resolve().parents[1]/'layout.py').read_text(encoding='utf8')
+    tree=ast.parse(source)
+    sidebar=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='render_sidebar')
+    assert 'nav-balance-m6' not in ast.get_source_segment(source,sidebar)
+    register=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='register_callbacks')
+    fn=next(n for n in ast.walk(register) if isinstance(n,ast.FunctionDef) and n.name=='toggle_subtabs')
+    decorator=ast.get_source_segment(source,fn.decorator_list[0])
+    assert '"nav-balance-m6"' not in decorator
+    fn.decorator_list=[]
+    env={'dash':SimpleNamespace(ctx=SimpleNamespace(triggered_id=trigger),no_update=no_update)}
+    exec(compile(ast.Module(body=[fn],type_ignores=[]),'layout.py','exec'),env)
+    result=env['toggle_subtabs'](*([0]*8),path,route,True,True,True)
+    assert len(result)==22
+    assert result[3]=={'display':'block'}
+    assert result[13]=='siir-nav-link active'
+    assert result[-1]==(expected if expected else no_update)

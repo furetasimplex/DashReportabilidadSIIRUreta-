@@ -1,0 +1,2326 @@
+{
+  "context": {
+    "caso_id": 10009,
+    "modelo_id": 2,
+    "solver_run_id": 10082,
+    "run_caso_id": 10009,
+    "estado_run": "success",
+    "modelo_codigo": "hidrometalurgia_125_v2",
+    "legacy_modelo_id": 6,
+    "total_flujos": 125,
+    "fecha_inicio": "2026-09-01",
+    "fecha_fin": "2026-09-07"
+  },
+  "catalog": [
+    {
+      "id": 156,
+      "modelo_id": 2,
+      "codigo_flujo": "F1",
+      "activo": true
+    },
+    {
+      "id": 161,
+      "modelo_id": 2,
+      "codigo_flujo": "F2",
+      "activo": true
+    },
+    {
+      "id": 163,
+      "modelo_id": 2,
+      "codigo_flujo": "F3",
+      "activo": true
+    },
+    {
+      "id": 237,
+      "modelo_id": 2,
+      "codigo_flujo": "F4",
+      "activo": true
+    },
+    {
+      "id": 236,
+      "modelo_id": 2,
+      "codigo_flujo": "F5",
+      "activo": true
+    },
+    {
+      "id": 168,
+      "modelo_id": 2,
+      "codigo_flujo": "F6",
+      "activo": true
+    },
+    {
+      "id": 167,
+      "modelo_id": 2,
+      "codigo_flujo": "F7",
+      "activo": true
+    },
+    {
+      "id": 166,
+      "modelo_id": 2,
+      "codigo_flujo": "F8",
+      "activo": true
+    },
+    {
+      "id": 169,
+      "modelo_id": 2,
+      "codigo_flujo": "F9",
+      "activo": true
+    },
+    {
+      "id": 174,
+      "modelo_id": 2,
+      "codigo_flujo": "F10",
+      "activo": true
+    },
+    {
+      "id": 173,
+      "modelo_id": 2,
+      "codigo_flujo": "F11",
+      "activo": true
+    },
+    {
+      "id": 172,
+      "modelo_id": 2,
+      "codigo_flujo": "F12",
+      "activo": true
+    },
+    {
+      "id": 158,
+      "modelo_id": 2,
+      "codigo_flujo": "F13",
+      "activo": true
+    },
+    {
+      "id": 160,
+      "modelo_id": 2,
+      "codigo_flujo": "F14",
+      "activo": true
+    },
+    {
+      "id": 159,
+      "modelo_id": 2,
+      "codigo_flujo": "F15",
+      "activo": true
+    },
+    {
+      "id": 164,
+      "modelo_id": 2,
+      "codigo_flujo": "F16",
+      "activo": true
+    },
+    {
+      "id": 165,
+      "modelo_id": 2,
+      "codigo_flujo": "F17",
+      "activo": true
+    },
+    {
+      "id": 175,
+      "modelo_id": 2,
+      "codigo_flujo": "F18",
+      "activo": true
+    },
+    {
+      "id": 176,
+      "modelo_id": 2,
+      "codigo_flujo": "F19",
+      "activo": true
+    },
+    {
+      "id": 204,
+      "modelo_id": 2,
+      "codigo_flujo": "F20",
+      "activo": true
+    },
+    {
+      "id": 203,
+      "modelo_id": 2,
+      "codigo_flujo": "F21",
+      "activo": true
+    },
+    {
+      "id": 212,
+      "modelo_id": 2,
+      "codigo_flujo": "F22",
+      "activo": true
+    },
+    {
+      "id": 211,
+      "modelo_id": 2,
+      "codigo_flujo": "F23",
+      "activo": true
+    },
+    {
+      "id": 177,
+      "modelo_id": 2,
+      "codigo_flujo": "F24",
+      "activo": true
+    },
+    {
+      "id": 238,
+      "modelo_id": 2,
+      "codigo_flujo": "F25",
+      "activo": true
+    },
+    {
+      "id": 240,
+      "modelo_id": 2,
+      "codigo_flujo": "F26",
+      "activo": true
+    },
+    {
+      "id": 239,
+      "modelo_id": 2,
+      "codigo_flujo": "F27",
+      "activo": true
+    },
+    {
+      "id": 189,
+      "modelo_id": 2,
+      "codigo_flujo": "F28",
+      "activo": true
+    },
+    {
+      "id": 243,
+      "modelo_id": 2,
+      "codigo_flujo": "F29",
+      "activo": true
+    },
+    {
+      "id": 241,
+      "modelo_id": 2,
+      "codigo_flujo": "F30",
+      "activo": true
+    },
+    {
+      "id": 242,
+      "modelo_id": 2,
+      "codigo_flujo": "F31",
+      "activo": true
+    },
+    {
+      "id": 231,
+      "modelo_id": 2,
+      "codigo_flujo": "F32",
+      "activo": true
+    },
+    {
+      "id": 229,
+      "modelo_id": 2,
+      "codigo_flujo": "F33",
+      "activo": true
+    },
+    {
+      "id": 230,
+      "modelo_id": 2,
+      "codigo_flujo": "F34",
+      "activo": true
+    },
+    {
+      "id": 232,
+      "modelo_id": 2,
+      "codigo_flujo": "F35",
+      "activo": true
+    },
+    {
+      "id": 233,
+      "modelo_id": 2,
+      "codigo_flujo": "F36",
+      "activo": true
+    },
+    {
+      "id": 234,
+      "modelo_id": 2,
+      "codigo_flujo": "F37",
+      "activo": true
+    },
+    {
+      "id": 235,
+      "modelo_id": 2,
+      "codigo_flujo": "F38",
+      "activo": true
+    },
+    {
+      "id": 157,
+      "modelo_id": 2,
+      "codigo_flujo": "F39",
+      "activo": true
+    },
+    {
+      "id": 162,
+      "modelo_id": 2,
+      "codigo_flujo": "F40",
+      "activo": true
+    },
+    {
+      "id": 205,
+      "modelo_id": 2,
+      "codigo_flujo": "F41",
+      "activo": true
+    },
+    {
+      "id": 209,
+      "modelo_id": 2,
+      "codigo_flujo": "F42",
+      "activo": true
+    },
+    {
+      "id": 210,
+      "modelo_id": 2,
+      "codigo_flujo": "F43",
+      "activo": true
+    },
+    {
+      "id": 181,
+      "modelo_id": 2,
+      "codigo_flujo": "F44",
+      "activo": true
+    },
+    {
+      "id": 182,
+      "modelo_id": 2,
+      "codigo_flujo": "F45",
+      "activo": true
+    },
+    {
+      "id": 180,
+      "modelo_id": 2,
+      "codigo_flujo": "F46",
+      "activo": true
+    },
+    {
+      "id": 183,
+      "modelo_id": 2,
+      "codigo_flujo": "F47",
+      "activo": true
+    },
+    {
+      "id": 184,
+      "modelo_id": 2,
+      "codigo_flujo": "F48",
+      "activo": true
+    },
+    {
+      "id": 185,
+      "modelo_id": 2,
+      "codigo_flujo": "F49",
+      "activo": true
+    },
+    {
+      "id": 186,
+      "modelo_id": 2,
+      "codigo_flujo": "F50",
+      "activo": true
+    },
+    {
+      "id": 208,
+      "modelo_id": 2,
+      "codigo_flujo": "F51",
+      "activo": true
+    },
+    {
+      "id": 207,
+      "modelo_id": 2,
+      "codigo_flujo": "F52",
+      "activo": true
+    },
+    {
+      "id": 206,
+      "modelo_id": 2,
+      "codigo_flujo": "F53",
+      "activo": true
+    },
+    {
+      "id": 154,
+      "modelo_id": 2,
+      "codigo_flujo": "F54",
+      "activo": true
+    },
+    {
+      "id": 151,
+      "modelo_id": 2,
+      "codigo_flujo": "F55",
+      "activo": true
+    },
+    {
+      "id": 153,
+      "modelo_id": 2,
+      "codigo_flujo": "F56",
+      "activo": true
+    },
+    {
+      "id": 125,
+      "modelo_id": 2,
+      "codigo_flujo": "F57",
+      "activo": true
+    },
+    {
+      "id": 126,
+      "modelo_id": 2,
+      "codigo_flujo": "F58",
+      "activo": true
+    },
+    {
+      "id": 124,
+      "modelo_id": 2,
+      "codigo_flujo": "F59",
+      "activo": true
+    },
+    {
+      "id": 130,
+      "modelo_id": 2,
+      "codigo_flujo": "F60",
+      "activo": true
+    },
+    {
+      "id": 127,
+      "modelo_id": 2,
+      "codigo_flujo": "F61",
+      "activo": true
+    },
+    {
+      "id": 131,
+      "modelo_id": 2,
+      "codigo_flujo": "F62",
+      "activo": true
+    },
+    {
+      "id": 133,
+      "modelo_id": 2,
+      "codigo_flujo": "F63",
+      "activo": true
+    },
+    {
+      "id": 132,
+      "modelo_id": 2,
+      "codigo_flujo": "F64",
+      "activo": true
+    },
+    {
+      "id": 134,
+      "modelo_id": 2,
+      "codigo_flujo": "F65",
+      "activo": true
+    },
+    {
+      "id": 138,
+      "modelo_id": 2,
+      "codigo_flujo": "F66",
+      "activo": true
+    },
+    {
+      "id": 188,
+      "modelo_id": 2,
+      "codigo_flujo": "F67",
+      "activo": true
+    },
+    {
+      "id": 178,
+      "modelo_id": 2,
+      "codigo_flujo": "F68",
+      "activo": true
+    },
+    {
+      "id": 192,
+      "modelo_id": 2,
+      "codigo_flujo": "F69",
+      "activo": true
+    },
+    {
+      "id": 144,
+      "modelo_id": 2,
+      "codigo_flujo": "F70",
+      "activo": true
+    },
+    {
+      "id": 141,
+      "modelo_id": 2,
+      "codigo_flujo": "F71",
+      "activo": true
+    },
+    {
+      "id": 143,
+      "modelo_id": 2,
+      "codigo_flujo": "F72",
+      "activo": true
+    },
+    {
+      "id": 142,
+      "modelo_id": 2,
+      "codigo_flujo": "F73",
+      "activo": true
+    },
+    {
+      "id": 147,
+      "modelo_id": 2,
+      "codigo_flujo": "F74",
+      "activo": true
+    },
+    {
+      "id": 140,
+      "modelo_id": 2,
+      "codigo_flujo": "F75",
+      "activo": true
+    },
+    {
+      "id": 146,
+      "modelo_id": 2,
+      "codigo_flujo": "F76",
+      "activo": true
+    },
+    {
+      "id": 150,
+      "modelo_id": 2,
+      "codigo_flujo": "F77",
+      "activo": true
+    },
+    {
+      "id": 149,
+      "modelo_id": 2,
+      "codigo_flujo": "F78",
+      "activo": true
+    },
+    {
+      "id": 148,
+      "modelo_id": 2,
+      "codigo_flujo": "F79",
+      "activo": true
+    },
+    {
+      "id": 152,
+      "modelo_id": 2,
+      "codigo_flujo": "F80",
+      "activo": true
+    },
+    {
+      "id": 155,
+      "modelo_id": 2,
+      "codigo_flujo": "F81",
+      "activo": true
+    },
+    {
+      "id": 135,
+      "modelo_id": 2,
+      "codigo_flujo": "F82",
+      "activo": true
+    },
+    {
+      "id": 129,
+      "modelo_id": 2,
+      "codigo_flujo": "F83",
+      "activo": true
+    },
+    {
+      "id": 128,
+      "modelo_id": 2,
+      "codigo_flujo": "F84",
+      "activo": true
+    },
+    {
+      "id": 137,
+      "modelo_id": 2,
+      "codigo_flujo": "F85",
+      "activo": true
+    },
+    {
+      "id": 136,
+      "modelo_id": 2,
+      "codigo_flujo": "F86",
+      "activo": true
+    },
+    {
+      "id": 139,
+      "modelo_id": 2,
+      "codigo_flujo": "F87",
+      "activo": true
+    },
+    {
+      "id": 219,
+      "modelo_id": 2,
+      "codigo_flujo": "F88",
+      "activo": true
+    },
+    {
+      "id": 221,
+      "modelo_id": 2,
+      "codigo_flujo": "F89",
+      "activo": true
+    },
+    {
+      "id": 218,
+      "modelo_id": 2,
+      "codigo_flujo": "F90",
+      "activo": true
+    },
+    {
+      "id": 222,
+      "modelo_id": 2,
+      "codigo_flujo": "F91",
+      "activo": true
+    },
+    {
+      "id": 220,
+      "modelo_id": 2,
+      "codigo_flujo": "F92",
+      "activo": true
+    },
+    {
+      "id": 223,
+      "modelo_id": 2,
+      "codigo_flujo": "F93",
+      "activo": true
+    },
+    {
+      "id": 121,
+      "modelo_id": 2,
+      "codigo_flujo": "F94",
+      "activo": true
+    },
+    {
+      "id": 122,
+      "modelo_id": 2,
+      "codigo_flujo": "F95",
+      "activo": true
+    },
+    {
+      "id": 123,
+      "modelo_id": 2,
+      "codigo_flujo": "F96",
+      "activo": true
+    },
+    {
+      "id": 190,
+      "modelo_id": 2,
+      "codigo_flujo": "F97",
+      "activo": true
+    },
+    {
+      "id": 191,
+      "modelo_id": 2,
+      "codigo_flujo": "F98",
+      "activo": true
+    },
+    {
+      "id": 226,
+      "modelo_id": 2,
+      "codigo_flujo": "F99",
+      "activo": true
+    },
+    {
+      "id": 225,
+      "modelo_id": 2,
+      "codigo_flujo": "F100",
+      "activo": true
+    },
+    {
+      "id": 224,
+      "modelo_id": 2,
+      "codigo_flujo": "F101",
+      "activo": true
+    },
+    {
+      "id": 213,
+      "modelo_id": 2,
+      "codigo_flujo": "F102",
+      "activo": true
+    },
+    {
+      "id": 216,
+      "modelo_id": 2,
+      "codigo_flujo": "F103",
+      "activo": true
+    },
+    {
+      "id": 214,
+      "modelo_id": 2,
+      "codigo_flujo": "F104",
+      "activo": true
+    },
+    {
+      "id": 195,
+      "modelo_id": 2,
+      "codigo_flujo": "F105",
+      "activo": true
+    },
+    {
+      "id": 196,
+      "modelo_id": 2,
+      "codigo_flujo": "F106",
+      "activo": true
+    },
+    {
+      "id": 193,
+      "modelo_id": 2,
+      "codigo_flujo": "F107",
+      "activo": true
+    },
+    {
+      "id": 194,
+      "modelo_id": 2,
+      "codigo_flujo": "F108",
+      "activo": true
+    },
+    {
+      "id": 227,
+      "modelo_id": 2,
+      "codigo_flujo": "F109",
+      "activo": true
+    },
+    {
+      "id": 228,
+      "modelo_id": 2,
+      "codigo_flujo": "F110",
+      "activo": true
+    },
+    {
+      "id": 197,
+      "modelo_id": 2,
+      "codigo_flujo": "F111",
+      "activo": true
+    },
+    {
+      "id": 198,
+      "modelo_id": 2,
+      "codigo_flujo": "F112",
+      "activo": true
+    },
+    {
+      "id": 217,
+      "modelo_id": 2,
+      "codigo_flujo": "F113",
+      "activo": true
+    },
+    {
+      "id": 170,
+      "modelo_id": 2,
+      "codigo_flujo": "F114",
+      "activo": true
+    },
+    {
+      "id": 171,
+      "modelo_id": 2,
+      "codigo_flujo": "F115",
+      "activo": true
+    },
+    {
+      "id": 179,
+      "modelo_id": 2,
+      "codigo_flujo": "F116",
+      "activo": true
+    },
+    {
+      "id": 187,
+      "modelo_id": 2,
+      "codigo_flujo": "F117",
+      "activo": true
+    },
+    {
+      "id": 199,
+      "modelo_id": 2,
+      "codigo_flujo": "F118",
+      "activo": true
+    },
+    {
+      "id": 200,
+      "modelo_id": 2,
+      "codigo_flujo": "F119",
+      "activo": true
+    },
+    {
+      "id": 201,
+      "modelo_id": 2,
+      "codigo_flujo": "F120",
+      "activo": true
+    },
+    {
+      "id": 202,
+      "modelo_id": 2,
+      "codigo_flujo": "F121",
+      "activo": true
+    },
+    {
+      "id": 215,
+      "modelo_id": 2,
+      "codigo_flujo": "F122",
+      "activo": true
+    },
+    {
+      "id": 244,
+      "modelo_id": 2,
+      "codigo_flujo": "F123",
+      "activo": true
+    },
+    {
+      "id": 245,
+      "modelo_id": 2,
+      "codigo_flujo": "F124",
+      "activo": true
+    },
+    {
+      "id": 145,
+      "modelo_id": 2,
+      "codigo_flujo": "F125",
+      "activo": true
+    }
+  ],
+  "results": [
+    {
+      "codigo_flujo": "F1",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 156,
+      "masa_reconciliada": 3132.720772,
+      "fino_cu_reconciliado": 16.500418
+    },
+    {
+      "codigo_flujo": "F2",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 161,
+      "masa_reconciliada": 187428.23877,
+      "fino_cu_reconciliado": 1250.724079
+    },
+    {
+      "codigo_flujo": "F3",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 163,
+      "masa_reconciliada": 190560.9913,
+      "fino_cu_reconciliado": 1267.268848
+    },
+    {
+      "codigo_flujo": "F4",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 237,
+      "masa_reconciliada": 189374.43232,
+      "fino_cu_reconciliado": 1256.800823
+    },
+    {
+      "codigo_flujo": "F5",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 236,
+      "masa_reconciliada": 1186.611648,
+      "fino_cu_reconciliado": 10.562244
+    },
+    {
+      "codigo_flujo": "F6",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 168,
+      "masa_reconciliada": 99417.012381,
+      "fino_cu_reconciliado": 656.747931
+    },
+    {
+      "codigo_flujo": "F7",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 167,
+      "masa_reconciliada": 88770.856775,
+      "fino_cu_reconciliado": 589.58751
+    },
+    {
+      "codigo_flujo": "F8",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 166,
+      "masa_reconciliada": 1186.611648,
+      "fino_cu_reconciliado": 10.562244
+    },
+    {
+      "codigo_flujo": "F9",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 169,
+      "masa_reconciliada": 77148.856848,
+      "fino_cu_reconciliado": 312.067403
+    },
+    {
+      "codigo_flujo": "F10",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 174,
+      "masa_reconciliada": 38281.968127,
+      "fino_cu_reconciliado": 154.895624
+    },
+    {
+      "codigo_flujo": "F11",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 173,
+      "masa_reconciliada": 38866.936816,
+      "fino_cu_reconciliado": 157.262284
+    },
+    {
+      "codigo_flujo": "F12",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 172,
+      "masa_reconciliada": 3840.322,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F13",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 158,
+      "masa_reconciliada": 1869.436155,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F14",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 160,
+      "masa_reconciliada": 1970.930699,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F15",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 159,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F16",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 164,
+      "masa_reconciliada": 140153.4303,
+      "fino_cu_reconciliado": 814.107458
+    },
+    {
+      "codigo_flujo": "F17",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 165,
+      "masa_reconciliada": 129023.80044,
+      "fino_cu_reconciliado": 744.580409
+    },
+    {
+      "codigo_flujo": "F18",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 175,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F19",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 176,
+      "masa_reconciliada": 269177.27418,
+      "fino_cu_reconciliado": 1558.784652
+    },
+    {
+      "codigo_flujo": "F20",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 204,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F21",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 203,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F22",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 212,
+      "masa_reconciliada": 882083.8227,
+      "fino_cu_reconciliado": 5185.770794
+    },
+    {
+      "codigo_flujo": "F23",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 211,
+      "masa_reconciliada": -612906.50577,
+      "fino_cu_reconciliado": -3626.889658
+    },
+    {
+      "codigo_flujo": "F24",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 177,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F25",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 238,
+      "masa_reconciliada": 155.154797,
+      "fino_cu_reconciliado": 155.154797
+    },
+    {
+      "codigo_flujo": "F26",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 240,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F27",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 239,
+      "masa_reconciliada": -155.254797,
+      "fino_cu_reconciliado": -155.254797
+    },
+    {
+      "codigo_flujo": "F28",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 189,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F29",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 243,
+      "masa_reconciliada": 1069.137402,
+      "fino_cu_reconciliado": 1069.137402
+    },
+    {
+      "codigo_flujo": "F30",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 241,
+      "masa_reconciliada": 1703.52558,
+      "fino_cu_reconciliado": 12.23467
+    },
+    {
+      "codigo_flujo": "F31",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 242,
+      "masa_reconciliada": 879311.06842,
+      "fino_cu_reconciliado": 4104.298722
+    },
+    {
+      "codigo_flujo": "F32",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 231,
+      "masa_reconciliada": 224240.23223,
+      "fino_cu_reconciliado": 543.829763
+    },
+    {
+      "codigo_flujo": "F33",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 229,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F34",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 230,
+      "masa_reconciliada": -224240.23958,
+      "fino_cu_reconciliado": -543.829671
+    },
+    {
+      "codigo_flujo": "F35",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 232,
+      "masa_reconciliada": 64447.506852,
+      "fino_cu_reconciliado": 175.016524
+    },
+    {
+      "codigo_flujo": "F36",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 233,
+      "masa_reconciliada": 113249.17677,
+      "fino_cu_reconciliado": 307.545915
+    },
+    {
+      "codigo_flujo": "F37",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 234,
+      "masa_reconciliada": -175993.16539,
+      "fino_cu_reconciliado": -470.327655
+    },
+    {
+      "codigo_flujo": "F38",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 235,
+      "masa_reconciliada": 288687.73173,
+      "fino_cu_reconciliado": 718.846295
+    },
+    {
+      "codigo_flujo": "F39",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 157,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F40",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 162,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F41",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 205,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F42",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 209,
+      "masa_reconciliada": 273.680038,
+      "fino_cu_reconciliado": 273.680038
+    },
+    {
+      "codigo_flujo": "F43",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 210,
+      "masa_reconciliada": -273.780038,
+      "fino_cu_reconciliado": -273.780038
+    },
+    {
+      "codigo_flujo": "F44",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 181,
+      "masa_reconciliada": 169812.71101,
+      "fino_cu_reconciliado": 227.745698
+    },
+    {
+      "codigo_flujo": "F45",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 182,
+      "masa_reconciliada": 6237.596382,
+      "fino_cu_reconciliado": 4.678905
+    },
+    {
+      "codigo_flujo": "F46",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 180,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F47",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 183,
+      "masa_reconciliada": 492089.06279,
+      "fino_cu_reconciliado": 555.471617
+    },
+    {
+      "codigo_flujo": "F48",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 184,
+      "masa_reconciliada": 92353.347624,
+      "fino_cu_reconciliado": 414.169114
+    },
+    {
+      "codigo_flujo": "F49",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 185,
+      "masa_reconciliada": 139950.35053,
+      "fino_cu_reconciliado": 142.834661
+    },
+    {
+      "codigo_flujo": "F50",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 186,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F51",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 208,
+      "masa_reconciliada": 175343.33722,
+      "fino_cu_reconciliado": 415.626928
+    },
+    {
+      "codigo_flujo": "F52",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 207,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F53",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 206,
+      "masa_reconciliada": 19798.494507,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F54",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 154,
+      "masa_reconciliada": 116399.18196,
+      "fino_cu_reconciliado": 302.817128
+    },
+    {
+      "codigo_flujo": "F55",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 151,
+      "masa_reconciliada": 334.442037,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F56",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 153,
+      "masa_reconciliada": -178.253448,
+      "fino_cu_reconciliado": -0.138927
+    },
+    {
+      "codigo_flujo": "F57",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 125,
+      "masa_reconciliada": 505050.16622,
+      "fino_cu_reconciliado": 1005.387449
+    },
+    {
+      "codigo_flujo": "F58",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 126,
+      "masa_reconciliada": -1025.348726,
+      "fino_cu_reconciliado": -0.755569
+    },
+    {
+      "codigo_flujo": "F59",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 124,
+      "masa_reconciliada": 540.497204,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F60",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 130,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F61",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 127,
+      "masa_reconciliada": 5796.082534,
+      "fino_cu_reconciliado": 4.578905
+    },
+    {
+      "codigo_flujo": "F62",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 131,
+      "masa_reconciliada": 441.587938,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F63",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 133,
+      "masa_reconciliada": 499751.42676,
+      "fino_cu_reconciliado": 582.623651
+    },
+    {
+      "codigo_flujo": "F64",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 132,
+      "masa_reconciliada": 1707.006811,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F65",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 134,
+      "masa_reconciliada": -9369.338892,
+      "fino_cu_reconciliado": -27.252034
+    },
+    {
+      "codigo_flujo": "F66",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 138,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F67",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 188,
+      "masa_reconciliada": 3.764466,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F68",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 178,
+      "masa_reconciliada": 0.080475,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F69",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 192,
+      "masa_reconciliada": 1043809.7317,
+      "fino_cu_reconciliado": 388.909407
+    },
+    {
+      "codigo_flujo": "F70",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 144,
+      "masa_reconciliada": 170893.24749,
+      "fino_cu_reconciliado": 46.983681
+    },
+    {
+      "codigo_flujo": "F71",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 141,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F72",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 143,
+      "masa_reconciliada": 716982.60395,
+      "fino_cu_reconciliado": 41.232979
+    },
+    {
+      "codigo_flujo": "F73",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 142,
+      "masa_reconciliada": 10855.622264,
+      "fino_cu_reconciliado": 2.305011
+    },
+    {
+      "codigo_flujo": "F74",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 147,
+      "masa_reconciliada": 155898.8408,
+      "fino_cu_reconciliado": 59.406426
+    },
+    {
+      "codigo_flujo": "F75",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 140,
+      "masa_reconciliada": 959.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F76",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 146,
+      "masa_reconciliada": 6060.220266,
+      "fino_cu_reconciliado": 237.28028
+    },
+    {
+      "codigo_flujo": "F77",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 150,
+      "masa_reconciliada": 194868.1182,
+      "fino_cu_reconciliado": 142.04689
+    },
+    {
+      "codigo_flujo": "F78",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 149,
+      "masa_reconciliada": 148.843151,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F79",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 148,
+      "masa_reconciliada": 819.242185,
+      "fino_cu_reconciliado": -0.277862
+    },
+    {
+      "codigo_flujo": "F80",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 152,
+      "masa_reconciliada": 39937.331,
+      "fino_cu_reconciliado": 82.462601
+    },
+    {
+      "codigo_flujo": "F81",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 155,
+      "masa_reconciliada": 18850.672822,
+      "fino_cu_reconciliado": 30.386126
+    },
+    {
+      "codigo_flujo": "F82",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 135,
+      "masa_reconciliada": 12535.58272,
+      "fino_cu_reconciliado": 82.734721
+    },
+    {
+      "codigo_flujo": "F83",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 129,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F84",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 128,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F85",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 137,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F86",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 136,
+      "masa_reconciliada": 126000.0,
+      "fino_cu_reconciliado": 59.99994
+    },
+    {
+      "codigo_flujo": "F87",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 139,
+      "masa_reconciliada": 1414.799278,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F88",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 219,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F89",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 221,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F90",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 218,
+      "masa_reconciliada": 22839.709504,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F91",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 222,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F92",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 220,
+      "masa_reconciliada": 9933.127781,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F93",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 223,
+      "masa_reconciliada": 29247.519721,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F94",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 121,
+      "masa_reconciliada": 1026.192872,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F95",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 122,
+      "masa_reconciliada": 1848.057266,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F96",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 123,
+      "masa_reconciliada": 1847.969204,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F97",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 190,
+      "masa_reconciliada": 172823.98026,
+      "fino_cu_reconciliado": 9200.931036
+    },
+    {
+      "codigo_flujo": "F98",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 191,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F99",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 226,
+      "masa_reconciliada": 200872.71563,
+      "fino_cu_reconciliado": 8001.929343
+    },
+    {
+      "codigo_flujo": "F100",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 225,
+      "masa_reconciliada": 737415.59601,
+      "fino_cu_reconciliado": 31333.221942
+    },
+    {
+      "codigo_flujo": "F101",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 224,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F102",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 213,
+      "masa_reconciliada": 765464.31181,
+      "fino_cu_reconciliado": 30134.320249
+    },
+    {
+      "codigo_flujo": "F103",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 216,
+      "masa_reconciliada": 1198.801693,
+      "fino_cu_reconciliado": 1198.801693
+    },
+    {
+      "codigo_flujo": "F104",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 214,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F105",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 195,
+      "masa_reconciliada": 1169.72,
+      "fino_cu_reconciliado": 1169.72
+    },
+    {
+      "codigo_flujo": "F106",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 196,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F107",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 193,
+      "masa_reconciliada": 28.981693,
+      "fino_cu_reconciliado": 28.981693
+    },
+    {
+      "codigo_flujo": "F108",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 194,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F109",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 227,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F110",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 228,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F111",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 197,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F112",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 198,
+      "masa_reconciliada": 1169.72,
+      "fino_cu_reconciliado": 1169.72
+    },
+    {
+      "codigo_flujo": "F113",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 217,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F114",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 170,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F115",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 171,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F116",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 179,
+      "masa_reconciliada": 15696.816771,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F117",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 187,
+      "masa_reconciliada": 4510.952712,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F118",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 199,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F119",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 200,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F120",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 201,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F121",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 202,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F122",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 215,
+      "masa_reconciliada": 0.0,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F123",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 244,
+      "masa_reconciliada": 1848.055249,
+      "fino_cu_reconciliado": 0.0
+    },
+    {
+      "codigo_flujo": "F124",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 245,
+      "masa_reconciliada": 10855.705278,
+      "fino_cu_reconciliado": 2.205011
+    },
+    {
+      "codigo_flujo": "F125",
+      "caso_id": 10009,
+      "run_id": 10082,
+      "flujo_modelo_id": 145,
+      "masa_reconciliada": 4999.937798,
+      "fino_cu_reconciliado": 1.60103
+    }
+  ],
+  "daily": [
+    {
+      "Fecha": "2026-09-01",
+      "Chancado_TMS_Real": 2097.909329737997,
+      "Humedad_Turno_A": 3.300000000000003,
+      "Humedad_Turno_B": 0.0,
+      "Humedad_promedio_dia": 3.300000000000003,
+      "Sal_turno_A": 100.812,
+      "Sal_Turno_B": 0.0,
+      "Sal_promedio_dia": 100.812,
+      "Apilado_TMH_turno_A": 3137.188,
+      "Apilado_TMH_turno_B": 0.0,
+      "Apilado_TMH_promedio_dia": 3137.188,
+      "Apilado_TMS_Real": 3030.334,
+      "Apilado_TMS_Plan": 0.0,
+      "Campana_apilado": "Sulfuro",
+      "Modulo_apilado": 134,
+      "Avance_apilado": 0.281757,
+      "Ley_CuT_Real": 0.509936,
+      "Ley_CuT_Plan": 0.0,
+      "Cobre_fino_Apilado_Real": 15.452763986239997,
+      "Cobre_fino_Apilado_Plan": 0.0,
+      "TMS_Rotopala_1_Real": 60187.989170999994,
+      "TMS_Rotopala_1_Plan": 0.0,
+      "Campana_reclamo_oxidos": "17",
+      "Modulo_reclamo_oxidos": 51,
+      "Avance_reclamo_oxidos": 0.337353,
+      "TMS_Rotopala_2_Real": 0.0,
+      "TMS_Rotopala_2_Plan": 68076.953953,
+      "Campana_reclamo_sulfuros": null,
+      "modulo_reclamo_sulfuros": null,
+      "Avance_reclamo_sulfuros": null,
+      "Camiones_TMS_Reclamo_Oxidos": 0.0,
+      "Camiones_TMS_Reclamo_Sulfuros": 23830.686931,
+      "Movido": null,
+      "Extraido": null,
+      "Camiones_TMS_total": 23830.686931,
+      "Camiones_TMS_plan": 15000,
+      "Campana_reclamo_camiones": "11",
+      "Modulo_reclamo_camiones": "25",
+      "Total_Ripios_Incluye_Camiones_Real": 84018.676102,
+      "Total_Ripios_Incluye_Camiones_Plan": 83076.953953,
+      "Produccion_Catodos_Real": 0.0,
+      "Produccion_Catodos_Plan": 0,
+      "SRR_TMS_Turno_A": 266.9724254,
+      "SRR_TMS_Turno_B": 0.0,
+      "SRR_TMS_promedio_dia": 266.9724254,
+      "SRR_TMS_Plan": 0.0,
+      "Ley_CuT_Real_srr": 0.44662646051926,
+      "Ley_CuT_Plan_srr": 0.0,
+      "estado": 0,
+      "dc_id": 2276
+    },
+    {
+      "Fecha": "2026-09-02",
+      "Chancado_TMS_Real": 16.790950635972877,
+      "Humedad_Turno_A": 0.0,
+      "Humedad_Turno_B": 0.0,
+      "Humedad_promedio_dia": 0.0,
+      "Sal_turno_A": 0.0,
+      "Sal_Turno_B": 0.0,
+      "Sal_promedio_dia": 0.0,
+      "Apilado_TMH_turno_A": 0.0,
+      "Apilado_TMH_turno_B": 0.0,
+      "Apilado_TMH_promedio_dia": 0.0,
+      "Apilado_TMS_Real": 0.0,
+      "Apilado_TMS_Plan": 0.0,
+      "Campana_apilado": "Sulfuro",
+      "Modulo_apilado": 134,
+      "Avance_apilado": 0.281757,
+      "Ley_CuT_Real": null,
+      "Ley_CuT_Plan": 0.0,
+      "Cobre_fino_Apilado_Real": 0.0,
+      "Cobre_fino_Apilado_Plan": 0.0,
+      "TMS_Rotopala_1_Real": 27045.786288000003,
+      "TMS_Rotopala_1_Plan": 0.0,
+      "Campana_reclamo_oxidos": "17",
+      "Modulo_reclamo_oxidos": 51,
+      "Avance_reclamo_oxidos": 0.61074,
+      "TMS_Rotopala_2_Real": 35431.633086,
+      "TMS_Rotopala_2_Plan": 28105.0,
+      "Campana_reclamo_sulfuros": "11",
+      "modulo_reclamo_sulfuros": 6,
+      "Avance_reclamo_sulfuros": 0.344628,
+      "Camiones_TMS_Reclamo_Oxidos": 0.0,
+      "Camiones_TMS_Reclamo_Sulfuros": 14936.735009,
+      "Movido": null,
+      "Extraido": null,
+      "Camiones_TMS_total": 14936.735009,
+      "Camiones_TMS_plan": 15000,
+      "Campana_reclamo_camiones": "11",
+      "Modulo_reclamo_camiones": "7",
+      "Total_Ripios_Incluye_Camiones_Real": 77414.154383,
+      "Total_Ripios_Incluye_Camiones_Plan": 43105.0,
+      "Produccion_Catodos_Real": 178.33,
+      "Produccion_Catodos_Plan": 175,
+      "SRR_TMS_Turno_A": 0.0,
+      "SRR_TMS_Turno_B": 0.0,
+      "SRR_TMS_promedio_dia": 0.0,
+      "SRR_TMS_Plan": 0.0,
+      "Ley_CuT_Real_srr": null,
+      "Ley_CuT_Plan_srr": 0.0,
+      "estado": 0,
+      "dc_id": 2277
+    },
+    {
+      "Fecha": "2026-09-03",
+      "Chancado_TMS_Real": 10808.065512253781,
+      "Humedad_Turno_A": 0.0,
+      "Humedad_Turno_B": 3.300000000000014,
+      "Humedad_promedio_dia": 3.300000000000014,
+      "Sal_turno_A": 0.0,
+      "Sal_Turno_B": 169.08,
+      "Sal_promedio_dia": 169.08,
+      "Apilado_TMH_turno_A": 0.0,
+      "Apilado_TMH_turno_B": 9901.545541302306,
+      "Apilado_TMH_promedio_dia": 9901.545541302306,
+      "Apilado_TMS_Real": 9569.21489843933,
+      "Apilado_TMS_Plan": 32777.0,
+      "Campana_apilado": "Sulfuro",
+      "Modulo_apilado": 134,
+      "Avance_apilado": 0.343991,
+      "Ley_CuT_Real": 0.587601,
+      "Ley_CuT_Plan": 0.59103,
+      "Cobre_fino_Apilado_Real": 56.22880243537849,
+      "Cobre_fino_Apilado_Plan": 193.7217528653464,
+      "TMS_Rotopala_1_Real": 59627.270381,
+      "TMS_Rotopala_1_Plan": 0.0,
+      "Campana_reclamo_oxidos": "17",
+      "Modulo_reclamo_oxidos": 52,
+      "Avance_reclamo_oxidos": 0.189435,
+      "TMS_Rotopala_2_Real": 0.0,
+      "TMS_Rotopala_2_Plan": 68076.953953,
+      "Campana_reclamo_sulfuros": "11",
+      "modulo_reclamo_sulfuros": 6,
+      "Avance_reclamo_sulfuros": 0.344628,
+      "Camiones_TMS_Reclamo_Oxidos": 0.0,
+      "Camiones_TMS_Reclamo_Sulfuros": 16572.981297,
+      "Movido": null,
+      "Extraido": null,
+      "Camiones_TMS_total": 16572.981297,
+      "Camiones_TMS_plan": 15000,
+      "Campana_reclamo_camiones": "11",
+      "Modulo_reclamo_camiones": "7",
+      "Total_Ripios_Incluye_Camiones_Real": 76200.251678,
+      "Total_Ripios_Incluye_Camiones_Plan": 83076.953953,
+      "Produccion_Catodos_Real": 152.791,
+      "Produccion_Catodos_Plan": 150,
+      "SRR_TMS_Turno_A": 0.0,
+      "SRR_TMS_Turno_B": 0.0,
+      "SRR_TMS_promedio_dia": 0.0,
+      "SRR_TMS_Plan": 13127.4,
+      "Ley_CuT_Real_srr": null,
+      "Ley_CuT_Plan_srr": 0.55743993441495,
+      "estado": 0,
+      "dc_id": 2278
+    },
+    {
+      "Fecha": "2026-09-04",
+      "Chancado_TMS_Real": 67555.53652004141,
+      "Humedad_Turno_A": 3.299999999999992,
+      "Humedad_Turno_B": 3.300000000000014,
+      "Humedad_promedio_dia": 3.3000000000000043,
+      "Sal_turno_A": 446.8646815093618,
+      "Sal_Turno_B": 616.3253184906382,
+      "Sal_promedio_dia": 1063.19,
+      "Apilado_TMH_turno_A": 34284.65764083085,
+      "Apilado_TMH_turno_B": 44602.45453128165,
+      "Apilado_TMH_promedio_dia": 78887.1121721125,
+      "Apilado_TMS_Real": 76248.75220043278,
+      "Apilado_TMS_Plan": 70810.0,
+      "Campana_apilado": "Sulfuro",
+      "Modulo_apilado": 134,
+      "Avance_apilado": 0.734233,
+      "Ley_CuT_Real": 0.681857,
+      "Ley_CuT_Plan": 0.615561,
+      "Cobre_fino_Apilado_Real": 519.9074542913049,
+      "Cobre_fino_Apilado_Plan": 435.8788895910161,
+      "TMS_Rotopala_1_Real": 37090.795282,
+      "TMS_Rotopala_1_Plan": 0.0,
+      "Campana_reclamo_oxidos": "17",
+      "Modulo_reclamo_oxidos": 52,
+      "Avance_reclamo_oxidos": 0.51157,
+      "TMS_Rotopala_2_Real": 0.0,
+      "TMS_Rotopala_2_Plan": 68076.953953,
+      "Campana_reclamo_sulfuros": "11",
+      "modulo_reclamo_sulfuros": 6,
+      "Avance_reclamo_sulfuros": 0.344628,
+      "Camiones_TMS_Reclamo_Oxidos": 0.0,
+      "Camiones_TMS_Reclamo_Sulfuros": 15224.019429,
+      "Movido": null,
+      "Extraido": null,
+      "Camiones_TMS_total": 15224.019429,
+      "Camiones_TMS_plan": 15000,
+      "Campana_reclamo_camiones": "11",
+      "Modulo_reclamo_camiones": "7",
+      "Total_Ripios_Incluye_Camiones_Real": 52314.814711,
+      "Total_Ripios_Incluye_Camiones_Plan": 83076.953953,
+      "Produccion_Catodos_Real": 231.138,
+      "Produccion_Catodos_Plan": 275,
+      "SRR_TMS_Turno_A": 0.0,
+      "SRR_TMS_Turno_B": 8941.0626966904,
+      "SRR_TMS_promedio_dia": 8941.0626966904,
+      "SRR_TMS_Plan": 31414.5,
+      "Ley_CuT_Real_srr": 0.35245482770172104,
+      "Ley_CuT_Plan_srr": 0.545254963229271,
+      "estado": 0,
+      "dc_id": 2279
+    },
+    {
+      "Fecha": "2026-09-05",
+      "Chancado_TMS_Real": 43820.40477867717,
+      "Humedad_Turno_A": 3.300000000000003,
+      "Humedad_Turno_B": 3.300000000000003,
+      "Humedad_promedio_dia": 3.300000000000003,
+      "Sal_turno_A": 377.2358177412596,
+      "Sal_Turno_B": 498.06418225874035,
+      "Sal_promedio_dia": 875.3,
+      "Apilado_TMH_turno_A": 29455.76418225874,
+      "Apilado_TMH_turno_B": 37612.93581774126,
+      "Apilado_TMH_promedio_dia": 67068.7,
+      "Apilado_TMS_Real": 64826.547999999995,
+      "Apilado_TMS_Plan": 78110.0,
+      "Campana_apilado": "Sulfuro",
+      "Modulo_apilado": 135,
+      "Avance_apilado": 0.26,
+      "Ley_CuT_Real": 0.54196,
+      "Ley_CuT_Plan": 0.546756,
+      "Cobre_fino_Apilado_Real": 351.3339595408,
+      "Cobre_fino_Apilado_Plan": 427.0710639579628,
+      "TMS_Rotopala_1_Real": 40366.41606,
+      "TMS_Rotopala_1_Plan": 0.0,
+      "Campana_reclamo_oxidos": "17",
+      "Modulo_reclamo_oxidos": 52,
+      "Avance_reclamo_oxidos": 0.86469,
+      "TMS_Rotopala_2_Real": 0.0,
+      "TMS_Rotopala_2_Plan": 58836.953953,
+      "Campana_reclamo_sulfuros": "11",
+      "modulo_reclamo_sulfuros": 6,
+      "Avance_reclamo_sulfuros": 0.344628,
+      "Camiones_TMS_Reclamo_Oxidos": 0.0,
+      "Camiones_TMS_Reclamo_Sulfuros": 14347.802487,
+      "Movido": null,
+      "Extraido": null,
+      "Camiones_TMS_total": 14347.802487,
+      "Camiones_TMS_plan": 15000,
+      "Campana_reclamo_camiones": "11",
+      "Modulo_reclamo_camiones": "7",
+      "Total_Ripios_Incluye_Camiones_Real": 54714.218547000004,
+      "Total_Ripios_Incluye_Camiones_Plan": 73836.95395299999,
+      "Produccion_Catodos_Real": 229.815,
+      "Produccion_Catodos_Plan": 275,
+      "SRR_TMS_Turno_A": 8205.4215074524,
+      "SRR_TMS_Turno_B": 13149.7021782706,
+      "SRR_TMS_promedio_dia": 21355.123685723,
+      "SRR_TMS_Plan": 34924.5,
+      "Ley_CuT_Real_srr": 0.4128146022262041,
+      "Ley_CuT_Plan_srr": 0.5356890457405,
+      "estado": 0,
+      "dc_id": 2280
+    },
+    {
+      "Fecha": "2026-09-06",
+      "Chancado_TMS_Real": 48376.294950085925,
+      "Humedad_Turno_A": 3.299999999999992,
+      "Humedad_Turno_B": 3.300000000000003,
+      "Humedad_promedio_dia": 3.299999999999996,
+      "Sal_turno_A": 560.2271899897356,
+      "Sal_Turno_B": 407.6028100102645,
+      "Sal_promedio_dia": 967.8300000000002,
+      "Apilado_TMH_turno_A": 43999.04648552303,
+      "Apilado_TMH_turno_B": 30621.337742162417,
+      "Apilado_TMH_promedio_dia": 74620.38422768544,
+      "Apilado_TMS_Real": 72125.97315817182,
+      "Apilado_TMS_Plan": 67160.0,
+      "Campana_apilado": "Sulfuro",
+      "Modulo_apilado": 135,
+      "Avance_apilado": 0.663417,
+      "Ley_CuT_Real": 0.557456,
+      "Ley_CuT_Plan": 0.574439,
+      "Cobre_fino_Apilado_Real": 402.07056492861824,
+      "Cobre_fino_Apilado_Plan": 385.7930343821816,
+      "TMS_Rotopala_1_Real": 0.0,
+      "TMS_Rotopala_1_Plan": 0.0,
+      "Campana_reclamo_oxidos": "17",
+      "Modulo_reclamo_oxidos": 52,
+      "Avance_reclamo_oxidos": 0.86469,
+      "TMS_Rotopala_2_Real": 0.0,
+      "TMS_Rotopala_2_Plan": 68076.953953,
+      "Campana_reclamo_sulfuros": "11",
+      "modulo_reclamo_sulfuros": 6,
+      "Avance_reclamo_sulfuros": 0.344628,
+      "Camiones_TMS_Reclamo_Oxidos": 0.0,
+      "Camiones_TMS_Reclamo_Sulfuros": 17329.767563,
+      "Movido": null,
+      "Extraido": null,
+      "Camiones_TMS_total": 17329.767563,
+      "Camiones_TMS_plan": 15000,
+      "Campana_reclamo_camiones": "11",
+      "Modulo_reclamo_camiones": "7",
+      "Total_Ripios_Incluye_Camiones_Real": 17329.767563,
+      "Total_Ripios_Incluye_Camiones_Plan": 83076.953953,
+      "Produccion_Catodos_Real": 252.126,
+      "Produccion_Catodos_Plan": 250,
+      "SRR_TMS_Turno_A": 14217.3077887722,
+      "SRR_TMS_Turno_B": 10036.4724749264,
+      "SRR_TMS_promedio_dia": 24253.7802636986,
+      "SRR_TMS_Plan": 29659.5,
+      "Ley_CuT_Real_srr": 0.40748200517427086,
+      "Ley_CuT_Plan_srr": 0.520699330823873,
+      "estado": 0,
+      "dc_id": 2281
+    },
+    {
+      "Fecha": "2026-09-07",
+      "Chancado_TMS_Real": 23339.459749921727,
+      "Humedad_Turno_A": 3.300000000000014,
+      "Humedad_Turno_B": 3.300000000000003,
+      "Humedad_promedio_dia": 3.3000000000000065,
+      "Sal_turno_A": 190.54145912044734,
+      "Sal_Turno_B": 473.5685408795527,
+      "Sal_promedio_dia": 664.11,
+      "Apilado_TMH_turno_A": 11655.446612460128,
+      "Apilado_TMH_turno_B": 23377.43615988222,
+      "Apilado_TMH_promedio_dia": 35032.88277234235,
+      "Apilado_TMS_Real": 33854.88201085506,
+      "Apilado_TMS_Plan": 78110.0,
+      "Campana_apilado": "Sulfuro",
+      "Modulo_apilado": 135,
+      "Avance_apilado": 0.876174,
+      "Ley_CuT_Real": 0.518722,
+      "Ley_CuT_Plan": 0.563411,
+      "Cobre_fino_Apilado_Real": 175.61272106434757,
+      "Cobre_fino_Apilado_Plan": 440.0802374501616,
+      "TMS_Rotopala_1_Real": 0.0,
+      "TMS_Rotopala_1_Plan": 0.0,
+      "Campana_reclamo_oxidos": "17",
+      "Modulo_reclamo_oxidos": 52,
+      "Avance_reclamo_oxidos": 0.86469,
+      "TMS_Rotopala_2_Real": 29015.894387,
+      "TMS_Rotopala_2_Plan": 62686.953953,
+      "Campana_reclamo_sulfuros": "11",
+      "modulo_reclamo_sulfuros": 6,
+      "Avance_reclamo_sulfuros": 0.640251,
+      "Camiones_TMS_Reclamo_Oxidos": 0.0,
+      "Camiones_TMS_Reclamo_Sulfuros": 11007.18405,
+      "Movido": null,
+      "Extraido": null,
+      "Camiones_TMS_total": 11007.18405,
+      "Camiones_TMS_plan": 15000,
+      "Campana_reclamo_camiones": "11",
+      "Modulo_reclamo_camiones": "7",
+      "Total_Ripios_Incluye_Camiones_Real": 40023.078437000004,
+      "Total_Ripios_Incluye_Camiones_Plan": 77686.95395299999,
+      "Produccion_Catodos_Real": 125.52,
+      "Produccion_Catodos_Plan": 275,
+      "SRR_TMS_Turno_A": 1740.369731427,
+      "SRR_TMS_Turno_B": 8270.3282351305,
+      "SRR_TMS_promedio_dia": 10010.6979665575,
+      "SRR_TMS_Plan": 34924.5,
+      "Ley_CuT_Real_srr": 0.38944711240715374,
+      "Ley_CuT_Plan_srr": 0.495003198370029,
+      "estado": 0,
+      "dc_id": 2282
+    }
+  ],
+  "rules": [
+    {
+      "regla_id": 1,
+      "col_nombre": "Chancado_TMS_Real",
+      "orden_calculo": 10,
+      "tipo_regla": "SCALE_TO_TARGET",
+      "target_code": "F3",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 2,
+      "col_nombre": "Humedad_Turno_A",
+      "orden_calculo": 20,
+      "tipo_regla": "NO_CAMBIA",
+      "target_code": null,
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 3,
+      "col_nombre": "Humedad_Turno_B",
+      "orden_calculo": 21,
+      "tipo_regla": "NO_CAMBIA",
+      "target_code": null,
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 4,
+      "col_nombre": "Humedad_promedio_dia",
+      "orden_calculo": 22,
+      "tipo_regla": "NO_CAMBIA",
+      "target_code": null,
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 12,
+      "col_nombre": "Sal_turno_A+Sal_Turno_B",
+      "orden_calculo": 23,
+      "tipo_regla": "PAIR_SCALE_TO_TARGET",
+      "target_code": "F10F11_MASA",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": "{\"a_col\":\"Sal_turno_A\",\"b_col\":\"Sal_Turno_B\"}"
+    },
+    {
+      "regla_id": 7,
+      "col_nombre": "Sal_promedio_dia",
+      "orden_calculo": 40,
+      "tipo_regla": "DERIVED",
+      "target_code": null,
+      "formula_py": "Sal_turno_A + Sal_Turno_B",
+      "depende_de": "Sal_turno_A,Sal_Turno_B",
+      "params_json": null
+    },
+    {
+      "regla_id": 21,
+      "col_nombre": "SRR_TMS_Turno_A",
+      "orden_calculo": 40,
+      "tipo_regla": "PAIR_SCALE_TO_TARGET",
+      "target_code": "F08F09_MASA",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": "{\"a_col\":\"SRR_TMS_Turno_A\",\"b_col\":\"SRR_TMS_Turno_B\"}"
+    },
+    {
+      "regla_id": 22,
+      "col_nombre": "SRR_TMS_promedio_dia",
+      "orden_calculo": 41,
+      "tipo_regla": "DERIVED",
+      "target_code": null,
+      "formula_py": "SRR_TMS_Turno_A.fillna(0) + SRR_TMS_Turno_B.fillna(0)",
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 23,
+      "col_nombre": "Ley_CuT_Real_srr",
+      "orden_calculo": 42,
+      "tipo_regla": "SCALE_FINOS_AND_RECALC_GRADE",
+      "target_code": "F08F09_LEY_CU",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": "{\n  \"masa_col\": \"SRR_TMS_promedio_dia\",\n  \"ley_base_col\": \"Ley_CuT_Real_srr\",\n  \"finos_out_col\": \"CuT_fino_srr_adj\",\n  \"scale\": 100,\n  \"fill\": 0\n}"
+    },
+    {
+      "regla_id": 8,
+      "col_nombre": "Apilado_TMS_Real",
+      "orden_calculo": 50,
+      "tipo_regla": "SCALE_TO_TARGET",
+      "target_code": "F14F15_MASA",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 9,
+      "col_nombre": "Apilado_TMH_promedio_dia",
+      "orden_calculo": 60,
+      "tipo_regla": "DERIVED",
+      "target_code": null,
+      "formula_py": "Apilado_TMS_Real * (1 + Humedad_promedio_dia/100.0)",
+      "depende_de": "Apilado_TMS_Real,Humedad_promedio_dia",
+      "params_json": null
+    },
+    {
+      "regla_id": 14,
+      "col_nombre": "TMS_Rotopala_1_Real",
+      "orden_calculo": 60,
+      "tipo_regla": "SCALE_TO_TARGET",
+      "target_code": "F19__MASA",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 15,
+      "col_nombre": "TMS_Rotopala_2_Real",
+      "orden_calculo": 61,
+      "tipo_regla": "SCALE_TO_TARGET",
+      "target_code": "F18__MASA",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 16,
+      "col_nombre": "Camiones_TMS_Reclamo_Oxidos",
+      "orden_calculo": 62,
+      "tipo_regla": "SCALE_TO_TARGET",
+      "target_code": "F22__MASA",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 17,
+      "col_nombre": "Camiones_TMS_Reclamo_Sulfuros",
+      "orden_calculo": 63,
+      "tipo_regla": "SCALE_TO_TARGET",
+      "target_code": "F21__MASA",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 10,
+      "col_nombre": "Apilado_TMH_promedio_dia",
+      "orden_calculo": 70,
+      "tipo_regla": "PROPORTIONAL_SPLIT",
+      "target_code": null,
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": "{\"a_col\":\"Apilado_TMH_turno_A\",\"b_col\":\"Apilado_TMH_turno_B\",\"total_col\":\"Apilado_TMH_promedio_dia\"}"
+    },
+    {
+      "regla_id": 11,
+      "col_nombre": "Cobre_fino_Apilado_Real",
+      "orden_calculo": 80,
+      "tipo_regla": "SCALE_TO_TARGET",
+      "target_code": "F14F15_FCU",
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 19,
+      "col_nombre": "Total_Ripios_Incluye_Camiones_Real",
+      "orden_calculo": 80,
+      "tipo_regla": "DERIVED",
+      "target_code": null,
+      "formula_py": "TMS_Rotopala_1_Real.fillna(0) + TMS_Rotopala_2_Real.fillna(0) + Camiones_TMS_Reclamo_Oxidos.fillna(0) + Camiones_TMS_Reclamo_Sulfuros.fillna(0)",
+      "depende_de": null,
+      "params_json": null
+    },
+    {
+      "regla_id": 13,
+      "col_nombre": "Ley_CuT_Real",
+      "orden_calculo": 90,
+      "tipo_regla": "DERIVED_SAFE_RATIO",
+      "target_code": null,
+      "formula_py": null,
+      "depende_de": null,
+      "params_json": "{\"num\":\"Cobre_fino_Apilado_Real\",\"den\":\"Apilado_TMS_Real\",\"scale\":100,\"fill\":0}"
+    }
+  ]
+}

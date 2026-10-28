@@ -154,10 +154,11 @@ def test_v2_highlight_uses_final_phase_not_stale_legacy_color(trigger):
     assert colors[0].startswith('lix-parcel draining')
 
 @pytest.mark.parametrize('enabled,previous,choice,expected',[(True,False,'legacy','v2'),(False,True,'v2','legacy'),(True,True,'legacy',None)])
-def test_feature_activation_on_open_preserves_comparison_choice(enabled,previous,choice,expected):
-    with patch.object(phase_flags,'enabled',return_value=enabled):
+@pytest.mark.parametrize('dev',[False,True])
+def test_feature_activation_on_open_preserves_comparison_choice(enabled,previous,choice,expected,dev):
+    with patch.object(phase_flags,'enabled',return_value=enabled),patch.object(phase_flags,'is_dev',return_value=dev):
         style,value,available=map_panel.initialize_model('lix-map-tab',{'display':'block'},choice,previous)
-    assert available is enabled and style==({} if enabled else {'display':'none'})
+    assert available is enabled and style==({} if enabled and not dev else {'display':'none'})
     assert value is __import__('dash').no_update if expected is None else value==expected
 
 def test_legacy_visual_phase_is_shown_with_natural_label():
