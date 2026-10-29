@@ -1,4 +1,4 @@
-from datetime import date
+﻿from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 from contextlib import contextmanager
@@ -53,7 +53,7 @@ def test_empty_or_failed_queries_clear_previous_results():
         assert result[0:3] == ('Sin dato',)*3
     with patch.object(db, 'overview', side_effect=ValueError('Fechas inválidas')):
         result=callbacks.load(1,None,None,None,None,None,None)
-        assert result[7] is None and result[0] == '—'
+        assert result[5] is None and result[0] == '—'
 
 
 def test_panel_registers_without_connecting():
@@ -104,7 +104,10 @@ def test_sidebar_keeps_all_existing_sections_and_new_one():
     exec(compile(module,'layout.py','exec'),namespace)
     for i, nav in enumerate(['nav-reportabilidad','nav-reclamo','nav-powerbi','nav-monitor-pitum','nav-lixiviacion']):
         context.triggered_id=nav
-        result=namespace['toggle_subtabs'](0,0,0,0,0,0,0,0,None,None)
-        assert len(result)==19
+        # La navegacion actual agrego Balance M6 y estados de montaje; la
+        # prueba antigua aun invocaba una firma de diez argumentos.
+        result=namespace['toggle_subtabs'](0,0,0,0,0,0,0,0,None,None,None,None,None)
+        assert len(result)==22
         assert [j for j,v in enumerate(result[:5]) if v['display']=='block']==[i]
         assert [j for j,v in enumerate(result[10:18]) if v.endswith(' active')]==[i]
+

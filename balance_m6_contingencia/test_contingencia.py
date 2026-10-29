@@ -139,16 +139,16 @@ def test_persistence_requires_full_preview_guard_before_any_sql():
         with pytest.raises(ValueError,match='Preview válido'):
             service.persist([], '00000000-0000-0000-0000-000000000001','tester','motivo','',None)
 
-def test_preview_locks_both_calculations_and_releases_on_failure():
+def test_preview_locks_three_calculations_and_releases_on_failure():
     from unittest.mock import MagicMock
     connection=MagicMock();engine=MagicMock();engine.connect.return_value.__enter__.return_value=connection
     r=row();r.update(pi_tmh=32768)
     keys=service.selection([r],[0],'TUM')
-    current=[{'fecha_operacional':r['fecha_operacional'],'turno':r['turno'],'equipo_codigo':r['equipo_codigo'],'version_m6':0,'huella_m6':'A'*64}]
+    current=[{**r,'valor_vigente':100.,'valor_auto':100.}]
     order=[]
     with patch.object(service,'engine_dev',return_value=engine),patch.object(service.phase_flags,'guard_connection'),patch.object(service,'check_contract'),patch.object(service,'records',return_value=current),patch.object(service,'lock_inputs',side_effect=lambda c,*args:order.append('verify' if args else 'lock') or 'B'*64),patch.object(service,'calculate',side_effect=lambda *args,**kwargs:order.append('calculate') or []),patch.object(service,'compare',return_value=[]):
         out=service.preview('2026-10-01','2026-10-12',4136,keys)
-    assert out['huella_entradas']=='B'*64 and order==['lock','calculate','calculate','verify']
+    assert out['huella_entradas']=='B'*64 and order==['lock','calculate','calculate','calculate','verify']
     connection.rollback.assert_called_once()
     order=[];connection.reset_mock()
     with patch.object(service,'engine_dev',return_value=engine),patch.object(service.phase_flags,'guard_connection'),patch.object(service,'check_contract'),patch.object(service,'lock_inputs',side_effect=ValueError('Entrada modificada')),patch.object(service,'calculate') as calc:

@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 import pytest
-from . import db, callbacks, panel
+from . import db, callbacks, panel,phase_db
 from .test_map import text_content
 
 
@@ -53,35 +53,41 @@ def test_no_parcel_no_query_and_empty_message():
     with patch.object(db,'_connection',side_effect=AssertionError):
         assert db.operational({'parcela':None})==(None,[])
         assert 'Seleccione una parcela' in text_content(callbacks.load_operational({'parcela':None}))
-    with patch.object(db,'operational',return_value=(None,[])):
+    with patch.object(phase_db,'operational',return_value=(None,[])):
         assert 'Sin información operacional' in text_content(callbacks.load_operational({'parcela':17,'hasta':'2026-09-10'}))
 
 
-@pytest.mark.parametrize('state,expected',[('MIXTO','Mixto'),('REPOSO_PRE_RECLAMO','Espera de reclamo'),('RIEGO_DRENAJE','Riego + drenaje'),('APILADO','Apilado')])
+def v2row(phase='RIEGO_CONTINUO'):
+    return dict(row(),fase_final=phase,fase_calculada_modelo=phase,condicion_dia='RIEGO_DRENAJE',
+                origen_fase_final='AUTOMATICO',riego_activo_v2=1)
+
+
+@pytest.mark.parametrize('state,expected',[('MIXTO','Mixto'),('ESPERA_RECLAMO','Espera de reclamo'),('RIEGO_CONTINUO','Riego continuo'),('APILADO','Apilado')])
 def test_friendly_header_and_separate_assignment(state,expected):
-    content=text_content(callbacks.operational_header(row(state=state),'2026-09-10'))
+    content=text_content(callbacks.operational_header(v2row(state),'2026-09-10'))
     for value in (expected,'10-09-2026','Campaña operacional 18','Campaña hidráulica Sin dato',
                   'Fuera de ventana hidráulica','Drenaje al 10-09-2026 Sin dato','no implica inactividad'):
         assert value in content
-    assert ('Condición actual' in content)==(state=='RIEGO_DRENAJE')
+    assert 'Condición diaria' in content and 'Fase estructural V2' in content
 
 
 def test_categorical_timeline_exact_condition_null_activity_and_colors():
-    fig=callbacks.operational_timeline([row(state='RIEGO_DRENAJE')],{'desde':'2026-09-01','hasta':'2026-09-10'})
+    fig=callbacks.operational_timeline([v2row()],{'desde':'2026-09-01','hasta':'2026-09-10'})
     assert fig.data[0].type=='bar' and fig.data[0].orientation=='h'
-    assert fig.data[0].customdata[0][1]=='Riego + drenaje'
+    assert fig.data[0].customdata[0][1]=='Riego continuo' and fig.data[0].customdata[0][2]=='Riego y aporte de drenaje'
     assert fig.data[0].customdata[0][5]=='Sin dato'
-    assert fig.data[0].marker.color==callbacks.operational_colors()['CICLO_HIDRAULICO']
+    assert fig.data[0].marker.color==callbacks.operational_colors()['RIEGO_CONTINUO']
     assert fig.layout.yaxis.type=='category'
 
 
 def test_operational_failure_independent_of_four_kpis_and_three_figures():
     totals=dict(registros=1,flujo=10,transferencia=-2,delta=0,fuera=1)
-    with patch.object(db,'overview',return_value=(totals,[])),patch.object(db,'operational',side_effect=RuntimeError):
+    with patch.object(db,'overview',return_value=(totals,[])),patch.object(phase_db,'operational',side_effect=RuntimeError):
         physical=callbacks.load(1,'2026-09-01','2026-09-10',1,None,17,None)
         assert physical[:4]==('10,000','-2,000','0,000','1')
-        assert len(physical[4:7])==3 and physical[7]['parcela']==17
-        assert 'No fue posible cargar el estado operacional.' in text_content(callbacks.load_operational(physical[7]))
+        from .test_ux_governance import components
+        assert len([n for n in components(physical[4]) if type(n).__name__=='Graph'])==3 and physical[5]['parcela']==17
+        assert 'No fue posible cargar el estado operacional.' in text_content(callbacks.load_operational(physical[5]))
 
 
 def test_existing_metric_and_chart_functions_unchanged_from_baseline():
@@ -89,7 +95,7 @@ def test_existing_metric_and_chart_functions_unchanged_from_baseline():
         return {n.name:ast.dump(n,include_attributes=False) for n in ast.parse(path.read_text(encoding='utf-8')).body if isinstance(n,ast.FunctionDef)}
     root=Path(__file__).parent
     for file,names in [('db.py',['where','options','overview','detail']),
-                       ('callbacks.py',['number','serial','figure','figures','load'])]:
+                       ('callbacks.py',['number','serial','figure'])]:
         old,new=nodes(root.parent/'test_fixtures/lixiviacion/diagnostico_fase1'/file),nodes(root/file)
         assert all(old[n]==new[n] for n in names)
 

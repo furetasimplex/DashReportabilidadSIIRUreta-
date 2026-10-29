@@ -5,6 +5,7 @@ import math
 import io
 import os
 import html
+import hashlib
 import posixpath
 import re
 import unicodedata
@@ -790,6 +791,18 @@ def validate_balance_output_package(xlsx_bytes, modelo_id=1):
             raise BalanceReportError(f"CRC invalido en la parte XLSX {corrupt}.")
         name_set = set(names)
         sheet_parts = _balance_sheet_parts({name: archive.read(name) for name in names})
+        if int(modelo_id) == 2:
+            # Modelo Completo es un esquema nativo, independiente del flowsheet.
+            # La huella incluye anclas, extremos, formatos y orden de los 9 objetos.
+            native_parts = {
+                "xl/drawings/drawing8.xml": "471872b3e3c66bbb9e913af16b90117f8a304c7763fb15e746c3c05cd20815e2",
+                "xl/drawings/_rels/drawing8.xml.rels": "c94c572a3318e9539c40f33d6907521c48d7f0254f9ac41cbff6348e14ea4af9",
+            }
+            for part, expected in native_parts.items():
+                if part not in name_set or hashlib.sha256(archive.read(part)).hexdigest() != expected:
+                    raise BalanceReportError("Modelo Completo debe conservar sus nueve objetos nativos y relaciones.")
+            if "xl/media/modelo_hidro_m6.png" in name_set:
+                raise BalanceReportError("El flowsheet no pertenece al esquema de Modelo Completo.")
         permitted_ref_parts = {
             sheet_parts[sheet] for sheet in (
                 "Proceso Área Seca", "Proceso Área Húmeda", "Proceso Área Cátodos"
@@ -1040,6 +1053,38 @@ def _balance_enable_full_calculation(wb):
             setattr(calc, attr, value)
 
 
+def _balance_validate_v2_humidity(wb, rows_data, cols_data):
+    """Impide exportar el informe V2 si omite o duplica F116/F117."""
+    ws = wb["Informe Hidrometalurgia"]
+    outputs = [str(ws.cell(row, 3).value or "").replace(" ", "").split(",")
+               for row in range(31, 42)]
+    for code in ("F116", "F117", "F122"):
+        if sum(group.count(code) for group in outputs) != 1:
+            raise BalanceReportError(f"Informe V2: {code} debe figurar una sola vez en SALIDAS.")
+    if ws["C40"].value != "F116, F117" or ws["C41"].value != "F122":
+        raise BalanceReportError("Informe V2: cambio la estructura de humedad/F122 en SALIDAS.")
+    expected = {}
+    for target, field in (("E40", "period_masa"), ("F40", "period_fino")):
+        column = get_column_letter(cols_data[field])
+        expected[target] = "+".join(
+            f"'Datos Reconciliados'!{column}{rows_data[code]}"
+            for code in ("F116", "F117")
+        )
+    expected.update({
+        "E42": "SUM(E31:E41)", "F42": "SUM(F31:F41)",
+        "E61": "SUM(E46:E60)", "F61": "SUM(F46:F60)",
+        "E64": "E27-E42-E61", "F64": "F27-F42-F61",
+        "E65": "E64/E27", "F65": "F64/F27",
+    })
+    for coordinate, formula in expected.items():
+        if ws[coordinate].value != "=" + formula:
+            raise BalanceReportError(f"Informe V2: formula protegida incorrecta en {coordinate}.")
+    for target, source in {"E32": "E68", "E33": "E72", "E34": "E75",
+                           "E36": "E77", "E37": "E80", "E38": "E81"}.items():
+        if wb["Resumen"][target].value != f"='Informe Hidrometalurgia'!{source}":
+            raise BalanceReportError(f"Informe V2: referencia dependiente incorrecta en Resumen!{target}.")
+
+
 def _balance_validate_template_contract(wb, modelo_id=1):
     """Valida la geometria observada en el template maestro oficial."""
     count = get_balance_model_contract(modelo_id)["flow_count"]
@@ -1078,6 +1123,8 @@ def _balance_validate_template_contract(wb, modelo_id=1):
         raise BalanceReportError(
             "Las columnas Periodo/Acumulado de Datos Reconciliados cambiaron."
         )
+    if count == 125:
+        _balance_validate_v2_humidity(wb, rows_data, cols_data)
 
     ws_analysis = wb[_BALANCE_SHEETS[1]]
     rows_analysis, flow_col_analysis = _balance_flow_rows(ws_analysis, count)

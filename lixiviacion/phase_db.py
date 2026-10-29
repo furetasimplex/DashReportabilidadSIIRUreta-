@@ -39,6 +39,55 @@ def snapshot(day):
         rows=[clean(r) for r in conn.execute(text(f'SELECT * FROM {SOURCE}(:fecha)'),{'fecha':day}).mappings()]
     return validate_snapshot(rows,day.isoformat())
 
+
+def operational(filters):
+    """Serie diaria V2 para Diagnóstico; consulta la TVF vigente sin replicar fases."""
+    if filters.get('parcela') is None:
+        return None, []
+    if not phase_flags.enabled('ENABLE_PHASE_MODEL_V2'):
+        raise PermissionError('La evolución operacional requiere el modelo V2 habilitado en DEV.')
+    from .db import where, SOURCE as hydraulic_source
+    from .phase_model import PHASES
+    where(filters)
+    start,end=(date.fromisoformat(filters[k][:10]) for k in ('desde','hasta'))
+    if (end-start).days>32767:
+        raise ValueError('Período operacional excede el calendario disponible.')
+    params=dict(desde=start,hasta=end,pad=int(filters['pad']) if filters.get('pad') is not None else None,
+                parcela=int(filters['parcela']))
+    fields=('fecha','pad_id','parcela_id','numero_parcela','nombre_pad','campana_id','numero_campana',
+            'fase_calculada_modelo','fase_final','origen_fase_final','condicion_dia','nivel_alerta',
+            'riego_activo_v2','tiene_dato_riego','drenaje_activo','tiene_dato_drenaje','calidad_estado',
+            'motivo_revision_modelo','dias_sin_riego_confirmados')
+    with _connection() as conn:
+        phase_flags.guard_connection(conn)
+        rows=[clean(r) for r in conn.execute(text(f'''WITH fechas AS (
+            SELECT CAST(:desde AS date) fecha
+            UNION ALL SELECT DATEADD(day,1,fecha) FROM fechas WHERE fecha<CAST(:hasta AS date)
+        ) SELECT {','.join('v.'+field for field in fields)}
+        FROM fechas d CROSS APPLY {SOURCE}(d.fecha) v
+        WHERE v.parcela_id=:parcela AND (:pad IS NULL OR v.pad_id=:pad)
+        ORDER BY v.fecha OPTION(MAXRECURSION 32767,RECOMPILE)'''),params).mappings()]
+        hydraulic=[dict(r) for r in conn.execute(text(f'''SELECT fecha,pad_id,parcela_id,
+            campana_id campana_hidraulica_id,numero_campana numero_campana_hidraulica,estado_asignacion
+            FROM {hydraulic_source} WHERE fecha BETWEEN :desde AND :hasta
+            AND parcela_id=:parcela AND (:pad IS NULL OR pad_id=:pad)'''),params).mappings()]
+    assignment={}
+    for row in hydraulic:
+        key=(row['fecha'],row['pad_id'],row['parcela_id'])
+        if key in assignment:raise ValueError('Asignación hidráulica duplicada; no se deduplican filas.')
+        assignment[key]=row
+    seen=set()
+    for row in rows:
+        if row['fecha'] in seen or not start<=row['fecha']<=end or row['parcela_id']!=params['parcela'] or (params['pad'] is not None and row['pad_id']!=params['pad']):
+            raise ValueError('Grano operacional V2 inválido; no se deduplican ni replican fases.')
+        if row['fase_final'] not in PHASES or row['fase_final']=='SIN_COBERTURA':
+            raise ValueError('Fase estructural V2 no disponible; no se utiliza el modelo anterior.')
+        seen.add(row['fecha'])
+        metadata=assignment.get((row['fecha'],row['pad_id'],row['parcela_id']),{})
+        row.update({field:metadata.get(field) for field in ('campana_hidraulica_id','numero_campana_hidraulica','estado_asignacion')})
+    header=next((r for r in rows if r['fecha']==end),None)
+    return header,rows
+
 def _row(conn,day,pad,parcel):
     rows=[dict(r) for r in conn.execute(text(f'SELECT * FROM {SOURCE}(:fecha) WHERE pad_id=:pad AND parcela_id=:parcela'),{'fecha':day,'pad':pad,'parcela':parcel}).mappings()]
     if len(rows)!=1:raise ValueError('Identidad operacional no disponible o ambigua.')
@@ -84,8 +133,8 @@ def _actor():
         raise PermissionError('Origen de solicitud no autorizado.')
     actor=session['user'].strip()
     if len(actor)>150:raise ValueError('Identidad de usuario inválida.')
-    if not auth.user_is_admin(actor):
-        raise PermissionError('Se requiere permiso administrativo para modificar una confirmación operacional.')
+    if not auth.user_can_write_operational_decisions(actor):
+        raise PermissionError('Se requiere un usuario activo con permiso para registrar decisiones operacionales.')
     return actor
 
 

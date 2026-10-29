@@ -15,6 +15,22 @@ PADS = {1: 'Óxidos', 2: 'Sulfuros'}
 log = logging.getLogger(__name__)
 
 
+def _detail_with_modules(row):
+    component=phase_panel.detail(row)
+    if not hasattr(component,'children'):
+        return component
+    module=phase_panel.irrigation_modules_panel.load_detail(row)
+    if module is not None:
+        children=list(component.children)
+        for i,child in enumerate(children):
+            parts=getattr(child,'children',None)
+            if isinstance(parts,list) and parts and getattr(parts[0],'children',None)=='Riego':
+                children.insert(i,module)
+                component.children=children
+                break
+    return component
+
+
 def state(row):
     return PHASES.get(row.get('fase_final'),PHASES['NO_EVALUABLE']) if row.get('model_v2') else FASES[row['fase_visual']]
 
@@ -87,7 +103,7 @@ def layout():
                 id='lix-map-date', date=None, display_format='DD-MM-YYYY', first_day_of_week=1))], md=4),
             dbc.Col([dbc.Label('PAD'), dcc.Dropdown(id='lix-map-pad', value=None,
                 options=[{'label':v,'value':k} for k,v in PADS.items()], placeholder='Ambos PAD', clearable=True)], md=4),
-            dbc.Col([dbc.Label('Modelo operacional'),dcc.Dropdown(id='lix-map-view',options=[{'label':'Modelo operacional','value':'v2'},{'label':'Comparar modelo anterior','value':'legacy'}],value='v2' if v2 else 'legacy',clearable=False)],md=4,id='lix-map-model-control',style={} if v2 else {'display':'none'}),
+            dbc.Col([dbc.Label('Modelo operacional'),dcc.Dropdown(id='lix-map-view',options=([{'label':'Modelo operacional','value':'v2'}] if phase_flags.is_dev() and v2 else [{'label':'Modelo operacional','value':'v2'},{'label':'Comparar modelo anterior','value':'legacy'}]),value='v2' if v2 else 'legacy',clearable=False)],md=4,id='lix-map-model-control',style={} if v2 and not phase_flags.is_dev() else {'display':'none'}),
             dbc.Col(html.P('Seleccione una parcela para revisar su detalle.', className='text-muted mt-4'), md=4),
         ])), className='mb-3'),
         dcc.Store(id='lix-map-data'), dcc.Store(id='lix-map-model-available',data=v2), html.Div(id='lix-map-date-error'),
@@ -113,7 +129,7 @@ def initialize_model(tab,style,selected,previously_enabled):
     enabled=phase_flags.enabled('ENABLE_PHASE_MODEL_V2')
     from dash import no_update
     choice=('v2' if enabled else 'legacy') if enabled!=bool(previously_enabled) else no_update
-    return ({} if enabled else {'display':'none'}),choice,enabled
+    return ({} if enabled and not phase_flags.is_dev() else {'display':'none'}),choice,enabled
 
 @callback(Output('lix-map-date','date'), Output('lix-map-date-error','children'),
           Input('lix-tabs','active_tab'), Input('subtabs-lixiviacion','style'),
@@ -149,7 +165,7 @@ def load_map(day, tab, style, view='legacy', refresh=0):
             except Exception as exc:
                 log.warning('Fallback legacy del mapa (%s)',type(exc).__name__)
                 rows=map_db.snapshot(day);v2=False
-                warning=dbc.Alert('El modelo operacional nuevo no está disponible; se muestra el modelo anterior.',color='warning')
+                warning=dbc.Alert('El modelo operacional V2 no está disponible. Se muestra una vista de respaldo; revise con soporte.' if phase_flags.is_dev() else 'El modelo operacional nuevo no está disponible; se muestra el modelo anterior.',color='warning')
         else:rows = map_db.snapshot(day)
         coverage=None
         if v2:
@@ -281,13 +297,13 @@ def open_detail(clicks, day, pad, tab, data,links=None,preview=None,selected=Non
         row=preview['row']
         if any(row.get(k)!=selected.get(k) for k in ('pad_id','parcela_id','campana_id')) or str(row.get('fecha'))[:10]!=str(effective):
             raise PreventUpdate
-        return True,phase_panel.detail(phase_db.clean(row))
+        return True,_detail_with_modules(phase_db.clean(row))
     if not isinstance(trigger, dict) or not any(clicks or []) or not data or data['fecha'] != day:
         return False, None
     row = next((r for r in data['rows'] if r['pad_id']==trigger['pad'] and r['parcela_id']==trigger['parcel']), None)
     if row is None:
         return False, None
-    if row.get('model_v2'):return True, phase_panel.detail(row)
+    if row.get('model_v2'):return True,_detail_with_modules(row)
     try:
         modules = map_db.fetch_modulos_parcela(day, row['pad_id'], row['parcela_id'])
     except Exception as exc:

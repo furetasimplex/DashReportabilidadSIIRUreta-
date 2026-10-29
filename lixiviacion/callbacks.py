@@ -11,8 +11,9 @@ from dash import Input, Output, State, callback, ctx, html, dcc
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
-from . import db
-from .map_states import FASES, ESTADOS, CALIDAD, fase_visual, actividad
+from . import db,phase_db
+from .phase_model import PHASES,CONDITIONS,label
+from .map_states import CALIDAD, actividad
 
 log = logging.getLogger(__name__)
 PADS = {1: 'Óxidos', 2: 'Sulfuros'}
@@ -67,7 +68,9 @@ def figures(rows, single_parcel=False):
     for day in dates:
         values = [v for v in daily[day] if v is not None]
         y.append(serial(sum(values)) if values else None)
-    transfer.add_trace(go.Bar(x=dates, y=y, name='Transferencia Cu', marker_color='#1F4E78'))
+    transfer.update_yaxes(tickformat='.8~r', exponentformat='none', showexponent='none')
+    transfer.add_trace(go.Bar(x=dates, y=y, name='Transferencia Cu', marker_color='#1F4E78',
+        hovertemplate='Fecha: %{x|%d-%m-%Y}<br>Transferencia Cu: %{y:.8~r} t Cu/d<extra></extra>'))
     return flow, chemistry, transfer
 
 
@@ -100,12 +103,15 @@ def options(style, start, end, pad, state, campaign, parcel, tab):
 
 
 @callback(*[Output(i, 'children') for i in ['lix-kpi-flujo', 'lix-kpi-cu', 'lix-kpi-delta', 'lix-kpi-fuera']],
-          Output('lix-flujo', 'figure'), Output('lix-quimica', 'figure'), Output('lix-transferencia', 'figure'),
+          Output('lix-diagnostic-charts', 'children'),
           Output('lix-aplicado', 'data'), Output('lix-error', 'children'), Output('lix-resumen', 'children'),
           Input('lix-consultar', 'n_clicks'), State('lix-fechas', 'start_date'), State('lix-fechas', 'end_date'),
           State('lix-pad', 'value'), State('lix-campana', 'value'), State('lix-parcela', 'value'),
           State('lix-estado', 'value'), prevent_initial_call=True)
 def load(clicks, start, end, pad, campaign, parcel, state):
+    if not clicks:
+        raise PreventUpdate
+    from .panel import diagnostic_charts, INITIAL_MESSAGE
     try:
         f = filters(start, end, pad, campaign, parcel, state)
         totals, rows = db.overview(f)
@@ -114,10 +120,10 @@ def load(clicks, start, end, pad, campaign, parcel, state):
             charts[1].update_layout(title='Cu drenaje vs refino · parcela seleccionada')
         message = dbc.Alert('No hay registros para los filtros seleccionados.', color='info') if not totals['registros'] else None
         return (number(totals['flujo']), number(totals['transferencia']), number(totals['delta']),
-                number(totals['fuera'], 0), *charts, f, message,
+                number(totals['fuera'], 0), diagnostic_charts(charts, parcel is not None), f, message,
                 f"Consulta aplicada: {start} → {end} · {totals['registros']} registros. Cambie filtros y pulse Consultar.")
     except Exception as exc:
-        return ('—', '—', '—', '—', *figures([]), None, alert(exc), '')
+        return ('—', '—', '—', '—', html.P(INITIAL_MESSAGE, className='text-muted'), None, alert(exc), '')
 
 
 @callback(Output('lix-tabla', 'data'), Output('lix-tabla', 'page_count'), Output('lix-tabla', 'page_current'),
@@ -146,28 +152,31 @@ def operational_colors():
     # La paleta tiene una única fuente: CSS existente del mapa. No se modifica ni duplica.
     css = (Path(__file__).resolve().parent.parent/'assets'/'lixiviacion_map.css').read_text(encoding='utf-8')
     colors = dict(re.findall(r'\.lix-operational \.(\w+)\s*\{\s*--lix-state:\s*(#[0-9a-fA-F]{6})', css))
-    return {phase: colors[style] for phase, (_, style) in FASES.items()}
+    return {phase: colors[style] for phase, (_, style) in PHASES.items() if phase!='SIN_COBERTURA'}
 
 
 def operational_timeline(rows, applied):
     fig = go.Figure()
     palette = operational_colors()
-    for phase, (label, _) in FASES.items():
-        subset = [r for r in rows if fase_visual(r['estado_operacional']) == phase]
+    for phase, (phase_label, _) in PHASES.items():
+        if phase=='SIN_COBERTURA':continue
+        subset = [r for r in rows if r['fase_final'] == phase]
         if not subset:
             continue
-        custom = [[r['fecha'].strftime('%d-%m-%Y'), ESTADOS[r['estado_operacional']][1], label,
+        custom = [[r['fecha'].strftime('%d-%m-%Y'), phase_label, label(r['condicion_dia'],CONDITIONS),
                    str(r['numero_campana']) if r['numero_campana'] is not None else 'Sin dato',
                    actividad(r['tiene_dato_riego'],r['riego_activo']),
                    actividad(r['tiene_dato_drenaje'],r['drenaje_activo']),
-                   CALIDAD.get(r['calidad_estado'],'Sin dato')] for r in subset]
-        fig.add_trace(go.Bar(name=label, orientation='h', y=['Estado operacional']*len(subset),
+                   CALIDAD.get(r['calidad_estado'],'Sin dato'),db.HYDRAULIC_LABELS.get(r.get('estado_asignacion'),'Sin dato'),
+                   label(r['fase_calculada_modelo']),r['origen_fase_final']] for r in subset]
+        fig.add_trace(go.Bar(name=phase_label, orientation='h', y=['Fase estructural V2']*len(subset),
             base=[r['fecha'].isoformat() for r in subset], x=[86400000]*len(subset),
             width=0.55, marker_color=palette[phase], customdata=custom,
-            hovertemplate='Fecha: %{customdata[0]}<br>Estado operacional: %{customdata[1]}<br>'
-            'Fase visual: %{customdata[2]}<br>Campaña operacional: %{customdata[3]}<br>'
+            hovertemplate='Fecha: %{customdata[0]}<br>Fase estructural: %{customdata[1]}<br>'
+            'Condición diaria: %{customdata[2]}<br>Campaña operacional: %{customdata[3]}<br>'
             'Riego activo: %{customdata[4]}<br>Drenaje activo: %{customdata[5]}<br>'
-            'Calidad: %{customdata[6]}<extra></extra>'))
+            'Calidad: %{customdata[6]}<br>Asignación hidráulica: %{customdata[7]}<br>'
+            'Fase calculada V2: %{customdata[8]}<br>Origen de fase final: %{customdata[9]}<extra></extra>'))
     fig.update_layout(template='plotly_white', height=220,
         barmode='overlay', margin=dict(l=20,r=20,t=15,b=70),
         xaxis=dict(type='date',tickformat='%d-%m-%Y',range=[applied['desde'],
@@ -178,8 +187,8 @@ def operational_timeline(rows, applied):
 
 def operational_header(row, end):
     when = date.fromisoformat(end[:10]).strftime('%d-%m-%Y')
-    phase = fase_visual(row['estado_operacional'])
-    fields = [('Fase operacional',FASES[phase][0]),('Condición actual',ESTADOS[row['estado_operacional']][1])] if phase == 'CICLO_HIDRAULICO' else [('Estado operacional',ESTADOS[row['estado_operacional']][1])]
+    fields = [('Fase estructural V2',label(row['fase_final'])),
+              ('Condición diaria',label(row['condicion_dia'],CONDITIONS))]
     fields += [('Campaña operacional',row['numero_campana']),
                ('Calidad',CALIDAD.get(row['calidad_estado'],'Sin dato')),
                ('Asignación hidráulica',db.HYDRAULIC_LABELS.get(row['estado_asignacion'],'Sin dato')),
@@ -202,7 +211,7 @@ def load_operational(applied):
     if not applied or applied.get('parcela') is None:
         return html.P('Seleccione una parcela para visualizar su estado operacional y evolución.',className='text-muted')
     try:
-        header, rows = db.operational(applied)
+        header, rows = phase_db.operational(applied)
         content = [operational_header(header,applied['hasta'])] if header else []
         content.append(dbc.Card(dbc.CardBody([
             html.H5('Evolución del estado operacional'),

@@ -1,6 +1,7 @@
 """Regresión de coexistencia y transferencia V10; sin SQL ni solver."""
 import io
 import json
+import re
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -88,7 +89,7 @@ def test_formulas_objetos_y_fechas_preservados(exported):
             elif name.startswith('xl/media/') or name.endswith('.rels') or name.startswith('xl/drawings/') and name not in [f'xl/drawings/drawing{k}.xml' for k in (1,2,3)]:
                 assert a.read(name)==b.read(name)
         # Nodo General: se retiraron solo las 26 formulas TMS de G43:G68.
-        assert count==3087
+        assert count==3089
     validate_balance_output_package(output,2)
     wb=load_workbook(io.BytesIO(output),data_only=False)
     for ws in wb:
@@ -99,7 +100,7 @@ def test_formulas_objetos_y_fechas_preservados(exported):
     assert wb.calculation.fullCalcOnLoad and wb.calculation.forceFullCalc
 
 
-def test_modelo_completo_nodo_general_solo_tmf_y_diagrama_pdf(exported):
+def test_modelo_completo_nodo_general_solo_tmf_y_esquema_nativo(exported):
     """La fuente basal aplica el formato en cada exportacion sin tocar G global."""
     wb = load_workbook(io.BytesIO(exported[3]), data_only=False)
     ws = wb['Modelo Completo']
@@ -119,11 +120,16 @@ def test_modelo_completo_nodo_general_solo_tmf_y_diagrama_pdf(exported):
         drawing = ET.fromstring(archive.read('xl/drawings/drawing8.xml'))
         ns = {'d': 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'}
         pictures = drawing.findall('.//d:pic', ns)
-        assert len(pictures) == 2  # Logo existente y un solo diagrama oficial.
-        assert len(drawing.findall('.//d:sp', ns)) == 0
-        assert sum(p.find('d:nvPicPr/d:cNvPr', ns).attrib.get('name') == 'Modelo Hidro M6'
-                   for p in pictures) == 1
-        assert 'xl/media/modelo_hidro_m6.png' in archive.namelist()
+        assert len(drawing) == 9
+        assert len(pictures) == 1
+        assert len(drawing.findall('.//d:sp', ns)) == 2
+        assert len(drawing.findall('.//d:cxnSp', ns)) == 6
+        assert 'xl/media/modelo_hidro_m6.png' not in archive.namelist()
+        with ZipFile(get_balance_template_path(2)) as template:
+            for part in ('xl/drawings/drawing8.xml', 'xl/drawings/_rels/drawing8.xml.rels'):
+                assert archive.read(part) == template.read(part)
+        for coordinate,value in {'E21':25,'F21':29,'G21':42,'I25':111,'I31':112,'G38':'Inventarios'}.items():
+            assert ws[coordinate].value == value
         # Excel usa sheetId, que no coincide necesariamente con el numero de parte.
         book = ET.fromstring(archive.read('xl/workbook.xml'))
         sid = next(s.attrib['sheetId'] for s in book.find('m:sheets', NS)
@@ -133,6 +139,96 @@ def test_modelo_completo_nodo_general_solo_tmf_y_diagrama_pdf(exported):
             current = cell.attrib.get('i', current)
             assert not (current == sid and cell.attrib['r'] in
                         {f'G{r}' for r in range(43, 69)})
+
+
+def test_rechaza_desplazamiento_de_objetos_nativos(exported):
+    output = io.BytesIO()
+    with ZipFile(io.BytesIO(exported[3])) as source, ZipFile(output,'w') as target:
+        for info in source.infolist():
+            raw = source.read(info.filename)
+            if info.filename == 'xl/drawings/drawing8.xml':
+                raw = re.sub(rb'<xdr:col>\d+</xdr:col>', b'<xdr:col>99</xdr:col>', raw, count=1)
+                assert raw != source.read(info.filename)
+            target.writestr(info,raw)
+    with pytest.raises(BalanceReportError, match='nueve objetos nativos'):
+        validate_balance_output_package(output.getvalue(),2)
+
+
+@pytest.mark.parametrize('loss116,loss117', [(0, 0), (0, Decimal('21557.506216')), (7, Decimal('123.456789'))])
+def test_humedad_dinamica_nuevos_periodos(loss116, loss117):
+    period, accumulated, meta = inputs()
+    period = period.copy()
+    for code, mass in [('F116', loss116), ('F117', loss117)]:
+        period.loc[code, 'masa_reconciliada'] = Decimal(str(mass))
+        period.loc[code, 'fino_cu_reconciliado'] = Decimal(0)
+    meta = dict(meta, caso_id=99991, solver_run_id=99992, run_id=99992,
+                fecha_inicio=date(2026,11,1), fecha_fin=date(2026,11,7),
+                fecha_inicio_acumulado=date(2026,11,1), fecha_fin_acumulado=date(2026,11,7))
+    out = export_balance_reconciliacion_to_template(period, accumulated, meta)
+    wb = load_workbook(io.BytesIO(out), data_only=False)
+    ws = wb['Informe Hidrometalurgia']
+    assert ws['C40'].value == 'F116, F117' and ws['C41'].value == 'F122'
+    for col, source in [('E','D'), ('F','F')]:
+        assert ws[f'{col}40'].value == f"='Datos Reconciliados'!{source}118+'Datos Reconciliados'!{source}119"
+        assert ws[f'{col}42'].value == f'=SUM({col}31:{col}41)'
+        assert ws[f'{col}61'].value == f'=SUM({col}46:{col}60)'
+        assert ws[f'{col}64'].value == f'={col}27-{col}42-{col}61'
+        assert ws[f'{col}65'].value == f'={col}64/{col}27'
+    assert Decimal(str(wb['Datos Reconciliados']['D118'].value)) == Decimal(str(loss116))
+    assert Decimal(str(wb['Datos Reconciliados']['D119'].value)) == Decimal(str(loss117))
+    for target, source in {'E32':'E68','E33':'E72','E34':'E75','E36':'E77','E37':'E80','E38':'E81'}.items():
+        assert wb['Resumen'][target].value == f"='Informe Hidrometalurgia'!{source}"
+    assert wb['Modelo Completo']['H51'].data_type == 'f'
+    assert wb['Modelo Completo']['E43'].fill.fgColor.rgb == 'FFFFFFFF'
+
+
+@pytest.mark.parametrize('kind', ['wrong_source', 'duplicate', 'summary', 'flow_order'])
+def test_humedad_rechaza_dependencias_incorrectas(kind):
+    from report_export.export_to_excel import _balance_validate_template_contract
+    wb = load_workbook(get_balance_template_path(2), data_only=False)
+    if kind == 'wrong_source':
+        wb['Informe Hidrometalurgia']['E40'] = "='Datos Reconciliados'!D117+'Datos Reconciliados'!D118"
+    elif kind == 'duplicate':
+        wb['Informe Hidrometalurgia']['C39'] = 'F116, F117'
+    elif kind == 'summary':
+        wb['Resumen']['E32'] = "='Informe Hidrometalurgia'!E67"
+    else:
+        wb['Datos Reconciliados']['B118'], wb['Datos Reconciliados']['B119'] = 'F117', 'F116'
+    with pytest.raises(BalanceReportError):
+        _balance_validate_template_contract(wb,2)
+
+
+def test_nodo_general_conserva_sumifs_compartidas(tmp_path):
+    """Excel puede compactar H50:H65; el empaquetador conserva ese XML."""
+    from report_export.export_to_excel import _balance_cell_xml
+    template = tmp_path / 'template_con_formulas_compartidas.xlsx'
+    shared_cells = {}
+    with ZipFile(get_balance_template_path(2)) as source, ZipFile(template,'w') as target:
+        for info in source.infolist():
+            raw = source.read(info.filename)
+            if info.filename == 'xl/worksheets/sheet10.xml':
+                for row in range(50,66):
+                    coord = f'H{row}'
+                    old = _balance_cell_xml(raw,coord)
+                    if row == 50:
+                        new = old.replace(b'<f>',b'<f t="shared" ref="H50:H65" si="0">',1)
+                    else:
+                        new = re.sub(rb'<f>.*?</f>',b'<f t="shared" si="0"/>',old)
+                    assert new != old
+                    raw = raw.replace(old,new,1)
+                    # El exportador elimina caches antiguos, conserva la formula compartida.
+                    shared_cells[coord] = re.sub(rb'<v\b[^>]*(?:/>|>.*?</v>)',b'',new)
+            target.writestr(info,raw)
+    period, accumulated, meta = inputs()
+    with patch('report_export.export_to_excel.validate_balance_template_hash', return_value='fixture_compartidas'):
+        out = export_balance_reconciliacion_to_template(period,accumulated,meta,str(template))
+    with ZipFile(io.BytesIO(out)) as result:
+        raw = result.read('xl/worksheets/sheet10.xml')
+        for coord,cell in shared_cells.items():
+            assert _balance_cell_xml(raw,coord) == cell
+    wb = load_workbook(io.BytesIO(out),data_only=False)
+    for row in range(50,66):
+        assert wb['Modelo Completo'][f'H{row}'].value == f'=SUMIFS($Q$16:$Q$36,$N$16:$N$36,G{row})'
 
 
 @pytest.mark.parametrize('kind',['missing','duplicate','nan','inf','wrong_model','wrong_case','changed_run'])

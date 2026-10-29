@@ -55,9 +55,6 @@ def render_sidebar():
             html.Hr(className="siir-divider"),
 
             html.Div("ÁREAS DE TRABAJO", className="siir-section-label"),
-            # Compatibilidad del antiguo disparador; el acceso visible vive en Monitoreo.
-            html.Button(id="nav-balance-m6", n_clicks=0, hidden=True, tabIndex=-1,
-                        **{"aria-hidden": "true"}),
             dcc.Store(id="monitor-route-sync"),
 
             dbc.Nav([
@@ -223,7 +220,6 @@ def register_callbacks(app):
         Output("siir-bc-active", "children"),
         Output("subtabs-balance-m6", "style"),
         Output("subtabs-balance-m6", "children"),
-        Output("nav-balance-m6", "className"),
         Output("pitum-tabs", "active_tab"),
         Input("nav-reportabilidad", "n_clicks"),
         Input("nav-reclamo", "n_clicks"),
@@ -233,7 +229,6 @@ def register_callbacks(app):
         Input("nav-polinomio-acido", "n_clicks"),
         Input("nav-curvas-recon", "n_clicks"),
         Input("nav-reconstitucion", "n_clicks"),
-        Input("nav-balance-m6", "n_clicks"),
         Input("page-url", "pathname"),
         Input("page-url", "hash"),
         State("subtabs-curvas-recon", "children"),
@@ -242,7 +237,7 @@ def register_callbacks(app):
         prevent_initial_call=False,
     )
     def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum, n_lix, n_polinomio, n_curvas,
-                       n_reconstitucion, n_balance_m6, pathname, url_hash, mounted_curvas, mounted_reconstitucion,
+                       n_reconstitucion, pathname, url_hash, mounted_curvas, mounted_reconstitucion,
                        mounted_balance_m6):
         # dash.ctx.triggered_id es None en la carga inicial -> por defecto
         # se muestra Reportabilidad, igual que antes.
@@ -263,7 +258,7 @@ def register_callbacks(app):
                 triggered = "nav-balance-m6" if route_tab == "pitum-contingencia-m6" else "nav-monitor-pitum"
             elif triggered == "page-url":
                 # Los href="#" existentes no deben sobrescribir el clic de otro menú.
-                return (dash.no_update,) * 23
+                return (dash.no_update,) * 22
 
         secciones = {
             "nav-balance-m6": "monitor-pitum",
@@ -316,7 +311,6 @@ def register_callbacks(app):
             clase("curvas-recon"), clase("reconstitucion"), titles[activa],
             estilo("balance-m6"),
             dash.no_update,
-            clase("balance-m6"),
             "pitum-contingencia-m6" if triggered == "nav-balance-m6" else (route_tab or dash.no_update),
         )
 

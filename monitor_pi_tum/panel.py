@@ -78,7 +78,7 @@ def layout():
             ], label="Diagnóstico de Correas", tab_id="pitum-diagnostico"),
             dbc.Tab(gestion.layout(),
                     label="Gestión PI / TUM", tab_id="pitum-gestion"),
-            *([dbc.Tab(m6_panel.layout(), label="Contingencia Balance M6", tab_id="pitum-contingencia-m6")] if is_dev() else []),
+            *([dbc.Tab(m6_panel.layout(), label="Contingencia para Balance de Masa", tab_id="pitum-contingencia-m6")] if is_dev() else []),
         ], id="pitum-tabs", active_tab="pitum-diagnostico"),
     ], fluid=True)
 

@@ -79,7 +79,7 @@ def _month_options():
 
 def _report_card(title, description, tipo):
     botones_pdf = []
-    if tipo not in {"representatividad_torres", "reporte_turno", "prod"}:
+    if tipo not in {"representatividad_torres", "reporte_turno", "prod", "conciliacion"}:
         botones_pdf = [
             dbc.Button([
                 html.I(className="bi bi-file-earmark-pdf me-2"),
@@ -114,6 +114,13 @@ def _report_card(title, description, tipo):
             ),
         ], className="rp-balance-selection mb-2")
 
+    if tipo == "conciliacion":
+        balance_selector = html.Div([
+            html.Small("Utiliza el Caso oficial seleccionado en Balance Semanal."),
+            html.Div("Seleccione un caso M6 con datos reconciliados publicados.",
+                     id="report-reconciled-status", className="small mt-2"),
+        ], className="mb-2")
+
     return dbc.Card([
         dbc.CardBody([
             # Icon + title + badge
@@ -146,7 +153,7 @@ def _report_card(title, description, tipo):
                     "Exportar Excel",
                 ], id={"type": "report-export-btn", "tipo": tipo},
                    className="rp-btn-export me-2", n_clicks=0,
-                   disabled=(tipo == "balance"))
+                   disabled=(tipo in {"balance", "conciliacion"}))
                 if tipo != "representatividad_torres"
                 else html.Div(),
                 *botones_pdf,
@@ -281,8 +288,8 @@ def layout():
                             "balance",
                         ), md=4, className="mb-4 rp-balance-column"),
                         dbc.Col(_report_card(
-                            "Conciliación Mensual",
-                            "Conciliación mensual acumulada de producción catódica.",
+                            "Datos Conciliados Reconciliados",
+                            "Descarga los valores diarios ajustados y publicados del caso de balance reconciliado, con su período y UUID.",
                             "conciliacion",
                         ), md=4, className="mb-4"),
                     ], className="g-4 mt-3"),

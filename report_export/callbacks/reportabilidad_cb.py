@@ -86,6 +86,29 @@ from report_export.balance_service import (
     get_balance_case_status,
 )
 from report_export.balance_contract import build_balance_report_identity, get_balance_template_path
+from report_export.reconciled_daily_export import (
+    build_reconciled_daily_excel, fetch_published_reconciled,
+)
+
+
+@callback(
+    Output("report-reconciled-status", "children"),
+    Output({"type": "report-export-btn", "tipo": "conciliacion"}, "disabled", allow_duplicate=True),
+    Input("report-balance-caso", "value"),
+    prevent_initial_call=True,
+)
+def actualizar_estado_reconciliado_publicado(caso_id):
+    if caso_id is None:
+        return "Seleccione el Caso oficial en Balance Semanal.", True
+    try:
+        from report_export.report_export import _get_engine
+        _, identity = fetch_published_reconciled(_get_engine(), int(caso_id))
+        return (f'Caso {identity["caso_id"]} | Solver {identity["solver_run_id"]} | '
+                f'{identity["fecha_inicio"]:%d-%m-%Y} a {identity["fecha_fin"]:%d-%m-%Y} | '
+                f'UUID {identity["run_id"]}'), False
+    except Exception as exc:
+        return f"Exportación no disponible: {exc}", True
+
 _NOMBRE_REPORTE_REPRESENTATIVIDAD_TORRES = "Representatividad Torres"
 _TEXTO_CONFIRMACION_BORRADO = "confirmar borrado"
 
@@ -7780,6 +7803,20 @@ def exportar_excel(
 
     print(f"[EXCEL] tipo={tipo} | ini={f_ini} | fin={f_fin}")
 
+    if tipo == "conciliacion":
+        try:
+            if balance_caso_id is None:
+                raise ValueError("Seleccione el Caso oficial en Balance Semanal.")
+            from report_export.report_export import _get_engine
+            content, filename, identity = build_reconciled_daily_excel(_get_engine(), int(balance_caso_id))
+            status = (f'Datos reconciliados publicados: caso {identity["caso_id"]}, '
+                      f'solver {identity["solver_run_id"]}, '
+                      f'{identity["fecha_inicio"]:%d-%m-%Y} a {identity["fecha_fin"]:%d-%m-%Y}, '
+                      f'UUID {identity["run_id"]}.')
+            return _enviar_descarga(content, filename), status, _done, False, no_update
+        except Exception as exc:
+            return no_update, f"No se generó el Excel reconciliado: {exc}", _done, False, no_update
+
     if not f_ini or not f_fin:
         print("[EXCEL] Sin fechas - abortando")
         return no_update, "Debe seleccionar rango de fechas.", _done, False, no_update
@@ -8163,6 +8200,9 @@ def generar_pdf(n_clicks_list, f_ini, f_fin, balance_caso_id=None):
 
     tipo = triggered["tipo"]
     _done = html.Div()
+
+    if tipo == "conciliacion":
+        return no_update, "PDF reconciliado no disponible; utilice Exportar Excel.", _done, False, no_update
 
     if tipo == "balance":
         try:

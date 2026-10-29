@@ -13,8 +13,9 @@ def test_minimum_context_without_diagnostic_duplication():
     r=row();before=copy.deepcopy(r)
     content=phase_panel.confirmation_summary(r,{'decision':0});text=text_content(content)
     for value in ['Fase automática actual','Riego continuo','Condición actual','Sin información suficiente del día',
-                  'Alerta','Información de riego incompleta','Modelo anterior','Ver detalle operacional']:
+                  'Alerta','Información de riego incompleta','Ver detalle operacional']:
         assert value in text
+    assert ('Modelo anterior' in text) is (not phase_panel.phase_flags.is_dev())
     for value in ['Caudal real','Último riego real','Primer riego reconocido','Cu++ drenaje','Último Cu++ positivo',
                   'Primer aporte reconocido','Días sin riego confirmados','Indicador químico','Módulos e hitos']:
         assert value not in text
@@ -89,4 +90,5 @@ def test_history_keeps_administrative_data_without_wide_tables():
 def test_full_drawer_still_has_all_diagnostic_sections():
     content=text_content(phase_panel.detail(row()))
     for value in ['Fase estructural','Fase calculada','Origen','Días sin riego confirmados','Caudal real','Último riego real',
-                  'Primer riego reconocido','Cu++ drenaje','Último Cu++ positivo','Primer aporte reconocido','Modelo anterior','Módulos e hitos']:assert value in content
+                  'Primer riego reconocido','Cu++ drenaje','Último Cu++ positivo','Primer aporte reconocido','Módulos e hitos']:assert value in content
+    assert ('Modelo anterior' in content) is (not phase_panel.phase_flags.is_dev())

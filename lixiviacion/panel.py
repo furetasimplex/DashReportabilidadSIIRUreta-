@@ -3,11 +3,27 @@ from dash import dcc, html, dash_table
 from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 from .db import HYDRAULIC_LABELS
+from . import phase_flags
 
 LABELS = [('fecha', 'Fecha'), ('pad', 'PAD'), ('parcela', 'Parcela'),
           ('campana', 'Campaña hidráulica'), ('estado', 'Asignación hidráulica'), ('flujo_m3_d', 'Flujo [m³/d]'),
           ('cu_drenaje_gl', 'Cu drenaje [g/L]'), ('cu_refino_gl', 'Cu refino [g/L]'),
           ('delta_cu_gl', 'ΔCu [g/L]'), ('transferencia_cu_t_d', 'Transferencia Cu [t/d]')]
+
+INITIAL_MESSAGE = 'Seleccione el período y los filtros, luego pulse Consultar.'
+CHEMISTRY_MULTI = 'Promedio simple por fecha y PAD de los registros disponibles de las parcelas seleccionadas; los valores ausentes se excluyen de cada promedio. No ponderado por caudal.'
+CHEMISTRY_SINGLE = 'Valores diarios de la parcela seleccionada. Los valores ausentes se mantienen como no disponibles. No ponderado por caudal.'
+
+
+def diagnostic_charts(charts, single_parcel=False):
+    config = {'displaylogo': False, 'scrollZoom': False}
+    return [dbc.Row([
+        dbc.Col(dbc.Card(dcc.Graph(id='lix-flujo', figure=charts[0], config=config)), md=6),
+        dbc.Col(dbc.Card([dcc.Graph(id='lix-quimica', figure=charts[1], config=config),
+            html.P(CHEMISTRY_SINGLE if single_parcel else CHEMISTRY_MULTI,
+                   className='lix-diagnostic-method')]), md=6),
+    ], className='mb-3'),
+        dbc.Card(dcc.Graph(id='lix-transferencia', figure=charts[2], config=config), className='mb-3')]
 
 
 def diagnostic_layout():
@@ -48,7 +64,6 @@ def diagnostic_layout():
     ])), md=3, className='mb-3') for key, label in [
         ('kpi-flujo', 'Flujo acumulado [m³]'), ('kpi-cu', 'Transferencia Cu [t Cu]'),
         ('kpi-delta', 'ΔCu promedio parcelas [g/L]'), ('kpi-fuera', 'Registros sin asignación hidráulica')]])
-    graph_config = {'displaylogo': False, 'scrollZoom': False}
     return dbc.Container([
         html.H3('Tablero de Lixiviación', className='my-3', style={'color': '#1F4E78'}),
         html.P('Seguimiento físico y químico por PAD, parcela y fecha.', className='text-muted'),
@@ -56,11 +71,7 @@ def diagnostic_layout():
         html.Div(id='lix-opciones-error'), dcc.Store(id='lix-aplicado'),
         dcc.Loading(html.Div([
             html.Div(id='lix-error'), html.Div(id='lix-resumen', className='text-muted mb-2'), cards,
-            dbc.Row([dbc.Col(dbc.Card(dcc.Graph(id='lix-flujo', config=graph_config)), md=6),
-                     dbc.Col(dbc.Card([dcc.Graph(id='lix-quimica', config=graph_config),
-                         html.P('Promedio simple por fecha y PAD de los registros disponibles de las parcelas seleccionadas; los valores ausentes se excluyen de cada promedio. No ponderado por caudal.',
-                                className='lix-diagnostic-method')]), md=6)], className='mb-3'),
-            dbc.Card(dcc.Graph(id='lix-transferencia', config=graph_config), className='mb-3'),
+            html.Div(html.P(INITIAL_MESSAGE, className='text-muted'), id='lix-diagnostic-charts'),
         ]),id='lix-diagnostic-analysis'),
         dbc.Card(dbc.CardBody([
             html.H5('Detalle diario'),
@@ -80,7 +91,8 @@ def diagnostic_layout():
             )),
         ]),id='lix-diagnostic-daily'),
         html.Details([
-            html.Summary([html.Span('Validación puntual del modelo operacional'),html.Small(
+            html.Summary([html.Span('Herramienta técnica QA (opcional)' if phase_flags.is_dev() else 'Validación puntual del modelo operacional'),html.Small(
+                'Validación técnica fuera del flujo operacional habitual.' if phase_flags.is_dev() else
                 'Herramienta técnica para revisar una parcela/fecha específica y comparar el resultado del modelo V2 con el modelo anterior.')]),
             html.Div([html.P('Aplique los filtros superiores con Consultar y seleccione un caso para revisar el modelo V2. La fecha de validación corresponde al fin del período consultado.',className='small text-muted'),
                 html.Div(id='lix-phase-diagnostic'),

@@ -1,0 +1,248 @@
+{
+  "version": "M6_PENDING_47_V1",
+  "columns": [
+    {
+      "name": "Fecha",
+      "type": "date"
+    },
+    {
+      "name": "Chancado_TMS_Real",
+      "type": "float(53)"
+    },
+    {
+      "name": "Humedad_Turno_A",
+      "type": "float(53)"
+    },
+    {
+      "name": "Humedad_Turno_B",
+      "type": "float(53)"
+    },
+    {
+      "name": "Humedad_promedio_dia",
+      "type": "float(53)"
+    },
+    {
+      "name": "Sal_turno_A",
+      "type": "float(53)"
+    },
+    {
+      "name": "Sal_Turno_B",
+      "type": "float(53)"
+    },
+    {
+      "name": "Sal_promedio_dia",
+      "type": "float(53)"
+    },
+    {
+      "name": "Apilado_TMH_turno_A",
+      "type": "float(53)"
+    },
+    {
+      "name": "Apilado_TMH_turno_B",
+      "type": "float(53)"
+    },
+    {
+      "name": "Apilado_TMH_promedio_dia",
+      "type": "float(53)"
+    },
+    {
+      "name": "Apilado_TMS_Real",
+      "type": "float(53)"
+    },
+    {
+      "name": "Apilado_TMS_Plan",
+      "type": "float(53)"
+    },
+    {
+      "name": "Campana_apilado",
+      "type": "nvarchar(255)"
+    },
+    {
+      "name": "Modulo_apilado",
+      "type": "int"
+    },
+    {
+      "name": "Avance_apilado",
+      "type": "float(53)"
+    },
+    {
+      "name": "Ley_CuT_Real",
+      "type": "float(53)"
+    },
+    {
+      "name": "Ley_CuT_Plan",
+      "type": "float(53)"
+    },
+    {
+      "name": "Cobre_fino_Apilado_Real",
+      "type": "float(53)"
+    },
+    {
+      "name": "Cobre_fino_Apilado_Plan",
+      "type": "float(53)"
+    },
+    {
+      "name": "TMS_Rotopala_1_Real",
+      "type": "float(53)"
+    },
+    {
+      "name": "TMS_Rotopala_1_Plan",
+      "type": "float(53)"
+    },
+    {
+      "name": "Campana_reclamo_oxidos",
+      "type": "nvarchar(255)"
+    },
+    {
+      "name": "Modulo_reclamo_oxidos",
+      "type": "int"
+    },
+    {
+      "name": "Avance_reclamo_oxidos",
+      "type": "float(53)"
+    },
+    {
+      "name": "TMS_Rotopala_2_Real",
+      "type": "float(53)"
+    },
+    {
+      "name": "TMS_Rotopala_2_Plan",
+      "type": "float(53)"
+    },
+    {
+      "name": "Campana_reclamo_sulfuros",
+      "type": "nvarchar(255)"
+    },
+    {
+      "name": "modulo_reclamo_sulfuros",
+      "type": "int"
+    },
+    {
+      "name": "Avance_reclamo_sulfuros",
+      "type": "float(53)"
+    },
+    {
+      "name": "Camiones_TMS_Reclamo_Oxidos",
+      "type": "float(53)"
+    },
+    {
+      "name": "Camiones_TMS_Reclamo_Sulfuros",
+      "type": "float(53)"
+    },
+    {
+      "name": "Movido",
+      "type": "nvarchar(255)"
+    },
+    {
+      "name": "Extraido",
+      "type": "nvarchar(255)"
+    },
+    {
+      "name": "Camiones_TMS_total",
+      "type": "float(53)"
+    },
+    {
+      "name": "Camiones_TMS_plan",
+      "type": "int"
+    },
+    {
+      "name": "Campana_reclamo_camiones",
+      "type": "nvarchar(255)"
+    },
+    {
+      "name": "Modulo_reclamo_camiones",
+      "type": "nvarchar(255)"
+    },
+    {
+      "name": "Total_Ripios_Incluye_Camiones_Real",
+      "type": "float(53)"
+    },
+    {
+      "name": "Total_Ripios_Incluye_Camiones_Plan",
+      "type": "float(53)"
+    },
+    {
+      "name": "Produccion_Catodos_Real",
+      "type": "float(53)"
+    },
+    {
+      "name": "Produccion_Catodos_Plan",
+      "type": "int"
+    },
+    {
+      "name": "SRR_TMS_Turno_A",
+      "type": "float(53)"
+    },
+    {
+      "name": "SRR_TMS_Turno_B",
+      "type": "float(53)"
+    },
+    {
+      "name": "SRR_TMS_promedio_dia",
+      "type": "float(53)"
+    },
+    {
+      "name": "SRR_TMS_Plan",
+      "type": "float(53)"
+    },
+    {
+      "name": "Ley_CuT_Real_srr",
+      "type": "float(53)"
+    },
+    {
+      "name": "Ley_CuT_Plan_srr",
+      "type": "float(53)"
+    }
+  ],
+  "adjusted": [
+    "Chancado_TMS_Real",
+    "Sal_turno_A",
+    "Sal_Turno_B",
+    "Sal_promedio_dia",
+    "Apilado_TMH_turno_A",
+    "Apilado_TMH_turno_B",
+    "Apilado_TMH_promedio_dia",
+    "Apilado_TMS_Real",
+    "Ley_CuT_Real",
+    "Cobre_fino_Apilado_Real",
+    "TMS_Rotopala_1_Real",
+    "TMS_Rotopala_2_Real",
+    "Camiones_TMS_Reclamo_Oxidos",
+    "Camiones_TMS_Reclamo_Sulfuros",
+    "Total_Ripios_Incluye_Camiones_Real",
+    "SRR_TMS_Turno_A",
+    "SRR_TMS_Turno_B",
+    "SRR_TMS_promedio_dia",
+    "Ley_CuT_Real_srr"
+  ],
+  "inherited": [
+    "Humedad_Turno_A",
+    "Humedad_Turno_B",
+    "Humedad_promedio_dia",
+    "Apilado_TMS_Plan",
+    "Campana_apilado",
+    "Modulo_apilado",
+    "Avance_apilado",
+    "Ley_CuT_Plan",
+    "Cobre_fino_Apilado_Plan",
+    "TMS_Rotopala_1_Plan",
+    "Campana_reclamo_oxidos",
+    "Modulo_reclamo_oxidos",
+    "Avance_reclamo_oxidos",
+    "TMS_Rotopala_2_Plan",
+    "Campana_reclamo_sulfuros",
+    "modulo_reclamo_sulfuros",
+    "Avance_reclamo_sulfuros",
+    "Movido",
+    "Extraido",
+    "Camiones_TMS_total",
+    "Camiones_TMS_plan",
+    "Campana_reclamo_camiones",
+    "Modulo_reclamo_camiones",
+    "Total_Ripios_Incluye_Camiones_Plan",
+    "Produccion_Catodos_Real",
+    "Produccion_Catodos_Plan",
+    "SRR_TMS_Plan",
+    "Ley_CuT_Plan_srr"
+  ]
+}

@@ -44,7 +44,7 @@ BALANCE_MODELS = {
     1: {"flow_count": 120, "template": "Template_Balance_Planta_Hidrometalurgia.xlsx",
         "sha256": BALANCE_TEMPLATE_SHA256, "code": "hidrometalurgia_120_completo"},
     2: {"flow_count": 125, "template": "Template_Balance_Planta_Hidrometalurgia_V2.xlsx",
-        "sha256": "8824A8CABAD0B0754CE5B3F6E85F1B3B755532FF680974815D3BFCEE80C69091",
+        "sha256": "96BA7B77D55CF91EB607D84BDB4BB17FFBE5AADCBFAC725CE1BCE7FA02870712",
         "code": "hidrometalurgia_125_v2"},
 }
 
