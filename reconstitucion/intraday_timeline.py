@@ -3,6 +3,30 @@ import numpy as np
 import pandas as pd
 
 
+def index_intraday(intervals):
+    """Index interval rows once by operational day, shift and conveyor.
+
+    The returned frames preserve every source row and its order within each
+    group. This is only an access-path optimization; validation and arithmetic
+    remain in ``clock_from_intraday``.
+    """
+    required = {'fecha_op', 'turno', 'tm', 'start', 'end', 'mass_h', 'quality'}
+    if intervals is None or (not isinstance(intervals, dict) and
+                             (intervals.empty or not required.issubset(intervals))):
+        return intervals
+    dates = pd.to_datetime(intervals.fecha_op).dt.normalize()
+    work = intervals.copy()
+    work['__fecha_op'] = dates
+    out = {}
+    for (day, shift, tm), group in work.groupby(
+            ['__fecha_op', 'turno', 'tm'], sort=False, dropna=False):
+        if pd.isna(day):
+            continue
+        out.setdefault(pd.Timestamp(day), {})[(shift, tm)] = group.drop(
+            columns='__fecha_op')
+    return out
+
+
 def clock_from_intraday(day, profile, intervals):
     """Return a mass-to-clock mapping, or an explicit A/B fallback reason.
 
@@ -11,19 +35,27 @@ def clock_from_intraday(day, profile, intervals):
     No reference capacity is used. Start/end sides preserve actual pauses.
     """
     required={'fecha_op','turno','tm','start','end','mass_h','quality'}
-    if intervals is None or intervals.empty or not required.issubset(intervals):
+    if intervals is None or (not isinstance(intervals, dict) and
+                             (intervals.empty or not required.issubset(intervals))):
         return None,'sin_perfil_intraturno'
     if 'tm' not in profile:
         return None,'perfil_sin_identidad_correa'
     date=pd.Timestamp(day).normalize()
-    raw=intervals.loc[pd.to_datetime(intervals.fecha_op).dt.normalize().eq(date)]
+    indexed = isinstance(intervals, dict)
+    raw = None if indexed else intervals.loc[
+        pd.to_datetime(intervals.fecha_op).dt.normalize().eq(date)]
+    by_block = intervals.get(date, {}) if indexed else None
     blocks=[]
     for row in profile.itertuples():
         expected=float(row.tmh)
         if expected==0:
             continue
-        block=raw.loc[raw.turno.eq(row.turno)&raw.tm.eq(row.tm)].copy()
-        if block.empty:
+        if indexed:
+            block = by_block.get((row.turno, row.tm))
+            block = block.copy() if block is not None else None
+        else:
+            block=raw.loc[raw.turno.eq(row.turno)&raw.tm.eq(row.tm)].copy()
+        if block is None or block.empty:
             return None,'bloque_intraturno_ausente'
         if block.quality.ne('ok').any() or block.end.duplicated().any():
             return None,'bloque_intraturno_no_valido'

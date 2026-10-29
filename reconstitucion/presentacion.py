@@ -130,21 +130,64 @@ def _itinerary_frame(res):
             present.add(key)
     if placeholders:
         out=pd.concat([out,pd.DataFrame(placeholders)],ignore_index=True).sort_values(['pad_id','campana','modulo','fecha','turno','start'],na_position='last').reset_index(drop=True)
+    case=res.get('caso') or res.get('fuente_modelo') or {}
+    out['caso_id']=case.get('id') if isinstance(case,dict) else None
+    from .informe_modulos import parcela_de
+    out['parcela']=[int(parcela_de(pd.Series([int(r.modulo)]),pad=int(r.pad_id))[0]) for r in out.itertuples()]
+    # Full-PAD denominator must survive a module-only selection.
+    full=res.get('_full_shift_table',res.get('shift_table'))
+    profile=res.get('perfil_turnos')
+    out['tmh_turno_asignada']=np.nan
+    if full is not None and not full.empty and profile is not None and not profile.empty:
+        full=full.copy();full['fecha']=pd.to_datetime(full.fecha).dt.normalize()
+        p=profile.copy();p['fecha']=pd.to_datetime(p.fecha).dt.normalize()
+        p['turno']=p.turno.astype(str).str.upper().str[-1]
+        wet_keys=['pad_id','fecha','turno'] if 'pad_id' in p else ['fecha','turno']
+        wet=p.groupby(wet_keys).tmh.sum(min_count=1).to_dict()
+        totals=full.groupby(['pad_id','fecha'])[['masa_turno1','masa_turno2']].sum(min_count=1)
+        for i,r in out.iterrows():
+            shift='A' if r.turno=='TA' else 'B';col='masa_turno1' if shift=='A' else 'masa_turno2'
+            key=(r.pad_id,r.fecha)
+            if key not in totals.index:continue
+            denominator=totals.loc[key,col];mass=r.masa_turno_asignada
+            measured=wet.get((r.pad_id,r.fecha,shift) if 'pad_id' in p else (r.fecha,shift),np.nan)
+            active=full.loc[full.fecha.eq(r.fecha)&pd.to_numeric(full[col],errors='coerce').gt(0),'pad_id'].nunique()
+            if active>1 and 'pad_id' not in p:measured=np.nan
+            if pd.notna(mass) and pd.notna(measured):
+                if pd.notna(denominator) and denominator>0:out.loc[i,'tmh_turno_asignada']=mass/denominator*measured
+                elif denominator==0 and mass==0 and measured==0:out.loc[i,'tmh_turno_asignada']=0.
     return out
+
+
+ITINERARIO_COLUMNS=[
+    {'name': c, 'id': c} for c in (
+        'id','Caso','Pad','Campana','Parcela','Modulo','Fecha','Turno',
+        'Intervalo estimado','TMH asignada a turno (t)','TMS asignada a turno (t)')]
 
 
 def tabla_itinerario(res):
     d=_itinerary_frame(res)
-    if d.empty: return html.Div('Horario reconstruido no disponible: falta perfil TMH completo.')
+    if d.empty:
+        table=dash_table.DataTable(data=[],columns=ITINERARIO_COLUMNS,
+            page_size=20,sort_action='none',filter_action='none',active_cell=None,
+            cell_selectable=True,style_table={'overflowX':'auto'},
+            style_header={'backgroundColor': C['bg'], 'color': C['sub'], 'fontWeight': '600', 'fontFamily': MONO, 'fontSize': '10px', 'textTransform': 'uppercase', 'letterSpacing': '0.04em', 'border': f"1px solid {C['border']}", 'padding': '8px 10px'},
+            style_cell={'backgroundColor': C['panel'], 'color': C['text'], 'border': f"1px solid {C['border']}", 'padding': '6px 10px', 'fontFamily': MONO, 'fontSize': '12px'})
+        table.id='reconstitucion-itinerario'
+        table.style_cell_conditional=[{'if':{'column_id':'id'},'display':'none'}]
+        return html.Div([html.P('Horario reconstruido no disponible: falta perfil TMH completo.'),table])
+    d=d.drop_duplicates(['caso_id','pad_id','campana','parcela','modulo','fecha','turno']).copy()
+    d['Caso']=d.caso_id;d['Parcela']=d.parcela.astype(int)
     d['Pad']=d.pad_id.astype(int); d['Campana']=d.campana.astype(int); d['Modulo']=d.modulo.astype(int)
     d['Fecha']=d.fecha.dt.strftime('%Y-%m-%d')
     d['Turno']=d.turno.map({'TA':'TA (08-20)','TB':'TB (20-08)'})
     d['Intervalo estimado']=d.apply(lambda r:'Sin interseccion del horario reconstruido' if pd.isna(r.start) else f"{timestamp_text(r.start, False)} a {timestamp_text(r.end, False)}",axis=1)
-    d['TMS asignada a turno (t)']=d.masa_turno_asignada.round(0)
+    d['TMS asignada a turno (t)']=d.masa_turno_asignada.round(1)
+    d['TMH asignada a turno (t)']=d.tmh_turno_asignada.round(1)
     d['Origen horario']=d.origen; d['Resolucion horario']=d.resolucion
-    show=[('id','id'),('Pad','Pad'),('Campana','Campana'),('Modulo','Modulo'),
+    show=[('id','id'),('Caso','Caso'),('Pad','Pad'),('Campana','Campana'),('Parcela','Parcela'),('Modulo','Modulo'),
           ('Fecha','Fecha'),('Turno','Turno'),('Intervalo estimado','Intervalo estimado'),
-          ('TMS asignada a turno (t)','TMS asignada a turno (t)')]
+          ('TMH asignada a turno (t)','TMH asignada a turno (t)'),('TMS asignada a turno (t)','TMS asignada a turno (t)')]
     for c,_ in show:
         if c not in d:
             d[c]=np.nan

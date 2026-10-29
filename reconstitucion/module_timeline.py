@@ -67,6 +67,10 @@ def build_module_timeline(apilado: pd.DataFrame, st: pd.DataFrame,
     dry = st.copy()
     if not dry.empty:
         dry["fecha"] = pd.to_datetime(dry.fecha).dt.normalize()
+    intraday_index = intraday
+    if intraday is not None:
+        from .intraday_timeline import index_intraday
+        intraday_index = index_intraday(intraday)
     rows = []
     for day, g in ap.groupby("fecha", sort=True):
         if day not in totals.index:
@@ -84,7 +88,8 @@ def build_module_timeline(apilado: pd.DataFrame, st: pd.DataFrame,
         vol_total = float(vol.sum())
         cum = 0.0
         from .intraday_timeline import clock_from_intraday
-        detailed_clock, detail_reason = clock_from_intraday(day, p.loc[p.fecha.eq(day)], intraday)
+        detailed_clock, detail_reason = clock_from_intraday(
+            day, p.loc[p.fecha.eq(day)], intraday_index)
         def to_time(x, side):
             if detailed_clock is not None:
                 return detailed_clock(x, side)

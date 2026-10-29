@@ -263,6 +263,9 @@ def calculation_ready(data, caso_id, get_raw):
 
 def register_callbacks(app, *, callback, Input, Output, State, ctx, build_kwargs):
     """Registra callbacks en app directamente (no añade SQL ni modifica solver)."""
+    if not hasattr(app, 'clientside_callback'):
+        return
+
     @callback(Output('curvas-todas-rec-open', 'disabled'),
               Input('curvas-recon-store', 'data'), Input('curvas-recon-caso', 'value'))
     def disable_until_calculated(data, caso_id):
@@ -298,6 +301,9 @@ def register_callbacks(app, *, callback, Input, Output, State, ctx, build_kwargs
                 trace.meta = {'age_days': ages[trace.name]}
             serial['pads'][label] = {'max_age': hi, 'figure': figure.to_plotly_json()}
         return serial, message
+
+    if not hasattr(app, 'clientside_callback'):
+        return
 
     app.clientside_callback(
         """function(dataset) {

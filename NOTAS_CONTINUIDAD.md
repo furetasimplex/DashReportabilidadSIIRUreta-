@@ -642,3 +642,41 @@ Evaluacion del HTML solicitada: intervalos de casos 10009/run10082 y 10013/run10
 ## Correccion de ejes de reconstitucion - 27-10-2026
 
 Un carril por Pad/Campana/Modulo en el eje Y. TA 08:00 y TB 20:00 se muestran solamente en el eje de fechas X. Se mantienen segmentos por turno, marcas naranjas y tabla con popup. El HTML de comparacion de metodologias de reconstitucion tambien se corrigio; QA calendario ambos casos y movil sin errores. Suite reconstitucion: 59 passed. Evidencia en ../curvas_recon/auditorias/reconstitucion_eje_turno_x_20261027/.
+
+
+## Reconstitucion: tabs PAD e informe optimizado - 28-10-2026
+
+Retirados los dropdowns de modulo y PAD del informe. `reconstitucion-pad-tabs` (1 Oxidos, 2 Sulfuros) filtra resultados y determina el informe descargado; al cambiar se limpia el popup. No se cambio la metodologia de asignacion.
+
+Exportacion: limpieza solo de celdas materializadas, sin modificar estilos; XLSX cacheado por resultado/token y PAD. Se mantienen guardas de Caso/run/periodo y boton desactivado mientras genera. Igualdad de valores, estilos, merges y hojas verificada contra baseline para Casos10009/10013 y ambos PAD. Suite93passed. QA navegador con fuentes congeladas/capturadas: Sulfuros primera descarga1.116s, repetida0.197s, Oxidos2.137s (sin latencia SQL); errores JS/HTTP0 y movil390px sin overflow. Repeticion produce mismos bytes. Evidencia ../curvas_recon/auditorias/reconstitucion_informe_tabs_20261028/.
+
+El popup instalado previamente usa claves Caso/PAD/campana/parcela/modulo/fecha/turno, masas del motor y perfil de calidad atribuido. `mov_cam` se consulta de forma diferida por fecha/turno/CH01 y se muestra como contexto secundario: no identifica modulo.
+
+
+## Informe de m?dulos: atributos de material apilado - 28-10-2026
+
+La descarga integra 23 campos adicionales por modulo: sal, seis atributos SRR, cinco CSR y suma, cinco ACF y suma, tres controles de calidad y suma. Se incorporaron la clasificacion contractual y AE=Z. Mina+Stock se asignan al modulo por sus masas/turnos y participacion de origen; ACF/control se ponderan por masa y CSR por cobre. SRR se pondera por la masa de ese origen asignada al modulo. No se inventa caracterizacion SRR faltante en los ACF/CSR de Mina+Stock. DETALLE conserva fuentes, alcance y cobertura.
+
+`fuentes_informe.cargar_fuentes` realiza tres SELECT acotados al rango (mov_cam CH01, SRR por turno y Datos_conciliados_of medido para sal), sin SP ni escrituras. Los atributos se cargan solo al descargar; popup mantiene loader basico. No se cachean informes con advertencias de fuentes para permitir reintento. No cambia masa ni horario de reconstitucion. Tabs strings1/2 y tabla vacia persistente conservados.
+
+Validacion con fuentes capturadas:7modulos Casos10009/10013; ACF/CSR/control coinciden con auditoria previa, SRR dentro4.7e-9, sal cobertura100%. Descarga en navegador Caso10013 contiene115celdas adicionales,5modulos; repeticion bytes identicos, sin errores callbacks/JS. Render de nuevos bloques conforme plantilla. Evidencia ../curvas_recon/auditorias/reconstitucion_informe_cobertura_20261028/. Fuentes pendientes de definicion no se rellenan con cero.
+
+Se incorporo tambien DL inicio de reposo desde campana_parcela_control, consultando solamente PAD y claves campana/modulo del resultado. Se verificaron C11/M134 yM135 con fechas06-09-2026 y09-09-2026; fechas ausentes se conservan sin dato. No se confunden identificadores internos con numero_campana/nombre_modulo. Pruebas de fuente acotada, cruce de campanas y ausencia aprobadas.
+
+
+## Formulas de plantilla en informe de modulos - 28-10-2026
+
+El exportador conserva/restaura formulas validas de MODULOS por PAD desde la plantilla, en vez de reemplazar salidas con valores Python. Entradas del Caso se escriben en sus columnas; se eliminan datos y formulas historicas fuera de filas emitidas. Resumen por clave campana/parcela, rangos cerrados a filas del grupo: TMS, humedad por TMH y recuperacion por fino Cu segun ecuacion oficial. Se conserva fecha de reposo explicita; formula DL=D guardada solo como fallback. S=CuS/CuT en SU conforme plantilla. No se agregan ecuaciones SU a columnas OX que no las tenian. Formato de resumen se copia a la fila dinamica, incluyendo cuando empieza en mitad de un bloque historico. Sin fuentes se conserva vacio y con cero medido se conserva cero.
+
+QA:92comprobaciones de recalculo artifact-tool sin diferencias ni errores de celda (2casos reales, OX con2campanas, ausencias/ceros).21pruebas focales pasaron inicialmente; tras guardas/formato/reposo mixto,7pruebas del escritor pasaron. Excel COM no disponible en esta sesion, por lo que no se declara validacion de Excel nativo; libro conserva fullCalcOnLoad=True. El renderer artifact-tool genera PNG y resultados correctos, pero su proceso finaliza con codigo1 sin error de celda; evidencia guardada, no confundir con validacion Excel nativo. Auditoria ../curvas_recon/auditorias/reconstitucion_formulas_20261028/.
+
+Resumen de fuentes y SP integrado en docs/RESUMEN_FUENTES_RECONSTITUCION.md. La seccion consulta SELECT a tablas/funciones; no ejecuta SP productor ni SP actualizador de cache.
+
+
+## Control mineral, controles y comparativo actualizado - 28-10-2026
+
+Corregido BE:BG de Sulfuros: son entradas numericas en su plantilla, mientras en Oxidos son formulas. El escritor protege solo las columnas cuyo patron de plantilla es realmente una formula, conserva entradas Calidad01/02/03 del dataframe y mantiene BH como suma formulada. Diagnostico contra Downloads/informe_modulos_sulfuros_caso_10013_run_10145 (3).xlsx confirmo atributos en DETALLE y MODULOS vacio; el reexport ya los contiene. Prueba de regresion diferencia ambos PAD. Verificacion de recalculo ampliada a132comparaciones, sin diferencias. Auditoria ../curvas_recon/auditorias/reconstitucion_control_mineral_20261028/.
+
+Retirados el control de rango deshabilitado junto a Cargar datos y el mensaje inicial de itinerario; se conserva metadata de fechas del Caso y se retiro callback de rango. Grilla selectorCaso+boton; siete callbacks. Pruebas:14casos/integracionHTTP y9layout/catalogo; navegador QA confirma ausencia del rango/mensaje y navegacion ambosPAD sin errores.
+
+Comparativo principal Informe_Simple_Reconstitucion.html actualizado desde los XLSX actuales recalculados (Casos10009/run10082 y10013/run10145), 7modulos. Salidas y scripts en auditorias/reconstitucion_informe_comparacion_20261027 y outputs/reconstitucion_modulos_casos_20261027. Fuentecongelada, no se afirma frescura SQL online.

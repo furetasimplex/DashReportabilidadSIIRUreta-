@@ -343,11 +343,10 @@ class IntegracionSIIR(unittest.TestCase):
         self.assertIn('Selecciona un Caso oficial', result['reconstitucion-estado']['children'])
         result = self.callback('reconstitucion-resultados.children', [
             dict(id='reconstitucion-token', property='data', value=None),
-            dict(id='reconstitucion-grupo', property='value', value='all'),
-            dict(id='reconstitucion-modo', property='value', value='apilado'),
+            dict(id='reconstitucion-pad-tabs', property='value', value='2'),
             dict(id='reconstitucion-caso', property='value', value=None),
             dict(id='reconstitucion-casos', property='data', value=None)])
-        self.assertIn('Carga la reconstitución del Caso seleccionado', json.dumps(result, ensure_ascii=False))
+        self.assertIsNone(result['reconstitucion-resultados']['children'])
         for action, display in [('reconstitucion-consideraciones', 'flex'), ('reconstitucion-cerrar', 'none')]:
             result = self.callback('reconstitucion-modal.style', [
                 dict(id='reconstitucion-consideraciones', property='n_clicks', value=1),
@@ -363,20 +362,23 @@ class IntegracionSIIR(unittest.TestCase):
                     fecha_fin=pd.Timestamp('2026-08-31'), estado='cerrado', run_id=80)
         with patch('curvas_recon.db_pipeline.load_casos', return_value=[case]) as source:
             result = self.callback('reconstitucion-casos.data',
-                [dict(id='reconstitucion-actualizar-casos', property='n_clicks', value=1)],
-                changed=['reconstitucion-actualizar-casos.n_clicks'])
+                [dict(id='reconstitucion-iniciar-casos', property='n_intervals', value=1)],
+                [dict(id='reconstitucion-caso', property='value', value=None)],
+                changed=['reconstitucion-iniciar-casos.n_intervals'])
         source.assert_called_once_with()
         self.assertEqual(result['reconstitucion-caso']['value'], 8)
         catalog = result['reconstitucion-casos']['data']
         self.assertEqual(catalog[0]['run_id'], 80)
-        dates = self.callback('reconstitucion-rango.start_date', [
-            dict(id='reconstitucion-caso', property='value', value=8),
-            dict(id='reconstitucion-casos', property='data', value=catalog)],
-            changed=['reconstitucion-caso.value'])
-        self.assertEqual(pd.Timestamp(dates['reconstitucion-rango']['start_date']),
-                         pd.Timestamp('2026-08-22'))
-        self.assertEqual(pd.Timestamp(dates['reconstitucion-rango']['end_date']),
-                         pd.Timestamp('2026-08-31'))
+        recon_panel = importlib.import_module('reconstitucion.panel')
+        layout = json.loads(json.dumps(recon_panel.build_layout(), cls=PlotlyJSONEncoder))
+        layout_ids = ids(layout)
+        self.assertIn('reconstitucion-caso', layout_ids)
+        self.assertIn('reconstitucion-pad-tabs', layout_ids)
+        self.assertNotIn('reconstitucion-rango', layout_ids)
+        dependencies = self.client.get('/_dash-dependencies').get_json()
+        self.assertFalse(any('reconstitucion-rango' in d['output'] or
+                             any(i['id'] == 'reconstitucion-rango' for i in d['inputs'])
+                             for d in dependencies))
         self.sql.assert_not_called()
         self.raw_sql.assert_not_called()
 

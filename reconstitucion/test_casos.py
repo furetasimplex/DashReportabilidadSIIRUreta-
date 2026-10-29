@@ -45,8 +45,17 @@ class Casos(unittest.TestCase):
         cases, opts, default, _ = find(f, "reconstitucion-casos.data")(1)
         self.assertEqual([o["value"] for o in opts], [1, 2])
         self.assertEqual(default, 1)
-        self.assertEqual(find(f, "reconstitucion-rango.start_date")(2, cases),
-                         (cases[1]["fecha_inicio"], cases[1]["fecha_fin"]))
+        self.assertTrue(all(c["fecha_inicio"] and c["fecha_fin"] for c in cases))
+        self.assertFalse(any("reconstitucion-rango" in name for name in f))
+        layout = str(panel.build_layout().to_plotly_json())
+        self.assertNotIn("reconstitucion-rango", layout)
+        self.assertIn("reconstitucion-caso", layout)
+        self.assertIn("reconstitucion-pad-tabs", layout)
+
+    def test_caso_invalido_no_muestra_placeholder(self):
+        out = find(callbacks(), "reconstitucion-resultados.children")(
+            None, "2", None, None)
+        self.assertIsNone(out)
 
     def test_carga_id_periodo(self):
         calls = []
@@ -62,9 +71,11 @@ class Casos(unittest.TestCase):
         f = callbacks(lambda **kwargs: result(1))
         token = find(f, "reconstitucion-token.data")(1, 1, CASES)[0]
         out = find(f, "reconstitucion-resultados.children")(token, "all", 2, CASES)
-        self.assertIn("Caso seleccionado", out.children)
-        self.assertIsNone(find(f, "reconstitucion-detalle.children")(
-            {"points": [{"customdata": [1, 7, 1]}]}, token, "all", 2, CASES))
+        self.assertIsNone(out)
+        popup = find(f, "reconstitucion-tabla-popup.children")(
+            {"points": [{"customdata": [1, 7, 1, "row-id"]}]}, None, 0, token, "all", 2, CASES)
+        self.assertIsNone(popup[0])
+        self.assertEqual(popup[1], {"display": "none"})
 
     def test_mismo_id_otro_run_o_periodo(self):
         f = callbacks(lambda **kwargs: result(1))
@@ -72,7 +83,7 @@ class Casos(unittest.TestCase):
         for update in (dict(run_id=99), dict(fecha_fin="2026-08-10")):
             out = find(f, "reconstitucion-resultados.children")(
                 token, "all", 1, [dict(CASES[0], **update)])
-            self.assertIn("Caso seleccionado", out.children)
+            self.assertIsNone(out)
 
     def test_sin_masa_y_otro_caso(self):
         for res in (dict(sample(), masa=pd.DataFrame()), result(2)):

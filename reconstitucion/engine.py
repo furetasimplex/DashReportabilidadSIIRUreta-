@@ -566,8 +566,9 @@ def analyze_db(fecha_min=None, fecha_max=None, boundary=SHIFT1_FRAC,
                               fecha_max or apilado.fecha.max())
     intraday = None
     if use_intraday:
-        from .wet_profile import load_intraday_profile
-        intraday = load_intraday_profile(fecha_min, fecha_max)
+        intraday, intraday_notice = _optional_intraday(fecha_min, fecha_max)
+        if intraday_notice is not None:
+            avisos.append(intraday_notice)
     timeline = build_module_timeline(apilado, st, profile, intraday=intraday)
     res = {
         "apilado": apilado,
@@ -597,6 +598,22 @@ def analyze_db(fecha_min=None, fecha_max=None, boundary=SHIFT1_FRAC,
     return res
 
 
+def _optional_intraday(start, end):
+    """10-second observations improve the clock but are not required for A/B."""
+    from .wet_profile import load_intraday_profile
+    try:
+        frame = load_intraday_profile(start, end)
+        if frame is not None and not frame.empty:
+            return frame, None
+    except Exception:
+        # Only this optional source is caught. Never expose SQL/connection text.
+        pass
+    notice = v.Aviso('info', 'perfil_intraturno_no_disponible',
+        'Perfil de 10 s no disponible; horario estimado desde TMH A/B con '
+        'interpolacion uniforme de 12 h. Consultar resolucion de cada modulo.')
+    return None, notice
+
+
 def _analyze_flow_case(caso, sem, use_intraday=False):
     """Official model solids, independently conserved for each PAD."""
     from . import db_source as dbs, modelo_flujos as mf
@@ -624,13 +641,14 @@ def _analyze_flow_case(caso, sem, use_intraday=False):
         profile_job = workers.submit(read_source, mf.load_profile)
         hours_job = workers.submit(read_source, mf.load_hours)
         if use_intraday:
-            from .wet_profile import load_intraday_profile
-            wet_job = workers.submit(read_source, load_intraday_profile)
+            wet_job = workers.submit(read_source, _optional_intraday)
         profile, timings['profile'] = profile_job.result()
         hours, timings['hours'] = hours_job.result()
         intraday = None
         if use_intraday:
-            intraday, timings['intraday'] = wet_job.result()
+            (intraday, intraday_notice), timings['intraday'] = wet_job.result()
+            if intraday_notice is not None:
+                avisos.append(intraday_notice)
     by_pad, base, balance = mf.distribute_profile(profile, ap, targets, caso)
     hours['fecha'] = pd.to_datetime(hours.fecha).dt.normalize()
     by_pad = by_pad.merge(hours, on='fecha', how='left', validate='many_to_one')

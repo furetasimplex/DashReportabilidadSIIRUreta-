@@ -11,3 +11,10 @@
 .reconstitucion-shell .reconstitucion-dialog { background: white; border-radius: 10px; padding: 24px; max-width: 900px; max-height: 85vh; overflow: auto; }
 @media (max-width: 1050px) { .reconstitucion-shell .reconstitucion-controls { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 600px) { .reconstitucion-shell .reconstitucion-controls { grid-template-columns: 1fr; } }
+
+.reconstitucion-shell .reconstitucion-controls-caso { grid-template-columns: minmax(240px, 1fr) auto; }
+.reconstitucion-shell .reconstitucion-controls-informe { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0; }
+.reconstitucion-shell .reconstitucion-controls-informe > span { color: var(--siir-muted, #8A8A9A); font-size: 12px; }
+.reconstitucion-shell .reconstitucion-pad-tabs { margin-top: 12px; }
+@media (max-width: 1050px) { .reconstitucion-shell .reconstitucion-controls-caso { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .reconstitucion-shell .reconstitucion-controls-caso { grid-template-columns: 1fr; } }

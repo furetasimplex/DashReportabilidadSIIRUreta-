@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 import importlib
 import sys
 import types
@@ -37,30 +37,26 @@ def walk(node):
     return out
 
 
-def test_change_marker_is_vertical_orange_only_at_reconstructed_module_change():
+def test_original_two_lane_contract_and_reconstructed_clock():
     assert Path(panel.e.__file__).resolve()==ACTIVE/'engine.py'
     fig=panel.fig_gantt(fixture())
-    marker=next(trace for trace in fig.data if trace.type=='scatter')
-    assert marker.name=='Medicion asignada al cambio reconstruido'
-    assert list(marker.x)==['2026-10-01T14:00:00']
-    assert marker.marker.symbol=='line-ns'
-    assert marker.marker.color==panel.C['accent']
-    assert 'No hay evento de cambio registrado' in marker.hovertemplate
-    assert 'Fecha original' in marker.hovertemplate
-    assert 'TA 08:00<br>01-10' in list(fig.layout.xaxis.ticktext)
-    assert 'TB 20:00<br>01-10' in list(fig.layout.xaxis.ticktext)
-    assert [t.name for t in fig.data]==['Horario reconstruido','Medicion asignada al cambio reconstruido']
+    assert len(fig.data)==1 and fig.data[0].type=='bar'
+    assert fig.data[0].name=='Reconstituido'
     assert list(fig.data[0].y)==['P2 / C12 / M5','P2 / C12 / M6']
-    assert not any(t.name=='Ventana diaria de medicion' for t in fig.data)
+    assert fig.data[0].marker.color==panel.C['shift2']
+    assert all(shape.line.color==panel.C['accent'] and shape.line.dash=='dot' for shape in fig.layout.shapes)
+    assert fig.layout.xaxis.type=='date' and fig.layout.xaxis.tickformat=='%d-%m'
+    assert 'Click: detalle' in fig.data[0].hovertemplate
 
 
-def test_same_module_continuation_has_no_change_marker_annotation_is_explicit():
-    res=fixture()
-    res['module_timeline']=pd.concat([res['module_timeline'].iloc[[0]],res['module_timeline'].iloc[[0]].assign(
-        fecha=pd.Timestamp('2026-10-02'),start=pd.Timestamp('2026-10-02 08:00'),end=pd.Timestamp('2026-10-02 14:00'))],ignore_index=True)
+def test_measurements_survive_empty_timeline_and_ignore_zero_rows():
+    res=fixture(); res['module_timeline']=res['module_timeline'].iloc[0:0]
     fig=panel.fig_gantt(res)
-    assert not any(t.type=='scatter' for t in fig.data)
-    assert 'No hay evento de cambio registrado' in fig.layout.annotations[0].text
+    assert len(fig.data)==0
+    res=fixture(); extra=res['shift_table'].iloc[[0]].copy(); extra['fecha']=pd.Timestamp('2026-10-03'); extra['vol_diario']=0
+    res['shift_table']=pd.concat([res['shift_table'],extra],ignore_index=True)
+    fig=panel.fig_gantt(res)
+    assert len(fig.data[0].x)==2
 
 
 def test_clickable_table_contains_raw_loaded_module_and_shift_data_and_server_popup():
@@ -89,17 +85,31 @@ def test_popup_explicitly_says_daily_tms_is_not_duplicated_by_segment():
     popup=pres.detalle_itinerario(res,row_id)
     content=' '.join(str(x.children) for x in walk(popup) if getattr(x,'children',None) is not None)
     assert 'no se replica como TMS por tramo' in content
-    assert 'No hay evento de cambio registrado' in content
 
 
-def test_marker_is_at_new_module_start_even_after_a_pause():
+def test_empty_itinerary_keeps_callback_component_mounted_once():
     res=fixture()
-    res['module_timeline'].loc[0,'end']=pd.Timestamp('2026-10-01 13:00')
-    res['module_timeline'].loc[1,'start']=pd.Timestamp('2026-10-01 15:00')
-    fig=panel.fig_gantt(res)
-    marker=next(trace for trace in fig.data if trace.type=='scatter')
-    assert list(marker.x)==['2026-10-01T15:00:00']
-    assert list(marker.customdata[0][:4])==[2,12,6,5]
+    res['module_timeline']=res['module_timeline'].iloc[0:0]
+    res['masa']=pd.DataFrame()
+    table=pres.tabla_itinerario(res)
+    assert any(getattr(node,'id',None)=='reconstitucion-itinerario' for node in walk(table))
+    assert len([node for node in walk(table) if getattr(node,'id',None)=='reconstitucion-itinerario'])==1
+    assert table.children[1].data==[]
+    assert [column['id'] for column in table.children[1].columns]==[
+        'id','Caso','Pad','Campana','Parcela','Modulo','Fecha','Turno',
+        'Intervalo estimado','TMH asignada a turno (t)','TMS asignada a turno (t)']
+    rendered=panel.render(res)
+    assert len([node for node in walk(rendered) if getattr(node,'id',None)=='reconstitucion-itinerario'])==1
+
+
+def test_initial_shell_and_tabs_keep_callback_contract_stable():
+    shell=panel.build_layout()
+    assert [tab.value for tab in shell.children[7].children]==['1','2']
+    app=__import__('dash').Dash(__name__,suppress_callback_exceptions=True)
+    panel.register_callbacks(app,loader=lambda **kwargs: {},case_loader=lambda: [])
+    detail=next(spec for spec in app._callback_list if 'reconstitucion-tabla-popup.children' in spec['output'])
+    assert any(item['id']=='reconstitucion-itinerario' and item['property']=='active_cell'
+               for item in detail['inputs'])
 
 
 def test_callbacks_keep_graph_detail_and_add_server_side_table_selection():
@@ -110,6 +120,11 @@ def test_callbacks_keep_graph_detail_and_add_server_side_table_selection():
     assert ('reconstitucion-gantt','clickData') in inputs
     assert ('reconstitucion-itinerario','active_cell') in inputs
     assert ('reconstitucion-tabla-cerrar','n_clicks') in inputs
+    detail=next(spec for spec in app._callback_list if 'reconstitucion-tabla-popup.children' in spec['output'])
+    assert [(x['id'],x['property']) for x in detail['inputs']] == [
+        ('reconstitucion-gantt','clickData'),('reconstitucion-itinerario','active_cell'),
+        ('reconstitucion-tabla-cerrar','n_clicks'),('reconstitucion-token','data'),
+        ('reconstitucion-pad-tabs','value'),('reconstitucion-caso','value'),('reconstitucion-casos','data')]
 
 
 def test_multiple_paused_segments_remain_separate_and_turn_tms_is_not_duplicated():
@@ -123,5 +138,5 @@ def test_multiple_paused_segments_remain_separate_and_turn_tms_is_not_duplicated
     assert m5ta.masa_turno_asignada.notna().sum()==1
     assert len(pieces.loc[pieces.modulo.eq(5)&pieces.turno.eq('TB')])==1
     fig=panel.fig_gantt(res)
-    marker=next(trace for trace in fig.data if trace.type=='scatter')
-    assert list(marker.x)==['2026-10-01T15:00:00']
+    assert len(fig.data)==1 and fig.data[0].type=='bar'
+
