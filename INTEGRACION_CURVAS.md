@@ -91,3 +91,12 @@ SQL y caché respetan el rango solicitado. Los 60 días corresponden al margen p
 Se adaptó el escritor al formato de recuperaciones de la referencia del 12 de octubre: cabeceras distintas por pad (OX curva desde fila 10; SU desde fila 11), Arial y colores de referencia, cuatro hojas existentes más Prod. Prod contiene Cu neto diario reconstruido por pila, con fechas desde el inicio de su campaña; no representa cátodos. Las sumas diarias coinciden con Aporte Parcelas. Recuperación máxima usa el máximo de la curva y el aporte conserva el acumulado terminal. Lector reconoce parcelas por identificador, excluye encabezados de las curvas y conserva huecos internos. Gráficos separados para evitar superposición.
 Indicación explícita del usuario: algunas curvas de la referencia suman varias pilas; esa agrupación se utiliza SOLO para la comparación externa, nunca como regla del reporte. Reporte/Prod y sus series continúan individuales por pila. Los archivos de contraste y la salida Excel quedan en la carpeta de trabajo; no se copian payloads internos DB al repositorio.
 Validación: 119 pruebas offline pasaron y se verificaron las cinco hojas, cuatro gráficos, referencias de series y sumas de Prod con el escritor real. Prueba de motor online fue SELECT-only; no se ejecutó callback de persistencia ni SP. main.py no se modificó. Sin commit ni push.
+
+
+## Sulfuros menores de 30 dias — 03/11/2026
+
+El selector de metodologia incorpora el ensayo neto local: solo jovenes ajustables,
+maduras con recuperacion observada y mes anterior protegido. Disponible con
+fuentes capturadas del Caso 10009/run10082; perfil de referencia2348. No guarda
+este ensayo en SQL. El metodo anterior sigue seleccionable y conserva su guardado.
+Contrato, fuentes, limites fisicos y pruebas: [METODO_SULFUROS_MENORES_30](docs/METODO_SULFUROS_MENORES_30.md).

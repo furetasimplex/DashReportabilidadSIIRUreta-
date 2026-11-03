@@ -2741,7 +2741,7 @@ def merge_flowsheet_res(parts):
     out = dict(parts[0])
     for k in _MERGE_SUM_KEYS:
         vals = [p.get(k) for p in parts if p.get(k) is not None]
-        out[k] = sum(vals) if vals else None
+        out[k] = sum(vals) if len(vals) == len(parts) else None
     for k in ('all_rows', 'piles', 'daily', 'warnings'):
         out[k] = [x for p in parts for x in (p.get(k) or [])]
     # Diccionarios indexados POR LABEL: cada parte trae solo su material, asi
@@ -2757,6 +2757,9 @@ def merge_flowsheet_res(parts):
         for p in parts:
             merged.update(p.get(k) or {})
         out[k] = merged
+    out['local_direct_recovery'] = any(p.get('local_direct_recovery') for p in parts)
+    out['recovery_rows'] = [x for p in parts for x in (p.get('recovery_rows') or [])]
+    out['sulfide_audit'] = next((p['sulfide_audit'] for p in parts if p.get('sulfide_audit')), None)
     net_by_label = {}
     for p in parts:
         net_by_label.update(p.get('net_cu_by_label') or {})
@@ -2779,6 +2782,82 @@ def merge_flowsheet_res(parts):
     return out
 
 
+def _reconcile_sulfide_local(week_start, week_end, material, anchor):
+    """Produce local direct-recovery data; SQL persistence is unsupported."""
+    from .sulfide_method import reconcile_sulfides
+    inputs = material.get('sulfide_inputs')
+    if not inputs or not inputs.get('rows') or not inputs.get('source_ids'):
+        raise ValueError('SULFUROS requiere sulfide_inputs con rows y source_ids')
+    if not anchor or anchor.get('net_cu_target_t') is None:
+        raise ValueError('SULFUROS requiere objetivo neto F29')
+    ws, we, _ = resolve_window(week_start, week_end)
+    if pd.Timestamp(inputs.get('target_period_start')).normalize() != ws:
+        raise ValueError('SULFUROS target_period_start no coincide con inicio del Caso')
+    result, audit = reconcile_sulfides(inputs['rows'], ws, we, anchor['net_cu_target_t'])
+    def _json_safe(value):
+        if isinstance(value, dict):
+            return {('/'.join(map(str, key)) if isinstance(key, tuple) else str(key)): _json_safe(item)
+                    for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [_json_safe(item) for item in value]
+        if hasattr(value, 'isoformat') and not isinstance(value, str):
+            return value.isoformat()
+        return value
+    audit['source_ids'] = inputs['source_ids']
+    audit['water_balance'] = 'Diferencia riego/drenaje incluye almacenamiento y otras perdidas; no validada fisicamente.'
+    by_pile = {}
+    for r in result:
+        if str(r['pad']).upper() not in ('SU', 'SULFUROS', 'SULFURO'):
+            continue
+        d = pd.Timestamp(r['date']).normalize()
+        if ws <= d <= we:
+            by_pile.setdefault((r['pile'], r['campaign']), []).append(r)
+    # The legacy persistence schema cannot represent observed recovery without
+    # inventing mature drainage. Consumers must use recovery_rows directly.
+    recovery_rows = []
+    for r in result:
+        x = dict(r)
+        x['reconciled_pct'] = x.get('reconciled_pct', x['official_pct'])
+        x['recovery_source'] = ('observed' if (x['pad'], x['pile'], x['campaign']) in audit['mature'] and ws <= pd.Timestamp(x['date']).normalize() <= we else
+                                'net_fit' if (x['pad'], x['pile'], x['campaign']) in audit['young'] and ws <= pd.Timestamp(x['date']).normalize() <= we else 'official')
+        recovery_rows.append(x)
+    piles, daily, all_rows = [], [], []
+    for (pile, campaign), records in by_pile.items():
+        age = (we.date() - pd.Timestamp(records[0]['first_irrigation']).date()).days
+        entries = []
+        for r in records:
+            q = r.get('q_riego_m3h')
+            qd = r.get('fitted_q_drenaje_m3h')
+            entries.append(dict(label='SULFUROS', parcela=pile, campaign=campaign,
+                                date=pd.Timestamp(r['date']).normalize(), q_riego_medido=q,
+                                q_pls_medido=None, cu_riego_medido=r.get('cu_riego_gL'),
+                                cu_pls_medido=r.get('cu_drenaje_gL'), q_riego_final=q,
+                                fino_riego_final=(q*r['cu_riego_gL'] if q is not None and r.get('cu_riego_gL') is not None else None),
+                                q_pls_final=qd, cu_riego_recon=r.get('cu_riego_gL'),
+                                cu_pls_recon=r.get('cu_drenaje_gL'),
+                                fino_pls_final=(qd*r['cu_drenaje_gL'] if qd is not None else None),
+                                ramp_factor=(qd/q if qd is not None and q else None)))
+        piles.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age, daily=entries,
+                          status=('young' if age < 30 else 'measured' if age > 30 else 'official_boundary')))
+        all_rows.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age))
+        daily.extend(entries)
+    q_values = [d['q_riego_final'] for d in daily]
+    q_total = sum(q_values) if all(q is not None for q in q_values) else None
+    out = {k: None for k in _MERGE_SUM_KEYS}
+    out.update(week_start=ws, week_end=we, anchored=True, n_active=len(piles), n_nuevas=len(audit['young']),
+               q_riego_medido=q_total, q_riego_recon=q_total,
+               net_cu_target_t=anchor['net_cu_target_t'], daily_net_cu_t=audit['curve_net_t'],
+               net_closure_residual_t=audit['net_residual_t'], all_rows=all_rows, piles=piles,
+               daily=daily, warnings=['Sulfuros: resultado local; drenaje de maduras desconocido.'],
+               recovery_rows=recovery_rows, sulfide_audit=_json_safe(audit), local_direct_recovery=True,
+               ramp_cap_by_label={}, nuevas={'SULFUROS': {pile: str(next(r['first_irrigation'] for r in result if r['pile'] == pile and r['campaign'] == campaign)) for _, pile, campaign in audit['young']}},
+               net_cu_by_label={'SULFUROS': {'target_t': anchor['net_cu_target_t'],
+                    'daily_t': audit['curve_net_t'], 'residual_t': audit['net_residual_t']}},
+               q_pls_recon_raw=None, fdrena_flow_raw=None, fdrena_flow_max=None,
+               fdrena_flow_clipped=False)
+    return out
+
+
 def reconcile_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFAULT,
                         sigma_rel=SIGMA_REL_DEFAULT, force_all_active=False,
                         week_end=None, anchor=None):
@@ -2791,12 +2870,14 @@ def reconcile_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFAULT,
         return reconcile_week_flowsheet(
             week_start, materials, n_transient=n_transient, sigma_rel=sigma_rel,
             force_all_active=force_all_active, week_end=week_end)
-    parts = [
-        reconcile_week_flowsheet(
-            week_start, {label: mat}, n_transient=n_transient, sigma_rel=sigma_rel,
-            force_all_active=force_all_active, week_end=week_end, anchor=anchor.get(label))
-        for label, mat in materials.items()
-    ]
+    parts = []
+    for label, mat in materials.items():
+        if label == 'SULFUROS' and mat.get('sulfide_policy') != 'legacy':
+            parts.append(_reconcile_sulfide_local(week_start, week_end, mat, anchor.get(label)))
+        else:
+            parts.append(reconcile_week_flowsheet(
+                week_start, {label: mat}, n_transient=n_transient, sigma_rel=sigma_rel,
+                force_all_active=force_all_active, week_end=week_end, anchor=anchor.get(label)))
     return merge_flowsheet_res(parts)
 
 
@@ -2837,6 +2918,8 @@ def reconcile_week_flowsheet_db(week_start, materials, conn, n_transient=N_TRANS
     if res is None:
         res = reconcile_flowsheet(week_start, materials, n_transient=n_transient, sigma_rel=sigma_rel,
                                    force_all_active=force_all_active, week_end=week_end, anchor=anchor)
+    if res.get('local_direct_recovery'):
+        raise RuntimeError('La recuperacion directa de Sulfuros no admite persistencia SQL legacy')
     _num = lambda v: v if pd.notna(v) else None
 
     row_build_started = time.perf_counter()
@@ -2927,10 +3010,11 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
     # Se persiste EL MISMO `res` que se devuelve para pintar; no se
     # recalcula (ver `res=` en `reconcile_week_flowsheet_db`).
     persist_started = time.perf_counter()
-    reconcile_week_flowsheet_db(week_start, materials, conn, n_transient=active_days, sigma_rel=sigma_rel,
-                                 force_all_active=force_all_active, week_end=week_end,
-                                 anchor=anchor, caso_id=caso_id, res=res)
-    persist_seconds = time.perf_counter() - persist_started
+    if not res.get('local_direct_recovery'):
+        reconcile_week_flowsheet_db(week_start, materials, conn, n_transient=active_days, sigma_rel=sigma_rel,
+                                     force_all_active=force_all_active, week_end=week_end,
+                                     anchor=anchor, caso_id=caso_id, res=res)
+    persist_seconds = 0.0 if res.get('local_direct_recovery') else time.perf_counter() - persist_started
     record_phase('engine.persist_total', persist_seconds)
 
     # Misma senal que reconcile_week_flowsheet_db: sin caudal repartido o sin
@@ -2963,8 +3047,9 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
         # reconciliaba y quedaba fija en FDRENA_MAX) se elimino junto con el
         # corte por `dia_ciclo`. Se conserva la clave porque el dashboard la
         # lee.
-        transient = [p['parcela'] for p in piles_l]
-        ss = []
+        transient = [p['parcela'] for p in piles_l if p.get('status', 'young') == 'young']
+        ss = [p['parcela'] for p in piles_l if p.get('status') == 'measured']
+        fixed = [p['parcela'] for p in piles_l if p.get('status') == 'official_boundary']
         fdrena, fdrena_prior_map, day_in_cycle = {}, {}, {}
         # Fdrena DIARIO reconciliado: la curva de paso 7, dia a dia. Es lo
         # unico que de verdad varia. `fdrena` (semanal) es otra cosa: en las
@@ -2975,15 +3060,17 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
         # el drenaje plano.
         fdrena_dia = {}
         for p in piles_l:
-            q = sum(d['q_riego_final'] for d in p['daily'])
-            qp = sum(d['q_pls_final'] for d in p['daily'])
-            fdrena[p['parcela']] = (qp / q) if q else FDRENA_MAX
+            qs = [d['q_riego_final'] for d in p['daily']]
+            qps = [d['q_pls_final'] for d in p['daily']]
+            q = sum(qs) if all(v is not None for v in qs) else None
+            qp = sum(qps) if all(v is not None for v in qps) else None
+            fdrena[p['parcela']] = (qp / q) if q and qp is not None else None
             fdrena_prior_map[p['parcela']] = FDRENA_MAX
             day_in_cycle[p['parcela']] = p['dia_ciclo']
-            fdrena_dia[p['parcela']] = [float(d['ramp_factor']) for d in p['daily']]
+            fdrena_dia[p['parcela']] = [float(d['ramp_factor']) if d['ramp_factor'] is not None else None for d in p['daily']]
         sub[label] = dict(
             Fdrena=fdrena, Fdrena_prior=fdrena_prior_map, method=METHOD_NAME,
-            transient=transient, ss=ss, fixed_transient=[], active=transient + ss,
+            transient=transient, ss=ss, fixed_transient=fixed, active=transient + ss + fixed,
             weeks={week_start: dict(week_row)}, converged=converged, warnings=_warns(label),
             R_global=r_global, day_in_cycle=day_in_cycle, rec_ratio={},
             Fdrena_dia=fdrena_dia,
@@ -3009,7 +3096,7 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
 
     return dict(
         materials=sub, weeks={week_start: dict(week_row)}, R_global=r_global, converged=converged,
-        method=METHOD_NAME, warnings=warns_globales, estimate_scale=False, targets=None,
+        method=('Sulfuros: ensayo neto local' if res.get('local_direct_recovery') else METHOD_NAME), warnings=warns_globales, estimate_scale=False, targets=None,
         totals=totals, week_start=week_start, week_end=week_end, n_days=n_days,
         # `res` crudo (con `piles` y su detalle diario). No es serializable a
         # JSON y no va al store del dashboard: lo necesita el reporte por el

@@ -68,7 +68,7 @@ _RECON_RAW_DIR = os.path.join(tempfile.gettempdir(), 'hidronueva_recon_runs')
 _RECON_RAW_TTL_SECONDS = 24 * 60 * 60
 # Change this when the meaning of a stored reconciliation changes. Browser
 # stores can outlive a deployment and otherwise export pre-fix results.
-_RECON_RAW_PAYLOAD_VERSION = 2
+_RECON_RAW_PAYLOAD_VERSION = 3
 
 TOP_OX = list(range(1, 17))
 BOTTOM_OX = list(range(32, 16, -1))
@@ -866,6 +866,12 @@ def _build_bar(data: dict, tab_value: str) -> go.Figure:
     'Cus' = Cu riego/PLS PROMEDIO semanal (g/L). Ver `_week_pila_metrics`
     para el detalle de por que la masa reconciliada se recalcula dia a dia
     (valido tanto para GEKKO como para 'Pendiente')."""
+    if data.get('local_direct_recovery'):
+        raw = _get_group_raw(data, data.get('caso_id'))
+        if not raw:
+            return empty_figure('El ensayo local ya no esta disponible; vuelve a calcular')
+        from .sulfide_presentation import trial_bars
+        return trial_bars(raw['res'], tab_value)
     week_start = data.get('week_start')
     if not week_start:
         return go.Figure()
@@ -998,7 +1004,7 @@ def _status_view(res: dict, max_num: int, active_set: set) -> dict:
     37 pilas "nuevas" el mismo dia.
     """
     nuevas = set(res.get('nuevas') or ())
-    reconciliadas = set(res.get('transient') or ()) | set(res.get('ss') or ())
+    reconciliadas = set(res.get('transient') or ()) | set(res.get('ss') or ()) | set(res.get('fixed_transient') or ())
     view = {}
     for n in range(1, max_num + 1):
         p = f'P{n:02d}'
@@ -1633,6 +1639,11 @@ def _reconstructed_campaign_series(label, num, week_start, week_end, raw=None,
     Fuera del Caso comparte con report_metodo la base FDRENA_MAX=0.95; dentro
     del Caso usa únicamente los flujos diarios de la corrida validada.
     """
+    if label == 'SULFUROS' and isinstance(raw, dict) and (raw.get('res') or {}).get('local_direct_recovery'):
+        from .sulfide_presentation import direct_series
+        series = direct_series(raw['res'], label, num, _measured_cycles(label, num))
+        if series is not None:
+            return series
     empty = {'xs': [], 'ys': [], 'sources': [], 'cu_tf': None, 'capped': False}
     p = f'P{num:02d}'
     info = WIP_META.get(label, {}).get(p) or {}
@@ -1957,6 +1968,9 @@ def _combined_member_series(member_id, raw, ws, we):
         pad_id, num_text = member_id.split('-P')
         label, num = _PAD_TO_LABEL[pad_id], int(num_text)
         pile = f'P{num:02d}'
+        if label == 'SULFUROS' and isinstance(raw, dict) and (raw.get('res') or {}).get('local_direct_recovery'):
+            from .sulfide_presentation import direct_member
+            return direct_member(raw['res'], label, num, pd.Timestamp(ws), pd.Timestamp(we), _measured_cycles(label, num))
         info = WIP_META.get(label, {}).get(pile) or {}
         cu_tf_t = cu_tf_toneladas(info.get('CuTf'))
         if cu_tf_t is None or cu_tf_t <= 0 or not isinstance(raw, dict):
@@ -2493,6 +2507,14 @@ def _build_content_layout():
         ),
     ], className='recon-controls')
 
+    recon_controls.children.append(dbc.Col([
+        html.Label('Metodologia Sulfuros', htmlFor='curvas-sulfide-policy', className='control-label'),
+        dcc.Dropdown(id='curvas-sulfide-policy', value='net_trial', clearable=False,
+                     options=[{'label': 'Menores de 30 dias: ensayo neto local', 'value': 'net_trial'},
+                              {'label': 'Metodo anterior (guarda en SQL al calcular)', 'value': 'legacy'}]),
+        html.Small('Ensayo disponible: Caso 10009, 1-7 septiembre de 2026; fuentes congeladas.'),
+    ], xs=12, lg=6, className='control-field'))
+
     recon_pila_tabs = dcc.Tabs(id='curvas-recon-pila-tabs', value='tab-rec', children=[
         dcc.Tab(label='Curvas de Recuperación', value='tab-rec', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
         dcc.Tab(label='Flujos', value='tab-flujo', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
@@ -2519,6 +2541,12 @@ def _build_content_layout():
             dbc.ModalBody([
                 html.Div([
                     html.Span('Cómo leer este panel', className='method-note-title'),
+                    html.P('Sulfuros: las pilas menores de 30 dias pueden ajustarse dentro de la ventana; '
+                           'se conserva el mes anterior y las mayores usan recuperacion observada. '
+                           'El drenaje ajustado es modelado: cerrar Cu neto no valida el balance de agua. '
+                           'El ensayo queda local y no reemplaza resultados SQL. '
+                           'Caso 10009: fuentes capturadas, run oficial 10082 y perfil de referencia 2348.',
+                           className='method-note-text'),
                     html.Span('Los deltas de caudal y Cu fino son relativos al medido. Los agregados de Cu fino son proporcionales, no toneladas. En las barras de concentración, la media diaria es aritmética sobre los días con dato y no está ponderada por caudal. “Cálculo listo” confirma que hay datos y pilas para mostrar; revisa avisos y gráficos para evaluar el resultado.',
                               className='method-note-text'),
                 ], className='method-note'),
@@ -2752,13 +2780,14 @@ def _error_modal_body(titulo, detalle, fallas=None):
     Output('curvas-recon-error-body', 'children'),
     Input('curvas-recon-btn', 'n_clicks'),
     State('curvas-recon-caso', 'value'),
+    State('curvas-sulfide-policy', 'value'),
     prevent_initial_call=True,
     running=[
         (Output('curvas-recon-btn', 'disabled'), True, False),
         (Output('curvas-recon-btn', 'children'), 'Calculando…', 'Ejecutar cálculo'),
     ],
 )
-def compute_recon(_n_clicks, caso_id):
+def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
     """Reconcile every active pile over the selected official Case window."""
     profile_total_t0 = time.perf_counter()
     perf_trace_id = uuid.uuid4().hex
@@ -2807,6 +2836,14 @@ def compute_recon(_n_clicks, caso_id):
                 )
             phase_anchor = time.perf_counter() - phase_t0
             record_phase('compute.anchor', phase_anchor, trace_id=perf_trace_id)
+            if sulfide_policy not in ('net_trial', 'legacy'):
+                raise ValueError('Selecciona una metodologia valida para Sulfuros')
+            if sulfide_policy == 'net_trial':
+                from .sulfide_inputs import load_sulfide_inputs
+                sulfide_inputs = load_sulfide_inputs(ws, week_end, caso['id'], anchor)
+                if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
+                    raise ValueError('El snapshot de Sulfuros no corresponde al run oficial seleccionado')
+                method = tag = 'Sulfuros: ensayo neto local'
 
             phase_t0 = time.perf_counter()
             _progress_set('Historico y metadatos', 'Asegurando caches...', 28)
@@ -2835,6 +2872,10 @@ def compute_recon(_n_clicks, caso_id):
                 {'riego': load_riego, 'cu_riego': load_cu_riego, 'drena_cu': load_drena_cu},
                 activity_loader=_fechas_actividad,
             )
+            if sulfide_policy == 'net_trial':
+                materials['SULFUROS']['sulfide_inputs'] = sulfide_inputs
+            else:
+                materials['SULFUROS']['sulfide_policy'] = 'legacy'
             phase_materials = time.perf_counter() - phase_t0
             record_phase('compute.inputs', phase_materials, trace_id=perf_trace_id,
                          activity_dates=len(activity_dates), labels=len(materials))
@@ -2881,11 +2922,11 @@ def compute_recon(_n_clicks, caso_id):
     print(f'[{tag}] planta: actual={wk.get("actual")} mt_base={wk.get("mt_base_t")} '
           f'mt_opt={wk.get("mt_opt_t")} resid_opt={wk.get("resid_opt")}')
     for label, sub in joint['materials'].items():
-        vals = list((sub.get('Fdrena') or {}).values())
+        vals = [v for v in (sub.get('Fdrena') or {}).values() if v is not None]
         rng = f'[{min(vals):.3f}, {max(vals):.3f}]' if vals else 'n/a'
-        dia = [v for lst in (sub.get('Fdrena_dia') or {}).values() for v in lst]
+        dia = [v for lst in (sub.get('Fdrena_dia') or {}).values() for v in lst if v is not None]
         rng_dia = f'[{min(dia):.6f}, {max(dia):.6f}]' if dia else 'n/a (sin pilas activas)'
-        print(f'[{tag}]   {label}: activas={len(sub["transient"])} '
+        print(f'[{tag}]   {label}: activas={len(sub["active"])} '
               f'Fdrena semanal agregado={rng} | Fdrena diario RECONCILIADO={rng_dia}')
 
     phase_t0 = time.perf_counter()
@@ -2893,6 +2934,9 @@ def compute_recon(_n_clicks, caso_id):
         week_start=ws.isoformat(), week_end=week_end.isoformat(), n_days=n_days,
         caso_id=caso['id'], caso_nombre=caso['nombre'], caso_run_id=caso['run_id'],
         raw_token=raw_token, performance_id=perf_trace_id,
+        sulfide_policy=sulfide_policy,
+        local_direct_recovery=bool((joint.get('res') or {}).get('local_direct_recovery')),
+        sulfide_audit=_clean_nan((joint.get('res') or {}).get('sulfide_audit') or {}),
         balance_inventario=dict(
             volumen_m3=24.*float((joint.get('res') or {}).get('inventario_pls') or 0.),
             cobre_t=.024*float((joint.get('res') or {}).get('inventario_fino_pls') or 0.),
@@ -2925,6 +2969,16 @@ def compute_recon(_n_clicks, caso_id):
     record_phase('compute.callback_total', time.perf_counter() - profile_total_t0,
                  trace_id=perf_trace_id, output_piles=len(materials))
     return out, False, dash.no_update
+
+
+@_callback(
+    Output('curvas-recon-store', 'data', allow_duplicate=True),
+    Input('curvas-sulfide-policy', 'value'),
+    prevent_initial_call=True,
+)
+def invalidate_sulfide_policy(_policy):
+    """A method change clears stale results and never triggers calculation."""
+    return None
 
 
 @_callback(
@@ -3101,6 +3155,21 @@ def render_recon_pila_charts(data, selected_pila, caso_id, group_id=None, groups
     cached = _get_cached_pila_figures(cache_key)
     if cached is not None:
         return cached
+    if data.get('local_direct_recovery') and selected_pila:
+        raw = _get_group_raw(data, caso_id)
+        if not raw:
+            return (empty_figure('El ensayo local ya no esta disponible; vuelve a calcular'),) * 3
+        from .sulfide_presentation import solution_figures
+        selected_pad, selected_num = selected_pila.split('-P')
+        flow, concentrations = solution_figures(raw['res'], _PAD_TO_LABEL[selected_pad], int(selected_num))
+        if _PAD_TO_LABEL[selected_pad] == 'SULFUROS':
+            from .sulfide_presentation import recovery_figure
+            recovery = recovery_figure(raw['res'], 'SULFUROS', int(selected_num), _measured_cycles('SULFUROS', int(selected_num)))
+        else:
+            recovery = _build_recovery_chart(selected_pila, ws, we, data, caso_id)
+        figures = (recovery, flow, concentrations)
+        _cache_pila_figures(cache_key, figures)
+        return figures
     figures = (
         _build_recovery_chart(selected_pila, ws, we, data, caso_id),
         _build_flujo_chart(selected_pila, ws, we),
@@ -3539,6 +3608,8 @@ def update_status_badge(data, caso_id):
         return 'Pendiente de cálculo', {**base_style, 'backgroundColor': '#64748B'}
     if data.get('caso_id') is not None and caso_id != data.get('caso_id'):
         return 'Pendiente de cálculo', {**base_style, 'backgroundColor': '#64748B'}
+    if data.get('local_direct_recovery') and data.get('converged'):
+        return 'Ensayo neto local', {**base_style, 'backgroundColor': '#B45309'}
     if not data.get('converged'):
         warnings = data.get('warnings') or []
         sin_datos = any('QRiego_medido o QPLS_medido' in w for w in warnings)
@@ -3628,6 +3699,13 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
         return html.Div(
             'La identidad de la corrida cambió; vuelve a ejecutar la reconciliación.',
             style={'color': '#B45309'}), None
+    if res.get('local_direct_recovery'):
+        from .sulfide_presentation import trial_workbook
+        if groups:
+            return html.Div('Exporta el ensayo sin grupos: este formato conserva las pilas individuales.'), None
+        workbook = trial_workbook(res, caso)
+        return (html.Div('Ensayo local exportado con recuperacion directa y fuentes; sin validacion hidraulica.'),
+                dcc.send_bytes(workbook, f'Ensayo_Neto_Local_Caso{caso["id"]}.xlsx'))
     tmp_path = None
     try:
         from . import report_metodo
