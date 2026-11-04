@@ -2535,7 +2535,9 @@ def _build_content_layout():
                     html.Span('Cómo leer este panel', className='method-note-title'),
                     html.P('Sulfuros: solo se ajustan las curvas de pilas con 30 días o menos desde el primer riego; '
                            'las mayores conservan la recuperación medida y el mes anterior no se modifica. '
-                           'El drenaje ajustado es modelado: cerrar el Cu neto no valida el balance de agua.',
+                           'El drenaje ajustado es modelado: cerrar el Cu neto no valida el balance de agua. '
+                           'Si es posible, las pilas nuevas (hasta ±30 %) también igualan la masa de riego y de drenaje y las '
+                           'concentraciones ponderadas de los flujos globales; si no, el aviso indica el motivo y se conserva lo medido.',
                            className='method-note-text'),
                     html.Span('Los deltas de caudal y Cu fino son relativos al medido. Los agregados de Cu fino son proporcionales, no toneladas. En las barras de concentración, la media diaria es aritmética sobre los días con dato y no está ponderada por caudal. “Cálculo listo” confirma que hay datos y pilas para mostrar; revisa avisos y gráficos para evaluar el resultado.',
                               className='method-note-text'),

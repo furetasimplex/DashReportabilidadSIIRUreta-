@@ -2808,6 +2808,20 @@ SULFIDE_CONC_MAX_CHANGE = 0.30
 SULFIDE_CONC_TOLERANCE = 0.001
 
 
+def _sulfide_match_warning(match):
+    """Aviso para el usuario sobre el ajuste de las pilas nuevas a los flujos globales."""
+    status = match.get('status')
+    if status == 'aplicado':
+        extra = (f"; el Cu de riego del pad queda {match['diferencia_cu_riego_relativa']:.1%} fuera del global "
+                 f"(los flujos globales no cuadran exactamente con F29)" if match.get('con_masas') else '')
+        return [f"Sulfuros: pilas nuevas ajustadas a los flujos globales (riego x{match['beta']:.3f}, "
+                f"Cu riego x{match['alpha_riego']:.3f}, Cu PLS x{match['alpha_pls']:.3f}){extra}."]
+    if status == 'no_aplicado':
+        return [f"Sulfuros: no se igualaron las masas y concentraciones de los flujos globales "
+                f"({match.get('motivo')}); se conservan los valores medidos."]
+    return []
+
+
 def _sulfide_balance_totals(recovery_rows, piles, ws, we):
     """Totales del balance de Sulfuros para las tarjetas de deltas.
 
@@ -2824,17 +2838,20 @@ def _sulfide_balance_totals(recovery_rows, piles, ws, we):
     by_pile = {}
     for row in recovery_rows:
         by_pile.setdefault(row['pile'], {})[pd.Timestamp(row['date']).normalize()] = row
-    t = dict(q_pls_medido=0.0, q_pls_recon=0.0, fino_riego=0.0, fino_riego_rec=0.0,
+    t = dict(q_pls_medido=0.0, q_pls_recon=0.0, q_riego_med=0.0, q_riego_rec=0.0, fino_riego=0.0, fino_riego_rec=0.0,
              fino_pls_medido=0.0, fino_pls_recon=0.0)
     for pile in piles:
         entries = pile['daily']
         q = [e['q_riego_medido'] or 0.0 for e in entries]
+        q_rec = [e['q_riego_final'] or 0.0 for e in entries]
         fino_riego = sum(qq * e['cu_riego_medido'] for qq, e in zip(q, entries)
                          if qq and e.get('cu_riego_medido') is not None)
-        fino_riego_rec = sum(qq * e['cu_riego_recon'] for qq, e in zip(q, entries)
+        fino_riego_rec = sum(qq * e['cu_riego_recon'] for qq, e in zip(q_rec, entries)
                              if qq and e.get('cu_riego_recon') is not None)
         fitted = [e['q_pls_final'] for e in entries if e.get('q_pls_final') is not None]
         t['q_pls_medido'] += FDRENA_MAX * sum(q)
+        t['q_riego_rec'] += sum(q_rec)
+        t['q_riego_med'] += sum(q)
         t['q_pls_recon'] += sum(fitted) if pile.get('status') == 'young' else FDRENA_MAX * sum(q)
         t['fino_riego'] += fino_riego
         t['fino_riego_rec'] += fino_riego_rec
@@ -2856,7 +2873,7 @@ def _sulfide_balance_totals(recovery_rows, piles, ws, we):
         q_pls_medido=t['q_pls_medido'], q_pls_recon=t['q_pls_recon'],
         cu_fino_riego_medido=t['fino_riego'], cu_fino_riego_recon=t['fino_riego_rec'],
         cu_fino_pls_medido=t['fino_pls_medido'], cu_fino_pls_recon=t['fino_pls_recon'],
-        delta_recon_riego=0.0, delta_recon_pls=t['q_pls_recon'] - t['q_pls_medido'],
+        delta_recon_riego=t['q_riego_rec'] - t['q_riego_med'], delta_recon_pls=t['q_pls_recon'] - t['q_pls_medido'],
         delta_fino_riego=t['fino_riego_rec'] - t['fino_riego'], delta_fino_pls=t['fino_pls_recon'] - t['fino_pls_medido'])
 
 
@@ -2874,8 +2891,10 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
     # Concentraciones globales del Caso (g/L) = 1000 x fino [t] / masa [m3] de los flujos de riego y de PLS del pad.
     def _global_conc(fino, masa):
         return 1000.0 * fino / masa if isinstance(fino, (int, float)) and isinstance(masa, (int, float)) and masa > 0 else None
+    _mass = lambda value: float(value) / 24.0 if isinstance(value, (int, float)) and value > 0 else None   # m3 -> suma diaria de m3/h
     conc_targets = dict(cu_riego_g_l=_global_conc(anchor.get('fino_riego_recon'), anchor.get('q_riego_recon')),
-                        cu_pls_g_l=_global_conc(anchor.get('fino_pls_recon'), anchor.get('q_pls_recon')))
+                        cu_pls_g_l=_global_conc(anchor.get('fino_pls_recon'), anchor.get('q_pls_recon')),
+                        q_riego_m3h_sum=_mass(anchor.get('q_riego_recon')), q_pls_m3h_sum=_mass(anchor.get('q_pls_recon')))
     result, audit = reconcile_sulfides(inputs['rows'], ws, we, anchor['net_cu_target_t'],
                                        concentration_targets=conc_targets,
                                        max_concentration_change=SULFIDE_CONC_MAX_CHANGE,
@@ -2913,6 +2932,7 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
         entries = []
         for r in records:
             q = r.get('q_riego_m3h')
+            q_rec = r.get('q_riego_recon_m3h', q)            # las nuevas pueden traer riego reconciliado
             qd = r.get('fitted_q_drenaje_m3h')
             # Las nuevas pueden traer concentraciones reconciliadas (ajuste a los flujos globales).
             cr_rec = r.get('cu_riego_recon_gL', r.get('cu_riego_gL'))
@@ -2920,25 +2940,28 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
             entries.append(dict(label='SULFUROS', parcela=pile, campaign=campaign,
                                 date=pd.Timestamp(r['date']).normalize(), q_riego_medido=q,
                                 q_pls_medido=None, cu_riego_medido=r.get('cu_riego_gL'),
-                                cu_pls_medido=r.get('cu_drenaje_gL'), q_riego_final=q,
-                                fino_riego_final=(q*cr_rec if q is not None and cr_rec is not None else None),
+                                cu_pls_medido=r.get('cu_drenaje_gL'), q_riego_final=q_rec,
+                                fino_riego_final=(q_rec*cr_rec if q_rec is not None and cr_rec is not None else None),
                                 q_pls_final=qd, cu_riego_recon=cr_rec,
                                 cu_pls_recon=cd_rec,
                                 fino_pls_final=(qd*cd_rec if qd is not None and cd_rec is not None else None),
-                                ramp_factor=(qd/q if qd is not None and q else None)))
+                                ramp_factor=(qd/q_rec if qd is not None and q_rec else None)))
         piles.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age, daily=entries,
                           status=('young' if age <= 30 else 'measured')))
         all_rows.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age))
         daily.extend(entries)
     q_values = [d['q_riego_final'] for d in daily]
     q_total = sum(q_values) if all(q is not None for q in q_values) else None
+    q_meas = [d['q_riego_medido'] for d in daily]
+    q_total_medido = sum(q_meas) if all(q is not None for q in q_meas) else None
     totals = _sulfide_balance_totals(recovery_rows, piles, ws, we)
     out = {k: None for k in _MERGE_SUM_KEYS}
     out.update(week_start=ws, week_end=we, anchored=True, n_active=len(piles), n_nuevas=len(audit['young']),
-               q_riego_medido=q_total, q_riego_recon=q_total, **totals,
+               q_riego_medido=q_total_medido, q_riego_recon=q_total, **totals,
                net_cu_target_t=anchor['net_cu_target_t'], daily_net_cu_t=audit['curve_net_t'],
                net_closure_residual_t=audit['net_residual_t'], all_rows=all_rows, piles=piles,
-               daily=daily, warnings=['Sulfuros: resultado local; drenaje de maduras desconocido.'],
+               daily=daily, warnings=['Sulfuros: resultado local; drenaje de maduras desconocido.']
+                                      + _sulfide_match_warning(audit.get('concentration_match') or {}),
                recovery_rows=recovery_rows, sulfide_audit=_json_safe(audit), local_direct_recovery=True,
                ramp_cap_by_label={}, nuevas={'SULFUROS': {pile: str(next(r['first_irrigation'] for r in result if r['pile'] == pile and r['campaign'] == campaign)) for _, pile, campaign in audit['young']}},
                net_cu_by_label={'SULFUROS': {'target_t': anchor['net_cu_target_t'],
