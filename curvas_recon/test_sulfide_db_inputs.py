@@ -156,6 +156,22 @@ def test_mature_gap_inside_window_stays_a_gap_and_case_still_closes():
     assert audit['net_residual_t'] == pytest.approx(0, abs=1e-9)
 
 
+def test_missing_close_reports_every_pile_and_last_available_reading():
+    material, curves, wip, first = synthetic()
+    for key in (7, 24):
+        curves[key] = curve(date(2026, 8, 1), 0.1, last=date(2026, 10, 1))   # tabla solo hasta el 1-oct
+    material['riego']['P25'] = 100.0
+    curves[25] = curve(date(2026, 8, 1), 0.1, last=date(2026, 10, 1))
+    wip['P25'] = {'CuTf': 100.0}
+    first['P25'] = date(2026, 6, 1)
+    material['drena_cu']['P25'] = 2.0
+    with pytest.raises(SulfideInputError) as error:
+        build_sulfide_rows(START, END, material, curves, wip, first)
+    message = str(error.value)
+    assert 'P07, P25: sin recuperacion medida el 2026-10-07' in message
+    assert 'ultima lectura disponible: 2026-10-01' in message and 'cargue las recuperaciones oficiales' in message
+
+
 def test_missing_measurements_are_rejected_not_filled():
     material, curves, wip, first = synthetic()
     curves[7] = curve(date(2026, 8, 1), 0.1, last=END - timedelta(days=1))

@@ -90,6 +90,8 @@ def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irriga
     births = {_pile_name(k): _as_day(v) for k, v in first_irrigation.items()}
     curves_by_pile = {_pile_name(k): v for k, v in curves.items()}
     rows = []
+    missing = {}                  # fecha -> pilas sin recuperacion medida obligatoria
+    last_reading = {}
     for pile in sorted(by_name):
         q_series = riego[by_name[pile]].reindex(idx)
         if not (q_series.fillna(0) > 0).any():
@@ -109,7 +111,8 @@ def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irriga
             # Obligatorio: base (dias previos) y cierre de las maduras. Un dia
             # intermedio sin lectura queda como hueco.
             if pct is None and (day < start or (not young and day == end)):
-                raise SulfideInputError(f'{pile}: sin recuperacion medida el {day.isoformat()}')
+                missing.setdefault(day, []).append(pile)
+                last_reading[pile] = max(measured, default=None)
             row = dict(pad='SULFUROS', pile=pile, campaign=max(campaign, 1), date=day.isoformat(),
                        first_irrigation=birth.isoformat(), cu_apilado_t=cu_tf,
                        official_pct=pct, observed_pct=pct, observation_source=CURVE_SOURCE)
@@ -124,6 +127,15 @@ def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irriga
                         if row[field] is None:
                             raise SulfideInputError(f'{pile}: sin {field} medido el {day.isoformat()}')
             rows.append(row)
+    if missing:
+        details = []
+        for day in sorted(missing):
+            known = [last_reading[p] for p in missing[day] if last_reading[p] is not None]
+            tail = f' (ultima lectura disponible: {max(known).isoformat()})' if known else ''
+            details.append(f"{', '.join(missing[day])}: sin recuperacion medida el {day.isoformat()}{tail}")
+        raise SulfideInputError(
+            '; '.join(details) + '. Recuperaciones_pad no tiene las lecturas necesarias: '
+            'cargue las recuperaciones oficiales de esas fechas y reintente.')
     if not rows:
         raise SulfideInputError('ninguna pila de Sulfuros riega en la ventana del Caso')
     return _attach_profile(rows, start, end, saved_profile or {})
