@@ -51,7 +51,7 @@ def test_workbook_roundtrip_keeps_every_series_without_filling_gaps(tmp_path):
     pd.testing.assert_frame_equal(riego, data['series']['SULFUROS']['riego'], check_freq=False, check_names=False)
     cu_riego = back['series']['SULFUROS']['cu_riego']
     assert cu_riego.isna().sum() == 0 and len(cu_riego) == 8                      # el hueco del 27-sep NO se rellena
-    cu_drena = back['series']['SULFUROS']['cu_drena']
+    cu_drena = back['series']['SULFUROS']['drena_cu']
     assert cu_drena['P25'].isna().sum() == 4 and cu_drena['P24'].tolist() == [2.0] * 9
     assert back['curves']['SULFUROS'][24] == dict(dates=[date(2026, 10, 1), date(2026, 10, 2)], values=[33.25, 34.0])
     assert back['wip']['SULFUROS']['P24']['CuTf'] == pytest.approx(4551.9)
@@ -77,6 +77,13 @@ def test_extracted_workbook_feeds_the_method_inputs(tmp_path):
     rows, _ = build_sulfide_rows(window['ventana_inicio'], window['ventana_fin'], sulfuros, back['curves']['SULFUROS'],
                                  back['wip']['SULFUROS'], back['first_irrigation']['SULFUROS'], back['saved_profile'])
     assert {r['pile'] for r in rows} == {'P24'} and rows[-1]['date'] == '2026-10-03'
+    # una pila NUEVA exige Cu de drenaje medido: el lector debe entregarlo con el nombre que usa el cargador
+    data['first_irrigation']['SULFUROS']['P24'] = pd.Timestamp('2026-09-20')
+    back = read_workbook(write_workbook(build_tables(**data), tmp_path / 'nueva.xlsx'))
+    young, _ = build_sulfide_rows(window['ventana_inicio'], window['ventana_fin'], back['series']['SULFUROS'],
+                                  back['curves']['SULFUROS'], back['wip']['SULFUROS'],
+                                  back['first_irrigation']['SULFUROS'], back['saved_profile'])
+    assert all(r['cu_drenaje_gL'] == 2.0 for r in young if r['date'] >= '2026-10-01')
 
 
 def test_extraction_script_connection_only_accepts_selects():

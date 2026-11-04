@@ -114,7 +114,7 @@ def read_workbook(path):
         series[pad] = dict(
             riego=riego.pivot_table(index='fecha', columns='pila', values='caudal_m3h', aggfunc='first').sort_index().astype(float),
             cu_riego=pd.Series(cu_r['cu_gL'].to_numpy(dtype=float), index=pd.DatetimeIndex(cu_r['fecha']), name='cu_riego').sort_index(),
-            cu_drena=cu_d.pivot_table(index='fecha', columns='pila', values='cu_gL', aggfunc='first').sort_index().astype(float))
+            drena_cu=cu_d.pivot_table(index='fecha', columns='pila', values='cu_gL', aggfunc='first').sort_index().astype(float))
     wip = {}
     for row in sheets['campana'].itertuples():
         wip.setdefault(row.pad, {})[row.pila] = dict(
