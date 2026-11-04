@@ -42,7 +42,7 @@ def reconcile_sulfides(rows, case_start, case_end, target_net_t):
             raise ValueError(f'duplicate row: {key} {day}')
         group[day] = (index, row)
     output = deepcopy(rows)
-    young, mature, boundary, history = [], [], [], []
+    young, mature, history = [], [], []
     held_net = young_in = young_drain = 0.0
     for key, group in groups.items():
         if str(key[0]).strip().upper() not in {'SU', 'SULFUROS', 'SULFURO'}:
@@ -70,12 +70,6 @@ def reconcile_sulfides(rows, case_start, case_end, target_net_t):
                 idx, row = group[day]
                 output[idx]['reconciled_pct'] = _number(row, 'observed_pct')
             held_net += cu_tf * (_number(group[end][1], 'observed_pct') - base_pct) / 100
-        elif age == 30:
-            boundary.append(key)
-            for day in expected:
-                idx, row = group[day]
-                output[idx]['reconciled_pct'] = _number(row, 'official_pct')
-            held_net += cu_tf * (_number(group[end][1], 'official_pct') - base_pct) / 100
         else:
             young.append(key)
             for day in expected:
@@ -125,7 +119,7 @@ def reconcile_sulfides(rows, case_start, case_end, target_net_t):
         raise ValueError('recovery curve net does not match target')
     return output, {'lambda': factor, 'target_net_t': float(target_net_t), 'delivered_net_t': delivered,
                     'net_residual_t': float(target_net_t)-delivered, 'curve_net_t': curve_net, 'young': young,
-                    'mature': mature, 'exact_30_pending': boundary, 'protected_history': history,
+                    'mature': mature, 'protected_history': history,
                     'water_by_young': water_by_young,
                     'water_qualification': 'Diferencia incluye almacenamiento y otras entradas o perdidas; no es almacenamiento medido.',
                     'method': 'offline net-only conditional profile fit'}

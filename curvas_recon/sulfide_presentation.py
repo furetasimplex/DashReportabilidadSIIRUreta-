@@ -44,9 +44,9 @@ def solution_figures(res, label, num):
                   key=lambda r: r['date'])
     xs = [r['date'] for r in rows]
     flow = make_subplots(rows=2, cols=1, shared_xaxes=True,
-                         subplot_titles=('Riego observado', 'Drenaje modelado'))
+                         subplot_titles=('Riego medido', 'Drenaje reconciliado'))
     concentrations = make_subplots(rows=2, cols=1, shared_xaxes=True,
-                                   subplot_titles=('Cu riego observado', 'Cu drenaje observado'))
+                                   subplot_titles=('Cu riego medido', 'Cu drenaje medido'))
     for fig, fields in ((flow, ('q_riego_final', 'q_pls_final')),
                         (concentrations, ('cu_riego_recon', 'cu_pls_recon'))):
         for index, field in enumerate(fields, 1):
@@ -55,7 +55,7 @@ def solution_figures(res, label, num):
                                     name=('Riego' if index == 1 else 'Drenaje')),
                           row=index, col=1)
         fig.update_layout(template='plotly_white', height=540, hovermode='x unified',
-                          title=f'{label} P{num:02d} · ventana del ensayo local')
+                          title=f'{label} P{num:02d} · ventana del Caso')
     flow.update_yaxes(title_text='m³/h')
     concentrations.update_yaxes(title_text='g/L')
     if rows and all(r.get('q_pls_final') is None for r in rows):
@@ -69,15 +69,13 @@ def recovery_figure(res, label, num, cycles=()):
     fig = go.Figure()
     if series:
         fig.add_trace(go.Scatter(x=series['xs'], y=series['ys'], customdata=series['sources'],
-                                mode='lines+markers', name='Resultado local', connectgaps=False,
+                                mode='lines+markers', name='Reconciliado', connectgaps=False,
                                 hovertemplate='%{x|%d/%m/%Y}<br>%{y:.3f}%<br>%{customdata}<extra></extra>'))
         fig.add_trace(go.Scatter(x=series['xs'], y=series['measured_ys'],
-                                mode='lines', name='Observado', connectgaps=False,
+                                mode='lines', name='Medido', connectgaps=False,
                                 line=dict(color='#9CA3AF', dash='dot')))
     fig.update_layout(template='plotly_white', title=f'{label} P{num:02d} · recuperación directa',
                       yaxis_title='Recuperación (%)', hovermode='x unified')
-    fig.add_annotation(text='Caso e historia de agosto: fuente congelada · ensayo neto local',
-                       x=.5, y=1.08, xref='paper', yref='paper', showarrow=False)
     return fig
 
 
@@ -131,8 +129,8 @@ def trial_bars(res, tab_value):
                 values = [None if r.get('fino_pls_final') is None or r.get('fino_riego_final') is None else
                           .024*(r['fino_pls_final']-r['fino_riego_final']) for r in rows]
                 after.append(sum(values) if all(v is not None for v in values) else None)
-    fig = go.Figure([go.Bar(x=keys, y=before, name='Observado / base oficial'),
-                     go.Bar(x=keys, y=after, name='Resultado local')])
+    fig = go.Figure([go.Bar(x=keys, y=before, name='Medido'),
+                     go.Bar(x=keys, y=after, name='Reconciliado')])
     title, unit = {'tab-flujo': ('Riego de la ventana', 'm³'),
                    'tab-cus': ('Cu drenaje: media diaria', 'g/L')}.get(tab_value, ('Cu neto de la ventana', 't Cu'))
     fig.update_layout(template='plotly_white', barmode='group', title=title, yaxis_title=unit)

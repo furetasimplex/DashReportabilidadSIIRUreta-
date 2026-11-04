@@ -869,7 +869,7 @@ def _build_bar(data: dict, tab_value: str) -> go.Figure:
     if data.get('local_direct_recovery'):
         raw = _get_group_raw(data, data.get('caso_id'))
         if not raw:
-            return empty_figure('El ensayo local ya no esta disponible; vuelve a calcular')
+            return empty_figure('El resultado ya no está disponible; vuelve a calcular')
         from .sulfide_presentation import trial_bars
         return trial_bars(raw['res'], tab_value)
     week_start = data.get('week_start')
@@ -2507,14 +2507,6 @@ def _build_content_layout():
         ),
     ], className='recon-controls')
 
-    recon_controls.children.append(dbc.Col([
-        html.Label('Metodologia Sulfuros', htmlFor='curvas-sulfide-policy', className='control-label'),
-        dcc.Dropdown(id='curvas-sulfide-policy', value='net_trial', clearable=False,
-                     options=[{'label': 'Menores de 30 dias: ensayo neto local', 'value': 'net_trial'},
-                              {'label': 'Metodo anterior (guarda en SQL al calcular)', 'value': 'legacy'}]),
-        html.Small('Ensayo disponible: Caso 10009, 1-7 septiembre de 2026; fuentes congeladas.'),
-    ], xs=12, lg=6, className='control-field'))
-
     recon_pila_tabs = dcc.Tabs(id='curvas-recon-pila-tabs', value='tab-rec', children=[
         dcc.Tab(label='Curvas de Recuperación', value='tab-rec', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
         dcc.Tab(label='Flujos', value='tab-flujo', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
@@ -2541,11 +2533,9 @@ def _build_content_layout():
             dbc.ModalBody([
                 html.Div([
                     html.Span('Cómo leer este panel', className='method-note-title'),
-                    html.P('Sulfuros: las pilas menores de 30 dias pueden ajustarse dentro de la ventana; '
-                           'se conserva el mes anterior y las mayores usan recuperacion observada. '
-                           'El drenaje ajustado es modelado: cerrar Cu neto no valida el balance de agua. '
-                           'El ensayo queda local y no reemplaza resultados SQL. '
-                           'Caso 10009: fuentes capturadas, run oficial 10082 y perfil de referencia 2348.',
+                    html.P('Sulfuros: solo se ajustan las curvas de pilas con 30 días o menos desde el primer riego; '
+                           'las mayores conservan la recuperación medida y el mes anterior no se modifica. '
+                           'El drenaje ajustado es modelado: cerrar el Cu neto no valida el balance de agua.',
                            className='method-note-text'),
                     html.Span('Los deltas de caudal y Cu fino son relativos al medido. Los agregados de Cu fino son proporcionales, no toneladas. En las barras de concentración, la media diaria es aritmética sobre los días con dato y no está ponderada por caudal. “Cálculo listo” confirma que hay datos y pilas para mostrar; revisa avisos y gráficos para evaluar el resultado.',
                               className='method-note-text'),
@@ -2780,14 +2770,13 @@ def _error_modal_body(titulo, detalle, fallas=None):
     Output('curvas-recon-error-body', 'children'),
     Input('curvas-recon-btn', 'n_clicks'),
     State('curvas-recon-caso', 'value'),
-    State('curvas-sulfide-policy', 'value'),
     prevent_initial_call=True,
     running=[
         (Output('curvas-recon-btn', 'disabled'), True, False),
         (Output('curvas-recon-btn', 'children'), 'Calculando…', 'Ejecutar cálculo'),
     ],
 )
-def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
+def compute_recon(_n_clicks, caso_id):
     """Reconcile every active pile over the selected official Case window."""
     profile_total_t0 = time.perf_counter()
     perf_trace_id = uuid.uuid4().hex
@@ -2836,14 +2825,11 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
                 )
             phase_anchor = time.perf_counter() - phase_t0
             record_phase('compute.anchor', phase_anchor, trace_id=perf_trace_id)
-            if sulfide_policy not in ('net_trial', 'legacy'):
-                raise ValueError('Selecciona una metodologia valida para Sulfuros')
-            if sulfide_policy == 'net_trial':
-                from .sulfide_inputs import load_sulfide_inputs
-                sulfide_inputs = load_sulfide_inputs(ws, week_end, caso['id'], anchor)
-                if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
-                    raise ValueError('El snapshot de Sulfuros no corresponde al run oficial seleccionado')
-                method = tag = 'Sulfuros: ensayo neto local'
+            from .sulfide_inputs import load_sulfide_inputs
+            sulfide_inputs = load_sulfide_inputs(ws, week_end, caso['id'], anchor)
+            if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
+                raise ValueError('Las fuentes de Sulfuros no corresponden al run oficial seleccionado')
+            method = tag = 'Sulfuros: ajuste de curvas de hasta 30 días'
 
             phase_t0 = time.perf_counter()
             _progress_set('Historico y metadatos', 'Asegurando caches...', 28)
@@ -2872,10 +2858,7 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
                 {'riego': load_riego, 'cu_riego': load_cu_riego, 'drena_cu': load_drena_cu},
                 activity_loader=_fechas_actividad,
             )
-            if sulfide_policy == 'net_trial':
-                materials['SULFUROS']['sulfide_inputs'] = sulfide_inputs
-            else:
-                materials['SULFUROS']['sulfide_policy'] = 'legacy'
+            materials['SULFUROS']['sulfide_inputs'] = sulfide_inputs
             phase_materials = time.perf_counter() - phase_t0
             record_phase('compute.inputs', phase_materials, trace_id=perf_trace_id,
                          activity_dates=len(activity_dates), labels=len(materials))
@@ -2934,7 +2917,6 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
         week_start=ws.isoformat(), week_end=week_end.isoformat(), n_days=n_days,
         caso_id=caso['id'], caso_nombre=caso['nombre'], caso_run_id=caso['run_id'],
         raw_token=raw_token, performance_id=perf_trace_id,
-        sulfide_policy=sulfide_policy,
         local_direct_recovery=bool((joint.get('res') or {}).get('local_direct_recovery')),
         sulfide_audit=_clean_nan((joint.get('res') or {}).get('sulfide_audit') or {}),
         balance_inventario=dict(
@@ -2969,16 +2951,6 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
     record_phase('compute.callback_total', time.perf_counter() - profile_total_t0,
                  trace_id=perf_trace_id, output_piles=len(materials))
     return out, False, dash.no_update
-
-
-@_callback(
-    Output('curvas-recon-store', 'data', allow_duplicate=True),
-    Input('curvas-sulfide-policy', 'value'),
-    prevent_initial_call=True,
-)
-def invalidate_sulfide_policy(_policy):
-    """A method change clears stale results and never triggers calculation."""
-    return None
 
 
 @_callback(
@@ -3158,7 +3130,7 @@ def render_recon_pila_charts(data, selected_pila, caso_id, group_id=None, groups
     if data.get('local_direct_recovery') and selected_pila:
         raw = _get_group_raw(data, caso_id)
         if not raw:
-            return (empty_figure('El ensayo local ya no esta disponible; vuelve a calcular'),) * 3
+            return (empty_figure('El resultado ya no está disponible; vuelve a calcular'),) * 3
         from .sulfide_presentation import solution_figures
         selected_pad, selected_num = selected_pila.split('-P')
         flow, concentrations = solution_figures(raw['res'], _PAD_TO_LABEL[selected_pad], int(selected_num))
@@ -3608,8 +3580,6 @@ def update_status_badge(data, caso_id):
         return 'Pendiente de cálculo', {**base_style, 'backgroundColor': '#64748B'}
     if data.get('caso_id') is not None and caso_id != data.get('caso_id'):
         return 'Pendiente de cálculo', {**base_style, 'backgroundColor': '#64748B'}
-    if data.get('local_direct_recovery') and data.get('converged'):
-        return 'Ensayo neto local', {**base_style, 'backgroundColor': '#B45309'}
     if not data.get('converged'):
         warnings = data.get('warnings') or []
         sin_datos = any('QRiego_medido o QPLS_medido' in w for w in warnings)
@@ -3702,10 +3672,10 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
     if res.get('local_direct_recovery'):
         from .sulfide_presentation import trial_workbook
         if groups:
-            return html.Div('Exporta el ensayo sin grupos: este formato conserva las pilas individuales.'), None
+            return html.Div('Exporta sin grupos: este formato conserva las pilas individuales.'), None
         workbook = trial_workbook(res, caso)
-        return (html.Div('Ensayo local exportado con recuperacion directa y fuentes; sin validacion hidraulica.'),
-                dcc.send_bytes(workbook, f'Ensayo_Neto_Local_Caso{caso["id"]}.xlsx'))
+        return (html.Div('Informe exportado con recuperación medida y reconciliada de Sulfuros.'),
+                dcc.send_bytes(workbook, f'Reconciliacion_Sulfuros_Caso{caso["id"]}.xlsx'))
     tmp_path = None
     try:
         from . import report_metodo

@@ -2838,7 +2838,7 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
                                 fino_pls_final=(qd*r['cu_drenaje_gL'] if qd is not None else None),
                                 ramp_factor=(qd/q if qd is not None and q else None)))
         piles.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age, daily=entries,
-                          status=('young' if age < 30 else 'measured' if age > 30 else 'official_boundary')))
+                          status=('young' if age <= 30 else 'measured')))
         all_rows.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age))
         daily.extend(entries)
     q_values = [d['q_riego_final'] for d in daily]
@@ -3096,7 +3096,7 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
 
     return dict(
         materials=sub, weeks={week_start: dict(week_row)}, R_global=r_global, converged=converged,
-        method=('Sulfuros: ensayo neto local' if res.get('local_direct_recovery') else METHOD_NAME), warnings=warns_globales, estimate_scale=False, targets=None,
+        method=('Sulfuros: ajuste de curvas de hasta 30 días' if res.get('local_direct_recovery') else METHOD_NAME), warnings=warns_globales, estimate_scale=False, targets=None,
         totals=totals, week_start=week_start, week_end=week_end, n_days=n_days,
         # `res` crudo (con `piles` y su detalle diario). No es serializable a
         # JSON y no va al store del dashboard: lo necesita el reporte por el
