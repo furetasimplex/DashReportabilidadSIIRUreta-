@@ -25,7 +25,7 @@ K_F = 0.024
 
 
 def match_pad_flows(rows_by_state, held_net_t, target_net_t, targets, max_change=0.30, tolerance=0.001,
-                    max_relaxed_gap=0.05):
+                    max_relaxed_gap=0.05, mature_ratio=FDRENA_PROXY):
     """Ajusta SOLO las pilas nuevas para que el pad entregue lo que entregan los flujos globales.
 
     Maduras: intactas (medido). Nuevas: cuatro factores comunes --
@@ -63,8 +63,8 @@ def match_pad_flows(rows_by_state, held_net_t, target_net_t, targets, max_change
     M_rc = sum(r['q_riego_m3h'] * r['cu_riego_gL'] for r in irrigated(mature))
     Y_q = sum(r['q_riego_m3h'] for r in irrigated(young))
     Y_rc = sum(r['q_riego_m3h'] * r['cu_riego_gL'] for r in irrigated(young))
-    Q_mp = sum(FDRENA_PROXY * r['q_riego_m3h'] for r in irrigated(mature))
-    S_m = sum(FDRENA_PROXY * r['q_riego_m3h'] * r['cu_drenaje_gL'] for r in irrigated(mature))
+    Q_mp = sum(mature_ratio * r['q_riego_m3h'] for r in irrigated(mature))
+    S_m = sum(mature_ratio * r['q_riego_m3h'] * r['cu_drenaje_gL'] for r in irrigated(mature))
     Y_pq = sum(r['profile_q_drenaje_m3h'] for r in irrigated(young))
     Y_pc = sum(r['profile_q_drenaje_m3h'] * r['cu_drenaje_gL'] for r in irrigated(young))
     if min(Y_q, Y_rc, Y_pq, Y_pc) <= 0 or M_q + Y_q <= 0:
@@ -117,7 +117,8 @@ def match_pad_flows(rows_by_state, held_net_t, target_net_t, targets, max_change
 
 
 def reconcile_sulfides(rows, case_start, case_end, target_net_t, concentration_targets=None,
-                       max_concentration_change=0.30, concentration_tolerance=0.001):
+                       max_concentration_change=0.30, concentration_tolerance=0.001,
+                       mature_drainage_ratio=FDRENA_PROXY):
     """Fit one common drainage-profile multiplier to the net Cu target.
 
     Requires each sulfide cohort to have the preceding month-end and every
@@ -191,7 +192,7 @@ def reconcile_sulfides(rows, case_start, case_end, target_net_t, concentration_t
         if state:
             state_rows[state].extend(group[day][1] for day in (start + timedelta(days=i) for i in range((end-start).days+1)))
     matching = match_pad_flows(state_rows, held_net, float(target_net_t), concentration_targets,
-                               max_concentration_change, concentration_tolerance) if young else {'status': 'sin_pilas_nuevas'}
+                               max_concentration_change, concentration_tolerance, mature_ratio=mature_drainage_ratio) if young else {'status': 'sin_pilas_nuevas'}
     if not young:
         if abs(float(target_net_t) - held_net) > 1e-6:
             raise ValueError('infeasible target without young cohorts')
@@ -245,5 +246,6 @@ def reconcile_sulfides(rows, case_start, case_end, target_net_t, concentration_t
                     'net_residual_t': float(target_net_t)-delivered, 'curve_net_t': curve_net, 'young': young,
                     'mature': mature, 'protected_history': history,
                     'water_by_young': water_by_young, 'concentration_match': matching,
+                    'mature_drainage_ratio': mature_drainage_ratio,
                     'water_qualification': 'Diferencia incluye almacenamiento y otras entradas o perdidas; no es almacenamiento medido.',
                     'method': 'offline net-only conditional profile fit'}
