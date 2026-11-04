@@ -484,6 +484,22 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                         continue
                     rec_ext[(p_name, d['date'])] = (fp - fr) * K_F
 
+        # Metodo de Sulfuros (recuperacion directa): dentro de la ventana del Caso la
+        # curva es el resultado del metodo -- medida en las maduras, ajustada en las
+        # jovenes --, no una reconstruccion desde Q y Cu.
+        direct_pct = {}
+        for cid in casos:
+            res = (runs[cid]['pads'].get(label) or {}).get('res') or {}
+            if label != 'SULFUROS' or not res.get('local_direct_recovery'):
+                continue
+            ws_c = pd.Timestamp(runs[cid]['ws']).normalize()
+            we_c = pd.Timestamp(runs[cid]['we']).normalize()
+            for row in res.get('recovery_rows') or []:
+                day = pd.Timestamp(row['date']).normalize()
+                if (row.get('recovery_source') in ('observed', 'net_fit') and ws_c <= day <= we_c
+                        and day_caso.get(day) == cid and row.get('reconciled_pct') is not None):
+                    direct_pct[(f"P{int(str(row['pile']).lstrip('Pp')):02d}", day)] = float(row['reconciled_pct'])
+
         recovery_cycles = _campaign_recovery_points(label)
         primary_points = {}
         for p, v in info.items():
@@ -544,6 +560,16 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                 _apply_primary_points(
                     rec, e_rec, i0, primary_points[p], stack_cu_daily.get(v['num']),
                     v['fin'], v['f1'], pos)
+            if direct_pct and v['fin']:
+                # Los dias de la ventana toman el valor del metodo; los posteriores conservan
+                # sus incrementos y se desplazan para no dejar un salto al salir del Caso.
+                days_direct = sorted(d for (pp, d) in direct_pct if pp == p and d in pos and pos[d] >= i0)
+                if days_direct:
+                    for d in days_direct:
+                        rec[pos[d] - i0] = direct_pct[(p, d)] * v['fin'] / 100.0
+                    last = pos[days_direct[-1]] - i0
+                    if last + 1 < rec.size:
+                        rec[last + 1:] = rec[last] + np.cumsum(e_rec[i0 + last + 1:])
             cov = ((q > 0) & ~np.isnan(cu_p)).astype(int)[i0:]
             rie = (q > 0).astype(int)[i0:]
             vol = float(q[i0:].sum()) * 24.0   # load_riego entrega m3/h

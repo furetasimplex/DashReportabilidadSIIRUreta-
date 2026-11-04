@@ -125,6 +125,54 @@ class NetTransferTargetTests(unittest.TestCase):
                         self.assertAlmostEqual(d['q_pls_final'] * d['cu_pls_recon'],
                                                d['fino_pls_final'], places=8)
 
+    def test_flujos_globales_sin_cambio_no_mueven_ninguna_pila(self):
+        """Si el global reconciliado = medido, el pad queda en lo medido aunque el neto de las pilas no sea F25."""
+        start = pd.Timestamp('2026-10-01')
+        dates = pd.date_range(start, periods=3, freq='D')
+        materials = {'OXIDOS': {
+            'wip': {}, 'rec_curves': {}, 'max_rec': {}, 'ciclo_d': {},
+            'riego': pd.DataFrame({'P01': 100.0, 'P02': 50.0}, index=dates),
+            'cu_riego': pd.Series([0.2, 0.3, 0.4], index=dates),
+            'drena_cu': pd.DataFrame({'P01': [2.0, 2.5, 1.5], 'P02': [1.0, 0.8, 1.2]}, index=dates),
+        }}
+        q_riego = 3 * 150.0
+        q_pls = q_riego * E.FDRENA_MAX
+        anchor = {'OXIDOS': {
+            'q_riego_medido': q_riego, 'q_riego_recon': q_riego * 1.0005,
+            'q_pls_medido': q_pls, 'q_pls_recon': q_pls,
+            'fino_riego_medido': 100.0, 'fino_riego_recon': 100.0,
+            'fino_pls_medido': 257.0, 'fino_pls_recon': 257.0,
+            'net_cu_target_t': 157.0, 'net_cu_target_flow': 'F25',     # el neto de las pilas es otro
+        }}
+        self.assertTrue(E._anchor_unchanged(anchor['OXIDOS']))
+        changed = {'OXIDOS': dict(anchor['OXIDOS'], fino_pls_recon=260.0, net_cu_target_t=160.0)}
+        self.assertFalse(E._anchor_unchanged(changed['OXIDOS']))
+
+        def classify(_start, _wip, _curves, _max_rec, _cycle, **_kwargs):
+            return ['P01', 'P02'], [], [], {'P01': 100, 'P02': 100}, {'P01': 1.0, 'P02': 1.0}
+
+        E.limpiar_estado_rampa()
+        end = dates[-1]
+        with patch.object(E, 'classify_piles', side_effect=classify), \
+                patch.object(E, 'inicio_campana', return_value={'P01': start - pd.Timedelta(days=100),
+                                                              'P02': start - pd.Timedelta(days=100)}), \
+                patch.object(E, 'arranque_en_ventana', return_value={}), \
+                patch.object(E, '_campaign_asof', return_value=100):
+            result = E.reconcile_flowsheet(start, materials, force_all_active=True, week_end=end,
+                                           anchor=dict(anchor, OXIDOS=anchor['OXIDOS']))
+        self.assertAlmostEqual(result['delta_recon_riego'], 0.0, places=9)
+        self.assertAlmostEqual(result['delta_recon_pls'], 0.0, places=9)
+        self.assertAlmostEqual(result['delta_fino_riego'], 0.0, places=9)
+        self.assertAlmostEqual(result['delta_fino_pls'], 0.0, places=9)
+        self.assertTrue(result['daily'])
+        for d in result['daily']:                       # cada dia de cada pila, exactamente lo medido
+            self.assertEqual(d['q_riego_final'], d['q_riego_medido'])
+            self.assertEqual(d['q_pls_final'], d['q_pls_medido'])
+            self.assertEqual(d['cu_riego_recon'], d['cu_riego_medido'])
+            self.assertEqual(d['cu_pls_recon'], d['cu_pls_medido'])
+            self.assertEqual(d['fino_pls_final'], d['fino_pls_medido'])
+            self.assertEqual(d['aporte_fino_pls'], 0.0)
+
     def test_negative_target_cannot_require_negative_pls_fine(self):
         self.assertAlmostEqual(E._pls_fine_target_for_net(-0.01, 50.0),
                                50.0 - 0.01 / 0.024)

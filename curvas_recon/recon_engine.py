@@ -607,6 +607,24 @@ def arranque_en_ventana(label, week_start, week_end, gap_days=UNLISTED_GAP_DAYS)
 _CAMPANA_CACHE = {}
 
 
+def pilas_jovenes(label, week_start, week_end, max_age_days=30):
+    """{pila: primer riego} de las pilas que riegan en la ventana y tienen
+    `max_age_days` dias o menos desde el primer riego real de su campana
+    vigente al cierre. Mismo criterio de edad que el ajuste de Sulfuros
+    (dias calendario transcurridos); si el resultado esta vacio no hay
+    curvas nuevas que ajustar."""
+    ws, we = pd.Timestamp(week_start).normalize(), pd.Timestamp(week_end).normalize()
+    riego, _ = _fechas_actividad(label)
+    out = {}
+    for pila, ini in inicio_campana(label, we).items():
+        fechas = riego.get(pila)
+        if fechas is None or not len(fechas[(fechas >= ws) & (fechas <= we)]):
+            continue
+        if (we - pd.Timestamp(ini).normalize()).days <= max_age_days:
+            out[pila] = ini
+    return out
+
+
 def inicio_campana(label, asof, gap_days=UNLISTED_GAP_DAYS):
     """{pila: Timestamp del primer dia de riego de la campana VIGENTE a `asof`}.
 
@@ -818,7 +836,7 @@ def _drena_cu_ingest(material, start, end):
     return wide.sort_index().apply(pd.to_numeric, errors='coerce')
 
 
-def load_cu_riego(label, start=None, end=None):
+def load_cu_riego(label, start=None, end=None, fill=True):
     """Serie unica de Cu++ refino de riego por material, desde cu_riego_diario
     (DB). Se aplica un margen de lookback antes de `start` (no `end`, por la
     regla de no usar datos futuros) para que el ffill() no caiga en el
@@ -863,10 +881,12 @@ def load_cu_riego(label, start=None, end=None):
               f'ni cu_riego_diario ni la vista de ingesta tienen datos en ese rango.')
         return pd.Series(dtype=float, name='cu_riego')
     ts.name = 'cu_riego'
+    if not fill:                       # lecturas tal cual: sin ffill ni respaldo
+        return ts
     return ts.ffill().fillna(CU_RIEGO_FALLBACK)
 
 
-def load_drena_cu(label, start=None, end=None):
+def load_drena_cu(label, start=None, end=None, fill=True):
     """Cu_pp de drenaje por pila, desde drena_cu_diario (DB). Mismo margen de
     lookback que load_cu_riego, por la misma razon (ffill por pila)."""
     material = LABEL_MATERIAL[label]
@@ -911,7 +931,7 @@ def load_drena_cu(label, start=None, end=None):
         print(f'[recon_engine] load_drena_cu({label!r}, {start}, {end}): 0 filas -- '
               f'ni drena_cu_diario ni vw_drena_quimica_ingest tienen datos en ese rango.')
         return pd.DataFrame()
-    return wide.sort_index().ffill()
+    return wide.sort_index().ffill() if fill else wide.sort_index()
 
 
 def active_pilas_by_riego(label, cutoff, window_days=21):
@@ -1839,9 +1859,29 @@ def _daily_net_cu_t(daily_rows):
                for d in daily_rows) * 0.024
 
 
+def _hold_measured(row):
+    """Deja cada dia de la pila EXACTAMENTE en lo medido (caudales, Cu y finos): sin ajuste, sin rampa."""
+    for d in row['daily']:
+        q_r, q_p = d['q_riego_medido'], d['q_pls_medido']
+        d.update(q_riego_final=q_r, q_pls_final=q_p,
+                 fino_riego_final=d['fino_riego_medido'], fino_pls_final=d['fino_pls_medido'],
+                 cu_riego_recon=d['cu_riego_medido'] if q_r > 0 else None,
+                 cu_pls_recon=d['cu_pls_medido'] if q_p > 0 else None,
+                 d_riego=0.0, d_pls=0.0, aporte_fino_riego=0.0, aporte_fino_pls=0.0,
+                 ramp_factor=(q_p / q_r if q_r > 0 else 0.0), weight_pls=q_p, clipped=False)
+    days = row['daily']
+    row['q_riego_final'] = sum(d['q_riego_final'] for d in days)
+    row['q_pls_final'] = sum(d['q_pls_final'] for d in days)
+    row['fino_riego_final'] = sum(d['fino_riego_final'] for d in days)
+    row['fino_pls_final'] = sum(d['fino_pls_final'] for d in days)
+    row['cu_riego_recon'] = row['fino_riego_final'] / row['q_riego_final'] if row['q_riego_final'] > 0 else None
+    row['cu_pls_recon'] = row['fino_pls_final'] / row['q_pls_final'] if row['q_pls_final'] > 0 else None
+    row['d_riego'] = row['d_pls'] = row['aporte_fino_riego'] = row['aporte_fino_pls'] = 0.0
+
+
 def _build_piles(rows, materials, week_start, q_riego_medido, q_pls_medido,
                   delta_recon_riego, delta_recon_pls, delta_fino_riego, delta_fino_pls,
-                  ramp_cap_by_label, week_end=None, nuevas_by_label=None,
+                  ramp_cap_by_label, week_end=None, nuevas_by_label=None, hold_measured=False,
                   campana_by_label=None):
     """Paso 3+4+6+7 para TODAS las pilas activas de `rows`.
 
@@ -2003,6 +2043,8 @@ def _build_piles(rows, materials, week_start, q_riego_medido, q_pls_medido,
             r['label'], r['parcela'], week_start, materials[r['label']], row,
             ramp_cap_by_label[r['label']], warnings, week_end=week_end,
             ini_ciclo=ini_ciclo, ini_campana=ini_campana)
+        if hold_measured:
+            _hold_measured(row)
         if any(d['clipped'] for d in row['daily']):
             clip_labels.add(r['label'])
 
@@ -2011,7 +2053,8 @@ def _build_piles(rows, materials, week_start, q_riego_medido, q_pls_medido,
     # pila nueva: es INVENTARIO INTERNO del lecho. Sale como termino aparte
     # para que el pad cierre y para que el % de ajuste de la pila nueva siga
     # siendo el de su aporte.
-    inventario = _repartir_residuo_rampa(piles, ramp_cap_by_label, warnings)
+    inventario = ({r['label']: (0.0, 0.0) for r in piles} if hold_measured
+                  else _repartir_residuo_rampa(piles, ramp_cap_by_label, warnings))
 
     # `daily_rows` se arma DESPUES de 7e: antes copiaba los dias de la pila y
     # el reparto los dejaba desactualizados.
@@ -2194,7 +2237,7 @@ def _repartir_residuo_rampa(piles, ramp_cap_by_label, warnings):
             warnings.append(
                 f'{label}: quedaron {residuo_q - colocado:.3f} m3/h-dia del residuo de rampa SIN '
                 f'colocar -- la holgura total del pad ({tot_h:.3f}) no alcanza. El termino no '
-                f'demuestra inventario interno del lecho ni permite a?adir Cu para cerrar '
+                f'demuestra inventario interno del lecho ni permite añadir Cu para cerrar '
                 f'el balance. Se declara el faltante con signo (paso 7e).')
         if abs(inv_q) > 1e-9 or abs(inv_f) > 1e-9:
             piso_q, piso_f = inventario.get(label, (0.0, 0.0))
@@ -2335,6 +2378,30 @@ def _anchor_ratio(anchor, key_recon, key_medido):
     if not (np.isfinite(rec) and np.isfinite(med)) or med == 0.0:
         return None
     return rec / med
+
+
+ANCHOR_UNCHANGED_TOL = 1e-3     # 0.1 %: dentro de esta banda el global reconciliado = medido
+
+
+def _anchor_unchanged(anchor, tol=ANCHOR_UNCHANGED_TOL):
+    """True si los flujos globales del pad no cambian al reconciliar (riego y PLS, masa y fino, y el neto).
+
+    En ese caso el pad no se mueve: ninguna pila cambia caudal, concentracion ni recuperacion. Sin esto el
+    neto absoluto (F25/F29) se imponia igual y movia el fino PLS de las pilas aunque los flujos no cambiaran,
+    solo porque el neto que miden las pilas no coincide con el del balance (distinto universo de pilas)."""
+    if not anchor:
+        return False
+    for rec, med in (('q_riego_recon', 'q_riego_medido'), ('q_pls_recon', 'q_pls_medido'),
+                     ('fino_riego_recon', 'fino_riego_medido'), ('fino_pls_recon', 'fino_pls_medido')):
+        ratio = _anchor_ratio(anchor, rec, med)
+        if ratio is None or abs(ratio - 1.0) > tol:
+            return False
+    target = anchor.get('net_cu_target_t')
+    if target is not None:
+        net_med = float(anchor['fino_pls_medido']) - float(anchor['fino_riego_medido'])
+        if not np.isfinite(float(target)) or abs(float(target) - net_med) > tol * max(abs(net_med), 1e-9):
+            return False
+    return True
 
 
 def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFAULT,
@@ -2552,6 +2619,9 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
     # recorte sin motivo fisico.
     ratio_riego = _anchor_ratio(anchor, 'q_riego_recon', 'q_riego_medido')
     ratio_pls = _anchor_ratio(anchor, 'q_pls_recon', 'q_pls_medido')
+    sin_cambio = _anchor_unchanged(anchor)
+    if sin_cambio:                      # flujos globales sin cambio: el pad queda exactamente en lo medido
+        ratio_riego = ratio_pls = 1.0
     if ratio_riego is not None:
         q_riego_recon = q_riego_medido * ratio_riego
     else:
@@ -2603,6 +2673,8 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
     # patron sintetico de paso 1 (ver `_noisy_global`).
     ratio_fr = _anchor_ratio(anchor, 'fino_riego_recon', 'fino_riego_medido')
     ratio_fp = _anchor_ratio(anchor, 'fino_pls_recon', 'fino_pls_medido')
+    if sin_cambio:
+        ratio_fr = ratio_fp = 1.0
     if ratio_fr is not None:
         cu_fino_riego_recon = cu_fino_riego_medido * ratio_fr
     else:
@@ -2616,7 +2688,7 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
     # separately reconciled irrigation fine. Internal fine is sum(Q*Cu); the
     # report's conversion to t Cu is 0.024 per daily Q[m3/h]*Cu[g/L].
     target_net_t = (float(anchor['net_cu_target_t'])
-                    if anchor and anchor.get('net_cu_target_t') is not None else None)
+                    if anchor and anchor.get('net_cu_target_t') is not None and not sin_cambio else None)
     if target_net_t is not None:
         cu_fino_pls_recon = _pls_fine_target_for_net(target_net_t,
                                                     cu_fino_riego_recon)
@@ -2641,7 +2713,9 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
     piles, daily_rows, loop_warnings, clip_labels, inventario_by_label = _build_piles(
         rows, materials, week_start, q_riego_medido, q_pls_medido,
         delta_recon_riego, delta_recon_pls, delta_fino_riego, delta_fino_pls,
-        ramp_cap_by_label, week_end=week_end, nuevas_by_label=nuevas_by_label,
+        ramp_cap_by_label, week_end=week_end,
+        # sin cambio en los flujos globales no hay ajuste que repartir: tampoco rampa de pila nueva
+        nuevas_by_label=({} if sin_cambio else nuevas_by_label), hold_measured=sin_cambio,
         campana_by_label=campana_by_label)
     warnings.extend(loop_warnings)
     daily_net_cu_t = _daily_net_cu_t(daily_rows)
@@ -2782,6 +2856,82 @@ def merge_flowsheet_res(parts):
     return out
 
 
+# Las concentraciones de las pilas nuevas pueden cambiar hasta este porcentaje para que las ponderadas
+# del pad coincidan con las de los flujos globales; la tolerancia (banda) es la diferencia relativa aceptada:
+# dentro de ella no se ajusta nada y fuera solo se lleva hasta el borde de la banda.
+SULFIDE_CONC_MAX_CHANGE = 0.30
+SULFIDE_CONC_TOLERANCE = 0.10
+
+
+def _sulfide_match_warning(match):
+    """Aviso para el usuario sobre el ajuste de las pilas nuevas a los flujos globales."""
+    status = match.get('status')
+    if status == 'aplicado':
+        extra = (f"; el Cu de riego del pad queda {match['diferencia_cu_riego_relativa']:.1%} fuera del global "
+                 f"(los flujos globales no cuadran exactamente con F29)" if match.get('con_masas') else '')
+        return [f"Sulfuros: pilas nuevas ajustadas a los flujos globales (riego x{match['beta']:.3f}, "
+                f"Cu riego x{match['alpha_riego']:.3f}, Cu PLS x{match['alpha_pls']:.3f}){extra}."]
+    if status == 'no_aplicado':
+        return [f"Sulfuros: no se igualaron las masas y concentraciones de los flujos globales "
+                f"({match.get('motivo')}); se conservan los valores medidos."]
+    return []
+
+
+def _sulfide_balance_totals(recovery_rows, piles, ws, we):
+    """Totales del balance de Sulfuros para las tarjetas de deltas.
+
+    El metodo conserva el riego y los Cu medidos: delta de riego y de Cu fino de riego
+    son 0. El caudal PLS medido sigue la convencion del dash (0.95 x riego) y el
+    reconciliado es el ajustado en las jovenes; las maduras no se ajustan. El Cu fino de
+    PLS se despeja del Cu neto de cada pila (neto = 0.024 x (fino PLS - fino riego)):
+    medido desde la recuperacion observada (0.95 x riego si la pila no tiene lectura al
+    cierre) y reconciliado desde el resultado del metodo. Misma unidad que el motor:
+    suma diaria de caudal [m3/h] x Cu [g/L]."""
+    k_f = 0.024
+    base_day = pd.Timestamp(ws).normalize() - pd.Timedelta(days=1)
+    end_day = pd.Timestamp(we).normalize()
+    by_pile = {}
+    for row in recovery_rows:
+        by_pile.setdefault(row['pile'], {})[pd.Timestamp(row['date']).normalize()] = row
+    t = dict(q_pls_medido=0.0, q_pls_recon=0.0, q_riego_med=0.0, q_riego_rec=0.0, fino_riego=0.0, fino_riego_rec=0.0,
+             fino_pls_medido=0.0, fino_pls_recon=0.0)
+    for pile in piles:
+        entries = pile['daily']
+        q = [e['q_riego_medido'] or 0.0 for e in entries]
+        q_rec = [e['q_riego_final'] or 0.0 for e in entries]
+        fino_riego = sum(qq * e['cu_riego_medido'] for qq, e in zip(q, entries)
+                         if qq and e.get('cu_riego_medido') is not None)
+        fino_riego_rec = sum(qq * e['cu_riego_recon'] for qq, e in zip(q_rec, entries)
+                             if qq and e.get('cu_riego_recon') is not None)
+        fitted = [e['q_pls_final'] for e in entries if e.get('q_pls_final') is not None]
+        t['q_pls_medido'] += FDRENA_MAX * sum(q)
+        t['q_riego_rec'] += sum(q_rec)
+        t['q_riego_med'] += sum(q)
+        t['q_pls_recon'] += sum(fitted) if pile.get('status') == 'young' else FDRENA_MAX * sum(q)
+        t['fino_riego'] += fino_riego
+        t['fino_riego_rec'] += fino_riego_rec
+        rows = by_pile.get(pile['parcela'], {})
+        base, last = rows.get(base_day), rows.get(end_day)
+        if base is None or last is None:
+            continue
+        cu_tf = base['cu_apilado_t']
+        net_rec = cu_tf * (last['reconciled_pct'] - base['official_pct']) / 100.0
+        if last.get('observed_pct') is not None:
+            net_med = cu_tf * (last['observed_pct'] - base['official_pct']) / 100.0
+        else:
+            net_med = k_f * sum(FDRENA_MAX * qq * e['cu_pls_medido'] - qq * e['cu_riego_medido']
+                                for qq, e in zip(q, entries)
+                                if qq and e.get('cu_pls_medido') is not None and e.get('cu_riego_medido') is not None)
+        t['fino_pls_recon'] += net_rec / k_f + fino_riego_rec
+        t['fino_pls_medido'] += net_med / k_f + fino_riego
+    return dict(
+        q_pls_medido=t['q_pls_medido'], q_pls_recon=t['q_pls_recon'],
+        cu_fino_riego_medido=t['fino_riego'], cu_fino_riego_recon=t['fino_riego_rec'],
+        cu_fino_pls_medido=t['fino_pls_medido'], cu_fino_pls_recon=t['fino_pls_recon'],
+        delta_recon_riego=t['q_riego_rec'] - t['q_riego_med'], delta_recon_pls=t['q_pls_recon'] - t['q_pls_medido'],
+        delta_fino_riego=t['fino_riego_rec'] - t['fino_riego'], delta_fino_pls=t['fino_pls_recon'] - t['fino_pls_medido'])
+
+
 def _reconcile_sulfide_local(week_start, week_end, material, anchor):
     """Produce local direct-recovery data; SQL persistence is unsupported."""
     from .sulfide_method import reconcile_sulfides
@@ -2793,7 +2943,17 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
     ws, we, _ = resolve_window(week_start, week_end)
     if pd.Timestamp(inputs.get('target_period_start')).normalize() != ws:
         raise ValueError('SULFUROS target_period_start no coincide con inicio del Caso')
-    result, audit = reconcile_sulfides(inputs['rows'], ws, we, anchor['net_cu_target_t'])
+    # Concentraciones globales del Caso (g/L) = 1000 x fino [t] / masa [m3] de los flujos de riego y de PLS del pad.
+    def _global_conc(fino, masa):
+        return 1000.0 * fino / masa if isinstance(fino, (int, float)) and isinstance(masa, (int, float)) and masa > 0 else None
+    _mass = lambda value: float(value) / 24.0 if isinstance(value, (int, float)) and value > 0 else None   # m3 -> suma diaria de m3/h
+    conc_targets = dict(cu_riego_g_l=_global_conc(anchor.get('fino_riego_recon'), anchor.get('q_riego_recon')),
+                        cu_pls_g_l=_global_conc(anchor.get('fino_pls_recon'), anchor.get('q_pls_recon')),
+                        q_riego_m3h_sum=_mass(anchor.get('q_riego_recon')), q_pls_m3h_sum=_mass(anchor.get('q_pls_recon')))
+    result, audit = reconcile_sulfides(inputs['rows'], ws, we, anchor['net_cu_target_t'],
+                                       concentration_targets=conc_targets,
+                                       max_concentration_change=SULFIDE_CONC_MAX_CHANGE,
+                                       concentration_tolerance=SULFIDE_CONC_TOLERANCE)
     def _json_safe(value):
         if isinstance(value, dict):
             return {('/'.join(map(str, key)) if isinstance(key, tuple) else str(key)): _json_safe(item)
@@ -2827,28 +2987,36 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
         entries = []
         for r in records:
             q = r.get('q_riego_m3h')
+            q_rec = r.get('q_riego_recon_m3h', q)            # las nuevas pueden traer riego reconciliado
             qd = r.get('fitted_q_drenaje_m3h')
+            # Las nuevas pueden traer concentraciones reconciliadas (ajuste a los flujos globales).
+            cr_rec = r.get('cu_riego_recon_gL', r.get('cu_riego_gL'))
+            cd_rec = r.get('cu_drenaje_recon_gL', r.get('cu_drenaje_gL'))
             entries.append(dict(label='SULFUROS', parcela=pile, campaign=campaign,
                                 date=pd.Timestamp(r['date']).normalize(), q_riego_medido=q,
                                 q_pls_medido=None, cu_riego_medido=r.get('cu_riego_gL'),
-                                cu_pls_medido=r.get('cu_drenaje_gL'), q_riego_final=q,
-                                fino_riego_final=(q*r['cu_riego_gL'] if q is not None and r.get('cu_riego_gL') is not None else None),
-                                q_pls_final=qd, cu_riego_recon=r.get('cu_riego_gL'),
-                                cu_pls_recon=r.get('cu_drenaje_gL'),
-                                fino_pls_final=(qd*r['cu_drenaje_gL'] if qd is not None else None),
-                                ramp_factor=(qd/q if qd is not None and q else None)))
+                                cu_pls_medido=r.get('cu_drenaje_gL'), q_riego_final=q_rec,
+                                fino_riego_final=(q_rec*cr_rec if q_rec is not None and cr_rec is not None else None),
+                                q_pls_final=qd, cu_riego_recon=cr_rec,
+                                cu_pls_recon=cd_rec,
+                                fino_pls_final=(qd*cd_rec if qd is not None and cd_rec is not None else None),
+                                ramp_factor=(qd/q_rec if qd is not None and q_rec else None)))
         piles.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age, daily=entries,
-                          status=('young' if age < 30 else 'measured' if age > 30 else 'official_boundary')))
+                          status=('young' if age <= 30 else 'measured')))
         all_rows.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age))
         daily.extend(entries)
     q_values = [d['q_riego_final'] for d in daily]
     q_total = sum(q_values) if all(q is not None for q in q_values) else None
+    q_meas = [d['q_riego_medido'] for d in daily]
+    q_total_medido = sum(q_meas) if all(q is not None for q in q_meas) else None
+    totals = _sulfide_balance_totals(recovery_rows, piles, ws, we)
     out = {k: None for k in _MERGE_SUM_KEYS}
     out.update(week_start=ws, week_end=we, anchored=True, n_active=len(piles), n_nuevas=len(audit['young']),
-               q_riego_medido=q_total, q_riego_recon=q_total,
+               q_riego_medido=q_total_medido, q_riego_recon=q_total, **totals,
                net_cu_target_t=anchor['net_cu_target_t'], daily_net_cu_t=audit['curve_net_t'],
                net_closure_residual_t=audit['net_residual_t'], all_rows=all_rows, piles=piles,
-               daily=daily, warnings=['Sulfuros: resultado local; drenaje de maduras desconocido.'],
+               daily=daily, warnings=['Sulfuros: resultado local; drenaje de maduras desconocido.']
+                                      + _sulfide_match_warning(audit.get('concentration_match') or {}),
                recovery_rows=recovery_rows, sulfide_audit=_json_safe(audit), local_direct_recovery=True,
                ramp_cap_by_label={}, nuevas={'SULFUROS': {pile: str(next(r['first_irrigation'] for r in result if r['pile'] == pile and r['campaign'] == campaign)) for _, pile, campaign in audit['young']}},
                net_cu_by_label={'SULFUROS': {'target_t': anchor['net_cu_target_t'],
@@ -3096,7 +3264,7 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
 
     return dict(
         materials=sub, weeks={week_start: dict(week_row)}, R_global=r_global, converged=converged,
-        method=('Sulfuros: ensayo neto local' if res.get('local_direct_recovery') else METHOD_NAME), warnings=warns_globales, estimate_scale=False, targets=None,
+        method=('Sulfuros: ajuste de curvas de hasta 30 días' if res.get('local_direct_recovery') else METHOD_NAME), warnings=warns_globales, estimate_scale=False, targets=None,
         totals=totals, week_start=week_start, week_end=week_end, n_days=n_days,
         # `res` crudo (con `piles` y su detalle diario). No es serializable a
         # JSON y no va al store del dashboard: lo necesita el reporte por el
