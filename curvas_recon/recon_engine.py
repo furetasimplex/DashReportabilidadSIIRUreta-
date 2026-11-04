@@ -1859,9 +1859,29 @@ def _daily_net_cu_t(daily_rows):
                for d in daily_rows) * 0.024
 
 
+def _hold_measured(row):
+    """Deja cada dia de la pila EXACTAMENTE en lo medido (caudales, Cu y finos): sin ajuste, sin rampa."""
+    for d in row['daily']:
+        q_r, q_p = d['q_riego_medido'], d['q_pls_medido']
+        d.update(q_riego_final=q_r, q_pls_final=q_p,
+                 fino_riego_final=d['fino_riego_medido'], fino_pls_final=d['fino_pls_medido'],
+                 cu_riego_recon=d['cu_riego_medido'] if q_r > 0 else None,
+                 cu_pls_recon=d['cu_pls_medido'] if q_p > 0 else None,
+                 d_riego=0.0, d_pls=0.0, aporte_fino_riego=0.0, aporte_fino_pls=0.0,
+                 ramp_factor=(q_p / q_r if q_r > 0 else 0.0), weight_pls=q_p, clipped=False)
+    days = row['daily']
+    row['q_riego_final'] = sum(d['q_riego_final'] for d in days)
+    row['q_pls_final'] = sum(d['q_pls_final'] for d in days)
+    row['fino_riego_final'] = sum(d['fino_riego_final'] for d in days)
+    row['fino_pls_final'] = sum(d['fino_pls_final'] for d in days)
+    row['cu_riego_recon'] = row['fino_riego_final'] / row['q_riego_final'] if row['q_riego_final'] > 0 else None
+    row['cu_pls_recon'] = row['fino_pls_final'] / row['q_pls_final'] if row['q_pls_final'] > 0 else None
+    row['d_riego'] = row['d_pls'] = row['aporte_fino_riego'] = row['aporte_fino_pls'] = 0.0
+
+
 def _build_piles(rows, materials, week_start, q_riego_medido, q_pls_medido,
                   delta_recon_riego, delta_recon_pls, delta_fino_riego, delta_fino_pls,
-                  ramp_cap_by_label, week_end=None, nuevas_by_label=None,
+                  ramp_cap_by_label, week_end=None, nuevas_by_label=None, hold_measured=False,
                   campana_by_label=None):
     """Paso 3+4+6+7 para TODAS las pilas activas de `rows`.
 
@@ -2023,6 +2043,8 @@ def _build_piles(rows, materials, week_start, q_riego_medido, q_pls_medido,
             r['label'], r['parcela'], week_start, materials[r['label']], row,
             ramp_cap_by_label[r['label']], warnings, week_end=week_end,
             ini_ciclo=ini_ciclo, ini_campana=ini_campana)
+        if hold_measured:
+            _hold_measured(row)
         if any(d['clipped'] for d in row['daily']):
             clip_labels.add(r['label'])
 
@@ -2031,7 +2053,8 @@ def _build_piles(rows, materials, week_start, q_riego_medido, q_pls_medido,
     # pila nueva: es INVENTARIO INTERNO del lecho. Sale como termino aparte
     # para que el pad cierre y para que el % de ajuste de la pila nueva siga
     # siendo el de su aporte.
-    inventario = _repartir_residuo_rampa(piles, ramp_cap_by_label, warnings)
+    inventario = ({r['label']: (0.0, 0.0) for r in piles} if hold_measured
+                  else _repartir_residuo_rampa(piles, ramp_cap_by_label, warnings))
 
     # `daily_rows` se arma DESPUES de 7e: antes copiaba los dias de la pila y
     # el reparto los dejaba desactualizados.
@@ -2690,7 +2713,9 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
     piles, daily_rows, loop_warnings, clip_labels, inventario_by_label = _build_piles(
         rows, materials, week_start, q_riego_medido, q_pls_medido,
         delta_recon_riego, delta_recon_pls, delta_fino_riego, delta_fino_pls,
-        ramp_cap_by_label, week_end=week_end, nuevas_by_label=nuevas_by_label,
+        ramp_cap_by_label, week_end=week_end,
+        # sin cambio en los flujos globales no hay ajuste que repartir: tampoco rampa de pila nueva
+        nuevas_by_label=({} if sin_cambio else nuevas_by_label), hold_measured=sin_cambio,
         campana_by_label=campana_by_label)
     warnings.extend(loop_warnings)
     daily_net_cu_t = _daily_net_cu_t(daily_rows)

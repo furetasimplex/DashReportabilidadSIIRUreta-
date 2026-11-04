@@ -132,8 +132,8 @@ class NetTransferTargetTests(unittest.TestCase):
         materials = {'OXIDOS': {
             'wip': {}, 'rec_curves': {}, 'max_rec': {}, 'ciclo_d': {},
             'riego': pd.DataFrame({'P01': 100.0, 'P02': 50.0}, index=dates),
-            'cu_riego': pd.Series(0.3, index=dates),
-            'drena_cu': pd.DataFrame({'P01': 2.0, 'P02': 1.0}, index=dates),
+            'cu_riego': pd.Series([0.2, 0.3, 0.4], index=dates),
+            'drena_cu': pd.DataFrame({'P01': [2.0, 2.5, 1.5], 'P02': [1.0, 0.8, 1.2]}, index=dates),
         }}
         q_riego = 3 * 150.0
         q_pls = q_riego * E.FDRENA_MAX
@@ -165,13 +165,13 @@ class NetTransferTargetTests(unittest.TestCase):
         self.assertAlmostEqual(result['delta_fino_riego'], 0.0, places=9)
         self.assertAlmostEqual(result['delta_fino_pls'], 0.0, places=9)
         self.assertTrue(result['daily'])
-        measured = {'P01': (100.0, 2.0), 'P02': (50.0, 1.0)}
-        for d in result['daily']:
-            q, cu_pls = measured[d['parcela'] if 'parcela' in d else d['pile']]
-            self.assertAlmostEqual(d['q_riego_final'], q, places=7)
-            self.assertAlmostEqual(d['cu_riego_recon'], 0.3, places=7)
-            self.assertAlmostEqual(d['q_pls_final'], E.FDRENA_MAX * q, places=7)
-            self.assertAlmostEqual(d['cu_pls_recon'], cu_pls, places=7)
+        for d in result['daily']:                       # cada dia de cada pila, exactamente lo medido
+            self.assertEqual(d['q_riego_final'], d['q_riego_medido'])
+            self.assertEqual(d['q_pls_final'], d['q_pls_medido'])
+            self.assertEqual(d['cu_riego_recon'], d['cu_riego_medido'])
+            self.assertEqual(d['cu_pls_recon'], d['cu_pls_medido'])
+            self.assertEqual(d['fino_pls_final'], d['fino_pls_medido'])
+            self.assertEqual(d['aporte_fino_pls'], 0.0)
 
     def test_negative_target_cannot_require_negative_pls_fine(self):
         self.assertAlmostEqual(E._pls_fine_target_for_net(-0.01, 50.0),
