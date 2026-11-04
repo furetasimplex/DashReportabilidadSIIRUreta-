@@ -74,7 +74,9 @@ def reconcile_sulfides(rows, case_start, case_end, target_net_t):
             young.append(key)
             for day in expected:
                 row = group[day][1]
-                qr = _number(row, 'q_riego_m3h', positive=True)
+                qr = _number(row, 'q_riego_m3h')
+                if qr == 0:
+                    continue                  # sin riego: sin flujo ni Cu ese dia
                 cr = _number(row, 'cu_riego_gL')
                 cd = _number(row, 'cu_drenaje_gL')
                 qd = _number(row, 'profile_q_drenaje_m3h', positive=True)
@@ -99,6 +101,10 @@ def reconcile_sulfides(rows, case_start, case_end, target_net_t):
         for i in range((end-start).days+1):
             day = start + timedelta(days=i)
             idx, row = group[day]
+            if float(row['q_riego_m3h']) == 0:
+                output[idx]['reconciled_pct'] = pct
+                output[idx]['fitted_q_drenaje_m3h'] = 0.0
+                continue
             qd = factor * float(row['profile_q_drenaje_m3h'])
             if not isfinite(qd) or qd > float(row['q_riego_m3h']) + 1e-10:
                 raise ValueError(f'infeasible drainage flow cap: {key} {day}')

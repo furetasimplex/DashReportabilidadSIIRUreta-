@@ -127,6 +127,9 @@ def test_compute_callback_connects_validated_inputs_and_serializes_local_result(
     monkeypatch.setattr(inputs_module, 'load_sulfide_inputs',
                         lambda ws, we, cid, anchor, source_provider=None: original_loader(ws, we, cid, anchor))
     monkeypatch.setattr(db_inputs_module, 'make_source_provider', lambda *args, **kw: None)
+    monkeypatch.setattr(db_inputs_module, 'load_saved_profile', lambda *args, **kw: {})
+    monkeypatch.setattr(dashboard, 'load_cu_riego', lambda *args, **kw: None)
+    monkeypatch.setattr(dashboard, 'load_drena_cu', lambda *args, **kw: None)
     monkeypatch.setattr(dashboard, 'DATA_SU', {})
     monkeypatch.setattr(dashboard, 'inicio_campana', lambda *args, **kw: {})
     forbid = Mock(side_effect=AssertionError('SQL persistence forbidden'))

@@ -836,7 +836,7 @@ def _drena_cu_ingest(material, start, end):
     return wide.sort_index().apply(pd.to_numeric, errors='coerce')
 
 
-def load_cu_riego(label, start=None, end=None):
+def load_cu_riego(label, start=None, end=None, fill=True):
     """Serie unica de Cu++ refino de riego por material, desde cu_riego_diario
     (DB). Se aplica un margen de lookback antes de `start` (no `end`, por la
     regla de no usar datos futuros) para que el ffill() no caiga en el
@@ -881,10 +881,12 @@ def load_cu_riego(label, start=None, end=None):
               f'ni cu_riego_diario ni la vista de ingesta tienen datos en ese rango.')
         return pd.Series(dtype=float, name='cu_riego')
     ts.name = 'cu_riego'
+    if not fill:                       # lecturas tal cual: sin ffill ni respaldo
+        return ts
     return ts.ffill().fillna(CU_RIEGO_FALLBACK)
 
 
-def load_drena_cu(label, start=None, end=None):
+def load_drena_cu(label, start=None, end=None, fill=True):
     """Cu_pp de drenaje por pila, desde drena_cu_diario (DB). Mismo margen de
     lookback que load_cu_riego, por la misma razon (ffill por pila)."""
     material = LABEL_MATERIAL[label]
@@ -929,7 +931,7 @@ def load_drena_cu(label, start=None, end=None):
         print(f'[recon_engine] load_drena_cu({label!r}, {start}, {end}): 0 filas -- '
               f'ni drena_cu_diario ni vw_drena_quimica_ingest tienen datos en ese rango.')
         return pd.DataFrame()
-    return wide.sort_index().ffill()
+    return wide.sort_index().ffill() if fill else wide.sort_index()
 
 
 def active_pilas_by_riego(label, cutoff, window_days=21):
@@ -2853,7 +2855,7 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
                                 fino_riego_final=(q*r['cu_riego_gL'] if q is not None and r.get('cu_riego_gL') is not None else None),
                                 q_pls_final=qd, cu_riego_recon=r.get('cu_riego_gL'),
                                 cu_pls_recon=r.get('cu_drenaje_gL'),
-                                fino_pls_final=(qd*r['cu_drenaje_gL'] if qd is not None else None),
+                                fino_pls_final=(qd*r['cu_drenaje_gL'] if qd is not None and r.get('cu_drenaje_gL') is not None else None),
                                 ramp_factor=(qd/q if qd is not None and q else None)))
         piles.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age, daily=entries,
                           status=('young' if age <= 30 else 'measured')))

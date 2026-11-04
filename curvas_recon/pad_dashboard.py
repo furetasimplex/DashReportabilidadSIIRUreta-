@@ -2860,11 +2860,18 @@ def compute_recon(_n_clicks, caso_id):
                 activity_loader=_fechas_actividad,
             )
             if sulfide_young:
-                from .sulfide_db_inputs import make_source_provider
+                from .sulfide_db_inputs import load_saved_profile, make_source_provider
                 from .sulfide_inputs import load_sulfide_inputs
+                # Concentraciones medidas tal cual (sin ffill ni respaldo) y el
+                # perfil modelado guardado del Caso, si existe.
+                raw_series = dict(
+                    riego=materials['SULFUROS']['riego'],
+                    cu_riego=load_cu_riego('SULFUROS', ws, week_end, fill=False),
+                    drena_cu=load_drena_cu('SULFUROS', ws, week_end, fill=False))
                 provider = make_source_provider(
-                    materials['SULFUROS'], DATA_SU, WIP_META['SULFUROS'],
-                    inicio_campana('SULFUROS', week_end), caso)
+                    raw_series, DATA_SU, WIP_META['SULFUROS'],
+                    inicio_campana('SULFUROS', week_end), caso,
+                    saved_profile=load_saved_profile(caso['id'], ws, week_end))
                 sulfide_inputs = load_sulfide_inputs(
                     ws, week_end, caso['id'], anchor, source_provider=provider)
                 if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:

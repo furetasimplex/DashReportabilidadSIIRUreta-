@@ -127,8 +127,11 @@ def _validate_payload(payload, case_id, start, end, target, fixed_bundle=True):
         if day > end:
             raise SulfideInputError('source date exceeds Case window')
         if day >= start and (fixed_bundle or row.get('drainage_profile_source') is not None):
-            for field in ('q_riego_m3h', 'cu_riego_gL', 'cu_drenaje_gL',
-                          'profile_q_drenaje_m3h', 'drainage_profile_source'):
+            fields = ('q_riego_m3h', 'cu_riego_gL', 'cu_drenaje_gL',
+                      'profile_q_drenaje_m3h', 'drainage_profile_source')
+            if row.get('q_riego_m3h') == 0:   # dia sin riego: no hay flujo que ajustar
+                fields = ('q_riego_m3h', 'drainage_profile_source')
+            for field in fields:
                 if field not in row or row[field] is None:
                     raise SulfideInputError(f'missing {field} on Case day')
             if 'not measured' not in str(row['drainage_profile_source']).lower():
