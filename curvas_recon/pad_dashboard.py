@@ -3689,13 +3689,6 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
         return html.Div(
             'La identidad de la corrida cambió; vuelve a ejecutar la reconciliación.',
             style={'color': '#B45309'}), None
-    if res.get('local_direct_recovery'):
-        from .sulfide_presentation import trial_workbook
-        if groups:
-            return html.Div('Exporta sin grupos: este formato conserva las pilas individuales.'), None
-        workbook = trial_workbook(res, caso)
-        return (html.Div('Informe exportado con recuperación medida y reconciliada de Sulfuros.'),
-                dcc.send_bytes(workbook, f'Reconciliacion_Sulfuros_Caso{caso["id"]}.xlsx'))
     tmp_path = None
     try:
         from . import report_metodo
