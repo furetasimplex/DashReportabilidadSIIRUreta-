@@ -121,6 +121,14 @@ def test_compute_callback_connects_validated_inputs_and_serializes_local_result(
     monkeypatch.setattr(dashboard, 'connect', Mock())
     monkeypatch.setattr(dashboard, '_save_recon_raw', lambda *args: 'offline-test-token')
     monkeypatch.setattr(dashboard, 'pilas_jovenes', lambda *args, **kw: {'P24': '2026-08-15', 'P25': '2026-09-01'})
+    import curvas_recon.sulfide_inputs as inputs_module
+    import curvas_recon.sulfide_db_inputs as db_inputs_module
+    original_loader = inputs_module.load_sulfide_inputs
+    monkeypatch.setattr(inputs_module, 'load_sulfide_inputs',
+                        lambda ws, we, cid, anchor, source_provider=None: original_loader(ws, we, cid, anchor))
+    monkeypatch.setattr(db_inputs_module, 'make_source_provider', lambda *args, **kw: None)
+    monkeypatch.setattr(dashboard, 'DATA_SU', {})
+    monkeypatch.setattr(dashboard, 'inicio_campana', lambda *args, **kw: {})
     forbid = Mock(side_effect=AssertionError('SQL persistence forbidden'))
     monkeypatch.setattr(engine, 'reconcile_week_flowsheet_db', forbid)
     data, modal, _ = dashboard.compute_recon(1, 10009)
