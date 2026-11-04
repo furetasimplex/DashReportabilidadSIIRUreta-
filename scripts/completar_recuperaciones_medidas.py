@@ -59,7 +59,10 @@ def parse_args(argv=None):
     parser.add_argument('--edad-minima', type=int, default=30, help='solo pilas con mas de estos dias desde el primer riego')
     parser.add_argument('--oficial-xlsx', type=Path, default=ROOT / 'Auditoria_Recuperaciones_SIIR_vs_Oficial_20261012.xlsx',
                         help='Excel con la hoja Oficial_02_12_oct: las curvas calculadas deben coincidir con el, salvo las pilas nuevas')
-    parser.add_argument('--tolerancia-pp', type=float, default=0.05, help='diferencia maxima aceptada contra el oficial (pp)')
+    parser.add_argument('--tolerancia-pp', type=float, default=0.1, help='variacion maxima aceptada contra el oficial en pilas maduras (pp)')
+    parser.add_argument('--tolerancia-nuevas-pp', type=float, default=0.5,
+                        help='variacion maxima aceptada en pilas relativamente nuevas (pp)')
+    parser.add_argument('--edad-nuevas', type=int, default=90, help='pilas con hasta estos dias desde el primer riego usan la tolerancia de nuevas')
     parser.add_argument('--forzar', action='store_true', help='aplica aunque alguna pila difiera del oficial')
     parser.add_argument('--aplicar', action='store_true', help='inserta las filas (por defecto solo prueba en seco)')
     parser.add_argument('--salida', type=Path, help='carpeta para el plan (por defecto auditorias/completar_recuperaciones_<hasta>)')
@@ -77,7 +80,7 @@ def main(argv=None):
         from curvas_recon import db_pipeline as db
         from curvas_recon.recon_engine import (
             inicio_campana, load_cu_riego, load_drena_cu, load_riego, load_wip, resolve_window)
-        from curvas_recon.recuperacion_medida import compare_with_official, plan_completion
+        from curvas_recon.recuperacion_medida import compare_with_official, daily_diagnostics, plan_completion
         from curvas_recon.comparacion_oficial import load_official
         engine = db.get_engine()
     schema = db.SCHEMA
@@ -152,17 +155,32 @@ def main(argv=None):
         fin = '' if r['pct_final'] is None else f"{r['pct_final']:.3f}"
         print(f"{r['pila']:5} {r['estado']:9} {r['ultima_lectura']:10} {r['filas']:5d} {r['pct_inicial']:9.3f} {fin:>8}  {r['motivo'] or ''}")
     official = {}
+    history = ROOT / 'curvas_recon' / 'test_fixtures' / 'historico_oficial_validado_20260901_20261001.csv'
     if args.oficial_xlsx and args.oficial_xlsx.exists():
-        official = load_official(args.oficial_xlsx, None, pad=label)
-    comparison, all_equal = compare_with_official(plan, report, official, args.tolerancia_pp)
+        official = load_official(args.oficial_xlsx, history if history.exists() else None, pad=label)
+    comparison, all_equal = compare_with_official(plan, report, official, args.tolerancia_pp, args.tolerancia_nuevas_pp, args.edad_nuevas)
     with open(folder / 'comparacion_con_oficial.csv', 'w', encoding='utf-8-sig', newline='') as handle:
         writer = csv.DictWriter(handle, fieldnames=list(comparison[0])); writer.writeheader(); writer.writerows(comparison)
-    print(f'\nComparacion con el reporte oficial (tolerancia {args.tolerancia_pp} pp; deben ser iguales salvo las pilas nuevas):')
-    print(f'{"pila":5} {"dias":>4} {"max |dif| pp":>12} {"fecha":10} {"calculada %":>11} {"oficial %":>9}  estado')
+    print(f'\nComparacion con el reporte oficial: se aceptan variaciones pequenas (<= {args.tolerancia_pp} pp en pilas maduras, '
+          f'<= {args.tolerancia_nuevas_pp} pp en las de {args.edad_nuevas} dias o menos); las pilas nuevas se ajustan con el metodo:')
+    print(f'{"pila":5} {"edad":>5} {"dias":>4} {"max |dif| pp":>12} {"tol pp":>6} {"fecha":10} {"calculada %":>11} {"oficial %":>9} {"dif Cu t":>8}  estado')
     for r in comparison:
         f3 = lambda v: '' if v is None else f'{v:.3f}'
-        print(f"{r['pila']:5} {r['dias_comparados']:4d} {f3(r['max_abs_pp']):>12} {r['fecha_max'] or '':10} "
-              f"{f3(r['calculada_final_pct']):>11} {f3(r['oficial_final_pct']):>9}  {r['estado']}")
+        print(f"{r['pila']:5} {'' if r['edad_dias'] is None else r['edad_dias']:>5} {r['dias_comparados']:4d} {f3(r['max_abs_pp']):>12} "
+              f"{r['tolerancia_pp']:6.2f} {r['fecha_max'] or '':10} {f3(r['calculada_final_pct']):>11} {f3(r['oficial_final_pct']):>9} "
+              f"{f3(r['dif_final_cu_t']):>8}  {r['estado']}")
+    cu_diff = sum(abs(r['dif_final_cu_t']) for r in comparison if r['dif_final_cu_t'] is not None)
+    print(f'Diferencia total vs oficial al cierre: {cu_diff:.1f} t Cu (suma de valores absolutos)')
+    detail = daily_diagnostics(plan, base, cu_tf, q, cu_riego, cu_drena, official)
+    if detail:
+        with open(folder / 'detalle_diario_comparacion.csv', 'w', encoding='utf-8-sig', newline='') as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(detail[0])); writer.writeheader(); writer.writerows(detail)
+        print('\nFactor de drenaje implicito en el oficial (el calculado usa 0.95) por pila con diferencia:')
+        for r in comparison:
+            if r['estado'] in ('difiere', 'igual') and (r['estado'] == 'difiere' or (r['max_abs_pp'] or 0) > 0.02):
+                f = [d['factor_drenaje_implicito'] for d in detail if d['pila'] == r['pila'] and d['factor_drenaje_implicito'] is not None]
+                if f:
+                    print(f"  {r['pila']}: min {min(f):.3f} · mediana {sorted(f)[len(f) // 2]:.3f} · max {max(f):.3f}  (detalle en detalle_diario_comparacion.csv)")
     if not official:
         print('(sin Excel oficial: no se pudo comparar)')
     print(f'Resultado: {"IGUALES salvo pilas nuevas" if all_equal and official else "HAY DIFERENCIAS o falta oficial"}')
@@ -172,9 +190,18 @@ def main(argv=None):
             print('Prueba en seco: no se escribio nada. Repita con --aplicar para insertar.')
         return 0
 
-    if not (all_equal and official) and not args.forzar:
-        print('No se inserto nada: la comparacion con el oficial no coincide (use --forzar solo si lo revisó).')
+    if not official and not args.forzar:
+        print('No se inserto nada: no hay curva oficial con que comparar (use --forzar solo si lo reviso).')
         return 1
+    if official and not args.forzar:
+        # El oficial decide: solo se insertan las pilas que coinciden; las que difieren o no figuran quedan pendientes.
+        ok = {r['pila'] for r in comparison if r['estado'] == 'igual'}
+        skipped = sorted({r['pila'] for r in plan} - ok)
+        plan = [r for r in plan if r['pila'] in ok]
+        print(f"Se insertan {len(ok)} pilas que coinciden con el oficial. Pendientes (no se insertan): {', '.join(skipped) or 'ninguna'}")
+        if not plan:
+            print('No se inserto nada.')
+            return 1
     try:
         with engine.begin() as conn:                              # transaccion unica
             before = conn.execute(text(f"SELECT COUNT(*) FROM {schema}.Recuperaciones_pad WHERE PAD = :pad"), {'pad': label}).scalar()

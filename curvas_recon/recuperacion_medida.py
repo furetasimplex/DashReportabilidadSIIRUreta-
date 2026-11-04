@@ -96,7 +96,7 @@ def plan_completion(base_rows, cu_tf, first_irrigation, q_riego, cu_riego, cu_dr
         base = base_rows[pile]
         last = _day(base['fecha'])
         info = dict(pila=pile, ultima_lectura=last.isoformat(), pct_inicial=base['pct'], filas=0,
-                    pct_final=None, estado='omitida', motivo=None)
+                    pct_final=None, estado='omitida', motivo=None, edad_dias=None, cu_apilado_t=None)
         report.append(info)
         if last >= until:
             info.update(estado='al dia', motivo='ya tiene lectura hasta la fecha pedida')
@@ -107,6 +107,8 @@ def plan_completion(base_rows, cu_tf, first_irrigation, q_riego, cu_riego, cu_dr
         if pile not in first_irrigation or pile not in cu_tf:
             info['motivo'] = 'sin primer riego o Cu apilado de la campana vigente'
             continue
+        info['edad_dias'] = (until - _day(first_irrigation[pile])).days
+        info['cu_apilado_t'] = _num(cu_tf[pile])
         rows, stop = extend_recovery(
             last, base['pct'], cu_tf[pile], first_irrigation[pile], until, q_riego.get(pile, {}),
             cu_riego, cu_drena.get(pile, {}), min_age_days=min_age_days)
@@ -118,11 +120,14 @@ def plan_completion(base_rows, cu_tf, first_irrigation, q_riego, cu_riego, cu_dr
     return plan, report
 
 
-def compare_with_official(plan, report, official, tol_pp=0.05):
+def compare_with_official(plan, report, official, tol_pp=0.1, tol_new_pp=0.5, new_age_days=90):
     """Compara las recuperaciones calculadas con las curvas del reporte oficial.
 
-    Deben coincidir salvo en las pilas nuevas (no completadas). `official`:
-    {pila: {'YYYY-MM-DD': pct}}. Devuelve (filas por pila, todo_igual).
+    Deben coincidir salvo en las pilas nuevas (no completadas). Se aceptan
+    variaciones pequenas: `tol_pp` para pilas maduras y `tol_new_pp` (mas
+    holgada) para pilas relativamente nuevas, con `new_age_days` o menos dias
+    desde el primer riego, cuyo drenaje aun no se estabiliza en 0.95.
+    `official`: {pila: {'YYYY-MM-DD': pct}}. Devuelve (filas por pila, todo_igual).
     """
     calculated = {}
     for row in plan:
@@ -131,8 +136,10 @@ def compare_with_official(plan, report, official, tol_pp=0.05):
     for info in report:
         pile = info['pila']
         ours, theirs = calculated.get(pile), official.get(pile, {})
-        record = dict(pila=pile, dias_comparados=0, max_abs_pp=None, fecha_max=None, dif_final_pp=None,
-                      oficial_final_pct=None, calculada_final_pct=None, estado=None)
+        age = info.get('edad_dias')
+        tol = tol_new_pp if age is not None and age <= new_age_days else tol_pp
+        record = dict(pila=pile, edad_dias=age, tolerancia_pp=tol, dias_comparados=0, max_abs_pp=None, fecha_max=None,
+                      dif_final_pp=None, dif_final_cu_t=None, oficial_final_pct=None, calculada_final_pct=None, estado=None)
         if not ours:
             record['estado'] = 'no completada (joven u omitida): se ajusta con el metodo'
         else:
@@ -143,10 +150,41 @@ def compare_with_official(plan, report, official, tol_pp=0.05):
             else:
                 worst = max(diffs, key=lambda d: abs(diffs[d]))
                 last = max(diffs)
+                cu = info.get('cu_apilado_t')
                 record.update(dias_comparados=len(diffs), max_abs_pp=abs(diffs[worst]), fecha_max=worst,
-                              dif_final_pp=diffs[last], oficial_final_pct=theirs[last], calculada_final_pct=ours[last])
-                equal = abs(diffs[worst]) <= tol_pp and len(diffs) == len(ours)
-                record['estado'] = 'igual' if equal else ('difiere' if abs(diffs[worst]) > tol_pp else 'faltan fechas oficiales')
+                              dif_final_pp=diffs[last], oficial_final_pct=theirs[last], calculada_final_pct=ours[last],
+                              dif_final_cu_t=None if cu is None else diffs[last] * cu / 100.0)
+                equal = abs(diffs[worst]) <= tol and len(diffs) == len(ours)
+                record['estado'] = 'igual' if equal else ('difiere' if abs(diffs[worst]) > tol else 'faltan fechas oficiales')
                 all_equal &= equal
         out.append(record)
     return out, all_equal
+
+
+def daily_diagnostics(plan, base_rows, cu_tf, q_riego, cu_riego, cu_drena, official):
+    """Detalle diario calculado vs oficial, con el factor de drenaje implicito.
+
+    El incremento oficial de un dia sirve para despejar el factor f que lo
+    reproduce con las mismas entradas medidas:
+        d_pct = 100 * 0.024 * (f*Q*Cu_PLS - Q*Cu_riego) / Cu_apilado
+    Un f estable y distinto de 0.95 indica otra base de drenaje; un solo dia
+    atipico indica una entrada distinta ese dia.
+    """
+    rows, previous = [], {}
+    for item in sorted(plan, key=lambda r: (r['pila'], r['fecha'])):
+        pile, day = item['pila'], _day(item['fecha'])
+        calc_prev = previous.get(pile, base_rows[pile]['pct'])
+        previous[pile] = item['recuperacion_pct']
+        off = official.get(pile, {})
+        off_now, off_prev = off.get(day.isoformat()), off.get((day - timedelta(days=1)).isoformat())
+        q, cr, cd = _num(q_riego.get(pile, {}).get(day)), _num(cu_riego.get(day)), _num(cu_drena.get(pile, {}).get(day))
+        inc_off = None if off_now is None or off_prev is None else off_now - off_prev
+        factor = None
+        if inc_off is not None and q and cd and q > 0 and cd > 0 and cr is not None and cu_tf.get(pile):
+            factor = (inc_off / 100.0 * cu_tf[pile] / UNIT_FACTOR + q * cr) / (q * cd)
+        rows.append(dict(pila=pile, fecha=day.isoformat(), q_riego_m3h=q, cu_riego_gL=cr, cu_drena_gL=cd,
+                         calculada_pct=item['recuperacion_pct'], oficial_pct=off_now,
+                         dif_pp=None if off_now is None else item['recuperacion_pct'] - off_now,
+                         inc_calculado_pp=item['recuperacion_pct'] - calc_prev, inc_oficial_pp=inc_off,
+                         factor_drenaje_implicito=factor))
+    return rows

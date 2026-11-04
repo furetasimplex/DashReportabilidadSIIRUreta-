@@ -118,7 +118,7 @@ def test_comparison_with_official_flags_differences_except_new_piles():
                                    series(0.4), {p: series(1.0) for p in first}, D(5), window_start=D(1))
     calc = {r['fecha'].isoformat(): r['recuperacion_pct'] for r in plan if r['pila'] == 'P10'}
     official = {'P10': dict(calc), 'P11': {d: v + 0.2 for d, v in calc.items()}, 'P26': {D(5).isoformat(): 9.0}}
-    rows, equal = compare_with_official(plan, report, official, tol_pp=0.05)
+    rows, equal = compare_with_official(plan, report, official, tol_pp=0.05, tol_new_pp=0.05)
     by = {r['pila']: r for r in rows}
     assert by['P10']['estado'] == 'igual' and by['P10']['max_abs_pp'] == pytest.approx(0)
     assert by['P11']['estado'] == 'difiere' and by['P11']['max_abs_pp'] == pytest.approx(0.2)
@@ -128,3 +128,36 @@ def test_comparison_with_official_flags_differences_except_new_piles():
     ok_rows, ok = compare_with_official([r for r in plan if r['pila'] == 'P10'], [r for r in report if r['pila'] in ('P10', 'P26')],
                                         official, 0.05)
     assert ok is True
+
+
+def test_small_variations_are_accepted_more_loosely_for_relatively_new_piles():
+    from curvas_recon.recuperacion_medida import compare_with_official, plan_completion
+    first = {'P20': date(2026, 6, 1), 'P25': D(1) - timedelta(days=40)}      # 126+ dias y 44 dias al 5-oct
+    base = {p: dict(fecha=D(1), pct=50.0, ids={}) for p in first}
+    plan, report = plan_completion(base, {p: 5000.0 for p in first}, first, {p: series(100.0) for p in first},
+                                   series(0.4), {p: series(1.0) for p in first}, D(5), window_start=D(1))
+    calc = {p: {r['fecha'].isoformat(): r['recuperacion_pct'] for r in plan if r['pila'] == p} for p in first}
+    shift = lambda p, delta: {d: v - delta for d, v in calc[p].items()}
+    small = compare_with_official(plan, report, {'P20': shift('P20', 0.09), 'P25': shift('P25', 0.3)})
+    assert [r['estado'] for r in small[0]] == ['igual', 'igual'] and small[1] is True           # pequena: ok en ambas
+    assert small[0][1]['dif_final_cu_t'] == pytest.approx(0.3 * 5000 / 100)
+    large = compare_with_official(plan, report, {'P20': shift('P20', 0.3), 'P25': shift('P25', 0.3)})
+    assert [r['estado'] for r in large[0]] == ['difiere', 'igual'] and large[1] is False         # 0.3 pp es grande en una madura
+    huge = compare_with_official(plan, report, {'P20': shift('P20', 0.09), 'P25': shift('P25', 1.2)})
+    assert [r['estado'] for r in huge[0]] == ['igual', 'difiere']                                  # 1.2 pp es grande incluso en una nueva
+
+
+def test_daily_diagnostics_recovers_the_drainage_factor_used_by_the_official_curve():
+    from curvas_recon.recuperacion_medida import daily_diagnostics, plan_completion
+    first = {'P25': date(2026, 6, 1)}
+    base = {'P25': dict(fecha=D(1), pct=30.0, ids={})}
+    q, cr, cd = {'P25': series(120.0)}, series(0.4), {'P25': series(5.0)}
+    plan, _ = plan_completion(base, {'P25': 5000.0}, first, q, cr, cd, D(5), window_start=D(1))
+    f = 0.93                                          # el oficial drena menos que el 0.95
+    official, pct = {'P25': {D(1).isoformat(): 30.0}}, 30.0
+    for n in range(2, 6):
+        pct += 100 * 0.024 * (f * 120.0 * 5.0 - 120.0 * 0.4) / 5000.0
+        official['P25'][D(n).isoformat()] = pct
+    detail = daily_diagnostics(plan, base, {'P25': 5000.0}, q, cr, cd, official)
+    assert [d['factor_drenaje_implicito'] for d in detail] == pytest.approx([0.93] * 4)
+    assert all(d['dif_pp'] > 0 for d in detail) and detail[-1]['dif_pp'] > detail[0]['dif_pp']   # calculada sobre el oficial, creciendo
