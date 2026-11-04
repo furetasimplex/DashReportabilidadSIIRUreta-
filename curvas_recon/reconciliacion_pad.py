@@ -148,3 +148,50 @@ def _summary(piles, x, x0, targets, net_target_t, mature_nets_t):
                  cu_riego_g_l=targets['cu_riego_g_l'], cu_pls_g_l=targets['cu_pls_g_l'], neto_t=net_target_t)
     return dict(status='ok', por_pila=per_pile, pad=pad, objetivo=goals,
                 diferencia={k: pad[k] / goals[k] - 1 for k in pad})
+
+
+def expand_to_days(rows, window_start, solution, observed_net_t_by_day, young_lambda, mature_ratio=0.95):
+    """Lleva la solucion (totales de la ventana) a cada dia, manteniendo EXACTA la recuperacion diaria de las maduras.
+
+    Riego: caudal y Cu de riego se escalan con los factores de la pila. PLS de una madura: el caudal se escala y su
+    fino diario es el Cu neto observado del dia / K mas el fino de riego del dia, de modo que el neto diario (la
+    recuperacion) no cambia; el Cu de PLS diario sale de ese fino. Una pila nueva escala caudal y Cu de PLS con
+    factores constantes. Devuelve filas diarias {pile, date, q_riego, cu_riego, q_pls, cu_pls, net_t}."""
+    start = str(window_start)[:10]
+    factors = {p['pile']: p for p in solution['por_pila']}
+    out = []
+    by_pile = {}
+    for r in rows:
+        if r['date'] >= start and r['q_riego_m3h'] > 0:
+            by_pile.setdefault(r['pile'], []).append(r)
+    for name, days in sorted(by_pile.items()):
+        f = factors[name]
+        young = f['young']
+        q0 = sum(d['q_riego_m3h'] for d in days)
+        a_r = f['q_riego'] / q0
+        c_r0 = sum(d['q_riego_m3h'] * d['cu_riego_gL'] for d in days) / q0
+        b_r = f['cu_riego'] / c_r0
+        if young:
+            qp0 = young_lambda * sum(d['profile_q_drenaje_m3h'] for d in days)
+            cp0 = sum(young_lambda * d['profile_q_drenaje_m3h'] * d['cu_drenaje_gL'] for d in days) / qp0
+        else:
+            qp0 = mature_ratio * q0
+            cp0 = sum(d['q_riego_m3h'] * d['cu_drenaje_gL'] for d in days) / q0
+        a_p, b_p = f['q_pls'] / qp0, f['cu_pls'] / cp0
+        rest = None
+        if not young:
+            nets = observed_net_t_by_day[name]
+            used = sum(nets.get(d['date'], 0.0) for d in days)
+            rest = sum(nets.values()) - used                             # neto en dias sin riego: se carga al ultimo dia con riego
+        for k, d in enumerate(days):
+            q_r, c_r = a_r * d['q_riego_m3h'], b_r * d['cu_riego_gL']
+            if young:
+                q_p = a_p * young_lambda * d['profile_q_drenaje_m3h']
+                c_p = b_p * d['cu_drenaje_gL']
+            else:
+                q_p = a_p * mature_ratio * d['q_riego_m3h']
+                net = nets.get(d['date'], 0.0) + (rest if k == len(days) - 1 else 0.0)
+                c_p = (net / K_F + q_r * c_r) / q_p
+            out.append(dict(pile=name, date=d['date'], young=young, q_riego=q_r, cu_riego=c_r, q_pls=q_p, cu_pls=c_p,
+                            net_t=K_F * (q_p * c_p - q_r * c_r)))
+    return out
