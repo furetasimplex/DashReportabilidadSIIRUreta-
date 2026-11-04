@@ -68,6 +68,11 @@ def reconcile_sulfides(rows, case_start, case_end, target_net_t):
             mature.append(key)
             for day in expected:
                 idx, row = group[day]
+                # Solo el cierre es obligatorio; un dia intermedio sin lectura
+                # queda como hueco, nunca se rellena.
+                if day != end and row.get('observed_pct') is None:
+                    output[idx]['reconciled_pct'] = None
+                    continue
                 output[idx]['reconciled_pct'] = _number(row, 'observed_pct')
             held_net += cu_tf * (_number(group[end][1], 'observed_pct') - base_pct) / 100
         else:

@@ -106,7 +106,9 @@ def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irriga
             pct = measured.get(day)
             if pct is None and young and (cycle_start is None or day < cycle_start):
                 pct = 0.0 if day < start else None      # campana aun sin recuperacion
-            if pct is None and (day < start or not young):
+            # Obligatorio: base (dias previos) y cierre de las maduras. Un dia
+            # intermedio sin lectura queda como hueco.
+            if pct is None and (day < start or (not young and day == end)):
                 raise SulfideInputError(f'{pile}: sin recuperacion medida el {day.isoformat()}')
             row = dict(pad='SULFUROS', pile=pile, campaign=max(campaign, 1), date=day.isoformat(),
                        first_irrigation=birth.isoformat(), cu_apilado_t=cu_tf,

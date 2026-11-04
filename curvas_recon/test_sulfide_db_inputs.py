@@ -142,6 +142,20 @@ def test_provider_passes_common_loader_for_any_case():
     assert out['metadata']['drainage_profile'] == FLAT_PROFILE_SOURCE
 
 
+def test_mature_gap_inside_window_stays_a_gap_and_case_still_closes():
+    material, curves, wip, first = synthetic()
+    gap = date(2026, 10, 4)
+    i = curves[7]['dates'].index(gap)
+    del curves[7]['dates'][i], curves[7]['values'][i]
+    rows, _ = build_sulfide_rows(START, END, material, curves, wip, first)
+    assert next(r for r in rows if r['pile'] == 'P07' and r['date'] == gap.isoformat())['observed_pct'] is None
+    out, audit = close(rows, 0.3)
+    p07 = {r['date']: r['reconciled_pct'] for r in out if r['pile'] == 'P07' and r['date'] >= START.isoformat()}
+    assert p07[gap.isoformat()] is None
+    assert p07[END.isoformat()] == next(r['observed_pct'] for r in rows if r['pile'] == 'P07' and r['date'] == END.isoformat())
+    assert audit['net_residual_t'] == pytest.approx(0, abs=1e-9)
+
+
 def test_missing_measurements_are_rejected_not_filled():
     material, curves, wip, first = synthetic()
     curves[7] = curve(date(2026, 8, 1), 0.1, last=END - timedelta(days=1))
