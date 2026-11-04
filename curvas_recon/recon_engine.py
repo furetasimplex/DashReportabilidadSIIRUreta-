@@ -2802,6 +2802,12 @@ def merge_flowsheet_res(parts):
     return out
 
 
+# Las concentraciones de las pilas nuevas pueden cambiar hasta este porcentaje para que las ponderadas
+# del pad coincidan con las de los flujos globales; la tolerancia es la diferencia relativa aceptada.
+SULFIDE_CONC_MAX_CHANGE = 0.30
+SULFIDE_CONC_TOLERANCE = 0.001
+
+
 def _sulfide_balance_totals(recovery_rows, piles, ws, we):
     """Totales del balance de Sulfuros para las tarjetas de deltas.
 
@@ -2818,16 +2824,20 @@ def _sulfide_balance_totals(recovery_rows, piles, ws, we):
     by_pile = {}
     for row in recovery_rows:
         by_pile.setdefault(row['pile'], {})[pd.Timestamp(row['date']).normalize()] = row
-    t = dict(q_pls_medido=0.0, q_pls_recon=0.0, fino_riego=0.0, fino_pls_medido=0.0, fino_pls_recon=0.0)
+    t = dict(q_pls_medido=0.0, q_pls_recon=0.0, fino_riego=0.0, fino_riego_rec=0.0,
+             fino_pls_medido=0.0, fino_pls_recon=0.0)
     for pile in piles:
         entries = pile['daily']
         q = [e['q_riego_medido'] or 0.0 for e in entries]
         fino_riego = sum(qq * e['cu_riego_medido'] for qq, e in zip(q, entries)
                          if qq and e.get('cu_riego_medido') is not None)
+        fino_riego_rec = sum(qq * e['cu_riego_recon'] for qq, e in zip(q, entries)
+                             if qq and e.get('cu_riego_recon') is not None)
         fitted = [e['q_pls_final'] for e in entries if e.get('q_pls_final') is not None]
         t['q_pls_medido'] += FDRENA_MAX * sum(q)
         t['q_pls_recon'] += sum(fitted) if pile.get('status') == 'young' else FDRENA_MAX * sum(q)
         t['fino_riego'] += fino_riego
+        t['fino_riego_rec'] += fino_riego_rec
         rows = by_pile.get(pile['parcela'], {})
         base, last = rows.get(base_day), rows.get(end_day)
         if base is None or last is None:
@@ -2840,14 +2850,14 @@ def _sulfide_balance_totals(recovery_rows, piles, ws, we):
             net_med = k_f * sum(FDRENA_MAX * qq * e['cu_pls_medido'] - qq * e['cu_riego_medido']
                                 for qq, e in zip(q, entries)
                                 if qq and e.get('cu_pls_medido') is not None and e.get('cu_riego_medido') is not None)
-        t['fino_pls_recon'] += net_rec / k_f + fino_riego
+        t['fino_pls_recon'] += net_rec / k_f + fino_riego_rec
         t['fino_pls_medido'] += net_med / k_f + fino_riego
     return dict(
         q_pls_medido=t['q_pls_medido'], q_pls_recon=t['q_pls_recon'],
-        cu_fino_riego_medido=t['fino_riego'], cu_fino_riego_recon=t['fino_riego'],
+        cu_fino_riego_medido=t['fino_riego'], cu_fino_riego_recon=t['fino_riego_rec'],
         cu_fino_pls_medido=t['fino_pls_medido'], cu_fino_pls_recon=t['fino_pls_recon'],
         delta_recon_riego=0.0, delta_recon_pls=t['q_pls_recon'] - t['q_pls_medido'],
-        delta_fino_riego=0.0, delta_fino_pls=t['fino_pls_recon'] - t['fino_pls_medido'])
+        delta_fino_riego=t['fino_riego_rec'] - t['fino_riego'], delta_fino_pls=t['fino_pls_recon'] - t['fino_pls_medido'])
 
 
 def _reconcile_sulfide_local(week_start, week_end, material, anchor):
@@ -2861,7 +2871,15 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
     ws, we, _ = resolve_window(week_start, week_end)
     if pd.Timestamp(inputs.get('target_period_start')).normalize() != ws:
         raise ValueError('SULFUROS target_period_start no coincide con inicio del Caso')
-    result, audit = reconcile_sulfides(inputs['rows'], ws, we, anchor['net_cu_target_t'])
+    # Concentraciones globales del Caso (g/L) = 1000 x fino [t] / masa [m3] de los flujos de riego y de PLS del pad.
+    def _global_conc(fino, masa):
+        return 1000.0 * fino / masa if isinstance(fino, (int, float)) and isinstance(masa, (int, float)) and masa > 0 else None
+    conc_targets = dict(cu_riego_g_l=_global_conc(anchor.get('fino_riego_recon'), anchor.get('q_riego_recon')),
+                        cu_pls_g_l=_global_conc(anchor.get('fino_pls_recon'), anchor.get('q_pls_recon')))
+    result, audit = reconcile_sulfides(inputs['rows'], ws, we, anchor['net_cu_target_t'],
+                                       concentration_targets=conc_targets,
+                                       max_concentration_change=SULFIDE_CONC_MAX_CHANGE,
+                                       concentration_tolerance=SULFIDE_CONC_TOLERANCE)
     def _json_safe(value):
         if isinstance(value, dict):
             return {('/'.join(map(str, key)) if isinstance(key, tuple) else str(key)): _json_safe(item)
@@ -2896,14 +2914,17 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
         for r in records:
             q = r.get('q_riego_m3h')
             qd = r.get('fitted_q_drenaje_m3h')
+            # Las nuevas pueden traer concentraciones reconciliadas (ajuste a los flujos globales).
+            cr_rec = r.get('cu_riego_recon_gL', r.get('cu_riego_gL'))
+            cd_rec = r.get('cu_drenaje_recon_gL', r.get('cu_drenaje_gL'))
             entries.append(dict(label='SULFUROS', parcela=pile, campaign=campaign,
                                 date=pd.Timestamp(r['date']).normalize(), q_riego_medido=q,
                                 q_pls_medido=None, cu_riego_medido=r.get('cu_riego_gL'),
                                 cu_pls_medido=r.get('cu_drenaje_gL'), q_riego_final=q,
-                                fino_riego_final=(q*r['cu_riego_gL'] if q is not None and r.get('cu_riego_gL') is not None else None),
-                                q_pls_final=qd, cu_riego_recon=r.get('cu_riego_gL'),
-                                cu_pls_recon=r.get('cu_drenaje_gL'),
-                                fino_pls_final=(qd*r['cu_drenaje_gL'] if qd is not None and r.get('cu_drenaje_gL') is not None else None),
+                                fino_riego_final=(q*cr_rec if q is not None and cr_rec is not None else None),
+                                q_pls_final=qd, cu_riego_recon=cr_rec,
+                                cu_pls_recon=cd_rec,
+                                fino_pls_final=(qd*cd_rec if qd is not None and cd_rec is not None else None),
                                 ramp_factor=(qd/q if qd is not None and q else None)))
         piles.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age, daily=entries,
                           status=('young' if age <= 30 else 'measured')))

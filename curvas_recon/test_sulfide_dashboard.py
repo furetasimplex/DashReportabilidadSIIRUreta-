@@ -283,3 +283,76 @@ def test_progress_and_error_texts_have_no_broken_accents():
     assert 'conexión' in source and 'conexi?n' not in source
     assert not re.search(r"'[^'\n]*[A-Za-záéíóúñ]\?[A-Za-záéíóúñ][^'\n]*'", "\n".join(
         line for line in source.splitlines() if not line.lstrip().startswith('#') and 're.' not in line and '(?' not in line))
+
+
+def _sulfide_result(anchor_extra):
+    """Caso 10009 por el motor, con objetivos globales de flujo opcionales en el ancla."""
+    from curvas_recon.sulfide_db_inputs import make_source_provider
+    from curvas_recon.test_sulfide_db_inputs import case10009_series
+    fx, material, curves, wip, first, saved = case10009_series()
+    provider = make_source_provider(material, curves, wip, first, {'run_id': 10082}, saved_profile=saved)
+    base = {'SULFUROS': {'net_cu_target_t': fx['target_net_t']}}
+    inputs = load_sulfide_inputs('2026-09-01', '2026-09-07', 10009, base, source_provider=provider)
+    anchor = {'SULFUROS': dict(base['SULFUROS'], **anchor_extra)}
+    return engine.reconcile_week_flowsheet_dash('2026-09-01', {'SULFUROS': {'sulfide_inputs': inputs}}, None, None,
+                                                week_end='2026-09-07', anchor=anchor, caso_id=10009)['res']
+
+
+def _pad_weighted(res):
+    """Ponderadas del pad como las calcula el agregador de grupos (PLS de maduras = 0.95 x riego)."""
+    from curvas_recon.group_solution_series import aggregate_group_solution_series
+    members = {}
+    for entry in res['daily']:
+        q, qp = entry['q_riego_final'], entry['q_pls_final']
+        members.setdefault(entry['parcela'], {})[pd.Timestamp(entry['date'])] = dict(
+            q_riego=q, q_pls=qp if qp is not None else 0.95 * q,
+            cu_riego=entry['cu_riego_recon'], cu_pls=entry['cu_pls_recon'])
+    days = aggregate_group_solution_series(members)
+    q_r = sum(d['q_riego'] for d in days)
+    q_p = sum(d['q_pls'] for d in days)
+    return (sum(d['q_riego'] * d['cu_riego'] for d in days) / q_r, sum(d['q_pls'] * d['cu_pls'] for d in days) / q_p)
+
+
+def test_weighted_concentrations_match_global_flows_by_changing_only_new_piles():
+    cr0, cp0 = _pad_weighted(_sulfide_result({}))
+    cr_goal, cp_goal = 0.995 * cr0, 1.005 * cp0                      # diferencia pequena contra los flujos globales
+    res = _sulfide_result(dict(q_riego_recon=700000.0, fino_riego_recon=cr_goal * 700.0,
+                               q_pls_recon=690000.0, fino_pls_recon=cp_goal * 690.0))
+    match = res['sulfide_audit']['concentration_match']
+    assert match['status'] == 'aplicado' and 0.7 <= match['alpha_riego'] <= 1.3 and 0.7 <= match['alpha_pls'] <= 1.3
+    assert _pad_weighted(res) == pytest.approx((cr_goal, cp_goal), rel=1e-9)             # igualan al global
+    assert res['sulfide_audit']['net_residual_t'] == pytest.approx(0, abs=1e-9)          # F29 sigue cerrando
+    base = _sulfide_result({})
+    young = {'P24', 'P25'}
+    for new, old in zip(res['daily'], base['daily']):
+        if new['parcela'] not in young:                                                    # maduras intactas
+            assert (new['cu_riego_recon'], new['cu_pls_recon'], new['q_pls_final']) == (
+                old['cu_riego_recon'], old['cu_pls_recon'], old['q_pls_final'])
+        else:                                                                              # nuevas: medido se conserva aparte
+            assert new['cu_riego_medido'] == old['cu_riego_medido'] and new['cu_riego_recon'] != old['cu_riego_recon']
+    rec = {(r['pile'], r['date']): r['reconciled_pct'] for r in res['recovery_rows']}
+    old_rec = {(r['pile'], r['date']): r['reconciled_pct'] for r in base['recovery_rows']}
+    assert all(rec[k] == old_rec[k] for k in rec if k[0] not in young)                     # recuperacion de maduras igual
+    assert res['delta_fino_riego'] != 0                                                    # la tarjeta ya refleja el cambio
+
+
+def test_global_targets_beyond_the_limit_are_reported_not_forced():
+    base = _sulfide_result({})
+    cr0, cp0 = _pad_weighted(base)
+    for extra in (dict(q_riego_recon=716982.6, fino_riego_recon=41.232979, q_pls_recon=724392.8, fino_pls_recon=1112.4752),  # run 10082
+                  dict(q_riego_recon=700000.0, fino_riego_recon=0.981 * cr0 * 700.0,
+                       q_pls_recon=690000.0, fino_pls_recon=1.02 * cp0 * 690.0)):                                        # +-2 %
+        res = _sulfide_result(extra)
+        match = res['sulfide_audit']['concentration_match']
+        assert match['status'] == 'no_aplicado' and match['motivo']
+        assert res['sulfide_audit']['lambda'] == pytest.approx(base['sulfide_audit']['lambda'])    # sin forzar nada
+        assert _pad_weighted(res) == pytest.approx((cr0, cp0))
+        assert res['sulfide_audit']['net_residual_t'] == pytest.approx(0, abs=1e-9)
+
+
+def test_concentrations_already_matching_the_global_flows_are_left_alone():
+    cr0, cp0 = _pad_weighted(_sulfide_result({}))
+    res = _sulfide_result(dict(q_riego_recon=700000.0, fino_riego_recon=cr0 * 700.0 * 1.0005,
+                               q_pls_recon=690000.0, fino_pls_recon=cp0 * 690.0))
+    assert res['sulfide_audit']['concentration_match']['status'] == 'sin_cambio'
+    assert res['delta_fino_riego'] == 0
