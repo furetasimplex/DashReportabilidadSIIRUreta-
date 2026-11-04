@@ -123,6 +123,7 @@ def test_comparison_with_official_flags_differences_except_new_piles():
     assert by['P10']['estado'] == 'igual' and by['P10']['max_abs_pp'] == pytest.approx(0)
     assert by['P11']['estado'] == 'difiere' and by['P11']['max_abs_pp'] == pytest.approx(0.2)
     assert by['P12']['estado'] == 'sin curva oficial en esas fechas'
+    assert by['P12']['estado'] == 'sin curva oficial en esas fechas' and by['P11']['estado'] == 'difiere'
     assert by['P26']['estado'].startswith('no completada')          # la pila nueva no se compara
     assert equal is False
     ok_rows, ok = compare_with_official([r for r in plan if r['pila'] == 'P10'], [r for r in report if r['pila'] in ('P10', 'P26')],
@@ -160,4 +161,19 @@ def test_daily_diagnostics_recovers_the_drainage_factor_used_by_the_official_cur
         official['P25'][D(n).isoformat()] = pct
     detail = daily_diagnostics(plan, base, {'P25': 5000.0}, q, cr, cd, official)
     assert [d['factor_drenaje_implicito'] for d in detail] == pytest.approx([0.93] * 4)
+    # con f = 0.95 el oficial equivale a un Cu de drenaje de 5.0 * 0.93 / 0.95
+    expected = 5.0 * 0.93 / 0.95
+    assert [d['cu_drena_implicito_gL'] for d in detail] == pytest.approx([expected] * 4)
     assert all(d['dif_pp'] > 0 for d in detail) and detail[-1]['dif_pp'] > detail[0]['dif_pp']   # calculada sobre el oficial, creciendo
+
+
+def test_piles_outside_the_official_report_are_not_counted_as_differences():
+    from curvas_recon.recuperacion_medida import compare_with_official, plan_completion
+    first = {'P10': date(2026, 6, 1), 'P07': date(2026, 6, 1)}
+    base = {p: dict(fecha=D(1), pct=50.0, ids={}) for p in first}
+    plan, report = plan_completion(base, {p: 100.0 for p in first}, first, {p: series(100.0) for p in first},
+                                   series(0.4), {p: series(1.0) for p in first}, D(5), window_start=D(1))
+    official = {'P10': {r['fecha'].isoformat(): r['recuperacion_pct'] for r in plan if r['pila'] == 'P10'}}
+    rows, equal = compare_with_official(plan, report, official)
+    assert {r['pila']: r['estado'] for r in rows} == {'P10': 'igual', 'P07': 'sin curva oficial en esas fechas'}
+    assert equal is True

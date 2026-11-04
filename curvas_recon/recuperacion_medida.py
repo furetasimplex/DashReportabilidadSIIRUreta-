@@ -145,8 +145,8 @@ def compare_with_official(plan, report, official, tol_pp=0.1, tol_new_pp=0.5, ne
         else:
             diffs = {d: ours[d] - theirs[d] for d in ours if d in theirs}
             if not diffs:
+                # Pila fuera del reporte oficial: no es una diferencia, solo no se inserta.
                 record['estado'] = 'sin curva oficial en esas fechas'
-                all_equal = False
             else:
                 worst = max(diffs, key=lambda d: abs(diffs[d]))
                 last = max(diffs)
@@ -179,12 +179,14 @@ def daily_diagnostics(plan, base_rows, cu_tf, q_riego, cu_riego, cu_drena, offic
         off_now, off_prev = off.get(day.isoformat()), off.get((day - timedelta(days=1)).isoformat())
         q, cr, cd = _num(q_riego.get(pile, {}).get(day)), _num(cu_riego.get(day)), _num(cu_drena.get(pile, {}).get(day))
         inc_off = None if off_now is None or off_prev is None else off_now - off_prev
-        factor = None
-        if inc_off is not None and q and cd and q > 0 and cd > 0 and cr is not None and cu_tf.get(pile):
-            factor = (inc_off / 100.0 * cu_tf[pile] / UNIT_FACTOR + q * cr) / (q * cd)
+        factor = cd_implied = None
+        if inc_off is not None and q and q > 0 and cr is not None and cu_tf.get(pile):
+            net = inc_off / 100.0 * cu_tf[pile] / UNIT_FACTOR + q * cr           # = f * Q * Cu_PLS
+            cd_implied = net / (FDRENA_BASE * q)                                 # Cu de drenaje que da el oficial con f = 0.95
+            factor = net / (q * cd) if cd and cd > 0 else None
         rows.append(dict(pila=pile, fecha=day.isoformat(), q_riego_m3h=q, cu_riego_gL=cr, cu_drena_gL=cd,
                          calculada_pct=item['recuperacion_pct'], oficial_pct=off_now,
                          dif_pp=None if off_now is None else item['recuperacion_pct'] - off_now,
                          inc_calculado_pp=item['recuperacion_pct'] - calc_prev, inc_oficial_pp=inc_off,
-                         factor_drenaje_implicito=factor))
+                         factor_drenaje_implicito=factor, cu_drena_implicito_gL=cd_implied))
     return rows

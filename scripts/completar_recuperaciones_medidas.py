@@ -181,9 +181,21 @@ def main(argv=None):
                 f = [d['factor_drenaje_implicito'] for d in detail if d['pila'] == r['pila'] and d['factor_drenaje_implicito'] is not None]
                 if f:
                     print(f"  {r['pila']}: min {min(f):.3f} · mediana {sorted(f)[len(f) // 2]:.3f} · max {max(f):.3f}  (detalle en detalle_diario_comparacion.csv)")
+        print('\nDias con mayor desvio contra el oficial (Cu de drenaje medido vs el que reproduce el oficial con f=0.95):')
+        for r in comparison:
+            if r['estado'] in ('difiere', 'igual') and (r['max_abs_pp'] or 0) > 0.02:
+                worst = sorted((d for d in detail if d['pila'] == r['pila'] and d['inc_oficial_pp'] is not None),
+                               key=lambda d: -abs(d['inc_calculado_pp'] - d['inc_oficial_pp']))[:2]
+                for d in worst:
+                    imp = d['cu_drena_implicito_gL']
+                    print(f"  {r['pila']} {d['fecha']}: riego {d['q_riego_m3h']:.1f} m3/h · Cu drenaje medido {d['cu_drena_gL']:.3f} g/L · "
+                          f"implicito {'' if imp is None else f'{imp:.3f}'} g/L · incremento calculado {d['inc_calculado_pp']:.4f} pp vs oficial {d['inc_oficial_pp']:.4f} pp")
     if not official:
         print('(sin Excel oficial: no se pudo comparar)')
-    print(f'Resultado: {"IGUALES salvo pilas nuevas" if all_equal and official else "HAY DIFERENCIAS o falta oficial"}')
+    out_of_report = [r['pila'] for r in comparison if r['estado'] == 'sin curva oficial en esas fechas']
+    differing = [r['pila'] for r in comparison if r['estado'] in ('difiere', 'faltan fechas oficiales')]
+    print(f'Resultado: {"IGUALES al oficial (variaciones dentro de tolerancia), salvo las pilas nuevas" if official and not differing else "HAY DIFERENCIAS GRANDES en " + ", ".join(differing) if official else "falta el oficial"}'
+          + (f' · fuera del reporte oficial (no se insertan): {", ".join(out_of_report)}' if out_of_report else ''))
     print(f'\nFilas a insertar: {len(plan)} · plan en {folder.relative_to(ROOT) if folder.is_relative_to(ROOT) else folder}')
     if not args.aplicar or not plan:
         if not args.aplicar:
