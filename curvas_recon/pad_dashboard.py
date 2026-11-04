@@ -42,7 +42,7 @@ from .recon_engine import (
     load_drena_cu, load_produccion, compute_wz_week, material_cutoff,
     reconcile_week_flowsheet_dash, N_TRANSIENT_DEFAULT, clear_curve_cache,
     active_pilas_by_riego, resolve_window, clear_actividad_cache,
-    _fechas_actividad,
+    _fechas_actividad, pilas_jovenes,
 )
 from .input_preparation import prepare_recon_inputs
 from .perf_trace import record_phase, set_trace_id, reset_trace_id
@@ -2825,11 +2825,18 @@ def compute_recon(_n_clicks, caso_id):
                 )
             phase_anchor = time.perf_counter() - phase_t0
             record_phase('compute.anchor', phase_anchor, trace_id=perf_trace_id)
-            from .sulfide_inputs import load_sulfide_inputs
-            sulfide_inputs = load_sulfide_inputs(ws, week_end, caso['id'], anchor)
-            if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
-                raise ValueError('Las fuentes de Sulfuros no corresponden al run oficial seleccionado')
-            method = tag = 'Sulfuros: ajuste de curvas de hasta 30 días'
+            # Con curvas nuevas (30 dias o menos desde el primer riego) se
+            # ajustan solo ellas; sin curvas nuevas el respaldo es la
+            # distribucion del ajuste entre todas las curvas.
+            sulfide_young = pilas_jovenes('SULFUROS', ws, week_end)
+            if sulfide_young:
+                from .sulfide_inputs import load_sulfide_inputs
+                sulfide_inputs = load_sulfide_inputs(ws, week_end, caso['id'], anchor)
+                if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
+                    raise ValueError('Las fuentes de Sulfuros no corresponden al run oficial seleccionado')
+                method = tag = 'Sulfuros: ajuste de curvas de hasta 30 días'
+            else:
+                sulfide_inputs = None
 
             phase_t0 = time.perf_counter()
             _progress_set('Historico y metadatos', 'Asegurando caches...', 28)
@@ -2858,7 +2865,10 @@ def compute_recon(_n_clicks, caso_id):
                 {'riego': load_riego, 'cu_riego': load_cu_riego, 'drena_cu': load_drena_cu},
                 activity_loader=_fechas_actividad,
             )
-            materials['SULFUROS']['sulfide_inputs'] = sulfide_inputs
+            if sulfide_inputs is not None:
+                materials['SULFUROS']['sulfide_inputs'] = sulfide_inputs
+            else:
+                materials['SULFUROS']['sulfide_policy'] = 'legacy'
             phase_materials = time.perf_counter() - phase_t0
             record_phase('compute.inputs', phase_materials, trace_id=perf_trace_id,
                          activity_dates=len(activity_dates), labels=len(materials))

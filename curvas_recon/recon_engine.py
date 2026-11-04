@@ -607,6 +607,24 @@ def arranque_en_ventana(label, week_start, week_end, gap_days=UNLISTED_GAP_DAYS)
 _CAMPANA_CACHE = {}
 
 
+def pilas_jovenes(label, week_start, week_end, max_age_days=30):
+    """{pila: primer riego} de las pilas que riegan en la ventana y tienen
+    `max_age_days` dias o menos desde el primer riego real de su campana
+    vigente al cierre. Mismo criterio de edad que el ajuste de Sulfuros
+    (dias calendario transcurridos); si el resultado esta vacio no hay
+    curvas nuevas que ajustar."""
+    ws, we = pd.Timestamp(week_start).normalize(), pd.Timestamp(week_end).normalize()
+    riego, _ = _fechas_actividad(label)
+    out = {}
+    for pila, ini in inicio_campana(label, we).items():
+        fechas = riego.get(pila)
+        if fechas is None or not len(fechas[(fechas >= ws) & (fechas <= we)]):
+            continue
+        if (we - pd.Timestamp(ini).normalize()).days <= max_age_days:
+            out[pila] = ini
+    return out
+
+
 def inicio_campana(label, asof, gap_days=UNLISTED_GAP_DAYS):
     """{pila: Timestamp del primer dia de riego de la campana VIGENTE a `asof`}.
 
