@@ -2357,6 +2357,30 @@ def _anchor_ratio(anchor, key_recon, key_medido):
     return rec / med
 
 
+ANCHOR_UNCHANGED_TOL = 1e-3     # 0.1 %: dentro de esta banda el global reconciliado = medido
+
+
+def _anchor_unchanged(anchor, tol=ANCHOR_UNCHANGED_TOL):
+    """True si los flujos globales del pad no cambian al reconciliar (riego y PLS, masa y fino, y el neto).
+
+    En ese caso el pad no se mueve: ninguna pila cambia caudal, concentracion ni recuperacion. Sin esto el
+    neto absoluto (F25/F29) se imponia igual y movia el fino PLS de las pilas aunque los flujos no cambiaran,
+    solo porque el neto que miden las pilas no coincide con el del balance (distinto universo de pilas)."""
+    if not anchor:
+        return False
+    for rec, med in (('q_riego_recon', 'q_riego_medido'), ('q_pls_recon', 'q_pls_medido'),
+                     ('fino_riego_recon', 'fino_riego_medido'), ('fino_pls_recon', 'fino_pls_medido')):
+        ratio = _anchor_ratio(anchor, rec, med)
+        if ratio is None or abs(ratio - 1.0) > tol:
+            return False
+    target = anchor.get('net_cu_target_t')
+    if target is not None:
+        net_med = float(anchor['fino_pls_medido']) - float(anchor['fino_riego_medido'])
+        if not np.isfinite(float(target)) or abs(float(target) - net_med) > tol * max(abs(net_med), 1e-9):
+            return False
+    return True
+
+
 def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFAULT,
                               sigma_rel=SIGMA_REL_DEFAULT, force_all_active=False,
                               week_end=None, anchor=None):
@@ -2572,6 +2596,9 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
     # recorte sin motivo fisico.
     ratio_riego = _anchor_ratio(anchor, 'q_riego_recon', 'q_riego_medido')
     ratio_pls = _anchor_ratio(anchor, 'q_pls_recon', 'q_pls_medido')
+    sin_cambio = _anchor_unchanged(anchor)
+    if sin_cambio:                      # flujos globales sin cambio: el pad queda exactamente en lo medido
+        ratio_riego = ratio_pls = 1.0
     if ratio_riego is not None:
         q_riego_recon = q_riego_medido * ratio_riego
     else:
@@ -2623,6 +2650,8 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
     # patron sintetico de paso 1 (ver `_noisy_global`).
     ratio_fr = _anchor_ratio(anchor, 'fino_riego_recon', 'fino_riego_medido')
     ratio_fp = _anchor_ratio(anchor, 'fino_pls_recon', 'fino_pls_medido')
+    if sin_cambio:
+        ratio_fr = ratio_fp = 1.0
     if ratio_fr is not None:
         cu_fino_riego_recon = cu_fino_riego_medido * ratio_fr
     else:
@@ -2636,7 +2665,7 @@ def reconcile_week_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFA
     # separately reconciled irrigation fine. Internal fine is sum(Q*Cu); the
     # report's conversion to t Cu is 0.024 per daily Q[m3/h]*Cu[g/L].
     target_net_t = (float(anchor['net_cu_target_t'])
-                    if anchor and anchor.get('net_cu_target_t') is not None else None)
+                    if anchor and anchor.get('net_cu_target_t') is not None and not sin_cambio else None)
     if target_net_t is not None:
         cu_fino_pls_recon = _pls_fine_target_for_net(target_net_t,
                                                     cu_fino_riego_recon)
