@@ -122,7 +122,9 @@ def trial_bars(res, tab_value):
                          if r['pad'] == label and r['pile'] == p], key=lambda r: r['date'])
             base = next((r for r in rr if pd.Timestamp(r['date']) == ws-pd.Timedelta(days=1)), None)
             last = next((r for r in rr if pd.Timestamp(r['date']) == we), None)
-            before.append((last['observed_pct']-base['official_pct'])*base['cu_apilado_t']/100 if base and last else None)
+            # Pila nueva sin recuperacion medida al cierre: no hay barra medida, solo la reconciliada.
+            measured = last.get('observed_pct') if last else None
+            before.append((measured-base['official_pct'])*base['cu_apilado_t']/100 if base and measured is not None else None)
             if base and last:
                 after.append((last['reconciled_pct']-base['official_pct'])*base['cu_apilado_t']/100)
             else:

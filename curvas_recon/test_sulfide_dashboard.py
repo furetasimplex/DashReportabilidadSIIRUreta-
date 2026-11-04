@@ -183,3 +183,27 @@ def test_pilas_jovenes_uses_first_irrigation_age_at_case_end(monkeypatch):
         'P20': pd.Timestamp('2026-08-07'), 'P09': pd.Timestamp('2026-07-01')})
     young = engine.pilas_jovenes('SULFUROS', '2026-09-01', '2026-09-07')
     assert sorted(young) == ['P23', 'P24']   # P23 tiene exactamente 30 dias; P09 no riega en la ventana
+
+
+def test_new_pile_without_measured_recovery_still_calculates_and_draws():
+    """P26 en octubre: pila nueva sin lecturas medidas en la ventana (el calculo la ajusta)."""
+    from curvas_recon.sulfide_db_inputs import build_sulfide_rows, make_source_provider
+    from curvas_recon.test_sulfide_db_inputs import case10009_series
+    fx, material, curves, wip, first, saved = case10009_series()
+    curves[25] = {'dates': [d for d in curves[25]['dates'] if d <= pd.Timestamp('2026-08-31').date()],
+                  'values': curves[25]['values'][:len([d for d in curves[25]['dates'] if d <= pd.Timestamp('2026-08-31').date()])]}
+    provider = make_source_provider(material, curves, wip, first, {'run_id': 10082}, saved_profile=saved)
+    anchor = {'SULFUROS': {'net_cu_target_t': fx['target_net_t']}}
+    inputs = load_sulfide_inputs('2026-09-01', '2026-09-07', 10009, anchor, source_provider=provider)
+    assert all(r['observed_pct'] is None for r in inputs['rows'] if r['pile'] == 'P25' and r['date'] >= '2026-09-01')
+    res = engine.reconcile_week_flowsheet_dash('2026-09-01', {'SULFUROS': {'sulfide_inputs': inputs}}, None, None,
+                                               week_end='2026-09-07', anchor=anchor, caso_id=10009)['res']
+    for tab in ('tab-rec', 'tab-flujo', 'tab-cus'):
+        trial_bars(res, tab)                                    # antes: TypeError en tab-rec
+    figure = trial_bars(res, 'tab-rec')
+    measured = dict(zip(figure.data[0].x, figure.data[0].y))
+    assert measured['SU-P25'] is None and measured['SU-P24'] is not None
+    series = direct_series(res, 'SULFUROS', 25)
+    assert all(y is None for x, y in zip(series['xs'], series['measured_ys']) if x >= pd.Timestamp('2026-09-01'))
+    assert all(y is not None for y in series['ys'])             # la curva reconciliada si existe
+    assert trial_workbook(res, {'id': 10009, 'run_id': 10082})
