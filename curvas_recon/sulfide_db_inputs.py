@@ -135,7 +135,8 @@ def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irriga
             details.append(f"{', '.join(missing[day])}: sin recuperacion medida el {day.isoformat()}{tail}")
         raise SulfideInputError(
             '; '.join(details) + '. Recuperaciones_pad no tiene las lecturas necesarias: '
-            'cargue las recuperaciones oficiales de esas fechas y reintente.')
+            'complete esas fechas con los datos medidos (scripts/completar_recuperaciones_medidas.py, '
+            'primero sin --aplicar) y reintente.')
     if not rows:
         raise SulfideInputError('ninguna pila de Sulfuros riega en la ventana del Caso')
     return _attach_profile(rows, start, end, saved_profile or {})

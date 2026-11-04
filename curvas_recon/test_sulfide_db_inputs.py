@@ -169,7 +169,7 @@ def test_missing_close_reports_every_pile_and_last_available_reading():
         build_sulfide_rows(START, END, material, curves, wip, first)
     message = str(error.value)
     assert 'P07, P25: sin recuperacion medida el 2026-10-07' in message
-    assert 'ultima lectura disponible: 2026-10-01' in message and 'cargue las recuperaciones oficiales' in message
+    assert 'ultima lectura disponible: 2026-10-01' in message and 'completar_recuperaciones_medidas.py' in message
 
 
 def test_missing_measurements_are_rejected_not_filled():
