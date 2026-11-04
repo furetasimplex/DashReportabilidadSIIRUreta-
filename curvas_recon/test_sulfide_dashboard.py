@@ -285,7 +285,7 @@ def test_progress_and_error_texts_have_no_broken_accents():
         line for line in source.splitlines() if not line.lstrip().startswith('#') and 're.' not in line and '(?' not in line))
 
 
-def _sulfide_result(anchor_extra):
+def _sulfide_result(anchor_extra, tolerance=0.001):
     """Caso 10009 por el motor, con objetivos globales de flujo opcionales en el ancla."""
     from curvas_recon.sulfide_db_inputs import make_source_provider
     from curvas_recon.test_sulfide_db_inputs import case10009_series
@@ -294,8 +294,12 @@ def _sulfide_result(anchor_extra):
     base = {'SULFUROS': {'net_cu_target_t': fx['target_net_t']}}
     inputs = load_sulfide_inputs('2026-09-01', '2026-09-07', 10009, base, source_provider=provider)
     anchor = {'SULFUROS': dict(base['SULFUROS'], **anchor_extra)}
-    return engine.reconcile_week_flowsheet_dash('2026-09-01', {'SULFUROS': {'sulfide_inputs': inputs}}, None, None,
-                                                week_end='2026-09-07', anchor=anchor, caso_id=10009)['res']
+    previous, engine.SULFIDE_CONC_TOLERANCE = engine.SULFIDE_CONC_TOLERANCE, tolerance    # banda de tolerancia del ajuste
+    try:
+        return engine.reconcile_week_flowsheet_dash('2026-09-01', {'SULFUROS': {'sulfide_inputs': inputs}}, None, None,
+                                                    week_end='2026-09-07', anchor=anchor, caso_id=10009)['res']
+    finally:
+        engine.SULFIDE_CONC_TOLERANCE = previous
 
 
 def _pad_totals(res):
@@ -331,9 +335,9 @@ YOUNG = {'P24', 'P25'}
 
 
 def test_pad_matches_global_flows_masses_and_concentrations_changing_only_new_piles():
-    base = _sulfide_result({})
+    base = _sulfide_result({}, tolerance=1e-12)                           # tolerancia ~0: igualdad exacta
     goal = _global_flows(base, 0.998, 1.002, 1.001)                       # diferencias de ~0,2 % contra lo medido
-    res = _sulfide_result(goal)
+    res = _sulfide_result(goal, tolerance=1e-12)
     match = res['sulfide_audit']['concentration_match']
     assert match['status'] == 'aplicado' and match['con_masas']
     assert all(0.7 <= match[k] <= 1.3 for k in ('beta', 'alpha_riego', 'alpha_pls'))
@@ -393,10 +397,39 @@ def test_concentration_only_matching_when_the_global_masses_are_not_given():
     mature, young = [day(100.0, 0.4, 2.0)] * 5, [day(100.0, 0.4, 20.0, 50.0)] * 5
     held = 0.024 * 5 * (0.95 * 100 * 2.0 - 100 * 0.4)
     rows = dict(mature=mature, young=young)
-    before = match_pad_flows(rows, held, held + 10.0, dict(cu_riego_g_l=1.0, cu_pls_g_l=1.0), 0.30, 0.0001)
+    before = match_pad_flows(rows, held, held + 10.0, dict(cu_riego_g_l=1.0, cu_pls_g_l=1.0), 0.30, 1e-9)
     goals = dict(cu_riego_g_l=0.995 * before['cu_riego_pad_g_l_antes'], cu_pls_g_l=0.99 * before['cu_pls_pad_g_l_antes'])
-    match = match_pad_flows(rows, held, held + 10.0, goals, 0.30, 0.0001)
+    match = match_pad_flows(rows, held, held + 10.0, goals, 0.30, 1e-9)
     assert match['status'] == 'aplicado' and not match['con_masas'] and match['beta'] == 1.0
     assert match['cu_riego_pad_g_l_despues'] == pytest.approx(goals['cu_riego_g_l'])
     assert match['cu_pls_pad_g_l_despues'] == pytest.approx(goals['cu_pls_g_l'])
-    assert match_pad_flows(rows, held, held + 10.0, {}, 0.30, 0.0001)['status'] == 'sin_objetivos'
+    assert match_pad_flows(rows, held, held + 10.0, {}, 0.30, 1e-9)['status'] == 'sin_objetivos'
+
+
+
+def test_tolerance_band_leaves_alone_a_pad_that_is_already_inside_it():
+    assert engine.SULFIDE_CONC_TOLERANCE == 0.10                      # tolerancia vigente en el dash: 10 %, no cero
+    base = _sulfide_result({}, tolerance=0.10)
+    for goal in (_global_flows(base, 0.998, 1.002, 1.001),            # ~0,2 %
+                 _global_flows(base, 0.96, 1.04, 1.05, riego_exact=True)):   # hasta ~5 %: sigue dentro de la banda
+        res = _sulfide_result(goal, tolerance=0.10)
+        assert res['sulfide_audit']['concentration_match']['status'] == 'sin_cambio'
+        assert res['sulfide_audit']['lambda'] == pytest.approx(base['sulfide_audit']['lambda'])
+        assert _pad_totals(res) == pytest.approx(_pad_totals(base))                               # no se movio nada
+        assert res['sulfide_audit']['net_residual_t'] == pytest.approx(0, abs=1e-9)
+
+
+def test_pad_just_outside_the_band_is_moved_only_to_the_edge_not_to_the_exact_value():
+    base = _sulfide_result({}, tolerance=0.10)
+    cp0 = _pad_totals(base)['cu_pls']
+    goal = _global_flows(base, 1.0, 1.0, 1 / 1.1005, riego_exact=True)   # el Cu de PLS del pad queda 10,05 % sobre el global
+    res = _sulfide_result(goal, tolerance=0.10)
+    match = res['sulfide_audit']['concentration_match']
+    assert match['status'] == 'aplicado'
+    exact = 1000 * goal['fino_pls_recon'] / goal['q_pls_recon']
+    edge = exact * 1.10
+    assert match['objetivo_efectivo']['cu_pls_g_l'] == pytest.approx(edge)
+    assert _pad_totals(res)['cu_pls'] == pytest.approx(edge, rel=1e-9)                            # llega al borde de la banda...
+    assert abs(_pad_totals(res)['cu_pls'] - exact) / exact == pytest.approx(0.10, abs=1e-9)       # ...y no a la igualdad exacta
+    assert _pad_totals(res)['cu_pls'] < cp0                                                       # se movio muy poco
+    assert res['sulfide_audit']['net_residual_t'] == pytest.approx(0, abs=1e-9)

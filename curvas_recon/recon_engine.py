@@ -2803,9 +2803,10 @@ def merge_flowsheet_res(parts):
 
 
 # Las concentraciones de las pilas nuevas pueden cambiar hasta este porcentaje para que las ponderadas
-# del pad coincidan con las de los flujos globales; la tolerancia es la diferencia relativa aceptada.
+# del pad coincidan con las de los flujos globales; la tolerancia (banda) es la diferencia relativa aceptada:
+# dentro de ella no se ajusta nada y fuera solo se lleva hasta el borde de la banda.
 SULFIDE_CONC_MAX_CHANGE = 0.30
-SULFIDE_CONC_TOLERANCE = 0.001
+SULFIDE_CONC_TOLERANCE = 0.10
 
 
 def _sulfide_match_warning(match):

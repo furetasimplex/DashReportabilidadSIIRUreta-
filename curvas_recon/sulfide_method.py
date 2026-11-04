@@ -24,7 +24,7 @@ FDRENA_PROXY = 0.95            # drenaje de las maduras = 0.95 x riego (no hay s
 K_F = 0.024
 
 
-def match_pad_flows(rows_by_state, held_net_t, target_net_t, targets, max_change=0.30, tolerance=0.001,
+def match_pad_flows(rows_by_state, held_net_t, target_net_t, targets, max_change=0.30, tolerance=0.10,
                     max_relaxed_gap=0.05, mature_ratio=FDRENA_PROXY):
     """Ajusta SOLO las pilas nuevas para que el pad entregue lo que entregan los flujos globales.
 
@@ -78,20 +78,28 @@ def match_pad_flows(rows_by_state, held_net_t, target_net_t, targets, max_change
     masses_ok = (not with_mass) or (gap(q_pad, r_goal) <= tolerance and gap(p_pad, p_goal) <= tolerance)
     if (masses_ok and gap(out['cu_riego_pad_g_l_antes'], cr_goal) <= tolerance
             and out['cu_pls_pad_g_l_antes'] is not None and gap(out['cu_pls_pad_g_l_antes'], cp_goal) <= tolerance):
-        return dict(out, status='sin_cambio', motivo='el pad ya coincide con los flujos globales')
+        return dict(out, status='sin_cambio', motivo='el pad ya esta dentro de la tolerancia de los flujos globales')
+    # Banda de tolerancia: lo que ya esta dentro no se toca; lo que esta fuera solo se lleva hasta el borde de la banda.
+    band = lambda current, goal: min(max(current, goal * (1 - tolerance)), goal * (1 + tolerance))
+    cr_eff, cp_eff = band(out['cu_riego_pad_g_l_antes'], cr_goal), band(out['cu_pls_pad_g_l_antes'], cp_goal)
     if with_mass:
-        beta = (r_goal - M_q) / Y_q
-        lam = (p_goal - Q_mp) / Y_pq
+        r_eff, p_eff = band(q_pad, r_goal), band(p_pad, p_goal)
+        out.update(objetivo_efectivo=dict(q_riego_m3=r_eff * 24, q_pls_m3=p_eff * 24, cu_riego_g_l=cr_eff, cu_pls_g_l=cp_eff))
+    else:
+        out.update(objetivo_efectivo=dict(cu_riego_g_l=cr_eff, cu_pls_g_l=cp_eff))
+    if with_mass:
+        beta = (r_eff - M_q) / Y_q
+        lam = (p_eff - Q_mp) / Y_pq
         if not (beta > 0 and lam > 0):
             return dict(out, beta=beta, lambda_=lam, motivo='la masa global exige un caudal no positivo en las nuevas')
-        alpha_p = (cp_goal * p_goal - S_m) / (lam * Y_pc)
+        alpha_p = (cp_eff * p_eff - S_m) / (lam * Y_pc)
         alpha_r = (alpha_p * lam * Y_pc - need) / (beta * Y_rc)        # el cierre de F29 fija el Cu de riego
-        q_after, p_after = r_goal, p_goal
+        q_after, p_after = r_eff, p_eff
     else:
         beta = 1.0
-        alpha_r = (cr_goal * q_pad - M_rc) / Y_rc
+        alpha_r = (cr_eff * q_pad - M_rc) / Y_rc
         a = (need + alpha_r * Y_rc) / Y_pc
-        lam = ((S_m + a * Y_pc) / cp_goal - Q_mp) / Y_pq
+        lam = ((S_m + a * Y_pc) / cp_eff - Q_mp) / Y_pq
         if not lam > 0:
             return dict(out, beta=beta, alpha_riego=alpha_r, lambda_=lam,
                         motivo='el caudal de PLS global exige un drenaje no positivo en las nuevas')
@@ -110,14 +118,14 @@ def match_pad_flows(rows_by_state, held_net_t, target_net_t, targets, max_change
     out.update(cu_riego_pad_g_l_despues=cr_after, cu_pls_pad_g_l_despues=cp_after,
                q_riego_pad_m3_despues=(M_q + beta * Y_q) * 24, q_pls_pad_m3_despues=(Q_mp + lam * Y_pq) * 24,
                diferencia_cu_riego_relativa=relaxed)
-    if relaxed > max_relaxed_gap:
+    if relaxed > max(max_relaxed_gap, tolerance):
         return dict(out, motivo=f'los flujos globales no son compatibles con el cierre de F29: '
                                 f'el Cu de riego del pad quedaria {relaxed:.1%} fuera del global')
     return dict(out, status='aplicado')
 
 
 def reconcile_sulfides(rows, case_start, case_end, target_net_t, concentration_targets=None,
-                       max_concentration_change=0.30, concentration_tolerance=0.001,
+                       max_concentration_change=0.30, concentration_tolerance=0.10,
                        mature_drainage_ratio=FDRENA_PROXY):
     """Fit one common drainage-profile multiplier to the net Cu target.
 
