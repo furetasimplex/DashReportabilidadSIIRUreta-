@@ -1,0 +1,281 @@
+{
+  "runs": [
+    {
+      "id": 2404,
+      "caso_id": 10013,
+      "semana_lunes": "2026-10-01",
+      "semana_fin": "2026-10-12",
+      "method": "Flowsheet",
+      "converged": true,
+      "row_count": 204,
+      "qd_rows": 204
+    },
+    {
+      "id": 2348,
+      "caso_id": 10009,
+      "semana_lunes": "2026-09-01",
+      "semana_fin": "2026-09-07",
+      "method": "Flowsheet",
+      "converged": true,
+      "row_count": 126,
+      "qd_rows": 126
+    }
+  ],
+  "official_staging_sources": [
+    {
+      "origen": "ago-2023",
+      "primera": "2022-08-01",
+      "ultima": "2023-08-31",
+      "filas": 7047,
+      "filas_limite": 0
+    },
+    {
+      "origen": "ago-2026",
+      "primera": "2025-08-12",
+      "ultima": "2026-08-23",
+      "filas": 6603,
+      "filas_limite": 0
+    },
+    {
+      "origen": "dic-2024",
+      "primera": "2024-04-28",
+      "ultima": "2024-12-24",
+      "filas": 3267,
+      "filas_limite": 0
+    },
+    {
+      "origen": "mar-2025",
+      "primera": "2024-12-25",
+      "ultima": "2025-03-24",
+      "filas": 1339,
+      "filas_limite": 0
+    },
+    {
+      "origen": "ago-2025",
+      "primera": "2025-08-01",
+      "ultima": "2025-08-31",
+      "filas": 541,
+      "filas_limite": 0
+    },
+    {
+      "origen": "may-2024",
+      "primera": "2023-09-01",
+      "ultima": "2024-05-20",
+      "filas": 4798,
+      "filas_limite": 0
+    },
+    {
+      "origen": "jul-2025",
+      "primera": "2025-03-25",
+      "ultima": "2025-07-31",
+      "filas": 2221,
+      "filas_limite": 0
+    },
+    {
+      "origen": "jul-2022",
+      "primera": "2017-07-01",
+      "ultima": "2022-07-31",
+      "filas": 30500,
+      "filas_limite": 0
+    }
+  ],
+  "baseline_sample": [],
+  "young_campaign": [
+    {
+      "Parcela": 24,
+      "Campana": 11.0,
+      "Fecha_drenaje": "2026-08-30",
+      "Recuperacion_parcela": 10.755902144168264
+    },
+    {
+      "Parcela": 24,
+      "Campana": 11.0,
+      "Fecha_drenaje": "2026-08-31",
+      "Recuperacion_parcela": 11.745198072025302
+    },
+    {
+      "Parcela": 24,
+      "Campana": 11.0,
+      "Fecha_drenaje": "2026-09-01",
+      "Recuperacion_parcela": 10.522037894044791
+    },
+    {
+      "Parcela": 24,
+      "Campana": 11.0,
+      "Fecha_drenaje": "2026-09-02",
+      "Recuperacion_parcela": 11.078018105379282
+    },
+    {
+      "Parcela": 25,
+      "Campana": 11.0,
+      "Fecha_drenaje": "2026-08-31",
+      "Recuperacion_parcela": 0.007326822072933113
+    },
+    {
+      "Parcela": 25,
+      "Campana": 11.0,
+      "Fecha_drenaje": "2026-09-01",
+      "Recuperacion_parcela": 0.12729700721466514
+    },
+    {
+      "Parcela": 25,
+      "Campana": 11.0,
+      "Fecha_drenaje": "2026-09-02",
+      "Recuperacion_parcela": 0.2996810012028943
+    }
+  ],
+  "august23": [
+    {
+      "parcela": 6,
+      "parcela_id": 38,
+      "origen": "ago-2026",
+      "recuperacion": 69.50639709413731,
+      "Campana": 11.0,
+      "observada": 69.50639709413731
+    },
+    {
+      "parcela": 7,
+      "parcela_id": 39,
+      "origen": "ago-2026",
+      "recuperacion": 65.22058067990615,
+      "Campana": 11.0,
+      "observada": 65.21454138845934
+    },
+    {
+      "parcela": 8,
+      "parcela_id": 40,
+      "origen": "ago-2026",
+      "recuperacion": 72.83836820067356,
+      "Campana": 11.0,
+      "observada": 72.82358585935643
+    },
+    {
+      "parcela": 9,
+      "parcela_id": 41,
+      "origen": "ago-2026",
+      "recuperacion": 61.7670391157303,
+      "Campana": 11.0,
+      "observada": 61.7670391157303
+    },
+    {
+      "parcela": 10,
+      "parcela_id": 42,
+      "origen": "ago-2026",
+      "recuperacion": 54.171620088469666,
+      "Campana": 11.0,
+      "observada": 54.15877536482802
+    },
+    {
+      "parcela": 11,
+      "parcela_id": 43,
+      "origen": "ago-2026",
+      "recuperacion": 59.01085213115128,
+      "Campana": 11.0,
+      "observada": 58.99861072528563
+    },
+    {
+      "parcela": 12,
+      "parcela_id": 44,
+      "origen": "ago-2026",
+      "recuperacion": 60.76353757737334,
+      "Campana": 11.0,
+      "observada": 60.76353757737334
+    },
+    {
+      "parcela": 13,
+      "parcela_id": 45,
+      "origen": "ago-2026",
+      "recuperacion": 55.30926495596712,
+      "Campana": 11.0,
+      "observada": 55.311040206236406
+    },
+    {
+      "parcela": 14,
+      "parcela_id": 46,
+      "origen": "ago-2026",
+      "recuperacion": 59.38580329012101,
+      "Campana": 11.0,
+      "observada": 59.37982119860421
+    },
+    {
+      "parcela": 15,
+      "parcela_id": 47,
+      "origen": "ago-2026",
+      "recuperacion": 47.496995333382664,
+      "Campana": 11.0,
+      "observada": 47.496995333382664
+    },
+    {
+      "parcela": 16,
+      "parcela_id": 48,
+      "origen": "ago-2026",
+      "recuperacion": 60.94306894229726,
+      "Campana": 11.0,
+      "observada": 60.925342829121305
+    },
+    {
+      "parcela": 17,
+      "parcela_id": 49,
+      "origen": "ago-2026",
+      "recuperacion": 70.998602887973,
+      "Campana": 11.0,
+      "observada": 70.9652673245884
+    },
+    {
+      "parcela": 18,
+      "parcela_id": 50,
+      "origen": "ago-2026",
+      "recuperacion": 73.29449129430886,
+      "Campana": 11.0,
+      "observada": 73.27428593201698
+    },
+    {
+      "parcela": 19,
+      "parcela_id": 51,
+      "origen": "ago-2026",
+      "recuperacion": 61.02773326558866,
+      "Campana": 11.0,
+      "observada": 60.9779157818713
+    },
+    {
+      "parcela": 20,
+      "parcela_id": 52,
+      "origen": "ago-2026",
+      "recuperacion": 49.79366191144372,
+      "Campana": 11.0,
+      "observada": 49.728282896342655
+    },
+    {
+      "parcela": 21,
+      "parcela_id": 53,
+      "origen": "ago-2026",
+      "recuperacion": 59.48664735602934,
+      "Campana": 11.0,
+      "observada": 59.460040203082855
+    },
+    {
+      "parcela": 22,
+      "parcela_id": 54,
+      "origen": "ago-2026",
+      "recuperacion": 52.00022453828698,
+      "Campana": 11.0,
+      "observada": 51.93746996290079
+    },
+    {
+      "parcela": 23,
+      "parcela_id": 55,
+      "origen": "ago-2026",
+      "recuperacion": 18.879087784869277,
+      "Campana": 11.0,
+      "observada": 22.622638539753602
+    },
+    {
+      "parcela": 24,
+      "parcela_id": 56,
+      "origen": "ago-2026",
+      "recuperacion": 5.361419502898526,
+      "Campana": 11.0,
+      "observada": 3.7551165473090835
+    }
+  ]
+}

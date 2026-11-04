@@ -1,0 +1,25 @@
+{
+  "status": "read_only_ok",
+  "case": 10009,
+  "runs": [
+    {
+      "id": 2348,
+      "caso_id": 10009,
+      "semana_lunes": "2026-09-01",
+      "semana_fin": "2026-09-07"
+    }
+  ],
+  "daily_columns": [
+    "id",
+    "run_id",
+    "material_id",
+    "label",
+    "parcela_nombre",
+    "dia_offset",
+    "fdrena",
+    "q",
+    "q_pls",
+    "cu_drena",
+    "cu_riego"
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "case_id": 10009,
+  "solver_run_id": 10082,
+  "allocation_reference_run_ids": [
+    2348
+  ],
+  "period": [
+    "2026-09-01",
+    "2026-09-07"
+  ],
+  "status": "infeasible_irrigation_copper_target",
+  "age_definition": "elapsed calendar days from first observed irrigation to case end; fixed cohort for all curve dates",
+  "month_rule": "Prior-month official rows are immutable; eligible current-month rows may be revisited across weekly boundaries.",
+  "eligible_by_age": [
+    "P24",
+    "P25"
+  ],
+  "mature_measured_only": [
+    "P07",
+    "P08",
+    "P10",
+    "P11",
+    "P12",
+    "P13",
+    "P14",
+    "P15",
+    "P16",
+    "P17",
+    "P18",
+    "P19",
+    "P20",
+    "P21",
+    "P22",
+    "P23"
+  ],
+  "piles": [
+    {
+      "pile": "P07",
+      "first_irrigation": "2025-10-07",
+      "age_at_case_end_days": 335,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 6.291453293962966
+    },
+    {
+      "pile": "P08",
+      "first_irrigation": "2025-10-27",
+      "age_at_case_end_days": 315,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 20.501323601562973
+    },
+    {
+      "pile": "P10",
+      "first_irrigation": "2025-12-09",
+      "age_at_case_end_days": 272,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 9.25302373984518
+    },
+    {
+      "pile": "P11",
+      "first_irrigation": "2026-01-06",
+      "age_at_case_end_days": 244,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 5.675955056979369
+    },
+    {
+      "pile": "P12",
+      "first_irrigation": "2026-02-03",
+      "age_at_case_end_days": 216,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 11.79164855694219
+    },
+    {
+      "pile": "P13",
+      "first_irrigation": "2026-02-20",
+      "age_at_case_end_days": 199,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 8.925099438043848
+    },
+    {
+      "pile": "P14",
+      "first_irrigation": "2026-03-13",
+      "age_at_case_end_days": 178,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 11.237407282268808
+    },
+    {
+      "pile": "P15",
+      "first_irrigation": "2026-03-31",
+      "age_at_case_end_days": 160,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 17.598040036877517
+    },
+    {
+      "pile": "P16",
+      "first_irrigation": "2026-04-23",
+      "age_at_case_end_days": 137,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 20.95977334197286
+    },
+    {
+      "pile": "P17",
+      "first_irrigation": "2026-05-06",
+      "age_at_case_end_days": 124,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 16.080534859403677
+    },
+    {
+      "pile": "P18",
+      "first_irrigation": "2026-05-17",
+      "age_at_case_end_days": 113,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 18.61677958344633
+    },
+    {
+      "pile": "P19",
+      "first_irrigation": "2026-05-18",
+      "age_at_case_end_days": 112,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 18.57337296734628
+    },
+    {
+      "pile": "P20",
+      "first_irrigation": "2026-06-17",
+      "age_at_case_end_days": 82,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 20.66750333667052
+    },
+    {
+      "pile": "P21",
+      "first_irrigation": "2026-06-21",
+      "age_at_case_end_days": 78,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 29.299717276788996
+    },
+    {
+      "pile": "P22",
+      "first_irrigation": "2026-07-08",
+      "age_at_case_end_days": 61,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 29.297152875808813
+    },
+    {
+      "pile": "P23",
+      "first_irrigation": "2026-08-01",
+      "age_at_case_end_days": 37,
+      "policy": "measured_only",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 22.95321009559162
+    },
+    {
+      "pile": "P24",
+      "first_irrigation": "2026-08-15",
+      "age_at_case_end_days": 23,
+      "policy": "young_adjustable_with_inputs",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 9.355235507756834
+    },
+    {
+      "pile": "P25",
+      "first_irrigation": "2026-09-01",
+      "age_at_case_end_days": 6,
+      "policy": "young_adjustable_with_inputs",
+      "days_with_irrigation_drainage_concentration_and_saved_drainage": 7,
+      "measured_irrigation_cu_t": 8.94869394896897
+    }
+  ],
+  "proof": {
+    "unit": "t Cu",
+    "measured_mature_irrigation_copper": 267.721995343512,
+    "all_piles_measured_irrigation_copper": 286.0259248002378,
+    "official_component_irrigation_copper_target": 41.232979,
+    "engine_ratio_normalized_irrigation_copper_target": 41.748813542878985,
+    "required_young_irrigation_copper": -225.973181800633,
+    "maximum_young_copper_if_no_negative_values": "cannot be negative; negative required contribution proves infeasibility",
+    "net_cu_target_F29": 1069.137402
+  },
+  "previous_month_reference_rows": 1285,
+  "database_writes": false,
+  "official_rows_modified": 0,
+  "publishable_reconciliation": false,
+  "limitations": [
+    "No independently measured drainage flow was found in the inspected drainage-source schema. Saved Qdrain is reconciled, not measured. The old 0.95*Qirrig proxy was not substituted for a measurement.",
+    "Young-pile drainage concentrations and saved reconciled drainage are available, but do not certify a measured drainage-flow prerequisite.",
+    "Infeasibility concerns preservation of the four existing official flow/copper constraints. It does not prove infeasibility for a net-copper-only model with different constraints.",
+    "No new curves are published. No full nonlinear solver was run after the necessary feasibility bound failed.",
+    "Allocation tables do not record their originating solver_run_id. The saved case reference and official solver anchor are identified separately.",
+    "Exactly 30 elapsed days is protected from adjustment; the case has no pile on that boundary."
+  ],
+  "sources": [
+    {
+      "file": "C:\\Users\\5330\\Desktop\\HidroNueva\\dash-lixiviacion-curvas\\auditorias\\metodologia_sulfuros_10009\\case10009_select_snapshot.json",
+      "sha256": "eb5d352a90f19daf0b725c116626fb1cd8f5cdaad54df99fdffbe6308b8bf32b"
+    },
+    {
+      "file": "C:\\Users\\5330\\Desktop\\HidroNueva\\curvas_recon\\auditorias\\comparacion_curvas_casos10009_10013_20261027\\fuentes\\pile_births_by_case.csv",
+      "sha256": "d9882a6e7321c47eeaaf716d2de2bd62729dc29342b6c9ee1d22aa4d55c68835"
+    }
+  ]
+}

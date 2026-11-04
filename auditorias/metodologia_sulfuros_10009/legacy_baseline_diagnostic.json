@@ -1,0 +1,173 @@
+{
+  "summary": {
+    "reconstructed": 17,
+    "unresolved": [
+      {
+        "pile": "P25",
+        "status": "missing_anchor_or_history"
+      }
+    ],
+    "lambda": 0.4192044513175783,
+    "target_t": 1069.137402,
+    "residual_t": 0.0
+  },
+  "details": [
+    {
+      "pile": "P07",
+      "status": "reconstructed",
+      "pct": 65.354248612604,
+      "prior_primary_pct": 65.3497999224711,
+      "difference_pct": 0.00444869013288951,
+      "cu23": 6006.465476060293,
+      "cu31": 6006.465476060293
+    },
+    {
+      "pile": "P08",
+      "status": "reconstructed",
+      "pct": 73.2783714329829,
+      "prior_primary_pct": 73.26547183920145,
+      "difference_pct": 0.012899593781440899,
+      "cu23": 6013.222328066455,
+      "cu31": 6013.222328066455
+    },
+    {
+      "pile": "P10",
+      "status": "reconstructed",
+      "pct": 54.48645868143478,
+      "prior_primary_pct": 54.4823626020525,
+      "difference_pct": 0.004096079382286177,
+      "cu23": 5926.376119776616,
+      "cu31": 5926.376119776616
+    },
+    {
+      "pile": "P11",
+      "status": "reconstructed",
+      "pct": 59.395317504273244,
+      "prior_primary_pct": 59.39365954601859,
+      "difference_pct": 0.0016579582546540905,
+      "cu23": 6055.159176426299,
+      "cu31": 6055.159176426299
+    },
+    {
+      "pile": "P12",
+      "status": "reconstructed",
+      "pct": 61.30697582335214,
+      "prior_primary_pct": 61.32456957085324,
+      "difference_pct": -0.01759374750110254,
+      "cu23": 6211.467840211143,
+      "cu31": 6211.467840211143
+    },
+    {
+      "pile": "P13",
+      "status": "reconstructed",
+      "pct": 55.86821099452726,
+      "prior_primary_pct": 55.890491541382175,
+      "difference_pct": -0.02228054685491543,
+      "cu23": 5831.312365244263,
+      "cu31": 5831.312365244263
+    },
+    {
+      "pile": "P14",
+      "status": "reconstructed",
+      "pct": 60.045241693482915,
+      "prior_primary_pct": 60.06363696935492,
+      "difference_pct": -0.018395275872002514,
+      "cu23": 5682.646469443341,
+      "cu31": 5682.646469443341
+    },
+    {
+      "pile": "P15",
+      "status": "reconstructed",
+      "pct": 48.23319651603663,
+      "prior_primary_pct": 48.270509558252755,
+      "difference_pct": -0.037313042216126746,
+      "cu23": 6826.168579488345,
+      "cu31": 6826.168579488345
+    },
+    {
+      "pile": "P16",
+      "status": "reconstructed",
+      "pct": 61.82719531758289,
+      "prior_primary_pct": 61.82789427028509,
+      "difference_pct": -0.0006989527022014386,
+      "cu23": 5532.0319635759415,
+      "cu31": 5532.0319635759415
+    },
+    {
+      "pile": "P17",
+      "status": "reconstructed",
+      "pct": 72.0089896984277,
+      "prior_primary_pct": 71.98741408196514,
+      "difference_pct": 0.021575616462556013,
+      "cu23": 3961.645380460167,
+      "cu31": 3961.645380460167
+    },
+    {
+      "pile": "P18",
+      "status": "reconstructed",
+      "pct": 74.35177244495338,
+      "prior_primary_pct": 74.28160932499391,
+      "difference_pct": 0.07016311995947433,
+      "cu23": 3504.6311988428693,
+      "cu31": 3504.6311988428693
+    },
+    {
+      "pile": "P19",
+      "status": "reconstructed",
+      "pct": 61.8607619915548,
+      "prior_primary_pct": 61.832178708732336,
+      "difference_pct": 0.028583282822467027,
+      "cu23": 3583.5865811207536,
+      "cu31": 3583.5865811207536
+    },
+    {
+      "pile": "P20",
+      "status": "reconstructed",
+      "pct": 50.54704756707296,
+      "prior_primary_pct": 50.51763993060201,
+      "difference_pct": 0.029407636470949683,
+      "cu23": 3417.4471515092205,
+      "cu31": 3417.4471515092205
+    },
+    {
+      "pile": "P21",
+      "status": "reconstructed",
+      "pct": 60.97494244421801,
+      "prior_primary_pct": 60.9926193014213,
+      "difference_pct": -0.017676857203291263,
+      "cu23": 4456.350706300657,
+      "cu31": 4456.350706300657
+    },
+    {
+      "pile": "P22",
+      "status": "reconstructed",
+      "pct": 54.259167973988646,
+      "prior_primary_pct": 54.29995511977746,
+      "difference_pct": -0.04078714578881204,
+      "cu23": 4705.33190994907,
+      "cu31": 4705.33190994907
+    },
+    {
+      "pile": "P23",
+      "status": "reconstructed",
+      "pct": 24.733039629271442,
+      "prior_primary_pct": 28.76790858310629,
+      "difference_pct": -4.034868953834849,
+      "cu23": 5026.454539774864,
+      "cu31": 5026.454539774864
+    },
+    {
+      "pile": "P24",
+      "status": "reconstructed",
+      "pct": 15.918633781468387,
+      "prior_primary_pct": 11.745198072025302,
+      "difference_pct": 4.173435709443085,
+      "cu23": 4551.913709795879,
+      "cu31": 4551.913709795879
+    },
+    {
+      "pile": "P25",
+      "status": "missing_anchor_or_history"
+    }
+  ]
+}
