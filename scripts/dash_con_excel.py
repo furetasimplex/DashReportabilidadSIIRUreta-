@@ -1,4 +1,4 @@
-"""Levanta el dash REAL sin base de datos: las lecturas se reemplazan por el Excel de .
+"""Levanta el dash REAL sin base de datos: las lecturas se reemplazan por el Excel de scripts/extraer_datos_caso.py.
 
 Uso (desde la raiz del repo):
 
