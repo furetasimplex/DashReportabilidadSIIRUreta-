@@ -2793,7 +2793,7 @@ def compute_recon(_n_clicks, caso_id):
 
     _progress_begin(
         'Ejecutando calculo',
-        f'Caso #{caso["id"]} ? {caso["nombre"]}',
+        f'Caso #{caso["id"]} — {caso["nombre"]}',
         3,
     )
     try:
@@ -2807,7 +2807,7 @@ def compute_recon(_n_clicks, caso_id):
 
             _progress_set(
                 'Ancla del caso',
-                f'Run oficial {caso["run_id"]} ? ventana {ws.date()}..{week_end.date()} ({n_days} d)',
+                f'Run oficial {caso["run_id"]} · ventana {ws.date()}..{week_end.date()} ({n_days} d)',
                 15,
             )
             phase_t0 = time.perf_counter()
@@ -2883,7 +2883,7 @@ def compute_recon(_n_clicks, caso_id):
             record_phase('compute.inputs', phase_materials, trace_id=perf_trace_id,
                          activity_dates=len(activity_dates), labels=len(materials))
 
-            _progress_set('Reconciliaci?n Pendiente', 'Resolviendo flowsheet...', 72)
+            _progress_set('Reconciliación pendiente', 'Resolviendo flowsheet…', 72)
             conn = connect()
             phase_t0 = time.perf_counter()
             trace_token = set_trace_id(perf_trace_id)
@@ -2907,7 +2907,7 @@ def compute_recon(_n_clicks, caso_id):
             print(f'[curvas] error en cálculo caso=#{caso["id"]}: {exc}')
             mensaje = str(exc).strip() or 'Error inesperado durante el cálculo.'
             if 'password' in mensaje.lower() or 'pwd=' in mensaje.lower():
-                mensaje = 'Error de conexi?n o de datos. Revisa el servidor y reintenta.'
+                mensaje = 'Error de conexión o de datos. Revisa el servidor y reintenta.'
             return (
                 dash.no_update,
                 True,
@@ -3153,7 +3153,10 @@ def render_recon_pila_charts(data, selected_pila, caso_id, group_id=None, groups
             return (empty_figure('El resultado ya no está disponible; vuelve a calcular'),) * 3
         from .sulfide_presentation import solution_figures
         selected_pad, selected_num = selected_pila.split('-P')
-        flow, concentrations = solution_figures(raw['res'], _PAD_TO_LABEL[selected_pad], int(selected_num))
+        # Antes del Caso: una sola serie con el historico oficial guardado; en la ventana: medido y reconciliado.
+        official_rows, _history_error = _load_recovery_history(
+            _PAD_TO_LABEL[selected_pad], int(selected_num), ws, data.get('raw_token'))
+        flow, concentrations = solution_figures(raw['res'], _PAD_TO_LABEL[selected_pad], int(selected_num), official_rows)
         if _PAD_TO_LABEL[selected_pad] == 'SULFUROS':
             from .sulfide_presentation import recovery_figure
             recovery = recovery_figure(raw['res'], 'SULFUROS', int(selected_num), _measured_cycles('SULFUROS', int(selected_num)))

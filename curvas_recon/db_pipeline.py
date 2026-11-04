@@ -89,15 +89,15 @@ def _ensure_reconciliation_tables():
             present = conn.execute(text("SELECT OBJECT_ID(:table_name, 'U')"),
                                    {'table_name': f'{SCHEMA}.{table}'}).scalar()
             if present is None:
-                raise RuntimeError(f'Falta la tabla de reconciliaci?n {table}; '
-                                   'instala el esquema antes de habilitar esta secci?n.')
+                raise RuntimeError(f'Falta la tabla de reconciliación {table}; '
+                                   'instala el esquema antes de habilitar esta sección.')
         for column in ('semana_fin', 'caso_id'):
             present = conn.execute(text('SELECT COL_LENGTH(:table_name, :column_name)'),
                                    {'table_name': f'{SCHEMA}.reconciliacion_run',
                                     'column_name': column}).scalar()
             if present is None:
                 raise RuntimeError(f'Falta la columna {column} en reconciliacion_run; '
-                                   'actualiza el esquema antes de ejecutar el c?lculo.')
+                                   'actualiza el esquema antes de ejecutar el cálculo.')
     _TABLAS_LISTAS = True
 
 
@@ -267,12 +267,12 @@ CASO_ANCHOR_KEYS = (
 
 
 def caso_anchor_completo(anchor):
-    """True si ambos pads tienen un ancla num?rica utilizable completa."""
+    """True si ambos pads tienen un ancla numérica utilizable completa."""
     return not diagnose_caso_anchor(anchor)
 
 
 def diagnose_caso_anchor(anchor):
-    """Lista fallas del ancla para ambos pads, o lista vac?a si est? completa."""
+    """Lista fallas del ancla para ambos pads, o lista vacía si está completa."""
     denominadores = {
         'q_riego_medido', 'q_pls_medido',
         'fino_riego_medido', 'fino_pls_medido',
@@ -303,7 +303,7 @@ def diagnose_caso_anchor(anchor):
             try:
                 number = float(value)
             except (TypeError, ValueError):
-                fallas.append(f'{label}: {nombre} no num?rico')
+                fallas.append(f'{label}: {nombre} no numérico')
                 continue
             if not math.isfinite(number) or number < 0:
                 fallas.append(f'{label}: {nombre} no finito o negativo')

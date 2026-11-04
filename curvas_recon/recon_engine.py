@@ -2214,7 +2214,7 @@ def _repartir_residuo_rampa(piles, ramp_cap_by_label, warnings):
             warnings.append(
                 f'{label}: quedaron {residuo_q - colocado:.3f} m3/h-dia del residuo de rampa SIN '
                 f'colocar -- la holgura total del pad ({tot_h:.3f}) no alcanza. El termino no '
-                f'demuestra inventario interno del lecho ni permite a?adir Cu para cerrar '
+                f'demuestra inventario interno del lecho ni permite añadir Cu para cerrar '
                 f'el balance. Se declara el faltante con signo (paso 7e).')
         if abs(inv_q) > 1e-9 or abs(inv_f) > 1e-9:
             piso_q, piso_f = inventario.get(label, (0.0, 0.0))
@@ -2802,6 +2802,54 @@ def merge_flowsheet_res(parts):
     return out
 
 
+def _sulfide_balance_totals(recovery_rows, piles, ws, we):
+    """Totales del balance de Sulfuros para las tarjetas de deltas.
+
+    El metodo conserva el riego y los Cu medidos: delta de riego y de Cu fino de riego
+    son 0. El caudal PLS medido sigue la convencion del dash (0.95 x riego) y el
+    reconciliado es el ajustado en las jovenes; las maduras no se ajustan. El Cu fino de
+    PLS se despeja del Cu neto de cada pila (neto = 0.024 x (fino PLS - fino riego)):
+    medido desde la recuperacion observada (0.95 x riego si la pila no tiene lectura al
+    cierre) y reconciliado desde el resultado del metodo. Misma unidad que el motor:
+    suma diaria de caudal [m3/h] x Cu [g/L]."""
+    k_f = 0.024
+    base_day = pd.Timestamp(ws).normalize() - pd.Timedelta(days=1)
+    end_day = pd.Timestamp(we).normalize()
+    by_pile = {}
+    for row in recovery_rows:
+        by_pile.setdefault(row['pile'], {})[pd.Timestamp(row['date']).normalize()] = row
+    t = dict(q_pls_medido=0.0, q_pls_recon=0.0, fino_riego=0.0, fino_pls_medido=0.0, fino_pls_recon=0.0)
+    for pile in piles:
+        entries = pile['daily']
+        q = [e['q_riego_medido'] or 0.0 for e in entries]
+        fino_riego = sum(qq * e['cu_riego_medido'] for qq, e in zip(q, entries)
+                         if qq and e.get('cu_riego_medido') is not None)
+        fitted = [e['q_pls_final'] for e in entries if e.get('q_pls_final') is not None]
+        t['q_pls_medido'] += FDRENA_MAX * sum(q)
+        t['q_pls_recon'] += sum(fitted) if pile.get('status') == 'young' else FDRENA_MAX * sum(q)
+        t['fino_riego'] += fino_riego
+        rows = by_pile.get(pile['parcela'], {})
+        base, last = rows.get(base_day), rows.get(end_day)
+        if base is None or last is None:
+            continue
+        cu_tf = base['cu_apilado_t']
+        net_rec = cu_tf * (last['reconciled_pct'] - base['official_pct']) / 100.0
+        if last.get('observed_pct') is not None:
+            net_med = cu_tf * (last['observed_pct'] - base['official_pct']) / 100.0
+        else:
+            net_med = k_f * sum(FDRENA_MAX * qq * e['cu_pls_medido'] - qq * e['cu_riego_medido']
+                                for qq, e in zip(q, entries)
+                                if qq and e.get('cu_pls_medido') is not None and e.get('cu_riego_medido') is not None)
+        t['fino_pls_recon'] += net_rec / k_f + fino_riego
+        t['fino_pls_medido'] += net_med / k_f + fino_riego
+    return dict(
+        q_pls_medido=t['q_pls_medido'], q_pls_recon=t['q_pls_recon'],
+        cu_fino_riego_medido=t['fino_riego'], cu_fino_riego_recon=t['fino_riego'],
+        cu_fino_pls_medido=t['fino_pls_medido'], cu_fino_pls_recon=t['fino_pls_recon'],
+        delta_recon_riego=0.0, delta_recon_pls=t['q_pls_recon'] - t['q_pls_medido'],
+        delta_fino_riego=0.0, delta_fino_pls=t['fino_pls_recon'] - t['fino_pls_medido'])
+
+
 def _reconcile_sulfide_local(week_start, week_end, material, anchor):
     """Produce local direct-recovery data; SQL persistence is unsupported."""
     from .sulfide_method import reconcile_sulfides
@@ -2863,9 +2911,10 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
         daily.extend(entries)
     q_values = [d['q_riego_final'] for d in daily]
     q_total = sum(q_values) if all(q is not None for q in q_values) else None
+    totals = _sulfide_balance_totals(recovery_rows, piles, ws, we)
     out = {k: None for k in _MERGE_SUM_KEYS}
     out.update(week_start=ws, week_end=we, anchored=True, n_active=len(piles), n_nuevas=len(audit['young']),
-               q_riego_medido=q_total, q_riego_recon=q_total,
+               q_riego_medido=q_total, q_riego_recon=q_total, **totals,
                net_cu_target_t=anchor['net_cu_target_t'], daily_net_cu_t=audit['curve_net_t'],
                net_closure_residual_t=audit['net_residual_t'], all_rows=all_rows, piles=piles,
                daily=daily, warnings=['Sulfuros: resultado local; drenaje de maduras desconocido.'],

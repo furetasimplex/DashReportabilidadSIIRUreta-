@@ -3,6 +3,7 @@ from copy import deepcopy
 from io import BytesIO
 import sys
 from pathlib import Path
+import re
 from unittest.mock import Mock
 
 import pandas as pd
@@ -11,7 +12,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from curvas_recon import recon_engine as engine, pad_dashboard as dashboard
 from curvas_recon.sulfide_inputs import load_sulfide_inputs
-from curvas_recon.sulfide_presentation import direct_series, direct_member, solution_figures, trial_bars, trial_workbook
+from curvas_recon.sulfide_presentation import (direct_series, direct_member, solution_figures, trial_bars,
+                                               trial_workbook, recovery_figure)
 
 
 @pytest.fixture
@@ -54,10 +56,11 @@ def test_direct_charts_groups_and_workbook_keep_values_and_unknown_drainage(resu
     assert group['cu_tf_t'] == series['cu_tf']
     assert group['reconciled_series']['ys'] == [v for d,v in zip(series['xs'],series['ys']) if d >= pd.Timestamp('2026-09-01')]
     flow, concentrations = solution_figures(res, 'SULFUROS', 7)
-    assert all(v is None for v in flow.data[1].y)
+    q_med, q_rec, pls_med, pls_rec = flow.data                 # riego medido/reconciliado y PLS medido/reconciliado
+    assert list(pls_med.y) == pytest.approx([0.95 * v for v in q_med.y]) and 'medido' in pls_med.name
+    assert list(pls_rec.y) == list(pls_med.y)                  # madura: sin ajuste, el reconciliado es el medido
     assert any(v is not None for v in concentrations.data[1].y)
-    for tab in ('tab-rec', 'tab-flujo', 'tab-cus'):
-        assert len(trial_bars(res, tab).data) == 2
+    assert [len(trial_bars(res, tab).data) for tab in ('tab-rec', 'tab-flujo', 'tab-cus')] == [2, 4, 4]
     wb = pd.read_excel(BytesIO(trial_workbook(res, {'id': 10009, 'run_id': 10082})), sheet_name=None)
     table = wb['Recuperacion Sulfuros']
     mature = table[table['recovery_source'] == 'observed']
@@ -202,8 +205,81 @@ def test_new_pile_without_measured_recovery_still_calculates_and_draws():
         trial_bars(res, tab)                                    # antes: TypeError en tab-rec
     figure = trial_bars(res, 'tab-rec')
     measured = dict(zip(figure.data[0].x, figure.data[0].y))
-    assert measured['SU-P25'] is None and measured['SU-P24'] is not None
+    assert measured['SU-P25'] is not None and measured['SU-P24'] is not None   # P25 sin lectura: estimado con 0,95 x riego
+    assert 'SU-P25' in figure.layout.annotations[0].text and 'sin lectura' in figure.layout.annotations[0].text
     series = direct_series(res, 'SULFUROS', 25)
     assert all(y is None for x, y in zip(series['xs'], series['measured_ys']) if x >= pd.Timestamp('2026-09-01'))
     assert all(y is not None for y in series['ys'])             # la curva reconciliada si existe
     assert trial_workbook(res, {'id': 10009, 'run_id': 10082})
+
+
+
+def oxide_pile(label='OXIDOS', parcela='P01'):
+    """Pila de Oxidos con la forma de las filas diarias del motor (medido y reconciliado)."""
+    days = pd.date_range('2026-09-01', '2026-09-07')
+    daily = [dict(label=label, parcela=parcela, date=d, q_riego_medido=100.0, q_pls_medido=95.0,
+                  cu_riego_medido=0.4, cu_pls_medido=2.0, fino_riego_medido=40.0, fino_pls_medido=190.0,
+                  q_riego_final=105.0, q_pls_final=98.0, cu_riego_recon=0.41, cu_pls_recon=2.1,
+                  fino_riego_final=43.0, fino_pls_final=205.8) for d in days]
+    return dict(label=label, parcela=parcela, daily=daily), daily
+
+
+def test_bars_show_measured_and_reconciled_for_oxide_piles_too(result):
+    res = dict(result['res'])
+    pile, daily = oxide_pile()
+    res['piles'] = [pile] + list(res['piles'])
+    res['daily'] = daily + list(res['daily'])
+    keys = {tab: dict(zip(trial_bars(res, tab).data[0].x, zip(*[t.y for t in trial_bars(res, tab).data])))
+            for tab in ('tab-rec', 'tab-flujo', 'tab-cus')}
+    measured, reconciled = keys['tab-rec']['OX-P01']
+    assert measured == pytest.approx(0.024 * 7 * (190.0 - 40.0)) and reconciled == pytest.approx(0.024 * 7 * (205.8 - 43.0))
+    assert all(v is not None for tab in keys.values() for values in tab.values() for v in values)   # ninguna barra vacia
+    assert keys['tab-flujo']['OX-P01'] == pytest.approx((100 * 24 * 7, 105 * 24 * 7, 95 * 24 * 7, 98 * 24 * 7))
+    assert len(keys['tab-rec']) == 19 and 'SU-P26' not in keys['tab-rec']        # Oxidos + las 18 de Sulfuros
+    assert all(all(v is not None for v in values) for values in keys['tab-rec'].values())
+
+
+def test_delta_cards_are_filled_for_the_sulfide_method(result):
+    res = result['res']
+    for key in ('q_pls_medido', 'q_pls_recon', 'cu_fino_riego_medido', 'cu_fino_riego_recon',
+                'cu_fino_pls_medido', 'cu_fino_pls_recon', 'delta_recon_riego', 'delta_recon_pls',
+                'delta_fino_riego', 'delta_fino_pls'):
+        assert res[key] is not None, key
+    assert res['delta_recon_riego'] == 0 and res['delta_fino_riego'] == 0       # riego y Cu medidos se conservan
+    # El Cu neto reconciliado menos el medido es lo que el metodo agrega: 196.5 t en el Caso 10009.
+    assert 0.024 * res['delta_fino_pls'] == pytest.approx(196.5, abs=0.2)
+    totals = {k: res[k] for k in ('q_riego_medido', 'q_pls_medido', 'delta_recon_riego', 'delta_recon_pls',
+                                  'cu_fino_riego_medido', 'delta_fino_riego', 'cu_fino_pls_medido', 'delta_fino_pls')}
+    tiles = str(dashboard._build_kpis(dict(base_row={}, n_activas=18, n_nuevas=2), totals))
+    assert 'N/A' not in tiles and '+0.0%' in tiles
+
+
+def test_charts_show_one_official_series_before_the_window_and_both_inside(result):
+    res = result['res']
+    history = [dict(date=pd.Timestamp('2026-08-30') + pd.Timedelta(days=i), q=90.0 + i, q_pls=80.0 + i,
+                    cu_riego=0.3, cu_drena=1.5) for i in range(2)]          # 30 y 31-ago, antes de la ventana
+    flow, concentrations = solution_figures(res, 'SULFUROS', 24, history)
+    for figure, row_names in ((flow, ('Riego', 'PLS')), (concentrations, ('Cu riego', 'Cu PLS'))):
+        by_name = {}
+        for trace in figure.data:
+            by_name.setdefault(trace.name.split(' (')[0] if trace.name.startswith('Oficial') else trace.name, []).append(trace)
+        official = [t for t in figure.data if t.name.startswith('Oficial')]
+        assert len(official) == 2 and all(max(t.x) < pd.Timestamp('2026-09-01') for t in official)
+        inside = [t for t in figure.data if not t.name.startswith('Oficial')]
+        assert len(inside) == 4 and all(min(t.x) >= pd.Timestamp('2026-09-01') for t in inside)
+        assert {t.name.split('(')[-1].rstrip(')').split(',')[0] for t in inside} >= {'medido', 'reconciliado'}
+    # una pila joven: el PLS reconciliado (ajustado) difiere del medido
+    pls_med, pls_rec = flow.data[-2], flow.data[-1]
+    assert list(pls_rec.y) != list(pls_med.y)
+    recovery = recovery_figure(res, 'SULFUROS', 24, ())
+    names = [t.name for t in recovery.data]
+    assert names == ['Oficial (histórico)', 'Medido', 'Reconciliado']
+    assert max(recovery.data[0].x) < pd.Timestamp('2026-09-01') and min(recovery.data[2].x) >= pd.Timestamp('2026-08-31')
+
+
+def test_progress_and_error_texts_have_no_broken_accents():
+    source = Path(dashboard.__file__).read_text(encoding='utf-8')
+    assert 'Reconciliación pendiente' in source and 'Reconciliaci?n' not in source
+    assert 'conexión' in source and 'conexi?n' not in source
+    assert not re.search(r"'[^'\n]*[A-Za-záéíóúñ]\?[A-Za-záéíóúñ][^'\n]*'", "\n".join(
+        line for line in source.splitlines() if not line.lstrip().startswith('#') and 're.' not in line and '(?' not in line))
