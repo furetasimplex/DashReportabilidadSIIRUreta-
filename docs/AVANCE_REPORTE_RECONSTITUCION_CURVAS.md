@@ -44,6 +44,7 @@ recalibrada y humedad resuelta desde DB.
 | 2a | Reconstitución: recalibración de densidad + asignación secuencial | ✅ 5-nov (opt-in «en validación») |
 | 2b | Reconstitución: informe con fracción de traspaso y Cu fino | ✅ 5-nov |
 | 4 | Integración: reporte consume recuperación directa del método | pendiente |
+| 5 | Unificación: reportes nuevos (formato oficial, reconstitución recalibrada) en el visor `dash-lixiviacion-curvas`, pestaña Reportes | pendiente |
 
 ## Parte 2 — entrega (5-nov)
 
@@ -74,3 +75,4 @@ recalibrada y humedad resuelta desde DB.
 
 - 5-nov: plan cerrado; metodología y Control copiados al repo; agentes lanzados.
 - 5-nov: parte 2 entregada y revisada; recalibrada queda opt-in hasta validar en DB.
+- 5-nov: se agrega hito 5 (reportes en el visor de lixiviación, unificación).
