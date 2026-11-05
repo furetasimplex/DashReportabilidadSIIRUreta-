@@ -383,5 +383,30 @@ class IntegracionSIIR(unittest.TestCase):
         self.raw_sql.assert_not_called()
 
 
+    def test_14_reportes_recon_montaje_lazy_sin_sql(self):
+        def navigate(section, mounted=None):
+            return self.callback('subtabs-curvas-recon.style',
+                [dict(id='nav-' + section, property='n_clicks', value=1)],
+                [dict(id='subtabs-reportes-recon', property='children', value=mounted)],
+                ['nav-' + section + '.n_clicks'])
+        static_ids = ids(self.client.get('/_dash-layout').get_json())
+        self.assertIn('nav-reportes-recon', static_ids)
+        self.assertNotIn('reportes-recon-generar', static_ids)
+        opened = navigate('reportes-recon')
+        mounted = opened['subtabs-reportes-recon']['children']
+        mounted_ids = ids(mounted)
+        self.assertIn('reportes-recon-generar', mounted_ids)
+        self.assertEqual(len(mounted_ids), len(set(mounted_ids)))
+        self.assertFalse(set(mounted_ids) & set(static_ids))
+        self.assertEqual(opened['siir-bc-active']['children'], 'REPORTES DE RECONCILIACIÓN')
+        self.assertEqual(opened['nav-reportes-recon']['className'], 'siir-nav-link active')
+        self.assertEqual(opened['subtabs-reconstitucion']['style'], {'display': 'none'})
+        reopened = navigate('reportes-recon', mounted)
+        self.assertNotIn('children', reopened['subtabs-reportes-recon'])
+        back = navigate('reportabilidad', mounted)
+        self.assertEqual(back['subtabs-reportes-recon']['style'], {'display': 'none'})
+        self.sql.assert_not_called()
+        self.raw_sql.assert_not_called()
+
 if __name__ == '__main__':
     unittest.main()

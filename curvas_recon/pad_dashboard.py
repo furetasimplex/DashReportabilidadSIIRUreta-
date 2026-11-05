@@ -3746,6 +3746,67 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
         f'curva hasta {JOINT_DATA_CUTOFF.date()}, {comparacion}).',
         style={'color': '#2E9E5B'}), download
 
+def latest_recon_store(caso_id):
+    """Store mínimo de la corrida más reciente del Caso guardada en este host.
+
+    Solo lee payloads emitidos por este dashboard y aún vigentes (TTL). Permite
+    generar el reporte desde otra sección sin volver a reconciliar ni escribir
+    en SQL. Devuelve None si no hay corrida disponible."""
+    if caso_id is None or not os.path.isdir(_RECON_RAW_DIR):
+        return None
+    cutoff = time.time() - _RECON_RAW_TTL_SECONDS
+    candidates = []
+    for name in os.listdir(_RECON_RAW_DIR):
+        path = os.path.join(_RECON_RAW_DIR, name)
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            continue
+        if name.endswith('.pkl') and mtime >= cutoff:
+            candidates.append((mtime, name[:-4]))
+    for mtime, token in sorted(candidates, reverse=True):
+        raw, _path = _load_recon_raw(token, caso_id)
+        if not raw:
+            continue
+        try:
+            caso = raw['caso']
+            res = raw.get('res') or {}
+            return dict(
+                caso_id=caso['id'], caso_nombre=caso.get('nombre'),
+                caso_run_id=caso.get('run_id'), raw_token=token,
+                week_start=pd.Timestamp(raw['ws']).isoformat(),
+                week_end=pd.Timestamp(raw['we']).isoformat(),
+                local_direct_recovery=bool(res.get('local_direct_recovery')),
+                guardado=datetime.fromtimestamp(mtime).isoformat(timespec='minutes'))
+        except (KeyError, TypeError, ValueError, AttributeError):
+            continue
+    return None
+
+
+def generate_case_report(caso_id, reconciliar=False, sulfide_policy='net_trial'):
+    """Reporte de recuperaciones reconciliadas de un Caso, sin la UI de curvas.
+
+    Con ``reconciliar=False`` usa la última corrida guardada en este host (no
+    recalcula ni escribe en SQL). Con ``reconciliar=True`` ejecuta el mismo
+    cálculo que «Ejecutar cálculo», que sí guarda la corrida. Devuelve
+    ``(estado, descarga)``; ``descarga`` es None si no se pudo generar."""
+    initialize_data()
+    if reconciliar:
+        data, failed, body = compute_recon(1, caso_id, sulfide_policy)
+        if failed or not isinstance(data, dict):
+            return (body if body is not dash.no_update
+                    else html.Div('No se pudo ejecutar la reconciliación.')), None
+    else:
+        data = latest_recon_store(caso_id)
+        if data is None:
+            return html.Div(
+                'No hay una reconciliación vigente de este Caso en el servidor. '
+                'Ejecútala en Curvas y reconciliación o elige «Reconciliar ahora».',
+                style={'color': '#B45309'}), None
+        ensure_full_data()
+    return generate_week_report(1, data, caso_id)
+
+
 def build_layout():
     """Return a lazy section shell, without opening a SQL connection."""
     return html.Div([
