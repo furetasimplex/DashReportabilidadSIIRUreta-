@@ -712,6 +712,21 @@ def _hoja_detalle(wb, m):
         ws.append([_celda(v) for v in fila])
 
 
+# Columnas por modulo de la reconstitucion recalibrada (solo DETALLE; la hoja
+# MODULOS conserva el formato de la plantilla).
+COLS_RECALIBRACION = ["meta_tmh", "densidad_recalibrada", "fraccion_traspaso"]
+
+
+def modulos_recal(res, pad):
+    """Meta TMH, densidad usada y fraccion de traspaso (S) por campana/modulo."""
+    m = res.get("recalibracion_modulos")
+    cols = ["campana", "modulo"] + COLS_RECALIBRACION
+    if m is None or m.empty:
+        return pd.DataFrame(columns=cols)
+    m = m.loc[m["pad_id"].eq(int(pad))].rename(columns={"rho_h": "densidad_recalibrada"})
+    return m[cols].drop_duplicates(["campana", "modulo"]).reset_index(drop=True)
+
+
 def preparar_modulos_desde_resultado(res, pad, calidad, fecha_min=None,
                                      fecha_max=None, extras=None):
     """Build the legacy MODULOS contract from one already-loaded Case result.
@@ -748,6 +763,18 @@ def preparar_modulos_desde_resultado(res, pad, calidad, fecha_min=None,
         ap = ap.loc[ap.estado.eq("ACTIVO")]
     keys = ["pad_id", "campana", "modulo"]
     daykeys = keys + ["fecha"]
+    # Reconstitucion recalibrada: la asignacion de masa puede caer en un modulo
+    # sin fila volumetrica ese dia; su masa no se descarta (seccion 12).
+    recal = {"tmh_turno1", "tmh_turno2"}.issubset(st.columns)
+    if recal and not st.empty:
+        con_masa = st.loc[st.pad_id.eq(pad)]
+        con_masa = con_masa.loc[con_masa[["tmh_turno1", "tmh_turno2"]].sum(axis=1).gt(0)]
+        falta = con_masa[daykeys].merge(ap[daykeys].drop_duplicates(), on=daykeys,
+                                        how="left", indicator=True)
+        falta = falta.loc[falta["_merge"].eq("left_only"), daykeys]
+        if len(falta):
+            falta = falta.assign(vol_diario=0.0)
+            ap = pd.concat([ap, falta], ignore_index=True)
     if ap.empty or st.empty:
         return pd.DataFrame(columns=COLS_INFORME + COLS_CALIDAD + [
             "fecha_ini_carguio", "dias", "dias_con_masa", "volumen",
@@ -770,6 +797,13 @@ def preparar_modulos_desde_resultado(res, pad, calidad, fecha_min=None,
         masa_turno1=("masa_turno1", lambda s: s.sum(min_count=1)),
         masa_turno2=("masa_turno2", lambda s: s.sum(min_count=1)))
     ap = ap.merge(sums, on=daykeys, how="left", validate="one_to_one")
+    if recal:
+        # TMH asignada por la secuencia (no por fraccion de volumen del dia).
+        tmh_st = (st.assign(_t=st[["tmh_turno1", "tmh_turno2"]].sum(axis=1, min_count=1))
+                  .groupby(daykeys, as_index=False)["_t"].sum(min_count=1)
+                  .rename(columns={"_t": "TMH_secuencial"}))
+        ap = ap.merge(tmh_st, on=daykeys, how="left", validate="one_to_one")
+        ap["TMH_asignada"] = ap["TMH_secuencial"]
     base = ap.groupby(keys, as_index=False).agg(
         fecha_ini_carguio=("fecha", "min"),
         fecha_fin_carguio=("fecha", "max"),
@@ -840,6 +874,16 @@ def preparar_modulos_desde_resultado(res, pad, calidad, fecha_min=None,
     out["frac_oxidos"] = out["solubilidad"]
     out["frac_sulfuros"] = 1 - out["frac_oxidos"]
     out["cu_fino"] = out["TMS"] * out["CuT"] / 100.0
+    if recal:
+        # Cu fino = suma por turno de TMS * CuT / 100 (Control M&R).
+        qq = q.loc[q["CuT"].notna()] if "CuT" in q.columns else q.iloc[0:0]
+        fino = (qq.assign(f=qq["peso"] * qq["CuT"] / 100.0)
+                .groupby(keys)["f"].sum(min_count=1).rename("cu_fino_turnos"))
+        out = out.merge(fino, left_on=keys, right_index=True, how="left", validate="one_to_one")
+        out["cu_fino"] = out["cu_fino_turnos"].where(out["cu_fino_turnos"].notna(), out["cu_fino"])
+        out = out.drop(columns="cu_fino_turnos")
+        out = out.merge(modulos_recal(res, pad), on=["campana", "modulo"], how="left",
+                        validate="one_to_one")
     # T and AE are literal legacy report rules: T follows solubility; AE=Z.
     out["clasificacion_contractual"] = np.where(
         out["solubilidad"].notna(),
@@ -896,7 +940,8 @@ def preparar_modulos_desde_resultado(res, pad, calidad, fecha_min=None,
     output_columns = list(dict.fromkeys(
         COLS_INFORME + COLS_CALIDAD + list(EXTRA_COLUMNAS.values()) + detail_fields + [
             "fecha_ini_carguio", "dias", "dias_con_masa", "volumen",
-            "completo", "cobertura_masa_completa", "ultimo_dia_en_caso", "altura_prom", "humedad"]))
+            "completo", "cobertura_masa_completa", "ultimo_dia_en_caso", "altura_prom", "humedad"]
+        + [c for c in COLS_RECALIBRACION if c in out.columns]))
     return out[output_columns].sort_values(
         ["campana", "modulo"]).reset_index(drop=True)
 

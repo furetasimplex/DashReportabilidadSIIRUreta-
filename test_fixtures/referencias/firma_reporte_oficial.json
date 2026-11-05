@@ -1,0 +1,2997 @@
+{
+ "origen": "186914ee-Reporte_Recuperaciones_12_de_Octubre_2026.xlsx (21.6 MB, no versionado). Extraida con tools/compare_report_format.py --extraer y curada con curar_firma().",
+ "version": 1,
+ "hojas": [
+  {
+   "nombre": "Budget FY16 y Q1",
+   "estado": "hidden",
+   "panel": null,
+   "color_pestana": null,
+   "columnas": [
+    [
+     1,
+     2,
+     9.45
+    ],
+    [
+     3,
+     3,
+     6.45
+    ],
+    [
+     4,
+     6,
+     7.45
+    ],
+    [
+     7,
+     7,
+     6.45
+    ],
+    [
+     8,
+     10,
+     7.45
+    ],
+    [
+     11,
+     11,
+     9.45
+    ],
+    [
+     12,
+     12,
+     12.45
+    ],
+    [
+     13,
+     13,
+     17.45
+    ],
+    [
+     14,
+     14,
+     20.45
+    ],
+    [
+     15,
+     15,
+     23.45
+    ],
+    [
+     16,
+     16384,
+     9.45
+    ]
+   ],
+   "combinadas": [
+    "C2:J2",
+    "C3:F3",
+    "G3:J3",
+    "L3:N3"
+   ],
+   "encabezado": {},
+   "formatos": {},
+   "graficos": []
+  },
+  {
+   "nombre": "Oxido",
+   "estado": "visible",
+   "panel": null,
+   "color_pestana": "FF00B050",
+   "columnas": [
+    [
+     1,
+     1,
+     11.45
+    ],
+    [
+     2,
+     2,
+     25.45
+    ],
+    [
+     3,
+     3,
+     11.45
+    ],
+    [
+     4,
+     4,
+     10.45
+    ],
+    [
+     5,
+     5,
+     10.45
+    ],
+    [
+     6,
+     6,
+     11.45
+    ],
+    [
+     7,
+     7,
+     10.45
+    ],
+    [
+     8,
+     8,
+     11.0
+    ],
+    [
+     9,
+     9,
+     10.45
+    ],
+    [
+     10,
+     13,
+     9.45
+    ],
+    [
+     14,
+     14,
+     10.45
+    ],
+    [
+     15,
+     15,
+     9.45
+    ],
+    [
+     16,
+     16,
+     12.0
+    ],
+    [
+     17,
+     17,
+     12.45
+    ],
+    [
+     18,
+     18,
+     13.45
+    ],
+    [
+     19,
+     19,
+     11.45
+    ],
+    [
+     20,
+     20,
+     12.0
+    ],
+    [
+     21,
+     21,
+     11.45
+    ],
+    [
+     22,
+     22,
+     15.45
+    ],
+    [
+     23,
+     23,
+     13.45
+    ],
+    [
+     24,
+     24,
+     12.45
+    ],
+    [
+     25,
+     25,
+     9.45
+    ],
+    [
+     26,
+     30,
+     11.45
+    ],
+    [
+     31,
+     31,
+     12.45
+    ],
+    [
+     32,
+     33,
+     13.45
+    ],
+    [
+     34,
+     34,
+     12.45
+    ],
+    [
+     35,
+     35,
+     14.0
+    ],
+    [
+     36,
+     36,
+     13.45
+    ],
+    [
+     37,
+     37,
+     14.45
+    ],
+    [
+     38,
+     41,
+     16.45
+    ],
+    [
+     42,
+     42,
+     14.45
+    ],
+    [
+     43,
+     45,
+     5.45
+    ],
+    [
+     46,
+     46,
+     6.45
+    ],
+    [
+     47,
+     53,
+     11.45
+    ],
+    [
+     54,
+     16384,
+     11.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {},
+   "formatos": {},
+   "graficos": [
+    {
+     "tipo": "scatterChart",
+     "titulo": "% Extracción Parcelas 1-8 Óxidos",
+     "series": 8,
+     "series_externas": 0,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "",
+       "min": 0.0,
+       "max": 360.0,
+       "unidad_mayor": 30.0,
+       "formato": "General"
+      },
+      {
+       "titulo": "% Extracción Cu",
+       "min": 0.0,
+       "max": 100.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "B3",
+     "esperado": {
+      "series": 8
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "% Extracción Parcelas 9-16 Óxidos",
+     "series": 6,
+     "series_externas": 0,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "",
+       "min": 0.0,
+       "max": 360.0,
+       "unidad_mayor": 30.0,
+       "formato": "General"
+      },
+      {
+       "titulo": "% Extracción Cu",
+       "min": 0.0,
+       "max": 110.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "N3",
+     "esperado": {
+      "series": 8
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "% Extracción Parcelas 17-24 Óxidos",
+     "series": 1,
+     "series_externas": 0,
+     "series_hojas_ocultas": 1,
+     "ejes": [
+      {
+       "titulo": "",
+       "min": 0.0,
+       "max": 400.0,
+       "unidad_mayor": 30.0,
+       "formato": "General"
+      },
+      {
+       "titulo": "% Extracción Cu",
+       "min": 0.0,
+       "max": 110.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "B45",
+     "esperado": {
+      "series": 8
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "% Extracción Parcelas 25-32 Óxidos",
+     "series": 6,
+     "series_externas": 0,
+     "series_hojas_ocultas": 3,
+     "ejes": [
+      {
+       "titulo": "",
+       "min": 0.0,
+       "max": 360.0,
+       "unidad_mayor": 30.0,
+       "formato": "0"
+      },
+      {
+       "titulo": "% Extracción Cu",
+       "min": 0.0,
+       "max": 100.0,
+       "unidad_mayor": 10.0,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "N45",
+     "esperado": {
+      "series": 8
+     }
+    }
+   ]
+  },
+  {
+   "nombre": "Sulfuro",
+   "estado": "visible",
+   "panel": null,
+   "color_pestana": "theme3",
+   "columnas": [
+    [
+     1,
+     1,
+     26.45
+    ],
+    [
+     2,
+     2,
+     11.45
+    ],
+    [
+     3,
+     3,
+     11.0
+    ],
+    [
+     4,
+     5,
+     10.45
+    ],
+    [
+     6,
+     7,
+     9.45
+    ],
+    [
+     8,
+     10,
+     10.45
+    ],
+    [
+     11,
+     11,
+     14.45
+    ],
+    [
+     12,
+     12,
+     21.45
+    ],
+    [
+     13,
+     13,
+     12.45
+    ],
+    [
+     14,
+     14,
+     23.45
+    ],
+    [
+     15,
+     16,
+     22.45
+    ],
+    [
+     17,
+     18,
+     21.45
+    ],
+    [
+     19,
+     19,
+     16.45
+    ],
+    [
+     20,
+     20,
+     17.45
+    ],
+    [
+     21,
+     21,
+     13.45
+    ],
+    [
+     22,
+     22,
+     12.45
+    ],
+    [
+     23,
+     23,
+     13.45
+    ],
+    [
+     24,
+     24,
+     11.45
+    ],
+    [
+     25,
+     25,
+     14.45
+    ],
+    [
+     26,
+     27,
+     12.45
+    ],
+    [
+     28,
+     28,
+     17.45
+    ],
+    [
+     29,
+     29,
+     16.45
+    ],
+    [
+     30,
+     30,
+     12.45
+    ],
+    [
+     31,
+     31,
+     14.45
+    ],
+    [
+     32,
+     33,
+     11.45
+    ],
+    [
+     34,
+     38,
+     11.45
+    ],
+    [
+     39,
+     39,
+     13.0
+    ],
+    [
+     40,
+     16384,
+     11.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {},
+   "formatos": {},
+   "graficos": [
+    {
+     "tipo": "scatterChart",
+     "titulo": "% Extracción Parcelas 1-7: Lado Este",
+     "series": 1,
+     "series_externas": 0,
+     "series_hojas_ocultas": 1,
+     "ejes": [
+      {
+       "titulo": "",
+       "min": 0.0,
+       "max": 400.0,
+       "unidad_mayor": 30.0,
+       "formato": "General"
+      },
+      {
+       "titulo": "% Extracción Cu",
+       "min": 0.0,
+       "max": 100.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": null,
+     "ancla": "A3",
+     "esperado": {
+      "series": 7
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "% Extracción Parcelas 8-14: Lado Este",
+     "series": 5,
+     "series_externas": 0,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "",
+       "min": 0.0,
+       "max": 400.0,
+       "unidad_mayor": 30.0,
+       "formato": "General"
+      },
+      {
+       "titulo": "% Extracción Cu",
+       "min": 0.0,
+       "max": 100.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "M3",
+     "esperado": {
+      "series": 7
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "% Extracción Parcelas 15-21: Lado Oeste",
+     "series": 7,
+     "series_externas": 0,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "",
+       "min": 0.0,
+       "max": 390.0,
+       "unidad_mayor": 30.0,
+       "formato": "General"
+      },
+      {
+       "titulo": "% Extracción Cu",
+       "min": 0.0,
+       "max": 100.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "A47",
+     "esperado": {
+      "series": 7
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "% Extracción Parcelas 22-28: Lado Oeste",
+     "series": 5,
+     "series_externas": 0,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "",
+       "min": 0.0,
+       "max": 390.0,
+       "unidad_mayor": 30.0,
+       "formato": "General"
+      },
+      {
+       "titulo": "% Extracción Cu",
+       "min": 0.0,
+       "max": 100.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "M47",
+     "esperado": {
+      "series": 7
+     }
+    }
+   ]
+  },
+  {
+   "nombre": "Rec Ox_gr",
+   "estado": "hidden",
+   "panel": "B10",
+   "color_pestana": "FF00B050",
+   "columnas": [
+    [
+     1,
+     1,
+     17.45
+    ],
+    [
+     2,
+     2,
+     8.45
+    ],
+    [
+     3,
+     3,
+     9.45
+    ],
+    [
+     4,
+     5,
+     8.45
+    ],
+    [
+     6,
+     10,
+     7.45
+    ],
+    [
+     11,
+     13,
+     8.45
+    ],
+    [
+     14,
+     14,
+     10.0
+    ],
+    [
+     15,
+     21,
+     8.45
+    ],
+    [
+     22,
+     22,
+     8.45
+    ],
+    [
+     23,
+     31,
+     8.45
+    ],
+    [
+     32,
+     33,
+     8.45
+    ],
+    [
+     34,
+     36,
+     0.0
+    ],
+    [
+     37,
+     16384,
+     9.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {},
+   "formatos": {},
+   "graficos": []
+  },
+  {
+   "nombre": "Dump",
+   "estado": "visible",
+   "panel": "A2",
+   "color_pestana": null,
+   "columnas": [
+    [
+     1,
+     1,
+     10.73
+    ],
+    [
+     2,
+     2,
+     10.63
+    ],
+    [
+     3,
+     3,
+     21.91
+    ],
+    [
+     4,
+     4,
+     15.82
+    ],
+    [
+     5,
+     5,
+     18.54
+    ],
+    [
+     6,
+     6,
+     20.18
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A1": {
+     "tipo": "texto",
+     "texto": "Fecha"
+    },
+    "B1": {
+     "tipo": "texto",
+     "texto": "Aporte"
+    },
+    "C1": {
+     "tipo": "texto",
+     "texto": "Flujo riego dump [m3/dia]"
+    },
+    "D1": {
+     "tipo": "texto",
+     "texto": "Flujo salida dump [m3/dia]"
+    },
+    "E1": {
+     "tipo": "texto",
+     "texto": "Concentracion riego"
+    },
+    "F1": {
+     "tipo": "texto",
+     "texto": "Concentracion drenaje"
+    }
+   },
+   "formatos": {
+    "A1": "General",
+    "B1": "General",
+    "C1": "General",
+    "D1": "General",
+    "E1": "General",
+    "F1": "General",
+    "A2": "mm-dd-yy",
+    "B2": "0",
+    "C2": "0",
+    "D2": "0",
+    "E2": "0.00",
+    "F2": "0.00"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "Rec Ox",
+   "estado": "visible",
+   "panel": "B10",
+   "color_pestana": "FF00B050",
+   "columnas": [
+    [
+     1,
+     1,
+     17.45
+    ],
+    [
+     2,
+     2,
+     8.45
+    ],
+    [
+     3,
+     3,
+     9.45
+    ],
+    [
+     4,
+     5,
+     8.45
+    ],
+    [
+     6,
+     10,
+     7.45
+    ],
+    [
+     11,
+     13,
+     8.45
+    ],
+    [
+     14,
+     14,
+     10.0
+    ],
+    [
+     15,
+     21,
+     8.45
+    ],
+    [
+     22,
+     22,
+     8.45
+    ],
+    [
+     23,
+     31,
+     8.45
+    ],
+    [
+     32,
+     33,
+     8.45
+    ],
+    [
+     34,
+     36,
+     0.0
+    ],
+    [
+     37,
+     16384,
+     9.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A1": {
+     "tipo": "texto",
+     "texto": "Campaña"
+    },
+    "B1": {
+     "tipo": "numero"
+    },
+    "C1": {
+     "tipo": "numero"
+    },
+    "D1": {
+     "tipo": "numero"
+    },
+    "E1": {
+     "tipo": "numero"
+    },
+    "F1": {
+     "tipo": "numero"
+    },
+    "A2": {
+     "tipo": "texto",
+     "texto": "Ciclos"
+    },
+    "B2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "C2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "D2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "E2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "F2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "A3": {
+     "tipo": "texto",
+     "texto": "Recuperación máx."
+    },
+    "B3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "C3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "D3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "E3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "F3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "A4": {
+     "tipo": "texto",
+     "texto": "Aporte Parcelas"
+    },
+    "B4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "C4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "D4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "E4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "F4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "A5": {
+     "tipo": "texto",
+     "texto": "Apilado tmf"
+    },
+    "B5": {
+     "tipo": "formula"
+    },
+    "C5": {
+     "tipo": "formula"
+    },
+    "D5": {
+     "tipo": "formula"
+    },
+    "E5": {
+     "tipo": "formula"
+    },
+    "F5": {
+     "tipo": "formula"
+    },
+    "A6": {
+     "tipo": "texto",
+     "texto": "Rec por especie"
+    },
+    "B6": {
+     "tipo": "numero"
+    },
+    "C6": {
+     "tipo": "numero"
+    },
+    "D6": {
+     "tipo": "numero"
+    },
+    "E6": {
+     "tipo": "numero"
+    },
+    "F6": {
+     "tipo": "numero"
+    },
+    "A7": {
+     "tipo": "texto",
+     "texto": "Recuperable"
+    },
+    "B7": {
+     "tipo": "formula"
+    },
+    "C7": {
+     "tipo": "formula"
+    },
+    "D7": {
+     "tipo": "formula"
+    },
+    "E7": {
+     "tipo": "formula"
+    },
+    "F7": {
+     "tipo": "formula"
+    },
+    "A8": {
+     "tipo": "texto",
+     "texto": "WIP"
+    },
+    "B8": {
+     "tipo": "formula"
+    },
+    "C8": {
+     "tipo": "formula"
+    },
+    "D8": {
+     "tipo": "formula"
+    },
+    "E8": {
+     "tipo": "formula"
+    },
+    "F8": {
+     "tipo": "formula"
+    },
+    "B9": {
+     "tipo": "numero"
+    },
+    "C9": {
+     "tipo": "numero"
+    },
+    "D9": {
+     "tipo": "numero"
+    },
+    "E9": {
+     "tipo": "numero"
+    },
+    "F9": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A1": "General",
+    "B1": "0",
+    "C1": "0",
+    "D1": "0",
+    "E1": "0",
+    "F1": "0",
+    "A2": "General",
+    "B2": "General",
+    "C2": "General",
+    "D2": "General",
+    "E2": "General",
+    "F2": "General",
+    "A3": "General",
+    "B3": "0.0",
+    "C3": "0.0",
+    "D3": "0.0",
+    "E3": "0.0",
+    "F3": "0.0",
+    "A4": "General",
+    "B4": "0.0",
+    "C4": "0.0",
+    "D4": "0.0",
+    "E4": "0.0",
+    "F4": "0.0",
+    "A5": "General",
+    "B5": "0.0",
+    "C5": "0.0",
+    "D5": "0.0",
+    "E5": "0.0",
+    "F5": "0.0",
+    "A6": "General",
+    "B6": "0.0",
+    "C6": "0.0",
+    "D6": "0.0",
+    "E6": "0.0",
+    "F6": "0.0",
+    "A7": "General",
+    "B7": "0.0",
+    "C7": "0.0",
+    "D7": "0.0",
+    "E7": "0.0",
+    "F7": "0.0",
+    "A8": "General",
+    "B8": "0.0",
+    "C8": "0.0",
+    "D8": "0.0",
+    "E8": "0.0",
+    "F8": "0.0",
+    "B9": "General",
+    "C9": "General",
+    "D9": "General",
+    "E9": "General",
+    "F9": "General",
+    "A10": "General",
+    "B10": "0.00",
+    "C10": "0.00",
+    "D10": "0.00",
+    "E10": "0.00",
+    "F10": "0.00"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "Rec Ox 2",
+   "estado": "visible",
+   "panel": "A4",
+   "color_pestana": "FF00B050",
+   "columnas": [
+    [
+     1,
+     1,
+     9.45
+    ],
+    [
+     2,
+     2,
+     12.45
+    ],
+    [
+     3,
+     3,
+     12.45
+    ],
+    [
+     4,
+     4,
+     13.45
+    ],
+    [
+     5,
+     8,
+     11.45
+    ],
+    [
+     9,
+     9,
+     12.09
+    ],
+    [
+     10,
+     10,
+     11.45
+    ],
+    [
+     11,
+     11,
+     11.0
+    ],
+    [
+     12,
+     12,
+     11.45
+    ],
+    [
+     13,
+     15,
+     11.0
+    ],
+    [
+     16,
+     17,
+     10.45
+    ],
+    [
+     18,
+     18,
+     11.0
+    ],
+    [
+     19,
+     19,
+     10.45
+    ],
+    [
+     20,
+     20,
+     11.0
+    ],
+    [
+     21,
+     21,
+     10.45
+    ],
+    [
+     22,
+     22,
+     11.0
+    ],
+    [
+     23,
+     26,
+     10.45
+    ],
+    [
+     27,
+     27,
+     11.0
+    ],
+    [
+     28,
+     28,
+     10.45
+    ],
+    [
+     29,
+     30,
+     10.0
+    ],
+    [
+     31,
+     31,
+     9.45
+    ],
+    [
+     32,
+     32,
+     10.0
+    ],
+    [
+     33,
+     33,
+     10.45
+    ],
+    [
+     34,
+     34,
+     10.0
+    ],
+    [
+     35,
+     35,
+     9.45
+    ],
+    [
+     36,
+     36,
+     12.45
+    ],
+    [
+     37,
+     37,
+     10.82
+    ],
+    [
+     38,
+     38,
+     8.45
+    ],
+    [
+     39,
+     39,
+     7.45
+    ],
+    [
+     40,
+     40,
+     6.91
+    ],
+    [
+     41,
+     41,
+     7.18
+    ],
+    [
+     42,
+     43,
+     4.45
+    ],
+    [
+     44,
+     44,
+     6.45
+    ],
+    [
+     45,
+     45,
+     5.45
+    ],
+    [
+     46,
+     46,
+     4.45
+    ],
+    [
+     47,
+     51,
+     5.45
+    ],
+    [
+     52,
+     54,
+     7.45
+    ],
+    [
+     55,
+     70,
+     5.45
+    ],
+    [
+     71,
+     16384,
+     9.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A1": {
+     "tipo": "texto",
+     "texto": "C11",
+     "opcional": true
+    },
+    "C1": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "D1": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "E1": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "F1": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "A2": {
+     "tipo": "texto",
+     "texto": "C12",
+     "opcional": true
+    },
+    "C2": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "D2": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "E2": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "F2": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "B3": {
+     "tipo": "texto",
+     "texto": "C17 / C18",
+     "libre": true
+    },
+    "C3": {
+     "tipo": "externa"
+    },
+    "D3": {
+     "tipo": "externa"
+    },
+    "E3": {
+     "tipo": "externa"
+    },
+    "F3": {
+     "tipo": "externa"
+    },
+    "B4": {
+     "tipo": "texto",
+     "texto": "C14/C15",
+     "opcional": true
+    },
+    "C4": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "D4": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "E4": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "F4": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "B5": {
+     "tipo": "texto",
+     "texto": "Parcela"
+    },
+    "C5": {
+     "tipo": "numero"
+    },
+    "D5": {
+     "tipo": "numero"
+    },
+    "E5": {
+     "tipo": "numero"
+    },
+    "F5": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A1": "General",
+    "C1": "#,##0",
+    "D1": "#,##0",
+    "E1": "#,##0",
+    "F1": "#,##0",
+    "A2": "General",
+    "C2": "#,##0",
+    "D2": "#,##0",
+    "E2": "#,##0",
+    "F2": "#,##0",
+    "B3": "#,##0",
+    "C3": "#,##0",
+    "D3": "#,##0",
+    "E3": "#,##0",
+    "F3": "#,##0",
+    "B4": "#,##0",
+    "C4": "#,##0",
+    "D4": "#,##0",
+    "E4": "#,##0",
+    "F4": "#,##0",
+    "B5": "General",
+    "C5": "General",
+    "D5": "General",
+    "E5": "General",
+    "F5": "General",
+    "B6": "mm-dd-yy",
+    "C6": "#,##0.00",
+    "D6": "#,##0.00",
+    "E6": "#,##0.00",
+    "F6": "#,##0.00"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "Prod Cu Oxidos",
+   "estado": "visible",
+   "panel": "B3",
+   "color_pestana": "FF00B050",
+   "columnas": [
+    [
+     1,
+     1,
+     15.0
+    ],
+    [
+     2,
+     4,
+     11.45
+    ],
+    [
+     5,
+     5,
+     11.45
+    ],
+    [
+     6,
+     18,
+     11.45
+    ],
+    [
+     19,
+     19,
+     11.45
+    ],
+    [
+     20,
+     34,
+     11.45
+    ],
+    [
+     36,
+     36,
+     15.45
+    ],
+    [
+     38,
+     38,
+     13.45
+    ],
+    [
+     40,
+     40,
+     16.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A4": {
+     "tipo": "texto",
+     "texto": "Parcela"
+    },
+    "B4": {
+     "tipo": "numero"
+    },
+    "C4": {
+     "tipo": "numero"
+    },
+    "D4": {
+     "tipo": "numero"
+    },
+    "E4": {
+     "tipo": "numero"
+    },
+    "F4": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A4": "General",
+    "B4": "General",
+    "C4": "General",
+    "D4": "General",
+    "E4": "General",
+    "F4": "General",
+    "A5": "mm-dd-yy",
+    "B5": "0.00",
+    "C5": "0.00",
+    "D5": "0.00",
+    "E5": "0.00",
+    "F5": "0.00"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "(Cu) dren Ox",
+   "estado": "visible",
+   "panel": "B5",
+   "color_pestana": "FF00B050",
+   "columnas": [
+    [
+     1,
+     1,
+     15.45
+    ],
+    [
+     3,
+     3,
+     7.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A4": {
+     "tipo": "texto",
+     "texto": "Cu++"
+    },
+    "B4": {
+     "tipo": "texto",
+     "texto": "P1Cu++"
+    },
+    "C4": {
+     "tipo": "texto",
+     "texto": "P2Cu++"
+    },
+    "D4": {
+     "tipo": "texto",
+     "texto": "P3Cu++"
+    },
+    "E4": {
+     "tipo": "texto",
+     "texto": "P4Cu++"
+    },
+    "F4": {
+     "tipo": "texto",
+     "texto": "P5Cu++"
+    }
+   },
+   "formatos": {
+    "A4": "mm-dd-yy",
+    "B4": "General",
+    "C4": "General",
+    "D4": "General",
+    "E4": "General",
+    "F4": "General",
+    "A5": "mm-dd-yy",
+    "B5": "#,##0.0",
+    "C5": "#,##0.0",
+    "D5": "#,##0.0",
+    "E5": "#,##0.0",
+    "F5": "#,##0.0"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "Flujo Riego Ox",
+   "estado": "visible",
+   "panel": "B6",
+   "color_pestana": "FF00B050",
+   "columnas": [
+    [
+     1,
+     1,
+     14.45
+    ],
+    [
+     2,
+     14,
+     11.45
+    ],
+    [
+     15,
+     15,
+     12.0
+    ],
+    [
+     16,
+     16,
+     11.45
+    ],
+    [
+     17,
+     17,
+     12.45
+    ],
+    [
+     18,
+     21,
+     12.0
+    ],
+    [
+     22,
+     22,
+     12.45
+    ],
+    [
+     23,
+     31,
+     12.0
+    ],
+    [
+     32,
+     33,
+     11.45
+    ],
+    [
+     34,
+     34,
+     4.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A1": {
+     "tipo": "texto",
+     "texto": "RL/días de riego"
+    },
+    "B1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "C1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "D1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "E1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "F1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "A2": {
+     "tipo": "texto",
+     "texto": "RL"
+    },
+    "B2": {
+     "tipo": "formula"
+    },
+    "C2": {
+     "tipo": "formula"
+    },
+    "D2": {
+     "tipo": "formula"
+    },
+    "E2": {
+     "tipo": "formula"
+    },
+    "F2": {
+     "tipo": "formula"
+    },
+    "A3": {
+     "tipo": "texto",
+     "texto": "C14/C15",
+     "libre": true
+    },
+    "B3": {
+     "tipo": "numero"
+    },
+    "C3": {
+     "tipo": "numero"
+    },
+    "D3": {
+     "tipo": "numero"
+    },
+    "E3": {
+     "tipo": "numero"
+    },
+    "F3": {
+     "tipo": "numero"
+    },
+    "A4": {
+     "tipo": "texto",
+     "texto": "Sum riego"
+    },
+    "B4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "C4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "D4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "E4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "F4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "A5": {
+     "tipo": "texto",
+     "texto": "Parcela"
+    },
+    "B5": {
+     "tipo": "numero"
+    },
+    "C5": {
+     "tipo": "numero"
+    },
+    "D5": {
+     "tipo": "numero"
+    },
+    "E5": {
+     "tipo": "numero"
+    },
+    "F5": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A1": "General",
+    "B1": "0.000",
+    "C1": "0.000",
+    "D1": "0.000",
+    "E1": "0.000",
+    "F1": "0.000",
+    "A2": "General",
+    "B2": "0.000",
+    "C2": "0.000",
+    "D2": "0.000",
+    "E2": "0.000",
+    "F2": "0.000",
+    "A3": "General",
+    "B3": "#,##0",
+    "C3": "#,##0",
+    "D3": "#,##0",
+    "E3": "#,##0",
+    "F3": "#,##0",
+    "A4": "General",
+    "B4": "0",
+    "C4": "0",
+    "D4": "0",
+    "E4": "0",
+    "F4": "0",
+    "A5": "General",
+    "B5": "General",
+    "C5": "General",
+    "D5": "General",
+    "E5": "General",
+    "F5": "General",
+    "A6": "mm-dd-yy",
+    "B6": "0",
+    "C6": "0",
+    "D6": "0",
+    "E6": "0",
+    "F6": "0"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "RL Oxidos",
+   "estado": "visible",
+   "panel": null,
+   "color_pestana": "FF00B050",
+   "columnas": [],
+   "combinadas": [],
+   "encabezado": {
+    "A1": {
+     "tipo": "texto",
+     "texto": "Parcela"
+    },
+    "B1": {
+     "tipo": "numero"
+    },
+    "C1": {
+     "tipo": "numero"
+    },
+    "D1": {
+     "tipo": "numero"
+    },
+    "E1": {
+     "tipo": "numero"
+    },
+    "F1": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A1": "General",
+    "B1": "General",
+    "C1": "General",
+    "D1": "General",
+    "E1": "General",
+    "F1": "General",
+    "A2": "General",
+    "B2": "0.00",
+    "C2": "0.00",
+    "D2": "0.00",
+    "E2": "0.00",
+    "F2": "0.00"
+   },
+   "graficos": [
+    {
+     "tipo": "scatterChart",
+     "titulo": "Recuperación vs RL (P1-8 Oxidos)",
+     "series": 7,
+     "series_externas": 7,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "RL",
+       "min": null,
+       "max": null,
+       "unidad_mayor": null,
+       "formato": "General"
+      },
+      {
+       "titulo": "Recuperación",
+       "min": null,
+       "max": 80.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "r",
+     "ancla": "AI2",
+     "esperado": {
+      "series": 8,
+      "titulo": "Recuperación vs RL (P1-8 Oxidos)"
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "Recuperación vs RL (P9-16 Oxidos)",
+     "series": 7,
+     "series_externas": 7,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "RL",
+       "min": null,
+       "max": null,
+       "unidad_mayor": null,
+       "formato": "General"
+      },
+      {
+       "titulo": "Recuperación",
+       "min": null,
+       "max": 90.0,
+       "unidad_mayor": 10.0,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "AP2",
+     "esperado": {
+      "series": 8,
+      "titulo": "Recuperación vs RL (P9-16 Oxidos)"
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "Recuperación vs RL (P17-23 Oxidos)",
+     "series": 1,
+     "series_externas": 1,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "RL",
+       "min": null,
+       "max": null,
+       "unidad_mayor": null,
+       "formato": "General"
+      },
+      {
+       "titulo": "Recuperación",
+       "min": null,
+       "max": 80.0,
+       "unidad_mayor": 10.0,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "AH22",
+     "esperado": {
+      "series": 8,
+      "titulo": "Recuperación vs RL (P17-24 Oxidos)"
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "Recuperación vs RL (P24-P32 Oxidos)",
+     "series": 3,
+     "series_externas": 3,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "RL",
+       "min": null,
+       "max": null,
+       "unidad_mayor": null,
+       "formato": "General"
+      },
+      {
+       "titulo": "Recuperación",
+       "min": 0.0,
+       "max": 90.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "r",
+     "ancla": "AP22",
+     "esperado": {
+      "series": 8,
+      "titulo": "Recuperación vs RL (P25-32 Oxidos)"
+     }
+    }
+   ]
+  },
+  {
+   "nombre": "Rec Sulfuro_gr",
+   "estado": "hidden",
+   "panel": "B11",
+   "color_pestana": "theme3",
+   "columnas": [
+    [
+     1,
+     1,
+     17.45
+    ],
+    [
+     2,
+     13,
+     8.45
+    ],
+    [
+     14,
+     29,
+     8.0
+    ],
+    [
+     30,
+     30,
+     11.45
+    ],
+    [
+     31,
+     38,
+     10.0
+    ],
+    [
+     39,
+     16384,
+     9.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {},
+   "formatos": {},
+   "graficos": []
+  },
+  {
+   "nombre": "Rec Sulfuro",
+   "estado": "visible",
+   "panel": "B11",
+   "color_pestana": "theme3",
+   "columnas": [
+    [
+     1,
+     1,
+     17.45
+    ],
+    [
+     2,
+     13,
+     8.45
+    ],
+    [
+     14,
+     29,
+     8.0
+    ],
+    [
+     30,
+     30,
+     11.45
+    ],
+    [
+     31,
+     38,
+     10.0
+    ],
+    [
+     39,
+     16384,
+     9.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A1": {
+     "tipo": "texto",
+     "texto": "Campaña"
+    },
+    "B1": {
+     "tipo": "numero"
+    },
+    "C1": {
+     "tipo": "numero"
+    },
+    "D1": {
+     "tipo": "numero"
+    },
+    "E1": {
+     "tipo": "numero"
+    },
+    "F1": {
+     "tipo": "numero"
+    },
+    "A2": {
+     "tipo": "texto",
+     "texto": "Ciclos"
+    },
+    "B2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "C2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "D2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "E2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "F2": {
+     "tipo": "formula",
+     "funciones": [
+      "LOOKUP"
+     ]
+    },
+    "A3": {
+     "tipo": "texto",
+     "texto": "Recuperación máx."
+    },
+    "B3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "C3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "D3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "E3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "F3": {
+     "tipo": "formula",
+     "funciones": [
+      "MAX"
+     ]
+    },
+    "A4": {
+     "tipo": "texto",
+     "texto": "Aporte Parcelas"
+    },
+    "B4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "C4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "D4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "E4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "F4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "A5": {
+     "tipo": "texto",
+     "texto": "Apilado tmf"
+    },
+    "B5": {
+     "tipo": "formula"
+    },
+    "C5": {
+     "tipo": "formula"
+    },
+    "D5": {
+     "tipo": "formula"
+    },
+    "E5": {
+     "tipo": "formula"
+    },
+    "F5": {
+     "tipo": "formula"
+    },
+    "A6": {
+     "tipo": "texto",
+     "texto": "Rec por especie"
+    },
+    "B6": {
+     "tipo": "numero"
+    },
+    "C6": {
+     "tipo": "numero"
+    },
+    "D6": {
+     "tipo": "numero"
+    },
+    "E6": {
+     "tipo": "numero"
+    },
+    "F6": {
+     "tipo": "numero"
+    },
+    "A7": {
+     "tipo": "texto",
+     "texto": "Recuperable"
+    },
+    "B7": {
+     "tipo": "formula"
+    },
+    "C7": {
+     "tipo": "formula"
+    },
+    "D7": {
+     "tipo": "formula"
+    },
+    "E7": {
+     "tipo": "formula"
+    },
+    "F7": {
+     "tipo": "formula"
+    },
+    "A8": {
+     "tipo": "texto",
+     "texto": "WIP"
+    },
+    "B8": {
+     "tipo": "formula"
+    },
+    "C8": {
+     "tipo": "formula"
+    },
+    "D8": {
+     "tipo": "formula"
+    },
+    "E8": {
+     "tipo": "formula"
+    },
+    "F8": {
+     "tipo": "formula"
+    },
+    "A10": {
+     "tipo": "texto",
+     "texto": "Dias Lix"
+    },
+    "B10": {
+     "tipo": "numero"
+    },
+    "C10": {
+     "tipo": "numero"
+    },
+    "D10": {
+     "tipo": "numero"
+    },
+    "E10": {
+     "tipo": "numero"
+    },
+    "F10": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A1": "General",
+    "B1": "General",
+    "C1": "General",
+    "D1": "General",
+    "E1": "General",
+    "F1": "General",
+    "A2": "General",
+    "B2": "General",
+    "C2": "General",
+    "D2": "General",
+    "E2": "General",
+    "F2": "General",
+    "A3": "General",
+    "B3": "0.00",
+    "C3": "0.00",
+    "D3": "0.00",
+    "E3": "0.00",
+    "F3": "0.00",
+    "A4": "General",
+    "B4": "0",
+    "C4": "0",
+    "D4": "0",
+    "E4": "0",
+    "F4": "0",
+    "A5": "General",
+    "B5": "0.00",
+    "C5": "0.00",
+    "D5": "0.00",
+    "E5": "0.00",
+    "F5": "0.00",
+    "A6": "General",
+    "B6": "0.00",
+    "C6": "0.00",
+    "D6": "0.00",
+    "E6": "0.00",
+    "F6": "0.00",
+    "A7": "General",
+    "B7": "0.0",
+    "C7": "0.0",
+    "D7": "0.0",
+    "E7": "0.0",
+    "F7": "0.0",
+    "A8": "General",
+    "B8": "0.0",
+    "C8": "0.0",
+    "D8": "0.0",
+    "E8": "0.0",
+    "F8": "0.0",
+    "A10": "General",
+    "B10": "General",
+    "C10": "General",
+    "D10": "General",
+    "E10": "General",
+    "F10": "General",
+    "A11": "General",
+    "B11": "0.00",
+    "C11": "0.00",
+    "D11": "0.00",
+    "E11": "0.00",
+    "F11": "0.00"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "Rec Sulfuro 2",
+   "estado": "visible",
+   "panel": "D5",
+   "color_pestana": "theme3",
+   "columnas": [
+    [
+     1,
+     2,
+     4.45
+    ],
+    [
+     3,
+     3,
+     12.0
+    ],
+    [
+     4,
+     6,
+     11.45
+    ],
+    [
+     7,
+     7,
+     12.45
+    ],
+    [
+     8,
+     34,
+     11.45
+    ],
+    [
+     35,
+     35,
+     10.0
+    ],
+    [
+     36,
+     173,
+     11.45
+    ],
+    [
+     174,
+     16384,
+     11.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "C1": {
+     "tipo": "texto",
+     "texto": "C10/C11",
+     "libre": true
+    },
+    "D1": {
+     "tipo": "externa"
+    },
+    "E1": {
+     "tipo": "externa"
+    },
+    "F1": {
+     "tipo": "externa"
+    },
+    "C2": {
+     "tipo": "texto",
+     "texto": "C6",
+     "opcional": true
+    },
+    "D2": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "E2": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "F2": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "C3": {
+     "tipo": "texto",
+     "texto": "C9",
+     "opcional": true
+    },
+    "D3": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "E3": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "F3": {
+     "tipo": "numero",
+     "opcional": true
+    },
+    "C4": {
+     "tipo": "texto",
+     "texto": "Parcela"
+    },
+    "D4": {
+     "tipo": "numero"
+    },
+    "E4": {
+     "tipo": "formula"
+    },
+    "F4": {
+     "tipo": "formula"
+    }
+   },
+   "formatos": {
+    "C1": "General",
+    "D1": "#,##0",
+    "E1": "#,##0",
+    "F1": "#,##0",
+    "C2": "General",
+    "D2": "0.000",
+    "E2": "0.000",
+    "F2": "#,##0",
+    "C3": "General",
+    "D3": "0.000",
+    "E3": "0.000",
+    "F3": "0.000",
+    "C4": "General",
+    "D4": "General",
+    "E4": "General",
+    "F4": "General",
+    "C5": "mm-dd-yy",
+    "D5": "#,##0.00",
+    "E5": "#,##0.00",
+    "F5": "#,##0.00"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "Prod Cu Sulfuros",
+   "estado": "visible",
+   "panel": "B5",
+   "color_pestana": "theme3",
+   "columnas": [
+    [
+     1,
+     1,
+     12.45
+    ],
+    [
+     2,
+     30,
+     9.45
+    ],
+    [
+     31,
+     31,
+     9.54
+    ],
+    [
+     33,
+     33,
+     12.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A4": {
+     "tipo": "texto",
+     "texto": "Parcela"
+    },
+    "B4": {
+     "tipo": "numero"
+    },
+    "C4": {
+     "tipo": "numero"
+    },
+    "D4": {
+     "tipo": "numero"
+    },
+    "E4": {
+     "tipo": "numero"
+    },
+    "F4": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A4": "General",
+    "B4": "General",
+    "C4": "General",
+    "D4": "General",
+    "E4": "General",
+    "F4": "General",
+    "A5": "mm-dd-yy",
+    "B5": "#,##0.00",
+    "C5": "#,##0.00",
+    "D5": "#,##0.00",
+    "E5": "#,##0.00",
+    "F5": "#,##0.00"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "(Cu) dren Sulf.",
+   "estado": "visible",
+   "panel": "B5",
+   "color_pestana": "theme3",
+   "columnas": [
+    [
+     1,
+     1,
+     12.54
+    ],
+    [
+     2,
+     29,
+     9.45
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A4": {
+     "tipo": "texto",
+     "texto": "Cu++"
+    },
+    "B4": {
+     "tipo": "texto",
+     "texto": "P21Cu++"
+    },
+    "C4": {
+     "tipo": "texto",
+     "texto": "P22Cu++"
+    },
+    "D4": {
+     "tipo": "texto",
+     "texto": "P23Cu++"
+    },
+    "E4": {
+     "tipo": "texto",
+     "texto": "P24Cu++"
+    },
+    "F4": {
+     "tipo": "texto",
+     "texto": "P25Cu++"
+    }
+   },
+   "formatos": {
+    "A4": "mm-dd-yy",
+    "B4": "#,##0.00",
+    "C4": "#,##0.00",
+    "D4": "#,##0.00",
+    "E4": "#,##0.00",
+    "F4": "#,##0.00",
+    "A5": "mm-dd-yy"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "Flujo Riego Sulf",
+   "estado": "visible",
+   "panel": "B6",
+   "color_pestana": "theme3",
+   "columnas": [
+    [
+     1,
+     1,
+     11.45
+    ],
+    [
+     2,
+     9,
+     11.45
+    ],
+    [
+     10,
+     29,
+     10.45
+    ],
+    [
+     30,
+     30,
+     12.45
+    ],
+    [
+     31,
+     31,
+     9.36
+    ]
+   ],
+   "combinadas": [],
+   "encabezado": {
+    "A1": {
+     "tipo": "texto",
+     "texto": "RL/días de riego"
+    },
+    "B1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "C1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "D1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "E1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "F1": {
+     "tipo": "formula",
+     "funciones": [
+      "COUNTIF"
+     ]
+    },
+    "A2": {
+     "tipo": "texto",
+     "texto": "RL"
+    },
+    "B2": {
+     "tipo": "formula"
+    },
+    "C2": {
+     "tipo": "formula"
+    },
+    "D2": {
+     "tipo": "formula"
+    },
+    "E2": {
+     "tipo": "formula"
+    },
+    "F2": {
+     "tipo": "formula"
+    },
+    "A3": {
+     "tipo": "texto",
+     "texto": "C10/C11 (TMS)",
+     "libre": true
+    },
+    "B3": {
+     "tipo": "numero"
+    },
+    "C3": {
+     "tipo": "numero"
+    },
+    "D3": {
+     "tipo": "numero"
+    },
+    "E3": {
+     "tipo": "numero"
+    },
+    "F3": {
+     "tipo": "externa"
+    },
+    "A4": {
+     "tipo": "texto",
+     "texto": "Sum riego"
+    },
+    "B4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "C4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "D4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "E4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "F4": {
+     "tipo": "formula",
+     "funciones": [
+      "SUM"
+     ]
+    },
+    "A5": {
+     "tipo": "texto",
+     "texto": "Parcela"
+    },
+    "B5": {
+     "tipo": "numero"
+    },
+    "C5": {
+     "tipo": "numero"
+    },
+    "D5": {
+     "tipo": "numero"
+    },
+    "E5": {
+     "tipo": "numero"
+    },
+    "F5": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A1": "General",
+    "B1": "0.000",
+    "C1": "0.000",
+    "D1": "0.000",
+    "E1": "0.000",
+    "F1": "0.000",
+    "A2": "General",
+    "B2": "0.000",
+    "C2": "0.000",
+    "D2": "0.000",
+    "E2": "0.000",
+    "F2": "0.000",
+    "A3": "General",
+    "B3": "0",
+    "C3": "0",
+    "D3": "0",
+    "E3": "0",
+    "F3": "0",
+    "A4": "General",
+    "B4": "0",
+    "C4": "0",
+    "D4": "0",
+    "E4": "0",
+    "F4": "0",
+    "A5": "General",
+    "B5": "General",
+    "C5": "General",
+    "D5": "General",
+    "E5": "General",
+    "F5": "General",
+    "A6": "mm-dd-yy"
+   },
+   "graficos": []
+  },
+  {
+   "nombre": "RL Sulfuro",
+   "estado": "visible",
+   "panel": null,
+   "color_pestana": "theme1",
+   "columnas": [],
+   "combinadas": [],
+   "encabezado": {
+    "A1": {
+     "tipo": "texto",
+     "texto": "Parcela"
+    },
+    "B1": {
+     "tipo": "numero"
+    },
+    "C1": {
+     "tipo": "numero"
+    },
+    "D1": {
+     "tipo": "numero"
+    },
+    "E1": {
+     "tipo": "numero"
+    },
+    "F1": {
+     "tipo": "numero"
+    }
+   },
+   "formatos": {
+    "A1": "General",
+    "B1": "General",
+    "C1": "General",
+    "D1": "General",
+    "E1": "General",
+    "F1": "General",
+    "A2": "General",
+    "B2": "0.00",
+    "C2": "0.00",
+    "D2": "0.00",
+    "E2": "0.00",
+    "F2": "0.00"
+   },
+   "graficos": [
+    {
+     "tipo": "scatterChart",
+     "titulo": "Recuperación vs RL (P1-7 Sulfuros)",
+     "series": 1,
+     "series_externas": 1,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "RL",
+       "min": 0.0,
+       "max": null,
+       "unidad_mayor": null,
+       "formato": "0.00"
+      },
+      {
+       "titulo": "Recuperación",
+       "min": 0.0,
+       "max": 80.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "AE2",
+     "esperado": {
+      "series": 7,
+      "titulo": "Recuperación vs RL (P1-7 Sulfuros)"
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "Recuperación vs RL (P8-14 Sulfuros)",
+     "series": 7,
+     "series_externas": 7,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "RL",
+       "min": null,
+       "max": null,
+       "unidad_mayor": null,
+       "formato": "0.00"
+      },
+      {
+       "titulo": "Recuperación",
+       "min": 0.0,
+       "max": 80.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "b",
+     "ancla": "AM2",
+     "esperado": {
+      "series": 7,
+      "titulo": "Recuperación vs RL (P8-14 Sulfuros)"
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "Recuperación vs RL (P15-P21)",
+     "series": 7,
+     "series_externas": 7,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "RL",
+       "min": null,
+       "max": null,
+       "unidad_mayor": null,
+       "formato": "0.00"
+      },
+      {
+       "titulo": "Recuperación",
+       "min": null,
+       "max": 80.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "r",
+     "ancla": "AE24",
+     "esperado": {
+      "series": 7,
+      "titulo": "Recuperación vs RL (P15-21 Sulfuros)"
+     }
+    },
+    {
+     "tipo": "scatterChart",
+     "titulo": "Recuperación en función Rlix",
+     "series": 5,
+     "series_externas": 5,
+     "series_hojas_ocultas": 0,
+     "ejes": [
+      {
+       "titulo": "RL",
+       "min": null,
+       "max": null,
+       "unidad_mayor": null,
+       "formato": "0.00"
+      },
+      {
+       "titulo": "Recuperación",
+       "min": null,
+       "max": 80.0,
+       "unidad_mayor": null,
+       "formato": "0"
+      }
+     ],
+     "leyenda": "r",
+     "ancla": "AM24",
+     "esperado": {
+      "series": 7,
+      "titulo": "Recuperación vs RL (P22-28 Sulfuros)"
+     }
+    }
+   ]
+  }
+ ],
+ "curada": true
+}

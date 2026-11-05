@@ -87,3 +87,13 @@ recuperacion directa observada en mayores de30, menores ajustables, historia
 protegida, fuente congelada10009 y ninguna persistencia SQL legacy del ensayo.
 No reconstruir el drenaje desconocido de maduras ni presentar el cierre neto
 como validacion hidraulica. Usar las pruebas offline antes de ampliar fuentes.
+
+## Reportes de reconciliación — 2026-11-05
+
+`tabs/tab_reportes_recon.py` es una sección aparte, solo de generación de
+reportes, que une el reporte de curvas reconciliadas
+(`pad_dashboard.generate_case_report`) y los informes de módulos de
+reconstitución (`reconstitucion.panel.generar_informe_modulos`). Por defecto
+usa la última corrida del Caso guardada en el servidor y no escribe en SQL;
+«Reconciliar ahora» ejecuta `compute_recon`, que sí guarda la corrida. Varios
+informes se descargan en un ZIP con `LEEME.txt`. IDs `reportes-recon-*`.

@@ -12,6 +12,12 @@ from sqlalchemy.engine import Engine
 
 from . import pad_dashboard as dashboard, report_metodo as report
 
+HOJAS_OFICIALES = [
+    'Oxido', 'Sulfuro', 'Dump', 'Rec Ox', 'Rec Ox 2', 'Prod Cu Oxidos',
+    '(Cu) dren Ox', 'Flujo Riego Ox', 'RL Oxidos', 'Rec Sulfuro',
+    'Rec Sulfuro 2', 'Prod Cu Sulfuros', '(Cu) dren Sulf.',
+    'Flujo Riego Sulf', 'RL Sulfuro']
+
 
 def report_doc():
     pads = {}
@@ -61,14 +67,18 @@ def test_descarga_real_sin_libro_planta_y_repetible(export_case):
         assert 'sin comparaci' in str(status)
         assert raw_path.is_file()
         book = load_workbook(BytesIO(base64.b64decode(download['content'])))
-        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros']
-        assert book['Rec Ox']['B12'].value == 4.0
-        assert book['Rec Ox']['C12'].value == 2.0
+        assert book.sheetnames == HOJAS_OFICIALES
+        # La curva de Rec Ox lee 'Rec Ox 2' (formula viva); P1 dia 3 = fila 8.
+        assert book['Rec Ox']['B12'].value == "='Rec Ox 2'!C8"
+        assert book['Rec Ox']['C12'].value == "='Rec Ox 2'!D8"
         assert book['Rec Ox']['B7'].value is None
-        assert len(book['Curvas Ox']._charts) == 2
-        assert len(book['Curvas Sulfuro']._charts) == 2
+        assert len(book['Oxido']._charts) == 4
+        assert len(book['Sulfuro']._charts) == 4
+        # sin RL en el doc sintetico no hay eje X para los graficos Recuperacion vs RL
+        assert len(book['RL Oxidos']._charts) == 0
+        assert len(book['RL Sulfuro']._charts) == 0
         with ZipFile(BytesIO(base64.b64decode(download['content']))) as archive:
-            assert len([p for p in archive.namelist() if p.startswith('xl/charts/chart') and p.endswith('.xml')]) == 4
+            assert len([p for p in archive.namelist() if p.startswith('xl/charts/chart') and p.endswith('.xml')]) == 8
 
 
 @pytest.mark.parametrize('change', ['selected', 'store_run', 'raw_run', 'store_window',
@@ -293,5 +303,5 @@ def test_report_includes_inactive_campaign_history_without_case_adjustment(monke
     report.escribir_libro(doc,out)
     book=load_workbook(out)
     assert [book['Rec Ox'].cell(9,c).value for c in range(2,34)]==list(range(1,33))
-    assert book['Rec Ox']['C12'].value==pytest.approx(.216)
+    assert book['Rec Ox']['C12'].value == "='Rec Ox 2'!D8"
     assert book['Rec Ox']['D10'].value is None

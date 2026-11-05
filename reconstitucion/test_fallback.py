@@ -23,7 +23,7 @@ def test_optional_10s_failure_keeps_case_mass_and_declares_ab_fallback(missing):
          patch.object(modelo_flujos,'load_hours',return_value=hours), \
          patch.object(db_source,'load_apilado',return_value=ap), \
          patch.object(wet_profile,'load_intraday_profile',**loader):
-        result=engine.analyze_db(fecha_min=day,fecha_max=day,caso=case,caso_id=case['id'],use_intraday=True)
+        result=engine.analyze_db(fecha_min=day,fecha_max=day,caso=case,caso_id=case['id'],use_intraday=True,metodo='volumen')
     assert result['shift_table'].masa_total.sum()==pytest.approx(100.)
     assert result['module_timeline'].mass_dry.sum()==pytest.approx(100.)
     assert result['module_timeline'].resolucion.str.startswith('interpolacion_uniforme_12h').all()
@@ -40,7 +40,7 @@ def test_mandatory_profile_error_is_not_suppressed():
          patch.object(db_source,'load_apilado',return_value=ap), \
          patch.object(wet_profile,'load_intraday_profile',side_effect=RuntimeError('OPTIONAL')):
         with pytest.raises(RuntimeError,match='MANDATORY_PROFILE'):
-            engine.analyze_db(fecha_min=day,fecha_max=day,caso=case,caso_id=case['id'],use_intraday=True)
+            engine.analyze_db(fecha_min=day,fecha_max=day,caso=case,caso_id=case['id'],use_intraday=True,metodo='volumen')
 
 @pytest.mark.parametrize('damage',['day_missing','gap','reset','null','duplicate','bad_total'])
 def test_invalid_intraday_uses_ab_with_unchanged_dry_mass(damage):

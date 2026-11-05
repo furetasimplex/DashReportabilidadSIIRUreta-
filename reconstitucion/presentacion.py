@@ -80,8 +80,21 @@ def _itinerary_frame(res):
     base=timeline.sort_values(['pad_id','campana','modulo','start']).reset_index(drop=True).copy()
     base['fecha']=pd.to_datetime(base.fecha).dt.normalize()
     shifts=res.get('shift_table')
+    if shifts is not None and not shifts.empty and 'fila_volumetrica' in shifts.columns:
+        # Recalibrada: un modulo con volumen observado y asignacion calculada cero
+        # no tiene tramo horario, pero su fila (volumen, TMH 0) no se elimina.
+        keys=['pad_id','campana','modulo','fecha']
+        extra=shifts[keys+['masa_total']].copy()
+        extra['fecha']=pd.to_datetime(extra.fecha).dt.normalize()
+        extra=extra.merge(base[keys].drop_duplicates(),on=keys,how='left',indicator=True)
+        extra=extra.loc[extra._merge.eq('left_only')].drop(columns='_merge')
+        if not extra.empty:
+            extra=extra.rename(columns={'masa_total':'mass_dry'})
+            extra['start']=pd.NaT;extra['end']=pd.NaT;extra['mass_h']=0.0
+            extra['origen']='asignacion_secuencial_TMH_recalibrada';extra['resolucion']='sin_asignacion_de_masa_en_el_dia'
+            base=pd.concat([base,extra],ignore_index=True)
     if shifts is not None and not shifts.empty:
-        shift_cols=[c for c in ('pad_id','campana','modulo','fecha','masa_turno1','masa_turno2','boundary_medida','frontera_tipo') if c in shifts.columns]
+        shift_cols=[c for c in ('pad_id','campana','modulo','fecha','masa_turno1','masa_turno2','tmh_turno1','tmh_turno2','boundary_medida','frontera_tipo') if c in shifts.columns]
         if {'pad_id','campana','modulo','fecha'}.issubset(shift_cols):
             lookup=shifts[shift_cols].copy()
             lookup['fecha']=pd.to_datetime(lookup.fecha).dt.normalize()
@@ -138,7 +151,12 @@ def _itinerary_frame(res):
     full=res.get('_full_shift_table',res.get('shift_table'))
     profile=res.get('perfil_turnos')
     out['tmh_turno_asignada']=np.nan
-    if full is not None and not full.empty and profile is not None and not profile.empty:
+    if {'tmh_turno1','tmh_turno2'}.issubset(out.columns):
+        # Reconstitucion recalibrada: la TMH de cada turno ES la asignacion
+        # secuencial; no se vuelve a repartir por TMS ni por volumen.
+        out['tmh_turno_asignada']=np.where(out.turno.eq('TA'),out.tmh_turno1,out.tmh_turno2)
+        out.loc[~out.tms_primera_fila,'tmh_turno_asignada']=np.nan
+    elif full is not None and not full.empty and profile is not None and not profile.empty:
         full=full.copy();full['fecha']=pd.to_datetime(full.fecha).dt.normalize()
         p=profile.copy();p['fecha']=pd.to_datetime(p.fecha).dt.normalize()
         p['turno']=p.turno.astype(str).str.upper().str[-1]

@@ -57,9 +57,9 @@ def test_real_missing_curve_point_stays_blank_without_erasing_individuals():
     assert group['rows'][1]['production'] == pytest.approx(3.0)
     book = Workbook()
     book.active.title = 'Rec Ox'
-    book.create_sheet('Prod Oxidos')
+    book.create_sheet('Prod Cu Oxidos')
     write_virtual_sheets(book, doc, [GROUP])
-    assert {'Rec Ox', 'Prod Oxidos', 'Pilas virtuales', 'Virtual 001'} <= set(book.sheetnames)
+    assert {'Rec Ox', 'Prod Cu Oxidos', 'Pilas virtuales', 'Virtual 001'} <= set(book.sheetnames)
     assert len(book['Virtual 001']._charts) == 2
     assert book['Virtual 001']['A1'].value == '[Virtual] Mixto OX y SU'
     assert 'OXIDOS' not in str([cell.value for row in book['Virtual 001'].iter_rows()
@@ -93,9 +93,9 @@ def test_production_gap_does_not_get_backfilled_as_later_spike_and_missing_displ
 def test_no_groups_keeps_original_workbook_sheet_set_untouched():
     book = Workbook()
     book.active.title = 'Rec Ox'
-    book.create_sheet('Prod Oxidos')
+    book.create_sheet('Prod Cu Oxidos')
     assert write_virtual_sheets(book, sample_doc(), None) == 0
-    assert book.sheetnames == ['Rec Ox', 'Prod Oxidos']
+    assert book.sheetnames == ['Rec Ox', 'Prod Cu Oxidos']
 
 
 def test_malformed_group_container_fails_instead_of_being_ignored():

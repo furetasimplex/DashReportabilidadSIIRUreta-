@@ -197,6 +197,9 @@ def build_layout():
         html.P('Reconstitución de Módulos', className='reconstitucion-title'),
         html.Div([
             dcc.Dropdown(id='reconstitucion-caso', options=[], placeholder='Cargando casos oficiales...', clearable=False),
+            dcc.Dropdown(id='reconstitucion-metodo', value='volumen', clearable=False, options=[
+                {'label': 'Reparto por volumen (vigente)', 'value': 'volumen'},
+                {'label': 'Densidad recalibrada (en validación)', 'value': 'recalibrada'}]),
             html.Button('Cargar datos', id='reconstitucion-cargar', n_clicks=0, className='reconstitucion-button')], className='reconstitucion-controls reconstitucion-controls-caso'),
         html.Div(id='reconstitucion-estado-casos', className='reconstitucion-note'),
         html.Div(id='reconstitucion-estado', children='Selecciona un Caso y carga su reconstitución.'),
@@ -217,6 +220,82 @@ def _resolve_loader(loader=None):
     if loader is not None:
         return loader
     return lambda **kwargs: e.analyze_db(use_intraday=True, **kwargs)
+
+
+XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+
+def cargar_resultado_caso(case, loader=None, metodo=None):
+    """Reconstitución de un Caso oficial con su identidad adjunta.
+
+    Lanza ``e.MissingCaseMassError`` si el Caso no tiene masa publicada propia:
+    nunca se completan datos con publicaciones de otros Casos.
+
+    ``metodo``: ``None`` usa la metodologia por defecto del motor ('volumen');
+    ``'recalibrada'`` pide la densidad humeda recalibrada (en validacion)."""
+    load = _resolve_loader(loader)
+    case_id = case['id']
+    kwargs = dict(fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'], caso_id=case_id)
+    if case.get('modelo_codigo'):
+        kwargs['caso'] = dict(case)
+        if metodo is not None:
+            kwargs['metodo'] = metodo
+    res = load(**kwargs)
+    mass = res.get('masa')
+    if mass is None or mass.empty or not mass['caso_id'].eq(case_id).all():
+        raise e.MissingCaseMassError(case_id)
+    # Identidad guardada junto al resultado: una respuesta tardía de otro
+    # Caso nunca se presenta como la selección actual.
+    return dict(res, caso=dict(case))
+
+
+def generar_informe_modulos(res, pad, quality_loader=None, extra_loader=None):
+    """Libro XLSX del informe de módulos de un PAD, cacheado por resultado.
+
+    Devuelve ``dict(xlsx, filename, modulos, advertencia, mensaje)``. Un informe
+    con fuentes sin consultar no se cachea, para permitir reintentar."""
+    quality_loader = quality_loader or im.calidad_turno
+    extra_loader = extra_loader or im.cargar_campos_extra
+    if not res.get('fuente_modelo') or pad not in dbs.PADS:
+        raise ValueError('El resultado no tiene fuente de modelo o el PAD no es válido')
+    case = res['caso']
+    with _lock:
+        workbook = res.get('_informe_xlsx_por_pad', {}).get(pad)
+        frame = res.get('_informe_modulos_por_pad', {}).get(pad)
+    if frame is None:
+        workbook = None
+    if workbook is None and frame is None:
+        has_modules = res['apilado']['pad_id'].eq(pad).any()
+        quality = (quality_loader(pad, engine=dbs.get_engine(),
+            fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'])
+            if has_modules else pd.DataFrame())
+        res.setdefault('_informe_calidad_por_pad', {})[pad] = quality
+        extras = extra_loader(res, pad, case, dbs.get_engine())
+        frame = im.preparar_modulos_desde_resultado(res, pad, quality,
+            fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'],
+            extras=extras)
+        warning = bool("advertencias_fuentes" in frame and
+            frame["advertencias_fuentes"].fillna("").astype(str).str.strip().ne("").any())
+        if not warning:
+            with _lock:
+                res.setdefault('_informe_modulos_por_pad', {})[pad] = frame
+    else:
+        warning = bool("advertencias_fuentes" in frame and
+            frame["advertencias_fuentes"].fillna("").astype(str).str.strip().ne("").any())
+    if workbook is None:
+        output = BytesIO()
+        im.exportar_desde_dataframe(frame, output, pad=pad, detalle=True, caso=case)
+        workbook = output.getvalue()
+        if not warning:
+            with _lock:
+                res.setdefault('_informe_xlsx_por_pad', {})[pad] = workbook
+    case_id = int(case['id'])
+    material = 'oxidos' if pad == dbs.PAD_OXIDOS else 'sulfuros'
+    return dict(
+        xlsx=workbook, modulos=len(frame), advertencia=warning,
+        filename=f"informe_modulos_{material}_caso_{case_id}_run_{case['run_id']}.xlsx",
+        mensaje=(f"Informe listo: {len(frame)} modulos del Caso {case_id}. Hay fuentes sin consultar; ver CASO; reintenta la descarga."
+                 if warning else f"Informe listo: {len(frame)} modulos del Caso {case_id}."))
 
 
 def register_callbacks(app, loader=None, case_loader=None, report_quality_loader=None, movement_loader=None, report_extra_loader=None):
@@ -255,27 +334,19 @@ def register_callbacks(app, loader=None, case_loader=None, report_quality_loader
 
     @app.callback(Output('reconstitucion-token', 'data'), Output('reconstitucion-estado', 'children'),
         Input('reconstitucion-cargar', 'n_clicks'), State('reconstitucion-caso', 'value'),
-        State('reconstitucion-casos', 'data'), prevent_initial_call=True,
+        State('reconstitucion-casos', 'data'), State('reconstitucion-metodo', 'value'),
+        prevent_initial_call=True,
         running=[(Output('reconstitucion-cargar', 'disabled'), True, False),
                  (Output('reconstitucion-cargar', 'children'), 'Calculando…', 'Cargar datos')])
-    def cargar(n, case_id, cases):
+    def cargar(n, case_id, cases, metodo=None):
         if not n:
             return (no_update,) * 2
         case = caso_actual(cases, case_id)
         if case is None:
             return None, 'Selecciona un Caso oficial antes de cargar.'
         try:
-            kwargs = dict(fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'], caso_id=case_id)
-            if case.get('modelo_codigo'):
-                kwargs['caso'] = dict(case)
-            res = load(**kwargs)
-            mass = res.get('masa')
-            if mass is None or mass.empty or not mass['caso_id'].eq(case_id).all():
-                return None, 'El Caso no tiene masa publicada validada disponible. No se usan datos de otros Casos.'
-            # Identidad guardada junto al resultado: una respuesta tardía de otro
-            # Caso nunca se presenta como la selección actual.
-            res = dict(res, caso=dict(case))
-            return remember(res), 'Carga finalizada. Los resultados identifican el Caso asociado.'
+            metodo = metodo if metodo in e.METODOS_RECONSTITUCION and metodo != e.METODO_DEFECTO else None
+            return remember(cargar_resultado_caso(case, load, metodo)), 'Carga finalizada. Los resultados identifican el Caso asociado.'
         except FlowCaseError as exc:
             return None, str(exc)
         except e.MissingCaseMassError:
@@ -313,47 +384,13 @@ def register_callbacks(app, loader=None, case_loader=None, report_quality_loader
             pad = None
         if not n or res is None or not res.get('fuente_modelo') or pad not in dbs.PADS:
             return None, 'Carga el Caso seleccionado antes de descargar.'
-        case = res['caso']
         try:
-            with _lock:
-                workbook = res.get('_informe_xlsx_por_pad', {}).get(pad)
-                frame = res.get('_informe_modulos_por_pad', {}).get(pad)
-            if frame is None:
-                workbook = None
-            if workbook is None and frame is None:
-                has_modules = res['apilado']['pad_id'].eq(pad).any()
-                quality = (quality_loader(pad, engine=dbs.get_engine(),
-                    fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'])
-                    if has_modules else pd.DataFrame())
-                res.setdefault('_informe_calidad_por_pad', {})[pad] = quality
-                extras = extra_loader(res, pad, case, dbs.get_engine())
-                frame = im.preparar_modulos_desde_resultado(res, pad, quality,
-                    fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'],
-                    extras=extras)
-                warning = bool("advertencias_fuentes" in frame and
-                    frame["advertencias_fuentes"].fillna("").astype(str).str.strip().ne("").any())
-                if not warning:
-                    with _lock:
-                        res.setdefault('_informe_modulos_por_pad', {})[pad] = frame
-            else:
-                warning = bool("advertencias_fuentes" in frame and
-                    frame["advertencias_fuentes"].fillna("").astype(str).str.strip().ne("").any())
-            if workbook is None:
-                output = BytesIO()
-                im.exportar_desde_dataframe(frame, output, pad=pad, detalle=True, caso=case)
-                workbook = output.getvalue()
-                if not warning:
-                    with _lock:
-                        res.setdefault('_informe_xlsx_por_pad', {})[pad] = workbook
+            informe = generar_informe_modulos(res, pad, quality_loader, extra_loader)
         except Exception:
             return None, 'No se pudo generar el informe. Verifica la conexion de calidad y reintenta.'
-        material = 'oxidos' if pad == dbs.PAD_OXIDOS else 'sulfuros'
-        filename = f"informe_modulos_{material}_caso_{int(case_id)}_run_{case['run_id']}.xlsx"
-        return {'content': base64.b64encode(workbook).decode('ascii'),
-            'filename': filename, 'base64': True,
-            'type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}, (
-                (f"Informe listo: {len(frame)} modulos del Caso {int(case_id)}. Hay fuentes sin consultar; ver CASO; reintenta la descarga."
-                 if warning else f"Informe listo: {len(frame)} modulos del Caso {int(case_id)}."))
+        return {'content': base64.b64encode(informe['xlsx']).decode('ascii'),
+            'filename': informe['filename'], 'base64': True,
+            'type': XLSX_MIME}, informe['mensaje']
 
     @app.callback(Output('reconstitucion-resultados', 'children'),
         Input('reconstitucion-token', 'data'), Input('reconstitucion-pad-tabs', 'value'),

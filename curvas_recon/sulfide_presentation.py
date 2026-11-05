@@ -1,10 +1,24 @@
-"""Render/export direct recovery without inferring unmeasured drainage."""
+"""Render/export direct recovery without inferring unmeasured drainage.
+
+Serves both PAD (OXIDOS and SULFUROS) of the "maduras fijas, nuevas moviles"
+local method; the module keeps its historical name.
+"""
 from io import BytesIO
 import json
 
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+from .maduras_nuevas import direct_recovery_series  # noqa: F401  (public API for reports)
+
+_PAD_PREFIX = {'OXIDOS': 'rox', 'SULFUROS': 'rsu'}
+
+
+def has_direct_pad(res, label):
+    """True si el resultado local trae recuperacion directa del PAD ``label``."""
+    return bool(isinstance(res, dict) and res.get('local_direct_recovery')
+                and any(r.get('pad') == label for r in res.get('recovery_rows') or []))
 
 
 def direct_series(res, label, num, cycles=()):
@@ -76,7 +90,7 @@ def recovery_figure(res, label, num, cycles=()):
                                 line=dict(color='#9CA3AF', dash='dot')))
     fig.update_layout(template='plotly_white', title=f'{label} P{num:02d} · recuperación directa',
                       yaxis_title='Recuperación (%)', hovermode='x unified')
-    fig.add_annotation(text='Caso e historia de agosto: fuente congelada · ensayo neto local',
+    fig.add_annotation(text='Historia protegida y Caso: recuperacion directa · ensayo neto local',
                        x=.5, y=1.08, xref='paper', yref='paper', showarrow=False)
     return fig
 
@@ -92,7 +106,7 @@ def direct_member(res, label, num, ws, we, cycles=()):
         return dict(xs=[s['xs'][i] for i in indices], ys=[values[i] for i in indices],
                     sources=[s['sources'][i] for i in indices])
     hist = curve(before, s['ys'])
-    return dict(id=f'rsu-P{num:02d}', cu_tf_t=s['cu_tf'],
+    return dict(id=f'{_PAD_PREFIX[label]}-P{num:02d}', cu_tf_t=s['cu_tf'],
                 initial_recovery_pct=s['ys'][0] if before else None,
                 series=curve(list(range(len(s['xs']))), s['ys']),
                 measured_series=curve(inside, s['measured_ys']),
@@ -147,11 +161,15 @@ def trial_workbook(res, caso):
     audit = dict(res.get('sulfide_audit') or {})
     audit.update(case_id=caso['id'], official_solver_run_id=caso['run_id'],
                  local_only=True, hydraulic_validation=False,
-                 scope='Sulfuros: recuperacion directa. Oxidos: motor existente; flujos en hoja Flujos.')
+                 scope='Recuperacion directa (maduras fijas, nuevas moviles) por PAD con resultado local; '
+                       'flujos modelados solo de las nuevas en hoja Flujos.')
     metadata = pd.DataFrame([{'campo': k, 'valor': json.dumps(v, ensure_ascii=False, default=str)}
                              for k, v in audit.items()])
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        recovery.to_excel(writer, sheet_name='Recuperacion Sulfuros', index=False)
+        for label, sheet in (('SULFUROS', 'Recuperacion Sulfuros'), ('OXIDOS', 'Recuperacion Oxidos')):
+            part = recovery[recovery['pad'] == label] if 'pad' in recovery else recovery.iloc[0:0]
+            if label == 'SULFUROS' or len(part):
+                part.to_excel(writer, sheet_name=sheet, index=False)
         flows.to_excel(writer, sheet_name='Flujos', index=False)
         metadata.to_excel(writer, sheet_name='Fuentes y alcance', index=False)
     return output.getvalue()

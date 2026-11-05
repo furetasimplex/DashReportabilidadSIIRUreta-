@@ -5,7 +5,7 @@ from dash.dependencies import Input, Output, State
 import base64, os
 from datetime import datetime
 
-from tabs import tab_report, tab_curvas, tab_reconstitucion
+from tabs import tab_report, tab_curvas, tab_reconstitucion, tab_reportes_recon
 import report_export.callbacks.reportabilidad_cb
 import callbacks.reportabilidad_callbacks
 from reclamo import panel as reclamo_panel  # registra sus @callback al importarse
@@ -90,6 +90,10 @@ def render_sidebar():
                     html.I(className="bi bi-stack me-2"),
                     "Reconstitución de Módulos",
                 ], href="#", id="nav-reconstitucion", className="siir-nav-link", n_clicks=0),
+                dbc.NavLink([
+                    html.I(className="bi bi-file-earmark-spreadsheet me-2"),
+                    "Reportes de reconciliación",
+                ], href="#", id="nav-reportes-recon", className="siir-nav-link", n_clicks=0),
             ], vertical=True, pills=False),
         ]
     )
@@ -181,6 +185,8 @@ subtabs = html.Div(
         # la pestaña sí quedan registrados al iniciar la app.
         html.Div(id="subtabs-curvas-recon", style={"display": "none"}),
         html.Div(id="subtabs-reconstitucion", style={"display": "none"}),
+        # Solo generación de reportes (curvas + reconstitución); montaje lazy.
+        html.Div(id="subtabs-reportes-recon", style={"display": "none"}),
         html.Div(id="subtabs-balance-m6", style={"display": "none"}),
     ]
 )
@@ -209,6 +215,8 @@ def register_callbacks(app):
         Output("subtabs-curvas-recon", "children"),
         Output("subtabs-reconstitucion", "style"),
         Output("subtabs-reconstitucion", "children"),
+        Output("subtabs-reportes-recon", "style"),
+        Output("subtabs-reportes-recon", "children"),
         Output("nav-reportabilidad", "className"),
         Output("nav-reclamo", "className"),
         Output("nav-powerbi", "className"),
@@ -217,6 +225,7 @@ def register_callbacks(app):
         Output("nav-polinomio-acido", "className"),
         Output("nav-curvas-recon", "className"),
         Output("nav-reconstitucion", "className"),
+        Output("nav-reportes-recon", "className"),
         Output("siir-bc-active", "children"),
         Output("subtabs-balance-m6", "style"),
         Output("subtabs-balance-m6", "children"),
@@ -229,16 +238,18 @@ def register_callbacks(app):
         Input("nav-polinomio-acido", "n_clicks"),
         Input("nav-curvas-recon", "n_clicks"),
         Input("nav-reconstitucion", "n_clicks"),
+        Input("nav-reportes-recon", "n_clicks"),
         Input("page-url", "pathname"),
         Input("page-url", "hash"),
         State("subtabs-curvas-recon", "children"),
         State("subtabs-reconstitucion", "children"),
+        State("subtabs-reportes-recon", "children"),
         State("subtabs-balance-m6", "children"),
         prevent_initial_call=False,
     )
     def toggle_subtabs(n_rep, n_rec, n_pbc, n_pitum, n_lix, n_polinomio, n_curvas,
-                       n_reconstitucion, pathname, url_hash, mounted_curvas, mounted_reconstitucion,
-                       mounted_balance_m6):
+                       n_reconstitucion, n_reportes_recon, pathname, url_hash, mounted_curvas,
+                       mounted_reconstitucion, mounted_reportes_recon, mounted_balance_m6):
         # dash.ctx.triggered_id es None en la carga inicial -> por defecto
         # se muestra Reportabilidad, igual que antes.
         triggered = dash.ctx.triggered_id
@@ -258,12 +269,13 @@ def register_callbacks(app):
                 triggered = "nav-balance-m6" if route_tab == "pitum-contingencia-m6" else "nav-monitor-pitum"
             elif triggered == "page-url":
                 # Los href="#" existentes no deben sobrescribir el clic de otro menú.
-                return (dash.no_update,) * 22
+                return (dash.no_update,) * 25
 
         secciones = {
             "nav-balance-m6": "monitor-pitum",
             "nav-curvas-recon": "curvas-recon",
             "nav-reconstitucion": "reconstitucion",
+            "nav-reportes-recon": "reportes-recon",
             "nav-reportabilidad": "reportabilidad",
             "nav-reclamo": "reclamo",
             "nav-powerbi": "powerbi",
@@ -285,6 +297,9 @@ def register_callbacks(app):
         reconstitucion_children = dash.no_update
         if activa == "reconstitucion" and not mounted_reconstitucion:
             reconstitucion_children = tab_reconstitucion.layout()
+        reportes_children = dash.no_update
+        if activa == "reportes-recon" and not mounted_reportes_recon:
+            reportes_children = tab_reportes_recon.layout()
         titles = {
             "balance-m6": "BALANCE DE MASA M6",
             "reportabilidad": "REPORTABILIDAD", "reclamo": "ADMINISTRACIÓN DE RECLAMO",
@@ -292,6 +307,7 @@ def register_callbacks(app):
             "lixiviacion": "LIXIVIACIÓN", "polinomio-acido": "POLINOMIO ÁCIDO",
             "curvas-recon": "CURVAS Y RECONCILIACIÓN",
             "reconstitucion": "RECONSTITUCIÓN DE MÓDULOS",
+            "reportes-recon": "REPORTES DE RECONCILIACIÓN",
         }
         return (
             estilo("reportabilidad"),
@@ -302,13 +318,14 @@ def register_callbacks(app):
             estilo("polinomio-acido"),
             estilo("curvas-recon"), children,
             estilo("reconstitucion"), reconstitucion_children,
+            estilo("reportes-recon"), reportes_children,
             clase("reportabilidad"),
             clase("reclamo"),
             clase("powerbi"),
             clase("monitor-pitum"),
             clase("lixiviacion"),
             clase("polinomio-acido"),
-            clase("curvas-recon"), clase("reconstitucion"), titles[activa],
+            clase("curvas-recon"), clase("reconstitucion"), clase("reportes-recon"), titles[activa],
             estilo("balance-m6"),
             dash.no_update,
             "pitum-contingencia-m6" if triggered == "nav-balance-m6" else (route_tab or dash.no_update),
@@ -342,6 +359,7 @@ def register_callbacks(app):
 
     tab_curvas.register_callbacks(app)
     tab_reconstitucion.register_callbacks(app)
+    tab_reportes_recon.register_callbacks(app)
 
     @app.callback(
         Output("siir-username", "children"),
