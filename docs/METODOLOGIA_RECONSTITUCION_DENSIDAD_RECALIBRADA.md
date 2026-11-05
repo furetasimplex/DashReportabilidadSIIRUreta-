@@ -2,7 +2,7 @@
 
 Fecha del documento: **5 de noviembre de 2026**.
 
-**Estado:** metodología acordada y prototipo preparado para integración. Las evidencias numéricas citadas corresponden a una captura DB y pruebas locales del 4 de noviembre de 2026. El reemplazo de la metodología del dashboard **todavía no está aplicado ni aprobado como implementación terminada**.
+**Estado:** metodología acordada y prototipo preparado para integración. Las evidencias numéricas citadas corresponden a una captura DB y pruebas locales del 4 de noviembre de 2026. La metodología está implementada en el motor del dashboard (ver la sección «Implementación» al final); **sigue sin darse por aprobada como despliegue terminado** hasta cerrar los pendientes listados allí.
 
 ## 1. Objetivo y alcance
 
@@ -357,3 +357,38 @@ Prototipo y evidencias en [`auditorias/integracion_mr_dashboard_20261104/`](../a
 - [`VERIFICACION_RUNTIME.json`](../auditorias/integracion_mr_dashboard_20261104/VERIFICACION_RUNTIME.json): registro de la prueba local del prototipo; no constituye acta de despliegue.
 
 El repositorio activo de la aplicación es `../DashReportabilidadSIIR`. Los archivos de esta carpeta de auditoría son preparación y evidencia, no prueba de que el proceso del dashboard ya haya cargado el cambio.
+
+## 18. Implementación
+
+Implementada el 5 de noviembre de 2026 desde este documento (el prototipo de §17 no estaba disponible). Solo lecturas SELECT; sin SP ni escrituras.
+
+**Archivos** (`reconstitucion/`):
+
+| Archivo | Contenido |
+|---|---|
+| `recalibracion.py` | Núcleo puro: `densidad_recalibrada` (§8), `metas_humedas` (§9), `asignar_secuencial` (§10, §13: S por módulo y residual no asignable), `conservacion_por_turno` (§14), `verificar_fijados` (§7). |
+| `recalibracion_caso.py` | Orquestación sobre frames: perfil global, suministro desde el nacimiento de la campaña, TMS reconciliada F18/F19 por turno en la ventana, `shift_table`, asignaciones, itinerario horario estimado. |
+| `recalibracion_db.py` | SELECT de nacimientos de campaña, `modulo` (parcela) y módulos fijados (`reclamo.v_modulo_base` + `disponible_rotopalas.tmh_apilado`). |
+| `engine.py` | `analyze_db(..., metodo=)` y `_analyze_recalibrado`. |
+| `panel.py`, `presentacion.py`, `informe_modulos.py` | Consumen las mismas asignaciones (grafico, tabla, detalle y XLSX). |
+| `test_recalibracion.py` | Invariantes §14, casos §8/§13, ejemplo §10, fijados, último abierto y referencia M&R. |
+
+**Activación.** Es la metodología por defecto de `analyze_db(caso=...)` y de `panel.cargar_resultado_caso`. El reparto anterior por fracción de volumen sigue disponible con `metodo='volumen'` (p. ej. `cargar_resultado_caso(case, metodo='volumen')`) para comparar. `metodo='recalibrada'` exige un Caso oficial. El resultado trae `metodo_reconstitucion`, `asignaciones`, `sin_asignar`, `recalibracion_grupos` (ρ_h, W_global, W_fijo, V_ajustable por PAD/campaña) y `recalibracion_modulos` (meta TMH, S, módulo fijado/abierto).
+
+**Decisiones de implementación.**
+
+- Identidad del grupo: PAD + campaña técnica + campaña visible; módulo físico (`modulo_id`) con parcela del catálogo. Identidad ambigua o duplicada detiene el cálculo.
+- Módulo fijado: `CONGELADO` con `fecha_congelamiento` ≤ corte y `tmh_apilado` > 0. Si faltan masa o fechas, se trata como ajustable con aviso `congelado_incompleto`. Un fijado que la secuencia no cubre con su TMH directa, o cuya TMS asignada difiere de `tms_conformado` en más de 1 %, bloquea el resultado.
+- S (fracción de traspaso, columna S del Control M&R): TMH del módulo en el turno de cierre / TMH del turno; 1 para el último módulo abierto. Se muestra en DETALLE del informe junto con meta TMH, densidad usada y Cu fino = Σ TMS·CuT/100 por turno (la hoja MODULOS conserva el formato de la plantilla).
+- Horas de cambio: interpolación uniforme de 12 h por turno sobre la TMH asignada, rotulada «estimación». No usa el perfil de 10 s. Varios PAD/campañas en un mismo turno ocupan tramos consecutivos del turno (orden PAD, campaña), proporcionales a su TMH.
+- Los módulos con volumen observado y asignación cero, y los módulos con asignación sin fila volumétrica ese día (`fila_volumetrica` = False), se conservan en `shift_table`, informe y tabla.
+- La masa de la ventana sin destino hace fallar el Caso (cierre exhaustivo, §13); la de la historia previa se reporta en `sin_asignar` y en un aviso.
+
+**Pendiente.**
+
+1. Semántica y vigencia de `vol_total_est` (volumen objetivo de §9) y su versión histórica.
+2. Orden operacional de los módulos: hoy se ordena por primera fecha con volumen y número de módulo, y el último abierto es el último de esa secuencia que no está fijado; falta validar secuencias que cambian de parcela o reinician numeración.
+3. Confirmar que `disponible_rotopalas.tmh_apilado` es la TMH fijada directa y la tolerancia de contraste con `tms_conformado` (1 %).
+4. PAD con TMS reconciliada cero y TMH de perfil positiva: hoy recibe TMH con TMS 0.
+5. Precisión horaria con el perfil de 10 s y secuenciación real de PAD/campañas simultáneas.
+6. Verificación contra DB real del Caso 10013 (ρ_h esperado 1,8496 TMH/m³), pantalla autenticada y exportaciones.

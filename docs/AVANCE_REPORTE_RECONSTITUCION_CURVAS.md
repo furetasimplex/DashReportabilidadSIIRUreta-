@@ -41,9 +41,27 @@ recalibrada y humedad resuelta desde DB.
 | 1b | Reporte: gráficos agrupados + RL + sumatorias Prod | ⏳ en curso |
 | 1c | Reporte: Dump reconciliado | ⏳ en curso |
 | 1d | Comparador de formato contra el oficial | ⏳ en curso |
-| 2a | Reconstitución: recalibración de densidad + asignación secuencial | ⏳ en curso |
-| 2b | Reconstitución: informe con fracción de traspaso y Cu fino | ⏳ en curso |
+| 2a | Reconstitución: recalibración de densidad + asignación secuencial | ✅ 5-nov (opt-in «en validación») |
+| 2b | Reconstitución: informe con fracción de traspaso y Cu fino | ✅ 5-nov |
 | 4 | Integración: reporte consume recuperación directa del método | pendiente |
+
+## Parte 2 — entrega (5-nov)
+
+- `reconstitucion/recalibracion.py` (fórmulas §8–§10, ceros §13, invariantes §14),
+  `recalibracion_caso.py` (suministro desde nacimiento de campaña, TMS
+  reconciliada F18/F19 en la ventana, horas uniformes 12 h),
+  `recalibracion_db.py` (solo SELECT).
+- `analyze_db(..., metodo='recalibrada'|'volumen')`. **Por defecto sigue
+  'volumen' (vigente)**; la recalibrada se elige en Reconstitución de Módulos →
+  selector «Densidad recalibrada (en validación)», hasta validarla contra DB.
+- Informe de módulos: DETALLE agrega `meta_tmh`, `densidad_recalibrada`,
+  `fraccion_traspaso`; Cu fino = Σ TMS·CuT/100 por turno.
+- Reproduce el Control M&R Septiembre: asignaciones por módulo, S = 0,6437 /
+  0,5861 / 0,5978 / 0,4720 / 1 y Cu fino 865,41 / 810,21 / 845,65 / 764,63 / 460,63.
+- Pruebas: 18 nuevas en `reconstitucion/test_recalibracion.py`.
+- Supuestos a confirmar en servidor: `disponible_rotopalas.tmh_apilado` como TMH
+  fijada directa; orden de módulos por primera fecha con volumen; tolerancia
+  1 % contra `tms_conformado`; PAD con TMS reconciliada 0 y TMH positiva.
 
 ## Pendientes conocidos
 
@@ -55,3 +73,4 @@ recalibrada y humedad resuelta desde DB.
 ## Bitácora
 
 - 5-nov: plan cerrado; metodología y Control copiados al repo; agentes lanzados.
+- 5-nov: parte 2 entregada y revisada; recalibrada queda opt-in hasta validar en DB.

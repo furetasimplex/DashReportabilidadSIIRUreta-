@@ -36,7 +36,8 @@ def test_single_pad_case_uses_intraday_and_preserves_case_run_and_TMS():
          patch.object(wet_profile, "load_intraday_profile",
                       return_value=make_intraday(day, profile)):
         result = engine.analyze_db(fecha_min=day, fecha_max=day, caso=case,
-                                   caso_id=case["id"], use_intraday=True)
+                                   caso_id=case["id"], use_intraday=True,
+                                   metodo="volumen")
 
     assert result["fuente_modelo"]["id"] == 10013
     assert result["fuente_modelo"]["run_id"] == 10145

@@ -95,7 +95,7 @@ def test_full_engine_rejects_unidentified_simultaneous_pad_routes():
          patch.object(db_source,'load_masa',side_effect=AssertionError('Caso no usa masa legacy')):
         with pytest.raises(ValueError, match='más de un PAD activo'):
             e.analyze_db(caso=case(),caso_id=10013,fecha_min=case()['fecha_inicio'],
-                         fecha_max=case()['fecha_fin'])
+                         fecha_max=case()['fecha_fin'],metodo='volumen')
 
 
 def test_panel_passes_official_run_metadata_to_loader():

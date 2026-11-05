@@ -197,6 +197,9 @@ def build_layout():
         html.P('Reconstitución de Módulos', className='reconstitucion-title'),
         html.Div([
             dcc.Dropdown(id='reconstitucion-caso', options=[], placeholder='Cargando casos oficiales...', clearable=False),
+            dcc.Dropdown(id='reconstitucion-metodo', value='volumen', clearable=False, options=[
+                {'label': 'Reparto por volumen (vigente)', 'value': 'volumen'},
+                {'label': 'Densidad recalibrada (en validación)', 'value': 'recalibrada'}]),
             html.Button('Cargar datos', id='reconstitucion-cargar', n_clicks=0, className='reconstitucion-button')], className='reconstitucion-controls reconstitucion-controls-caso'),
         html.Div(id='reconstitucion-estado-casos', className='reconstitucion-note'),
         html.Div(id='reconstitucion-estado', children='Selecciona un Caso y carga su reconstitución.'),
@@ -222,16 +225,21 @@ def _resolve_loader(loader=None):
 XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 
-def cargar_resultado_caso(case, loader=None):
+def cargar_resultado_caso(case, loader=None, metodo=None):
     """Reconstitución de un Caso oficial con su identidad adjunta.
 
     Lanza ``e.MissingCaseMassError`` si el Caso no tiene masa publicada propia:
-    nunca se completan datos con publicaciones de otros Casos."""
+    nunca se completan datos con publicaciones de otros Casos.
+
+    ``metodo``: ``None`` usa la metodologia por defecto del motor ('volumen');
+    ``'recalibrada'`` pide la densidad humeda recalibrada (en validacion)."""
     load = _resolve_loader(loader)
     case_id = case['id']
     kwargs = dict(fecha_min=case['fecha_inicio'], fecha_max=case['fecha_fin'], caso_id=case_id)
     if case.get('modelo_codigo'):
         kwargs['caso'] = dict(case)
+        if metodo is not None:
+            kwargs['metodo'] = metodo
     res = load(**kwargs)
     mass = res.get('masa')
     if mass is None or mass.empty or not mass['caso_id'].eq(case_id).all():
@@ -326,17 +334,19 @@ def register_callbacks(app, loader=None, case_loader=None, report_quality_loader
 
     @app.callback(Output('reconstitucion-token', 'data'), Output('reconstitucion-estado', 'children'),
         Input('reconstitucion-cargar', 'n_clicks'), State('reconstitucion-caso', 'value'),
-        State('reconstitucion-casos', 'data'), prevent_initial_call=True,
+        State('reconstitucion-casos', 'data'), State('reconstitucion-metodo', 'value'),
+        prevent_initial_call=True,
         running=[(Output('reconstitucion-cargar', 'disabled'), True, False),
                  (Output('reconstitucion-cargar', 'children'), 'Calculando…', 'Cargar datos')])
-    def cargar(n, case_id, cases):
+    def cargar(n, case_id, cases, metodo=None):
         if not n:
             return (no_update,) * 2
         case = caso_actual(cases, case_id)
         if case is None:
             return None, 'Selecciona un Caso oficial antes de cargar.'
         try:
-            return remember(cargar_resultado_caso(case, load)), 'Carga finalizada. Los resultados identifican el Caso asociado.'
+            metodo = metodo if metodo in e.METODOS_RECONSTITUCION and metodo != e.METODO_DEFECTO else None
+            return remember(cargar_resultado_caso(case, load, metodo)), 'Carga finalizada. Los resultados identifican el Caso asociado.'
         except FlowCaseError as exc:
             return None, str(exc)
         except e.MissingCaseMassError:

@@ -338,7 +338,8 @@ class IntegracionSIIR(unittest.TestCase):
         result = self.callback('reconstitucion-token.data',
             [dict(id='reconstitucion-cargar', property='n_clicks', value=1)],
             [dict(id='reconstitucion-caso', property='value', value=None),
-             dict(id='reconstitucion-casos', property='data', value=None)],
+             dict(id='reconstitucion-casos', property='data', value=None),
+             dict(id='reconstitucion-metodo', property='value', value='volumen')],
             ['reconstitucion-cargar.n_clicks'])
         self.assertIn('Selecciona un Caso oficial', result['reconstitucion-estado']['children'])
         result = self.callback('reconstitucion-resultados.children', [
