@@ -39,12 +39,16 @@ def test_download_exports_each_local_group_without_double_counting(export_case, 
     assert virtual['Rec Sulfuro'].cell(10,30).value == 'Σ Mixto [OX+SU]'
     assert virtual['Rec Ox'].cell(12,34).value == pytest.approx(3.0)
     assert virtual['Rec Ox'].cell(4,34).value == pytest.approx(6.0)
-    assert len(virtual['Curvas Ox']._charts[0].series) == 34
-    assert len(virtual['Curvas Sulfuro']._charts[0].series) == 29
-    assert virtual['Curvas Ox']._charts[0].series[-2].title.v == 'Σ Mixto [OX+SU]'
-    assert virtual['Curvas Ox']._charts[0].series[-1].title.v == 'Σ OX'
+    # Los 4 graficos agrupados fisicos no cambian; los grupos van en un 5.o grafico.
+    assert len(original['Oxido']._charts) == 4
+    assert len(virtual['Oxido']._charts) == 5
+    assert len(virtual['Sulfuro']._charts) == 5
+    assert [len(c.series) for c in virtual['Oxido']._charts[:4]] == [8, 8, 8, 8]
+    extra = virtual['Oxido']._charts[4]
+    assert [s.tx.strRef.f for s in extra.series] == ["'Rec Ox'!$AH$9", "'Rec Ox'!$AI$9"]
+    assert len(virtual['RL Oxidos']._charts) == 5
     # Virtual sums are not appended to production and its physical totals.
-    assert list(original['Prod Oxidos'].values) == list(virtual['Prod Oxidos'].values)
+    assert list(original['Prod Cu Oxidos'].values) == list(virtual['Prod Cu Oxidos'].values)
 
 
 def test_download_reports_unknown_member_and_preserves_saved_run(export_case):

@@ -53,7 +53,7 @@ def test_writer_keeps_official_rl_matrix_and_dump_shape():
     book.save(output)
     output.seek(0)
     check = load_workbook(output, data_only=True)
-    assert check.sheetnames == ['Dump', 'RL Oxidos', 'RL Sulfuros']
+    assert check.sheetnames == ['Dump', 'RL Oxidos', 'RL Sulfuro']
     assert tuple(check['Dump'].values)[0] == (
         'Fecha', 'Aporte', 'Flujo riego dump [m3/dia]',
         'Flujo salida dump [m3/dia]', 'Concentracion riego ',
@@ -61,7 +61,11 @@ def test_writer_keeps_official_rl_matrix_and_dump_shape():
     assert tuple(check['RL Oxidos'].values)[0][:3] == ('Parcela', 1, 2)
     assert tuple(check['RL Oxidos'].values)[1][:3] == (1, 0.1, 0.3)
     assert tuple(check['RL Oxidos'].values)[2][:3] == (2, pytest.approx(0.3), pytest.approx(0.7))
-    assert tuple(check['RL Sulfuros'].values)[0][:2] == ('Parcela', 21)
+    # RL Sulfuro lista las pilas en orden ascendente (1..28), como el oficial.
+    sulfuro = tuple(check['RL Sulfuro'].values)
+    assert sulfuro[0][:3] == ('Parcela', 1, 2)
+    assert sulfuro[0][21] == 21
+    assert sulfuro[1][21] == 0.5
     check.close()
 
 

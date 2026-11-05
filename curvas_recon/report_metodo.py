@@ -11,9 +11,10 @@ implementacion.
 Dos pasos:
 
   `construir_doc(runs, ...)`  corridas del motor -> dict de curvas por pila
-                              (el mismo `motor_curvas.json`).
-  `escribir_libro(doc, out)`  ese dict -> el .xlsx con las hojas de datos por
-                              pad y sus dos hojas de graficos.
+                              (el mismo `motor_curvas.json`), con la serie
+                              diaria de riego, Cu de drenaje y el Dump.
+  `escribir_libro(doc, out)`  ese dict -> el .xlsx de 15 hojas con el formato
+                              del reporte oficial (ver `report_libro`).
 
 `runs` es {caso_id: {'ws', 'we', 'caso', 'pads': {label: {'res': res}}}}, donde
 `res` es lo que devuelve `recon_engine.reconcile_flowsheet`. Cada dia pertenece
@@ -23,14 +24,13 @@ import os
 
 import numpy as np
 import pandas as pd
-from openpyxl.chart import LineChart, Reference, Series
-from openpyxl.chart.marker import Marker
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import Font, PatternFill, Alignment
-
 from . import recon_engine as E
 from .rl_series import cumulative_campaign_rl
-from .report_columns import physical_columns, recovery_columns, with_group_columns
+from .report_columns import recovery_columns
+from .report_dump import dump_reconciliado
+from .report_layout import (HOJA, HOJA_GRAFICOS, HOJA_PROD, NPILAS, ORDEN)
+from .report_libro import (_escribir_dump, _escribir_graficos, _escribir_hoja_pad,  # noqa: F401
+                           _escribir_prod, _escribir_rl, escribir_libro as _escribir_libro)
 from .db_pipeline import connect, SCHEMA
 from sqlalchemy import text
 
@@ -38,15 +38,12 @@ RAIZ = os.path.dirname(os.path.abspath(__file__))
 
 K_F = 0.024
 PAD_ID = {'OXIDOS': 1, 'SULFUROS': 2}
-NPILAS = {'OXIDOS': 32, 'SULFUROS': 28}
 XL_PLANTA = os.getenv('RECON_PLANTA_XLSX', os.path.join(RAIZ, 'Reporte_Recuperaciones 31 de Julio 2026.xlsx'))
 CORTE_PLANTA = pd.Timestamp('2026-07-31')
 BUSCA_RIEGO_DESDE = pd.Timestamp('2024-06-01')
 
 # el libro de planta: sulfuros va P21..P28, P1..P20; oxidos va P1..P32
-ORDEN = {'OXIDOS': list(range(1, 33)),
-         'SULFUROS': list(range(21, 29)) + list(range(1, 21))}
-HOJA = {'OXIDOS': 'Rec Ox', 'SULFUROS': 'Rec Sulfuro'}
+# (ORDEN, HOJA y NPILAS viven en report_layout)
 HDR = ['campana', 'ciclos', 'rec_max', 'aporte', 'apilado', 'rec_termino',
        'recuperable', 'wip']
 
@@ -360,8 +357,23 @@ def leer_dump(asof):
     return result
 
 
+def _directo_a_serie(direct_recovery, label, num):
+    """Serie de recuperacion directa [%] de una pila, o None."""
+    if not direct_recovery:
+        return None
+    serie = direct_recovery.get((label, int(num)))
+    if serie is None:
+        return None
+    serie = pd.Series(serie, dtype=float)
+    if serie.empty:
+        return None
+    serie.index = pd.DatetimeIndex(pd.to_datetime(serie.index)).normalize()
+    serie = serie[~serie.index.duplicated(keep='last')].sort_index()
+    return serie
+
+
 def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
-                  verbose=True):
+                  verbose=True, direct_recovery=None):
     """Curvas de recuperacion por pila, medidas y reconciliadas.
 
     Cada ciclo comienza en la lectura primaria neta de recuperacion mas
@@ -370,7 +382,17 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
     conservan para produccion, pero se ocultan en las curvas y en su maximo.
     Dentro de las ventanas con ancla de `runs` manda el Q y el Cu reconciliado
     por el motor. `end` estira las curvas mas alla del ultimo caso (default:
-    el fin del caso mas nuevo)."""
+    el fin del caso mas nuevo).
+
+    ``direct_recovery`` (opcional): ``{(label, num_pila): pandas.Series}`` con
+    la recuperacion acumulada directa [%] por fecha de esa pila (p.ej. la del
+    metodo de maduras/nuevas). Cuando una pila viene en el dict su curva
+    (``rec`` / ``rec_curve``, y con ello Prod, Rec Ox y RL) se arma con esos
+    valores en vez de reconstruirla desde Q y Cu; ``med`` conserva la
+    reconstruccion medida. Las fechas sin valor mantienen el ultimo acumulado
+    (produccion cero) y quedan en blanco en la curva visible; las anteriores al
+    primer valor valen cero. Pilas que no estan en el diccionario (o sin Apilado
+    tmf) siguen con el calculo normal."""
     casos = sorted(runs)
     if not casos:
         raise ValueError('construir_doc necesita al menos una corrida')
@@ -387,8 +409,10 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
             day_caso.setdefault(d, cid)
             d += pd.Timedelta(days=1)
 
+    dump_filas, dump_meta, dump_avisos = dump_reconciliado(
+        leer_dump(END), runs, day_caso=day_caso)
     doc = dict(end=str(END.date()), corte_planta=str(pd.Timestamp(corte_planta).date()),
-               dump=leer_dump(END),
+               dump=dump_filas, dump_meta=dump_meta, dump_avisos=dump_avisos,
                casos=[dict(id=c, desde=str(runs[c]['ws'].date()),
                            hasta=str(runs[c]['we'].date()),
                            run=runs[c]['caso']['run_id']) for c in casos],
@@ -438,6 +462,7 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
         # extraccion reconciliada dia a dia, dentro de las ventanas con ancla
         rec_ext = {}
         q_reconciled = {}
+        cu_pls_rec = {}
         first_case_by_pile = {}
         for cid in casos:
             res = (runs[cid]['pads'].get(label) or {}).get('res')
@@ -468,6 +493,12 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                     fp, fr = d['fino_pls_final'], d['fino_riego_final']
                     q_final = _valid_flow(d.get('q_riego_final'))
                     q_pls_final = _valid_flow(d.get('q_pls_final'))
+                    if p_name in info:
+                        cu_dren = _valid_flow(d.get('cu_pls_recon'))
+                        if cu_dren is None and q_pls_final and fp is not None:
+                            cu_dren = _valid_flow(float(fp) / q_pls_final)
+                        if cu_dren is not None:
+                            cu_pls_rec[(p_name, d['date'])] = cu_dren
                     if q_pls_final == 0.0:
                         fp = 0.0
                     elif q_pls_final is not None and fp is None:
@@ -544,6 +575,19 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                 _apply_primary_points(
                     rec, e_rec, i0, primary_points[p], stack_cu_daily.get(v['num']),
                     v['fin'], v['f1'], pos)
+            # Recuperacion directa (p.ej. metodo maduras/nuevas): sustituye la
+            # curva reconstruida desde Q y Cu por la serie dada, en % del Apilado.
+            directa = None
+            serie_directa = _directo_a_serie(direct_recovery, label, v['num'])
+            if serie_directa is not None and v['fin']:
+                dias_ciclo = cal[i0:]
+                pct_directo = serie_directa.reindex(dias_ciclo).to_numpy(dtype=float)
+                con_dato = np.isfinite(pct_directo)
+                if con_dato.any():
+                    toneladas = pct_directo * float(v['fin']) / 100.0
+                    rec = pd.Series(toneladas, index=dias_ciclo).ffill().fillna(0.0).to_numpy()
+                    directa = [float(x) if ok else None for x, ok in zip(toneladas, con_dato)]
+                    measured_anchor = None
             cov = ((q > 0) & ~np.isnan(cu_p)).astype(int)[i0:]
             rie = (q > 0).astype(int)[i0:]
             vol = float(q[i0:].sum()) * 24.0   # load_riego entrega m3/h
@@ -571,6 +615,17 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                 accumulated = cumulative_campaign_rl(
                     {p: daily_q}, {p: v['tms']}, {p: v['f0']})
                 rl_accum_curve = [accumulated.get(day) for day in rl_dates]
+            medido_q = (riego[p].reindex(cal) if p in riego.columns
+                        else pd.Series(np.nan, index=cal))
+            riego_m3d, dren_cu = [], []
+            for k, day in enumerate(cal):
+                caudal = _valid_flow(q_reconciled[(p, day)] if (p, day) in q_reconciled
+                                     else medido_q.iloc[k])
+                riego_m3d.append(round(caudal * 24.0, 3) if caudal is not None else None)
+                ley = cu_pls_rec.get((p, day))
+                if ley is None:
+                    ley = _valid_flow(cu_p[k])
+                dren_cu.append(round(ley, 4) if ley is not None else None)
             pilas.append(dict(
                 p=p, num=v['num'], campana=v['camp'],
                 ini=str(v['ini'].date()), apilado_ini=str(v['f0'].date()),
@@ -601,8 +656,10 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                                for x in pl.get('curva', [])] if misma else []),
                 med=[round(float(x), 3) for x in med],
                 rec=[round(float(x), 3) for x in rec],
-                rec_curve=_recovery_curve_for_display(
-                    rec, (primary_points[p][0][0] if primary_points.get(p) else None), v['ini']),
+                rec_curve=(directa if directa is not None else _recovery_curve_for_display(
+                    rec, (primary_points[p][0][0] if primary_points.get(p) else None), v['ini'])),
+                recuperacion_directa=directa is not None,
+                riego_curve=riego_m3d, dren_cu_curve=dren_cu,
                 cov=[int(x) for x in cov]))
 
         doc['pads'][label] = dict(pilas=pilas, desde=str(start.date()))
@@ -619,101 +676,9 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
 
 FILAS = ['Campana', 'Ciclos', 'Recuperacion max.', 'Aporte Parcelas',
          'Apilado tmf', 'Rec termino ciclo', 'Recuperable', 'WIP']
-CHART = {'OXIDOS': 'Curvas Ox', 'SULFUROS': 'Curvas Sulfuro'}
-COL_T = 40          # bloque de toneladas, lejos a la derecha de los graficos
-PROD_SHEET = {'OXIDOS': 'Prod Oxidos', 'SULFUROS': 'Prod Sulfuros'}
-
-
-def _escribir_rl(w, doc):
-    """Write campaign RL accumulated by cycle day through report cutoff."""
-    names = {'OXIDOS': 'RL Oxidos', 'SULFUROS': 'RL Sulfuros'}
-    for label in ('OXIDOS', 'SULFUROS'):
-        ws = w.book.create_sheet(names[label])
-        piles = recovery_columns(doc, label, ORDEN[label])
-        series = {}
-        n_days = 0
-        for q in piles:
-            values = q.get('rl_accum_curve')
-            if values is None:  # Compatibilidad con documentos antiguos.
-                daily = q.get('rl_curve') or []
-                total = 0.0
-                values = []
-                unknown = False
-                for value in daily:
-                    if value is None:
-                        unknown = True
-                        values.append(None)
-                    elif unknown:
-                        values.append(None)
-                    else:
-                        total += float(value)
-                        values.append(total)
-            cutoff = pd.Timestamp(doc.get('end') or doc.get('pads', {}).get(label, {}).get('desde') or pd.Timestamp.today())
-            start = pd.Timestamp(q.get('ini') or doc.get('pads', {}).get(label, {}).get('desde') or cutoff)
-            known_start = q.get('ini') or doc.get('pads', {}).get(label, {}).get('desde')
-            n_visible = (max(0, min(len(values), (cutoff.normalize() - start.normalize()).days + 1))
-                         if known_start else len(values))
-            n_days = max(n_days, n_visible)
-            series[id(q)] = values[:n_visible]
-        ws.cell(1, 1, 'Parcela')
-        for col, q in enumerate(piles, start=2):
-            ws.cell(1, col, q['num'])
-        for day_idx in range(n_days):
-            row = day_idx + 2
-            ws.cell(row, 1, day_idx + 1)
-            for col, q in enumerate(piles, start=2):
-                values = series[id(q)]
-                if day_idx < len(values):
-                    ws.cell(row, col, values[day_idx])
-        max_col = max(1, len(piles) + 1)
-        for row in ws.iter_rows(min_row=1, max_row=max(1, n_days + 1),
-                                min_col=1, max_col=max_col):
-            for cell in row:
-                cell.font = Font(name='Arial', size=10, bold=(cell.row == 1))
-                if cell.row > 1 and cell.column > 1:
-                    cell.number_format = '0.0000'
-        ws.column_dimensions['A'].width = 12
-        for col in range(2, max_col + 1):
-            ws.column_dimensions[get_column_letter(col)].width = 12
-        ws.freeze_panes = 'B2'
-
-
-def _escribir_dump(w, doc):
-    """Write only source-backed DUMP daily rows in the official six-column shape."""
-    rows = doc.get('dump') or []
-    if not rows:
-        return
-    ws = w.book.create_sheet('Dump')
-    headers = ['Fecha', 'Aporte', 'Flujo riego dump [m3/dia]',
-               'Flujo salida dump [m3/dia]', 'Concentracion riego ',
-               'Concentracion drenaje']
-    ws.append(headers)
-    for row in rows:
-        ws.append([row.get('fecha'), row.get('aporte'), row.get('flujo_riego'),
-                   row.get('flujo_salida'), row.get('cu_feed'), row.get('cu_drenaje')])
-    ws.freeze_panes = 'A2'
-    ws.auto_filter.ref = ws.dimensions
-    widths = [14, 13, 25, 27, 22, 24]
-    for i, width in enumerate(widths, start=1):
-        ws.column_dimensions[get_column_letter(i)].width = width
-    for cell in ws[1]:
-        cell.font = Font(name='Arial', size=10, bold=True)
-        cell.fill = PatternFill('solid', fgColor='FFFFC000')
-    for row in ws.iter_rows(min_row=2):
-        for cell in row:
-            cell.font = Font(name='Arial', size=10)
-        row[0].number_format = 'dd-mm-yyyy'
-        row[1].number_format = '#,##0.00'
-        for col in (3, 4):
-            row[col - 1].number_format = '#,##0.00'
-        for col in (5, 6):
-            row[col - 1].number_format = '0.000'
-    w.book.properties.description = (
-        'Hoja Dump, fuente DB del modelo 125: Aporte = F51−F77 (t Cu/día). '
-        'F51 usa flujo_dpls_m3h y dump_dpls_cu; F77 usa flujo_feed_dump_m3h y '
-        'dump_feed_cu. Caudales ×24 para m3/día y grados g/L para t Cu. '
-        'flujo_refino_dump_m3h/oxidos_refino_cu se mantiene separado en F74.'
-    )
+CHART = dict(HOJA_GRAFICOS)
+COL_T = 40          # (historico) bloque de toneladas; ya no se escribe
+PROD_SHEET = dict(HOJA_PROD)
 
 
 def _corte_corto(doc):
@@ -749,130 +714,6 @@ def hoja_pad(doc, label):
                 M.at[str(i), c] = round(v * k, 6) if v is not None else None
     return M
 
-
-def _escribir_hoja_pad(ws, doc, label):
-    """Escribe la matriz en el formato de la hoja de recuperaciones de planta."""
-    pilas = recovery_columns(doc, label, ORDEN[label])
-    etiquetas = ['Campana', 'Ciclos', 'Recuperacion max.', 'Aporte Parcelas',
-                 'Apilado tmf', 'Rec termino ciclo', 'Recuperable', 'WIP']
-    for row, etiqueta in enumerate(etiquetas, start=1):
-        ws.cell(row=row, column=1, value=etiqueta)
-    for col, q in enumerate(pilas, start=2):
-        ap = q['apilado']
-        rt = q['planta_rec_termino']
-        recup = ap * rt / 100.0 if rt is not None else None
-        final = q['rec'][-1] if q['rec'] else q['t_rec']
-        aporte = round(final, 3) if final is not None else None
-        rec_value = _finite_recovery_max(q.get('rec_curve', q['rec']))
-        rec_max = rec_value * 100.0 / ap if ap and rec_value is not None else None
-        valores = [q['campana'], q['n'], rec_max, aporte, ap, rt,
-                   round(recup, 3) if recup is not None else None,
-                   round(recup - aporte, 3) if recup is not None and aporte is not None else None]
-        for row, value in enumerate(valores, start=1):
-            ws.cell(row=row, column=col, value=value)
-        if label == 'OXIDOS':
-            ws.cell(row=9, column=col, value=q['num'])
-        else:
-            ws.cell(row=10, column=col, value=q['num'])
-        if ap:
-            curve_row = 10 if label == 'OXIDOS' else 11
-            for i, value in enumerate(q.get('rec_curve', q['rec']), start=curve_row):
-                ws.cell(row=i, column=col, value=(round(value * 100.0 / ap, 6)
-                                                        if value is not None else None))
-
-    if label == 'OXIDOS':
-        for i in range(max((q['n'] for q in pilas), default=0)):
-            ws.cell(10 + i, 1, i + 1)
-        curve_row = 10
-    else:
-        ws.cell(row=10, column=1, value='Dias Lix')
-        for i in range(max((q['n'] for q in pilas), default=0)):
-            ws.cell(11 + i, 1, i + 1)
-        curve_row = 11
-
-    ws.column_dimensions['A'].width = 26
-    ws.freeze_panes = f'B{curve_row}'
-    max_row = max(10, curve_row + max((q['n'] for q in pilas), default=0) - 1)
-    for row in ws.iter_rows(min_row=1, max_row=max_row, min_col=1,
-                            max_col=max(1, len(pilas) + 1)):
-        for cell in row:
-            cell.font = Font(name='Arial', size=10)
-    for col in range(2, len(pilas) + 2):
-        ws.column_dimensions[get_column_letter(col)].width = 24 if pilas[col-2].get('virtual') else 11
-        ws.cell(1, col).font = Font(name='Arial', size=10, bold=True)
-        for row in (1, 2):
-            ws.cell(row, col).number_format = '0'
-        for row in range(3, 9):
-            ws.cell(row, col).number_format = '#,##0.0'
-        ws.cell(6, col).fill = PatternFill('solid', fgColor='FFFF00')
-        id_row = 9 if label == 'OXIDOS' else 10
-        ws.cell(id_row, col).fill = PatternFill('solid', fgColor='FFFF00')
-        ws.cell(id_row, col).font = Font(name='Arial', size=10, bold=True)
-        for row in range(curve_row, max_row + 1):
-            ws.cell(row, col).number_format = '0.00'
-
-
-def _escribir_prod(w, doc):
-    """Crea una hoja Prod independiente para cada pad, con t Cu neto diario."""
-    pad_defs = [('OXIDOS', 'Óxidos'), ('SULFUROS', 'Sulfuros')]
-    for label, title in pad_defs:
-        ws = w.book.create_sheet(PROD_SHEET[label])
-        pilas = physical_columns(doc, label, ORDEN[label])
-        ws['A1'] = 'Cu neto diario [t Cu/dia]'
-        case_labels = []
-        for case in doc.get('casos', []):
-            case_id = case.get('id')
-            run_id = case.get('run', case.get('run_id'))
-            start = case.get('desde') or case.get('fecha_inicio')
-            end = case.get('hasta') or case.get('fecha_fin')
-            period = f'{start}–{end}' if start and end else 'periodo no disponible'
-            case_labels.append(
-                f'Caso {case_id if case_id is not None else "no disponible"} / '
-                f'run {run_id if run_id is not None else "no disponible"} ({period})')
-        ws['A2'] = ' | '.join(case_labels) if case_labels else f'Corte {doc["end"]}'
-        ws['A3'] = title
-        ws['A4'] = 'Parcela'
-        ws['A1'].font = Font(name='Arial', size=10, bold=True)
-        ws['A3'].font = Font(name='Arial', size=10, bold=True)
-        ws['A3'].alignment = Alignment(horizontal='center')
-        ws['A4'].font = Font(name='Arial', size=10)
-        ws.column_dimensions['A'].width = 46
-
-        all_dates = set()
-        for col, q in enumerate(pilas, start=2):
-            ws.cell(4, col, q['num'])
-            start = pd.Timestamp(q.get('ini') or doc['pads'][label].get('desde'))
-            all_dates.update(start + pd.Timedelta(days=i) for i in range(len(q['rec'])))
-
-        if not all_dates:
-            continue
-        dates = sorted(all_dates)
-        row_by_date = {day: row for row, day in enumerate(dates, start=5)}
-        for day, row in row_by_date.items():
-            ws.cell(row, 1, day.to_pydatetime())
-        for col, q in enumerate(pilas, start=2):
-            start = pd.Timestamp(q.get('ini') or doc['pads'][label].get('desde'))
-            previous = 0.0
-            for i, cumulative in enumerate(q['rec']):
-                day = start + pd.Timedelta(days=i)
-                ws.cell(row_by_date[day], col, round(float(cumulative) - previous, 3))
-                previous = float(cumulative)
-
-        final_col = len(pilas) + 1
-        header_fill = PatternFill('solid', fgColor='FFFFC000')
-        base_font = Font(name='Arial', size=10)
-        for cell in ws[4]:
-            if cell.column <= final_col:
-                cell.alignment = Alignment(horizontal='center')
-        for row in range(5, 5 + len(dates)):
-            for col in range(1, final_col + 1):
-                ws.cell(row, col).fill = header_fill
-                ws.cell(row, col).font = base_font
-            ws.cell(row, 1).number_format = 'dd-mm-yyyy'
-            for col in range(2, final_col + 1):
-                ws.cell(row, col).number_format = '0.00'
-        for col in range(2, final_col + 1):
-            ws.column_dimensions[get_column_letter(col)].width = 11
 
 def hoja_resumen(doc):
     r = []
@@ -916,54 +757,8 @@ def hoja_comparacion(doc):
 
 
 def graficos(w, doc, label):
-    """Una hoja por pad con la curva en % y la curva en toneladas."""
-    P = recovery_columns(doc, label, ORDEN[label])
-    ws = w.book.create_sheet(CHART[label])
-    for row in range(1, 75):
-        ws.row_dimensions[row].height = 15
-    if not any(q['n'] for q in P):
-        ws['A1'] = 'Sin pilas con datos para este pad.'
-        return
-    nmax = max(q['n'] for q in P)
-    n = len(P)
-    src = w.book[HOJA[label]]        # la hoja de datos ya trae la curva en %
-
-    # En el formato de planta Oxidos guarda ids en la fila 9 y curva desde 10;
-    # Sulfuros deja fila 9 vacia, ids en 10 y curva desde 11.
-    r0 = 10 if label == 'OXIDOS' else 11
-    r1 = r0 + nmax - 1
-
-    ws.cell(row=1, column=COL_T, value='dia')
-    for j, q in enumerate(P):
-        ws.cell(row=1, column=COL_T + 1 + j, value=q['p'])
-        for i, v in enumerate(q.get('rec_curve', q['rec'])):
-            ws.cell(row=2 + i, column=COL_T + 1 + j, value=v)
-    for i in range(nmax):
-        ws.cell(row=2 + i, column=COL_T, value=i + 1)
-
-    def linea(titulo, ytit, hoja, c_ini, f_ini, f_fin, c_cat):
-        ch = LineChart()
-        ch.title = titulo
-        ch.y_axis.title = ytit
-        ch.x_axis.title = 'dia de ciclo'
-        ch.height, ch.width = 15.5, 33
-        ch.style = 2
-        for j in range(n):
-            s = Series(Reference(hoja, min_col=c_ini + j,
-                                 min_row=f_ini, max_row=f_fin),
-                       title=P[j]['p'])
-            s.marker = Marker(symbol='none')
-            s.smooth = False
-            ch.series.append(s)
-        ch.set_categories(Reference(hoja, min_col=c_cat,
-                                    min_row=f_ini, max_row=f_fin))
-        return ch
-
-    ws.add_chart(linea('%s - recuperacion acumulada' % label.title(),
-                       '% del Apilado tmf', src, 2, r0, r1, 1), 'A1')
-    ws.add_chart(linea('%s - Cu fino acumulado' % label.title(),
-                       't Cu', ws, COL_T + 1, 2, 1 + nmax, COL_T), 'A38')
-    ws.column_dimensions[get_column_letter(COL_T)].width = 6
+    """Graficos agrupados de un pad en su hoja (`Oxido` / `Sulfuro`)."""
+    _escribir_graficos(w, doc, label)
 
 
 def notas(doc):
@@ -1029,23 +824,15 @@ def notas(doc):
 
 
 def escribir_libro(doc, out_path, groups=None):
-    """Rec Ox, Rec Sulfuro, las dos hojas de gráficos y Prod diaria por pad.
+    """Libro de 15 hojas con el formato del reporte oficial.
+
+    Oxido, Sulfuro, Dump, Rec Ox, Rec Ox 2, Prod Cu Oxidos, (Cu) dren Ox,
+    Flujo Riego Ox, RL Oxidos, Rec Sulfuro, Rec Sulfuro 2, Prod Cu Sulfuros,
+    (Cu) dren Sulf., Flujo Riego Sulf y RL Sulfuro. Ver `report_libro`.
 
     Las hojas Resumen, Comparacion planta y Metodo se sacaron del libro. Sus
     constructores (`hoja_resumen`, `hoja_comparacion`, `notas`) se conservan
     intactos: no los llama nadie mas hoy, pero son el texto de metodologia y
     los agregados por pad, y reponerlos es agregar la linea de vuelta aca.
     """
-    doc = with_group_columns(doc, groups)
-    pads = ['OXIDOS', 'SULFUROS']
-    with pd.ExcelWriter(out_path, engine='openpyxl', datetime_format='dd-mm-yyyy') as w:
-        for lab in pads:
-            ws = w.book.create_sheet(HOJA[lab])
-            _escribir_hoja_pad(ws, doc, lab)
-        for lab in pads:
-            graficos(w, doc, lab)
-        _escribir_prod(w, doc)
-        _escribir_dump(w, doc)
-        _escribir_rl(w, doc)
-
-    return out_path
+    return _escribir_libro(doc, out_path, groups=groups)

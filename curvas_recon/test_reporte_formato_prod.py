@@ -16,11 +16,15 @@ from openpyxl import Workbook, load_workbook
 
 try:
     from . import report_metodo as report
+    from .test_reporte_curvas import HOJAS_OFICIALES
+    from .test_reporte_oficial import recalcular
 except ImportError:  # ejecución desde el staging separado del checkout objetivo
     target_parent = Path(__file__).resolve().parents[3] / "DashReportabilidadSIIR"
     if target_parent.is_dir():
         sys.path.insert(0, str(target_parent))
     from curvas_recon import report_metodo as report
+    from curvas_recon.test_reporte_curvas import HOJAS_OFICIALES
+    from curvas_recon.test_reporte_oficial import recalcular
 
 
 def _write_reference_fixture(path: Path) -> None:
@@ -105,33 +109,42 @@ def test_libro_final_conserva_layout_pad_curvas_prod_y_agrega_rl(tmp_path):
     report.escribir_libro(_doc(), path)
     wb = load_workbook(path, data_only=False)
 
-    assert wb.sheetnames == ["Rec Ox", "Rec Sulfuro", "Curvas Ox", "Curvas Sulfuro", "Prod Oxidos", "Prod Sulfuros", "RL Oxidos", "RL Sulfuros"]
+    assert wb.sheetnames == HOJAS_OFICIALES
     ox, su = wb["Rec Ox"], wb["Rec Sulfuro"]
     # La hoja de óxidos conserva su fila 9 con números de pila y curva desde 10.
-    assert ox["A1"].value == "Campana"
+    assert ox["A1"].value == "Campaña"
+    assert ox["A3"].value == "Recuperación máx."
     assert ox["B9"].value == 1
     assert ox["A10"].value == 1
-    assert ox["B10"].value == pytest.approx(0.5)
+    # La curva lee Rec Ox 2 (fila 6 = 2026-10-01, columna C = pila 1).
+    assert ox["B10"].value == "='Rec Ox 2'!C6"
+    assert ox["B2"].value == "=+LOOKUP(B3,B10:B12,$A$10:$A$12)"
+    assert ox["B3"].value == "=+MAX(B10:B12)"
+    assert ox["B4"].value == "=+SUM('Prod Cu Oxidos'!B5:B7)"
+    assert ox["B5"].value == "=+'Rec Ox 2'!C3"
     # Sulfuros deja la fila 9 libre, identifica el eje en fila 10 y empieza en 11.
-    assert su["A1"].value == "Campana"
+    assert su["A1"].value == "Campaña"
     assert su["A9"].value is None and su["B9"].value is None
     assert su["A10"].value == "Dias Lix"
     assert su["B10"].value == 21
     assert su["A11"].value == 1
-    assert su["B11"].value == pytest.approx(1.0)
+    # P21 es la primera columna de Rec Sulfuro 2 (D); fecha 2026-10-02 = fila 5.
+    assert su["B11"].value == "='Rec Sulfuro 2'!D5"
+    assert su["B5"].value == "=+'Rec Sulfuro 2'!D1"
 
     # Cada gráfico usa las celdas de la curva de su pad y el eje de días alineado.
     for name, val_range, cat_range in (
-        ("Curvas Ox", "'Rec Ox'!$B$10:$B$12", "'Rec Ox'!$A$10:$A$12"),
-        ("Curvas Sulfuro", "'Rec Sulfuro'!$B$11:$B$13", "'Rec Sulfuro'!$A$11:$A$13"),
+        ("Oxido", "'Rec Ox'!$B$10:$B$12", "'Rec Ox'!$A$10:$A$12"),
+        # primera serie del grafico P1-7: la pila 1 es la columna J de Rec Sulfuro
+        ("Sulfuro", "'Rec Sulfuro'!$J$11:$J$13", "'Rec Sulfuro'!$A$11:$A$13"),
     ):
         chart_sheet = wb[name]
-        assert len(chart_sheet._charts) == 2
+        assert len(chart_sheet._charts) == 4
         recovery = chart_sheet._charts[0].series[0]
-        assert _series_formula(recovery, "val") == val_range
-        assert _series_formula(recovery, "cat") == cat_range
+        assert _series_formula(recovery, "yVal") == val_range
+        assert _series_formula(recovery, "xVal") == cat_range
 
-    prod_ox, prod_su = wb["Prod Oxidos"], wb["Prod Sulfuros"]
+    prod_ox, prod_su = wb["Prod Cu Oxidos"], wb["Prod Cu Sulfuros"]
     assert prod_ox["A1"].value == "Cu neto diario [t Cu/dia]"
     assert prod_ox["A2"].value == "Caso 18 / run 456 (2026-10-01–2026-10-04)"
     assert prod_ox["A3"].value.endswith("xidos")
@@ -150,14 +163,19 @@ def test_libro_final_conserva_layout_pad_curvas_prod_y_agrega_rl(tmp_path):
     ]
     assert [prod_ox.cell(row, 2).value for row in range(5, 8)] == pytest.approx([0.5, 1.0, 1.5])
     assert [prod_su.cell(row, 2).value for row in range(5, 8)] == pytest.approx([1.0, 1.0, 2.0])
-    assert sum(prod_ox.cell(row, 2).value or 0 for row in range(5, 8)) == pytest.approx(ox['B4'].value)
-    assert sum(prod_su.cell(row, 2).value or 0 for row in range(5, 8)) == pytest.approx(su['B4'].value)
+    # Total Prod diario y Total Suma del mes hasta el corte (formulas)
+    assert prod_ox["AJ4"].value == "Total Prod"
+    assert prod_ox["AJ5"].value == "=+SUM(B5:AH5)"
+    assert prod_su["AE4"].value == "Total Prod"
+    assert prod_su["AE5"].value == "=+SUM(B5:AC5)"
     assert ox['B9'].fill.fgColor.rgb[-6:] == 'FFFF00'
     assert prod_ox['B5'].fill.fgColor.rgb[-6:] == 'FFC000'
     assert ox['B10'].font.name == 'Arial'
-    # El lector reconoce las columnas por parcela y puede releer el resultado.
-    assert report.leer_planta('OXIDOS', str(path))[1]['curva'] == [0.5, 1.5, 3.0]
-    assert report.leer_planta('SULFUROS', str(path))[21]['curva'] == [1.0, 2.0, 4.0]
+    # Con las formulas recalculadas, el lector reconoce las columnas por parcela
+    # y puede releer el resultado.
+    recalculado = recalcular(path, tmp_path)
+    assert report.leer_planta('OXIDOS', str(recalculado))[1]['curva'] == pytest.approx([0.5, 1.5, 3.0])
+    assert report.leer_planta('SULFUROS', str(recalculado))[21]['curva'] == pytest.approx([1.0, 2.0, 4.0])
 
 
 def test_prod_preserva_extraccion_negativa_y_pads_sin_datos(tmp_path):
@@ -167,10 +185,13 @@ def test_prod_preserva_extraccion_negativa_y_pads_sin_datos(tmp_path):
     path = tmp_path / 'solo_ox.xlsx'
     report.escribir_libro(doc, path)
     book = load_workbook(path)
-    assert book['Prod Oxidos']['B6'].value == pytest.approx(-0.3)
-    assert 'Prod Sulfuros' in book.sheetnames
-    assert book['Rec Ox']['B4'].value == 1.0
-    assert len(book['Curvas Sulfuro']._charts) == 0
+    assert book['Prod Cu Oxidos']['B6'].value == pytest.approx(-0.3)
+    assert 'Prod Cu Sulfuros' in book.sheetnames
+    assert book['Rec Ox']['B4'].value == "=+SUM('Prod Cu Oxidos'!B5:B7)"
+    assert len(book['Sulfuro']._charts) == 0
+    assert len(book['RL Sulfuro']._charts) == 0
+    valores = load_workbook(recalcular(path, tmp_path), data_only=True)
+    assert valores['Rec Ox']['B4'].value == pytest.approx(1.0)
 
 
 def test_recuperacion_maxima_no_confunde_maximo_con_ultimo_punto(tmp_path):
@@ -179,9 +200,11 @@ def test_recuperacion_maxima_no_confunde_maximo_con_ultimo_punto(tmp_path):
     path = tmp_path / 'curva_con_descenso.xlsx'
     report.escribir_libro(doc, path)
     book = load_workbook(path)
-    assert book['Rec Ox']['B3'].value == 2.0
-    assert book['Rec Ox']['B4'].value == 0.5
-    assert book['Rec Ox']['B12'].value == 0.5
+    assert book['Rec Ox']['B3'].value == "=+MAX(B10:B12)"
+    valores = load_workbook(recalcular(path, tmp_path), data_only=True)
+    assert valores['Rec Ox']['B3'].value == pytest.approx(2.0)
+    assert valores['Rec Ox']['B4'].value == pytest.approx(0.5)
+    assert valores['Rec Ox']['B12'].value == pytest.approx(0.5)
 
 
 def test_prod_marca_run_y_periodo_ausentes_sin_inventar_metadatos(tmp_path):
@@ -190,4 +213,4 @@ def test_prod_marca_run_y_periodo_ausentes_sin_inventar_metadatos(tmp_path):
     path = tmp_path / "caso_sin_run.xlsx"
     report.escribir_libro(doc, path)
     book = load_workbook(path)
-    assert book["Prod Oxidos"]["A2"].value == "Caso 19 / run no disponible (2026-10-01–2026-10-04)"
+    assert book["Prod Cu Oxidos"]["A2"].value == "Caso 19 / run no disponible (2026-10-01–2026-10-04)"

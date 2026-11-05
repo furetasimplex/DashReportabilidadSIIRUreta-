@@ -37,10 +37,10 @@ recalibrada y humedad resuelta desde DB.
 | 0 | Plan, decisiones y validación del Control | ✅ 5-nov |
 | 3a | Método maduras/nuevas: cargador SELECT genérico (cualquier Caso) | ✅ 5-nov |
 | 3b | Método maduras/nuevas en Óxidos + casos borde | ✅ 5-nov |
-| 1a | Reporte: 15 hojas visibles, nombres y orden | ⏳ en curso |
-| 1b | Reporte: gráficos agrupados + RL + sumatorias Prod | ⏳ en curso |
-| 1c | Reporte: Dump reconciliado | ⏳ en curso |
-| 1d | Comparador de formato contra el oficial | ⏳ en curso |
+| 1a | Reporte: 15 hojas visibles, nombres y orden | ✅ 5-nov |
+| 1b | Reporte: gráficos agrupados + RL + sumatorias Prod | ✅ 5-nov |
+| 1c | Reporte: Dump reconciliado | ✅ 5-nov |
+| 1d | Comparador de formato contra el oficial | ✅ 5-nov |
 | 2a | Reconstitución: recalibración de densidad + asignación secuencial | ✅ 5-nov (opt-in «en validación») |
 | 2b | Reconstitución: informe con fracción de traspaso y Cu fino | ✅ 5-nov |
 | 4 | Integración: reporte consume recuperación directa del método | pendiente |
@@ -83,6 +83,27 @@ recalibrada y humedad resuelta desde DB.
   `reconciliacion_run.converged`, nombres `P%02d`; cotas de λ (0,2–5,0)
   provisionales; encadenamiento automático entre corridas de la UI pendiente.
 
+## Parte 1 — entrega (5-nov)
+
+- `escribir_libro` genera las 15 hojas visibles del oficial en su orden, con
+  encabezados como fórmulas internas (`LOOKUP`, `MAX`, `SUM`, WIP), `Rec * 2`,
+  `(Cu) dren`, `Flujo Riego` (reconciliado dentro del Caso, medido fuera).
+- Gráficos de dispersión agrupados (Ox P1-8/9-16/17-24/25-32; Su P1-7/8-14/
+  15-21/22-28) y 4 gráficos «Recuperación vs RL» por PAD; pilas virtuales
+  siguen funcionando (5.º gráfico).
+- Prod Cu: `Total Prod` diario (`=SUM`) y `Total Suma` del mes hasta el corte.
+- Dump reconciliado (`report_dump.py`): F77 riego / F51 drenaje del run;
+  riego diario reconciliado = medido × (Σ rec / Σ med); F por Caso;
+  drenaje = F × riego; Aporte = (Qd·Cd − Qr·Cr)/1000; leyes medidas.
+- `construir_doc(direct_recovery=...)` para el método maduras/nuevas.
+- Comparador `tools/compare_report_format.py` + firma
+  `test_fixtures/referencias/firma_reporte_oficial.json`: 0 ERROR; 5 AVISO
+  (eje X ampliado a 420 días para no cortar curvas largas).
+- Diferencia declarada: cada gráfico lleva una serie por pila del grupo
+  (el oficial mezcla series de hojas ocultas/libros externos).
+- A confirmar en servidor: F77/F51 en `recon_resultado_flujo` del modelo 125.
+- Generación: ~13 s con 60 pilas × 1200 días (antes ~2 s) por las fórmulas.
+
 ## Pendientes conocidos
 
 - Prototipo `auditorias/integracion_mr_dashboard_20261104/` no disponible en
@@ -96,3 +117,4 @@ recalibrada y humedad resuelta desde DB.
 - 5-nov: parte 2 entregada y revisada; recalibrada queda opt-in hasta validar en DB.
 - 5-nov: se agrega hito 5 (reportes en el visor de lixiviación, unificación).
 - 5-nov: parte 3 entregada y revisada.
+- 5-nov: parte 1 entregada y revisada (comparador 0 ERROR).

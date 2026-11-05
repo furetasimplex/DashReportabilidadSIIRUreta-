@@ -181,7 +181,7 @@ def test_ultima_corrida_del_caso_genera_libro_sin_recalcular(saved_runs, monkeyp
     status, download = dashboard.generate_case_report(case['id'])
     assert download is not None, str(status)
     book = load_workbook(BytesIO(base64.b64decode(download['content'])))
-    assert book.sheetnames[:2] == ['Rec Ox', 'Rec Sulfuro']
+    assert book.sheetnames[:2] == ['Oxido', 'Sulfuro']
 
 
 def test_sin_corrida_vigente_pide_reconciliar(saved_runs, monkeypatch, tmp_path):
