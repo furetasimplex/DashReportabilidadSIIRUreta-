@@ -44,7 +44,7 @@ recalibrada y humedad resuelta desde DB.
 | 2a | Reconstitución: recalibración de densidad + asignación secuencial | ✅ 5-nov (opt-in «en validación») |
 | 2b | Reconstitución: informe con fracción de traspaso y Cu fino | ✅ 5-nov |
 | 4 | Integración: reporte consume recuperación directa del método | ✅ 5-nov |
-| 5 | Unificación: reportes nuevos (formato oficial, reconstitución recalibrada) en el visor `dash-lixiviacion-curvas`, pestaña Reportes | pendiente |
+| 5 | Unificación: reportes nuevos (formato oficial, reconstitución recalibrada) en el visor `dash-lixiviacion-curvas`, pestaña Reportes | ✅ 5-nov |
 
 ## Parte 2 — entrega (5-nov)
 
@@ -113,11 +113,25 @@ recalibrada y humedad resuelta desde DB.
 - La sección Reportes agrega al ZIP `Auditoria_Ensayo_Neto_Local_Caso<id>.xlsx`
   (fuentes, λ y cierre) cuando la corrida usa el método.
 
+## Hito 5 — unificación en el visor (5-nov)
+
+- La sección «Reportes de reconciliación» (SIIR) y la pestaña Reportes del
+  visor `dash-lixiviacion-curvas` (con `LIX_CURVAS_SIIR=1`) entregan: reporte
+  con formato oficial, auditoría del ensayo maduras/nuevas y los informes de
+  módulos con selector «Reparto por volumen (vigente)» / «Densidad recalibrada
+  (en validación)». El LEEME del ZIP registra el método.
+- Verificado montando el visor dentro del SIIR con catálogo simulado: sin
+  errores de consola.
+
 ## Pendientes conocidos
 
 - Prototipo `auditorias/integracion_mr_dashboard_20261104/` no disponible en
   este entorno; la parte 2 se implementa desde el documento.
-- Sin acceso SQL aquí: validación con fixtures/mocks; falta prueba en servidor.
+- Sin acceso SQL aquí: validación con fixtures/mocks. **Falta prueba en servidor**:
+  F77/F51 en `recon_resultado_flujo`; cargador maduras/nuevas (reproducir 10009
+  y un Caso con Óxidos); densidad recalibrada del Caso 10013 (ρ ≈ 1,8496).
+- Cotas de λ (0,2–5,0) provisionales; encadenamiento de Casos desde la UI.
+- Tiempo del reporte: ~13 s con 60 pilas × 1200 días.
 - Semántica de `vol_total_est` y orden operacional de módulos (según documento).
 
 ## Bitácora
@@ -128,3 +142,4 @@ recalibrada y humedad resuelta desde DB.
 - 5-nov: parte 3 entregada y revisada.
 - 5-nov: parte 1 entregada y revisada (comparador 0 ERROR).
 - 5-nov: hito 4 integrado (reporte oficial con recuperación directa).
+- 5-nov: hito 5: reportes nuevos disponibles en el visor de lixiviación.
