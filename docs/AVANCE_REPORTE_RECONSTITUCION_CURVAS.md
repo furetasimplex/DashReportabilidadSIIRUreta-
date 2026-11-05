@@ -35,8 +35,8 @@ recalibrada y humedad resuelta desde DB.
 | # | Hito | Estado |
 |---|---|---|
 | 0 | Plan, decisiones y validación del Control | ✅ 5-nov |
-| 3a | Método maduras/nuevas: cargador SELECT genérico (cualquier Caso) | ⏳ en curso |
-| 3b | Método maduras/nuevas en Óxidos + casos borde | ⏳ en curso |
+| 3a | Método maduras/nuevas: cargador SELECT genérico (cualquier Caso) | ✅ 5-nov |
+| 3b | Método maduras/nuevas en Óxidos + casos borde | ✅ 5-nov |
 | 1a | Reporte: 15 hojas visibles, nombres y orden | ⏳ en curso |
 | 1b | Reporte: gráficos agrupados + RL + sumatorias Prod | ⏳ en curso |
 | 1c | Reporte: Dump reconciliado | ⏳ en curso |
@@ -64,6 +64,25 @@ recalibrada y humedad resuelta desde DB.
   fijada directa; orden de módulos por primera fecha con volumen; tolerancia
   1 % contra `tms_conformado`; PAD con TMS reconciliada 0 y TMH positiva.
 
+## Parte 3 — entrega (5-nov)
+
+- `curvas_recon/maduras_nuevas.py`: núcleo genérico por PAD (`reconcile_pad`,
+  `reconcile_chain`); maduras (>30 d) conservan la recuperación observada,
+  nuevas se mueven con λ común para cerrar el Cu neto del run oficial
+  (F25 Óxidos, F29 Sulfuros); 30 d conserva la oficial; historia intacta.
+- `curvas_recon/maduras_inputs.py`: cargador SELECT-only para cualquier Caso
+  (identidad Caso/run/modelo, objetivo F25/F29, perfil del run de asignación,
+  recuperación primaria, riego y leyes); falla con causa explícita.
+- Casos borde: pila que nace en la ventana, edad 29/30/31, infactibilidad con
+  λ requerido y pila/día limitante, encadenamiento de Casos (vía API).
+- Interfaz para el reporte: `direct_recovery_series(res)`.
+- UI: «Ensayo neto local» funciona para Óxidos y Sulfuros de cualquier Caso,
+  sin guardar en SQL. Regresión Caso 10009 intacta (λ = 0,72144; 1069,137 t).
+- Pruebas: 88 pasan en las suites maduras/sulfide/cierre.
+- Supuestos a confirmar en servidor: columnas `modulos_turnos.pad_id`,
+  `reconciliacion_run.converged`, nombres `P%02d`; cotas de λ (0,2–5,0)
+  provisionales; encadenamiento automático entre corridas de la UI pendiente.
+
 ## Pendientes conocidos
 
 - Prototipo `auditorias/integracion_mr_dashboard_20261104/` no disponible en
@@ -76,3 +95,4 @@ recalibrada y humedad resuelta desde DB.
 - 5-nov: plan cerrado; metodología y Control copiados al repo; agentes lanzados.
 - 5-nov: parte 2 entregada y revisada; recalibrada queda opt-in hasta validar en DB.
 - 5-nov: se agrega hito 5 (reportes en el visor de lixiviación, unificación).
+- 5-nov: parte 3 entregada y revisada.

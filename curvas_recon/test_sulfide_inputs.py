@@ -1,15 +1,11 @@
-import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 
+from curvas_recon import sulfide_inputs as module
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = ROOT / 'curvas_recon' / 'sulfide_inputs.py'
-SPEC = importlib.util.spec_from_file_location('staged_sulfide_inputs', MODULE_PATH)
-module = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(module)
 
 
 def anchor():

@@ -1,8 +1,10 @@
-"""Fail-closed source adapter for the Sulfides net-only trial.
+"""Fail-closed adapter for the FROZEN Case 10009 Sulfides source bundle.
 
-This staged version supports only the captured Case 10009 source bundle. It
-does not query the database. A future SELECT provider can be injected, but it
-must return the same identity-bearing contract and pass the validations below.
+This is the regression fixture of the "maduras fijas, nuevas moviles" method:
+it supports only the captured Case 10009 bundle and does not query the
+database. The generic Case loader (any official Case, Oxides and Sulfides,
+SELECT-only) is :mod:`curvas_recon.maduras_inputs`; both share the same
+identity-bearing payload contract and validation (``validate_payload``).
 """
 from __future__ import annotations
 
@@ -12,6 +14,8 @@ import csv
 import json
 from pathlib import Path
 from typing import Callable, Mapping
+
+from .maduras_inputs import MadurasInputError, validate_payload
 
 
 _FIXTURE_SHA256 = 'a2946b35e945b9bece6faa2ccd02067da00bfe3a4f2a86652259320f4ac90c6a'
@@ -23,8 +27,8 @@ _SUPPORTED_START = date(2026, 9, 1)
 _SUPPORTED_END = date(2026, 9, 7)
 
 
-class SulfideInputError(ValueError):
-    """Input sources are missing, stale, or do not match the requested Case."""
+# Alias kept for callers of the original, Sulfides-only loader.
+SulfideInputError = MadurasInputError
 
 
 def _day(value, field):
@@ -59,12 +63,22 @@ def _default_fixture_path():
     return Path(__file__).resolve().parents[1] / 'test_fixtures' / 'caso10009_sulfuros_net_inputs.json'
 
 
+def _canonical_sha256(raw):
+    """SHA-256 over CRLF-normalised bytes.
+
+    The recorded hashes were taken on a Windows checkout (CRLF). A Linux or
+    autocrlf checkout holds LF; normalising line endings keeps the integrity
+    check about content, not about the checkout's newline convention.
+    """
+    return hashlib.sha256(raw.replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')).hexdigest()
+
+
 def _read_fixture(path):
     try:
         raw = Path(path).read_bytes()
     except OSError as exc:
         raise SulfideInputError('captured sulfide input fixture is unavailable') from exc
-    if hashlib.sha256(raw).hexdigest() != _FIXTURE_SHA256:
+    if _canonical_sha256(raw) != _FIXTURE_SHA256:
         raise SulfideInputError('captured sulfide input fixture hash mismatch')
     try:
         payload = json.loads(raw.decode('utf-8'))
@@ -74,76 +88,13 @@ def _read_fixture(path):
 
 
 def _validate_payload(payload, case_id, start, end, target):
-    if not isinstance(payload, Mapping) or not isinstance(payload.get('rows'), list):
-        raise SulfideInputError('source provider must return a rows list')
-    source_ids = payload.get('source_ids')
-    if source_ids is None and isinstance(payload.get('metadata'), Mapping):
-        meta = payload['metadata']
-        source_ids = {
-            'case_id': meta.get('case_id'),
-            'solver_run_id': meta.get('solver_run_id'),
-            'allocation_profile_run_id': meta.get('allocation_profile_run_id'),
-            'fixture_sha256': meta.get('fixture_sha256'),
-            'qualification': meta.get('qualification'),
-        }
-    if not isinstance(source_ids, Mapping):
-        raise SulfideInputError('source identities are required')
-    expected_ids = {
-        'case_id': _SUPPORTED_CASE,
-        'solver_run_id': _SUPPORTED_SOLVER_RUN,
-        'allocation_profile_run_id': _SUPPORTED_PROFILE_RUN,
-    }
-    for name, expected in expected_ids.items():
-        if int(source_ids.get(name, -1)) != expected:
-            raise SulfideInputError(f'unsupported or mismatched {name}')
+    """Frozen-bundle contract: only the captured Case 10009 window is valid."""
     if case_id != _SUPPORTED_CASE or start != _SUPPORTED_START or end != _SUPPORTED_END:
         raise SulfideInputError('no validated source bundle for requested Case/window')
-    payload_start = _day(payload.get('target_period_start', start), 'target_period_start')
-    if payload_start != start:
-        raise SulfideInputError('source target period does not start at Case window')
-    payload_target = payload.get('target_net_t')
-    if not isinstance(payload_target, (int, float)) or isinstance(payload_target, bool):
-        raise SulfideInputError('captured target net-Cu is missing')
-    if abs(float(payload_target) - target) > 1e-8:
-        raise SulfideInputError('captured target does not match official Case anchor')
-
-    rows = payload['rows']
-    required = {
-        'pad', 'pile', 'campaign', 'date', 'official_pct', 'observed_pct',
-        'cu_apilado_t', 'first_irrigation', 'observation_source',
-    }
-    groups = {}
-    for row in rows:
-        if not isinstance(row, Mapping) or not required.issubset(row):
-            raise SulfideInputError('row misses canonical cohort fields')
-        if str(row['pad']).upper() != 'SULFUROS':
-            raise SulfideInputError('non-sulfide row in sulfide source bundle')
-        key = (str(row['pad']), str(row['pile']), int(row['campaign']))
-        day = _day(row['date'], 'row date')
-        if day > end:
-            raise SulfideInputError('source date exceeds Case window')
-        if day >= start:
-            for field in ('q_riego_m3h', 'cu_riego_gL', 'cu_drenaje_gL',
-                          'profile_q_drenaje_m3h', 'drainage_profile_source'):
-                if field not in row or row[field] is None:
-                    raise SulfideInputError(f'missing {field} on Case day')
-            if 'not measured' not in str(row['drainage_profile_source']).lower():
-                raise SulfideInputError('drainage profile provenance must state modeled/not measured')
-        groups.setdefault(key, set()).add(day)
-    if not groups:
-        raise SulfideInputError('empty sulfide source bundle')
-    required_days = {start - timedelta(days=1)} | {
-        start + timedelta(days=i) for i in range((end - start).days + 1)
-    }
-    if any(not required_days.issubset(days) for days in groups.values()):
-        raise SulfideInputError('each sulfide cohort requires prior-day baseline and complete Case coverage')
-    return {
-        'rows': [dict(row) for row in rows],
-        'source_ids': dict(source_ids),
-        'target_period_start': start.isoformat(),
-        'target_net_t': target,
-        'metadata': dict(payload.get('metadata') or {}),
-    }
+    return validate_payload(
+        payload, case_id=_SUPPORTED_CASE, label='SULFUROS', start=start, end=end, target=target,
+        expected_ids={'solver_run_id': _SUPPORTED_SOLVER_RUN,
+                      'allocation_profile_run_id': _SUPPORTED_PROFILE_RUN})
 
 
 def load_sulfide_inputs(week_start, week_end, caso_id, anchor, *,
@@ -172,7 +123,7 @@ def load_sulfide_inputs(week_start, week_end, caso_id, anchor, *,
         meta = dict(payload['metadata'])
         history_path = Path(fixture_path or _default_fixture_path()).with_name('caso10009_sulfuros_historia_agosto.csv')
         raw_history = history_path.read_bytes()
-        if hashlib.sha256(raw_history).hexdigest() != _HISTORY_SHA256:
+        if _canonical_sha256(raw_history) != _HISTORY_SHA256:
             raise SulfideInputError('captured August history hash mismatch')
         template = {(r['pile'], int(r['campaign'])): r for r in payload['rows']}
         known = {(r['pile'], int(r['campaign']), r['date']) for r in payload['rows']}

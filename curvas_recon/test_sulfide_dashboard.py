@@ -119,6 +119,10 @@ def test_compute_callback_connects_validated_inputs_and_serializes_local_result(
     monkeypatch.setattr(dashboard, 'prepare_recon_inputs', lambda *args, **kw: ({'SULFUROS': {'riego': None, 'cu_riego': None, 'drena_cu': None}}, {}))
     monkeypatch.setattr(dashboard, 'compute_wz_week', lambda *args, **kw: {})
     monkeypatch.setattr(dashboard, 'connect', Mock())
+    # The generic loader is SELECT-only SQL; here the frozen Case 10009 bundle stands in for it.
+    monkeypatch.setattr(dashboard, '_load_net_trial_inputs',
+                        lambda ws, we, caso, anchor, label: (
+                            load_sulfide_inputs(ws, we, caso['id'], anchor) if label == 'SULFUROS' else None))
     monkeypatch.setattr(dashboard, '_save_recon_raw', lambda *args: 'offline-test-token')
     forbid = Mock(side_effect=AssertionError('SQL persistence forbidden'))
     monkeypatch.setattr(engine, 'reconcile_week_flowsheet_db', forbid)
@@ -129,3 +133,26 @@ def test_compute_callback_connects_validated_inputs_and_serializes_local_result(
     assert len(data['SULFUROS']['ss']) == 16
     json.dumps(data, allow_nan=False)
     forbid.assert_not_called()
+
+
+def test_case10009_regression_through_generic_core_and_report_interface(result):
+    """Caso 10009 congelado: mismas cifras de la auditoria con el nucleo generico."""
+    from curvas_recon.maduras_nuevas import direct_recovery_series, reconcile_pad
+    res = result['res']
+    audit = res['sulfide_audit']
+    assert audit['lambda'] == pytest.approx(0.7214427195956585, rel=1e-12)
+    assert audit['curve_net_t'] == pytest.approx(1069.137402, abs=1e-6)
+    assert abs(audit['net_residual_t']) < 1e-6
+    assert res['maduras_audit']['SULFUROS']['lambda'] == audit['lambda']
+    series = direct_recovery_series(res)
+    assert set(series) == {('SULFUROS', n) for n in [7, 8] + list(range(10, 26))}
+    end = pd.Timestamp('2026-09-07')
+    assert series[('SULFUROS', 24)][end] == pytest.approx(15.847805, abs=5e-7)
+    assert series[('SULFUROS', 25)][end] == pytest.approx(5.480463, abs=5e-7)
+    for r in res['recovery_rows']:
+        if r['recovery_source'] == 'observed':
+            assert series[('SULFUROS', int(r['pile'][1:]))][pd.Timestamp(r['date'])] == r['observed_pct']
+    # El nucleo generico y el contrato historico entregan lo mismo.
+    inputs = load_sulfide_inputs('2026-09-01', '2026-09-07', 10009, {'SULFUROS': {'net_cu_target_t': 1069.137402}})
+    _, direct = reconcile_pad(inputs['rows'], '2026-09-01', '2026-09-07', 1069.137402, pad='SULFUROS')
+    assert direct['lambda'] == audit['lambda']

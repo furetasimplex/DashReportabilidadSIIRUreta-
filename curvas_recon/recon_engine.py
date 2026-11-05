@@ -2760,6 +2760,10 @@ def merge_flowsheet_res(parts):
     out['local_direct_recovery'] = any(p.get('local_direct_recovery') for p in parts)
     out['recovery_rows'] = [x for p in parts for x in (p.get('recovery_rows') or [])]
     out['sulfide_audit'] = next((p['sulfide_audit'] for p in parts if p.get('sulfide_audit')), None)
+    audits = {}
+    for p in parts:
+        audits.update(p.get('maduras_audit') or {})
+    out['maduras_audit'] = audits
     net_by_label = {}
     for p in parts:
         net_by_label.update(p.get('net_cu_by_label') or {})
@@ -2782,18 +2786,23 @@ def merge_flowsheet_res(parts):
     return out
 
 
-def _reconcile_sulfide_local(week_start, week_end, material, anchor):
-    """Produce local direct-recovery data; SQL persistence is unsupported."""
-    from .sulfide_method import reconcile_sulfides
-    inputs = material.get('sulfide_inputs')
+_LOCAL_LABELS = ('OXIDOS', 'SULFUROS')
+
+
+def _reconcile_pad_local(label, week_start, week_end, material, anchor):
+    """Produce local direct-recovery data for one PAD (maduras fijas, nuevas
+    moviles); SQL persistence is unsupported."""
+    from .maduras_nuevas import reconcile_pad
+    inputs = material.get('maduras_inputs') or material.get('sulfide_inputs')
     if not inputs or not inputs.get('rows') or not inputs.get('source_ids'):
-        raise ValueError('SULFUROS requiere sulfide_inputs con rows y source_ids')
+        raise ValueError(f'{label} requiere maduras_inputs con rows y source_ids')
+    flow = 'F25' if label == 'OXIDOS' else 'F29'
     if not anchor or anchor.get('net_cu_target_t') is None:
-        raise ValueError('SULFUROS requiere objetivo neto F29')
+        raise ValueError(f'{label} requiere objetivo neto {flow}')
     ws, we, _ = resolve_window(week_start, week_end)
     if pd.Timestamp(inputs.get('target_period_start')).normalize() != ws:
-        raise ValueError('SULFUROS target_period_start no coincide con inicio del Caso')
-    result, audit = reconcile_sulfides(inputs['rows'], ws, we, anchor['net_cu_target_t'])
+        raise ValueError(f'{label} target_period_start no coincide con inicio del Caso')
+    result, audit = reconcile_pad(inputs['rows'], ws, we, anchor['net_cu_target_t'], pad=label)
     def _json_safe(value):
         if isinstance(value, dict):
             return {('/'.join(map(str, key)) if isinstance(key, tuple) else str(key)): _json_safe(item)
@@ -2807,7 +2816,7 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
     audit['water_balance'] = 'Diferencia riego/drenaje incluye almacenamiento y otras perdidas; no validada fisicamente.'
     by_pile = {}
     for r in result:
-        if str(r['pad']).upper() not in ('SU', 'SULFUROS', 'SULFURO'):
+        if str(r['pad']).upper() not in ('SU', 'OX', 'SULFUROS', 'SULFURO', 'OXIDOS', 'OXIDO'):
             continue
         d = pd.Timestamp(r['date']).normalize()
         if ws <= d <= we:
@@ -2818,8 +2827,7 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
     for r in result:
         x = dict(r)
         x['reconciled_pct'] = x.get('reconciled_pct', x['official_pct'])
-        x['recovery_source'] = ('observed' if (x['pad'], x['pile'], x['campaign']) in audit['mature'] and ws <= pd.Timestamp(x['date']).normalize() <= we else
-                                'net_fit' if (x['pad'], x['pile'], x['campaign']) in audit['young'] and ws <= pd.Timestamp(x['date']).normalize() <= we else 'official')
+        x.setdefault('recovery_source', 'official')
         recovery_rows.append(x)
     piles, daily, all_rows = [], [], []
     for (pile, campaign), records in by_pile.items():
@@ -2828,7 +2836,7 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
         for r in records:
             q = r.get('q_riego_m3h')
             qd = r.get('fitted_q_drenaje_m3h')
-            entries.append(dict(label='SULFUROS', parcela=pile, campaign=campaign,
+            entries.append(dict(label=label, parcela=pile, campaign=campaign,
                                 date=pd.Timestamp(r['date']).normalize(), q_riego_medido=q,
                                 q_pls_medido=None, cu_riego_medido=r.get('cu_riego_gL'),
                                 cu_pls_medido=r.get('cu_drenaje_gL'), q_riego_final=q,
@@ -2837,9 +2845,9 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
                                 cu_pls_recon=r.get('cu_drenaje_gL'),
                                 fino_pls_final=(qd*r['cu_drenaje_gL'] if qd is not None else None),
                                 ramp_factor=(qd/q if qd is not None and q else None)))
-        piles.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age, daily=entries,
+        piles.append(dict(label=label, parcela=pile, campaign=campaign, dia_ciclo=age, daily=entries,
                           status=('young' if age < 30 else 'measured' if age > 30 else 'official_boundary')))
-        all_rows.append(dict(label='SULFUROS', parcela=pile, campaign=campaign, dia_ciclo=age))
+        all_rows.append(dict(label=label, parcela=pile, campaign=campaign, dia_ciclo=age))
         daily.extend(entries)
     q_values = [d['q_riego_final'] for d in daily]
     q_total = sum(q_values) if all(q is not None for q in q_values) else None
@@ -2848,14 +2856,32 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
                q_riego_medido=q_total, q_riego_recon=q_total,
                net_cu_target_t=anchor['net_cu_target_t'], daily_net_cu_t=audit['curve_net_t'],
                net_closure_residual_t=audit['net_residual_t'], all_rows=all_rows, piles=piles,
-               daily=daily, warnings=['Sulfuros: resultado local; drenaje de maduras desconocido.'],
-               recovery_rows=recovery_rows, sulfide_audit=_json_safe(audit), local_direct_recovery=True,
-               ramp_cap_by_label={}, nuevas={'SULFUROS': {pile: str(next(r['first_irrigation'] for r in result if r['pile'] == pile and r['campaign'] == campaign)) for _, pile, campaign in audit['young']}},
-               net_cu_by_label={'SULFUROS': {'target_t': anchor['net_cu_target_t'],
+               daily=daily, warnings=[f'{label}: resultado local; drenaje de maduras desconocido.'],
+               recovery_rows=recovery_rows, sulfide_audit=_json_safe(audit),
+               maduras_audit={label: _json_safe(audit)}, local_direct_recovery=True,
+               ramp_cap_by_label={}, nuevas={label: {pile: str(next(r['first_irrigation'] for r in result if r['pile'] == pile and r['campaign'] == campaign)) for _, pile, campaign in audit['young']}},
+               net_cu_by_label={label: {'target_t': anchor['net_cu_target_t'],
                     'daily_t': audit['curve_net_t'], 'residual_t': audit['net_residual_t']}},
                q_pls_recon_raw=None, fdrena_flow_raw=None, fdrena_flow_max=None,
                fdrena_flow_clipped=False)
     return out
+
+
+def _reconcile_sulfide_local(week_start, week_end, material, anchor):
+    """Compatibilidad: ajuste local de Sulfuros."""
+    return _reconcile_pad_local('SULFUROS', week_start, week_end, material, anchor)
+
+
+def _uses_local_method(label, material):
+    """True si el PAD corre "maduras fijas, nuevas moviles" en vez del motor
+    anterior: solo cuando se le entregan fuentes validadas y no se pidio
+    ``sulfide_policy='legacy'``. La pantalla (``compute_recon``) siempre entrega
+    fuentes o falla antes de llegar aqui, asi que no hay vuelta silenciosa al
+    metodo anterior desde la UI; las llamadas directas al motor sin fuentes
+    conservan el contrato historico."""
+    if material.get('sulfide_policy') == 'legacy':
+        return False
+    return label in _LOCAL_LABELS and bool(material.get('maduras_inputs') or material.get('sulfide_inputs'))
 
 
 def reconcile_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFAULT,
@@ -2872,8 +2898,8 @@ def reconcile_flowsheet(week_start, materials, n_transient=N_TRANSIENT_DEFAULT,
             force_all_active=force_all_active, week_end=week_end)
     parts = []
     for label, mat in materials.items():
-        if label == 'SULFUROS' and mat.get('sulfide_policy') != 'legacy':
-            parts.append(_reconcile_sulfide_local(week_start, week_end, mat, anchor.get(label)))
+        if _uses_local_method(label, mat):
+            parts.append(_reconcile_pad_local(label, week_start, week_end, mat, anchor.get(label)))
         else:
             parts.append(reconcile_week_flowsheet(
                 week_start, {label: mat}, n_transient=n_transient, sigma_rel=sigma_rel,
@@ -3096,7 +3122,7 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
 
     return dict(
         materials=sub, weeks={week_start: dict(week_row)}, R_global=r_global, converged=converged,
-        method=('Sulfuros: ensayo neto local' if res.get('local_direct_recovery') else METHOD_NAME), warnings=warns_globales, estimate_scale=False, targets=None,
+        method=('Ensayo neto local: maduras fijas, nuevas moviles' if res.get('local_direct_recovery') else METHOD_NAME), warnings=warns_globales, estimate_scale=False, targets=None,
         totals=totals, week_start=week_start, week_end=week_end, n_days=n_days,
         # `res` crudo (con `piles` y su detalle diario). No es serializable a
         # JSON y no va al store del dashboard: lo necesita el reporte por el

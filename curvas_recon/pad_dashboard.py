@@ -1639,10 +1639,10 @@ def _reconstructed_campaign_series(label, num, week_start, week_end, raw=None,
     Fuera del Caso comparte con report_metodo la base FDRENA_MAX=0.95; dentro
     del Caso usa únicamente los flujos diarios de la corrida validada.
     """
-    if label == 'SULFUROS' and isinstance(raw, dict) and (raw.get('res') or {}).get('local_direct_recovery'):
+    if isinstance(raw, dict) and (raw.get('res') or {}).get('local_direct_recovery'):
         from .sulfide_presentation import direct_series
         series = direct_series(raw['res'], label, num, _measured_cycles(label, num))
-        if series is not None:
+        if series is not None:      # None: el PAD no tiene recuperacion directa (motor anterior)
             return series
     empty = {'xs': [], 'ys': [], 'sources': [], 'cu_tf': None, 'capped': False}
     p = f'P{num:02d}'
@@ -1968,9 +1968,11 @@ def _combined_member_series(member_id, raw, ws, we):
         pad_id, num_text = member_id.split('-P')
         label, num = _PAD_TO_LABEL[pad_id], int(num_text)
         pile = f'P{num:02d}'
-        if label == 'SULFUROS' and isinstance(raw, dict) and (raw.get('res') or {}).get('local_direct_recovery'):
+        if isinstance(raw, dict) and (raw.get('res') or {}).get('local_direct_recovery'):
             from .sulfide_presentation import direct_member
-            return direct_member(raw['res'], label, num, pd.Timestamp(ws), pd.Timestamp(we), _measured_cycles(label, num))
+            member = direct_member(raw['res'], label, num, pd.Timestamp(ws), pd.Timestamp(we), _measured_cycles(label, num))
+            if member is not None:    # None: el PAD no tiene recuperacion directa (motor anterior)
+                return member
         info = WIP_META.get(label, {}).get(pile) or {}
         cu_tf_t = cu_tf_toneladas(info.get('CuTf'))
         if cu_tf_t is None or cu_tf_t <= 0 or not isinstance(raw, dict):
@@ -2508,11 +2510,13 @@ def _build_content_layout():
     ], className='recon-controls')
 
     recon_controls.children.append(dbc.Col([
-        html.Label('Metodologia Sulfuros', htmlFor='curvas-sulfide-policy', className='control-label'),
+        html.Label('Metodologia de curvas', htmlFor='curvas-sulfide-policy', className='control-label'),
         dcc.Dropdown(id='curvas-sulfide-policy', value='net_trial', clearable=False,
                      options=[{'label': 'Menores de 30 dias: ensayo neto local', 'value': 'net_trial'},
                               {'label': 'Metodo anterior (guarda en SQL al calcular)', 'value': 'legacy'}]),
-        html.Small('Ensayo disponible: Caso 10009, 1-7 septiembre de 2026; fuentes congeladas.'),
+        html.Small('Ensayo neto local: Oxidos y Sulfuros de cualquier Caso oficial. Maduras (>30 d) '
+                   'conservan la recuperacion observada; las nuevas se ajustan al Cu neto F25/F29 '
+                   'del run oficial. Solo lectura SQL; no guarda la corrida.'),
     ], xs=12, lg=6, className='control-field'))
 
     recon_pila_tabs = dcc.Tabs(id='curvas-recon-pila-tabs', value='tab-rec', children=[
@@ -2541,11 +2545,12 @@ def _build_content_layout():
             dbc.ModalBody([
                 html.Div([
                     html.Span('Cómo leer este panel', className='method-note-title'),
-                    html.P('Sulfuros: las pilas menores de 30 dias pueden ajustarse dentro de la ventana; '
-                           'se conserva el mes anterior y las mayores usan recuperacion observada. '
-                           'El drenaje ajustado es modelado: cerrar Cu neto no valida el balance de agua. '
-                           'El ensayo queda local y no reemplaza resultados SQL. '
-                           'Caso 10009: fuentes capturadas, run oficial 10082 y perfil de referencia 2348.',
+                    html.P('Ensayo neto local (Oxidos y Sulfuros): las pilas mayores de 30 dias conservan la '
+                           'recuperacion observada; las menores de 30 dias se mueven con un factor comun sobre su '
+                           'perfil de drenaje modelado para cerrar el Cu neto del PAD (F25 Oxidos, F29 Sulfuros) '
+                           'del run oficial del Caso; exactamente 30 dias conserva la oficial y la historia previa '
+                           'queda intacta. El drenaje ajustado es modelado: cerrar Cu neto no valida el balance de '
+                           'agua. El ensayo lee SQL (solo SELECT), queda local y no reemplaza resultados SQL.',
                            className='method-note-text'),
                     html.Span('Los deltas de caudal y Cu fino son relativos al medido. Los agregados de Cu fino son proporcionales, no toneladas. En las barras de concentración, la media diaria es aritmética sobre los días con dato y no está ponderada por caudal. “Cálculo listo” confirma que hay datos y pilas para mostrar; revisa avisos y gráficos para evaluar el resultado.',
                               className='method-note-text'),
@@ -2774,6 +2779,16 @@ def _error_modal_body(titulo, detalle, fallas=None):
     ])
 
 
+def _load_net_trial_inputs(ws, week_end, caso, anchor, label):
+    """Fuentes SELECT-only del ensayo neto local para un PAD del Caso oficial."""
+    from .maduras_inputs import load_pad_inputs
+    inputs = load_pad_inputs(ws, week_end, caso['id'], label, anchor,
+                             expected_run_id=caso['run_id'])
+    if inputs['source_ids']['solver_run_id'] != caso['run_id']:
+        raise ValueError(f'Las fuentes de {label} no corresponden al run oficial seleccionado')
+    return inputs
+
+
 @_callback(
     Output('curvas-recon-store', 'data'),
     Output('curvas-recon-error-modal', 'is_open'),
@@ -2839,11 +2854,9 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
             if sulfide_policy not in ('net_trial', 'legacy'):
                 raise ValueError('Selecciona una metodologia valida para Sulfuros')
             if sulfide_policy == 'net_trial':
-                from .sulfide_inputs import load_sulfide_inputs
-                sulfide_inputs = load_sulfide_inputs(ws, week_end, caso['id'], anchor)
-                if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
-                    raise ValueError('El snapshot de Sulfuros no corresponde al run oficial seleccionado')
-                method = tag = 'Sulfuros: ensayo neto local'
+                maduras_inputs = {pad: _load_net_trial_inputs(ws, week_end, caso, anchor, pad)
+                                  for pad in ('SULFUROS', 'OXIDOS')}
+                method = tag = 'Ensayo neto local: maduras fijas, nuevas moviles'
 
             phase_t0 = time.perf_counter()
             _progress_set('Historico y metadatos', 'Asegurando caches...', 28)
@@ -2873,7 +2886,9 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
                 activity_loader=_fechas_actividad,
             )
             if sulfide_policy == 'net_trial':
-                materials['SULFUROS']['sulfide_inputs'] = sulfide_inputs
+                for pad, pad_inputs in maduras_inputs.items():
+                    if pad in materials:
+                        materials[pad]['maduras_inputs'] = pad_inputs
             else:
                 materials['SULFUROS']['sulfide_policy'] = 'legacy'
             phase_materials = time.perf_counter() - phase_t0
@@ -2937,6 +2952,7 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
         sulfide_policy=sulfide_policy,
         local_direct_recovery=bool((joint.get('res') or {}).get('local_direct_recovery')),
         sulfide_audit=_clean_nan((joint.get('res') or {}).get('sulfide_audit') or {}),
+        maduras_audit=_clean_nan((joint.get('res') or {}).get('maduras_audit') or {}),
         balance_inventario=dict(
             volumen_m3=24.*float((joint.get('res') or {}).get('inventario_pls') or 0.),
             cobre_t=.024*float((joint.get('res') or {}).get('inventario_fino_pls') or 0.),
@@ -3162,9 +3178,12 @@ def render_recon_pila_charts(data, selected_pila, caso_id, group_id=None, groups
         from .sulfide_presentation import solution_figures
         selected_pad, selected_num = selected_pila.split('-P')
         flow, concentrations = solution_figures(raw['res'], _PAD_TO_LABEL[selected_pad], int(selected_num))
-        if _PAD_TO_LABEL[selected_pad] == 'SULFUROS':
+        selected_label = _PAD_TO_LABEL[selected_pad]
+        from .sulfide_presentation import has_direct_pad
+        if has_direct_pad(raw['res'], selected_label):
             from .sulfide_presentation import recovery_figure
-            recovery = recovery_figure(raw['res'], 'SULFUROS', int(selected_num), _measured_cycles('SULFUROS', int(selected_num)))
+            recovery = recovery_figure(raw['res'], selected_label, int(selected_num),
+                                       _measured_cycles(selected_label, int(selected_num)))
         else:
             recovery = _build_recovery_chart(selected_pila, ws, we, data, caso_id)
         figures = (recovery, flow, concentrations)

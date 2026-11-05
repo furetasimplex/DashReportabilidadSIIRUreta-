@@ -1,5 +1,13 @@
 # Sulfuros menores de 30 dias: ensayo neto local
 
+> Antecedente. El contrato vigente, generalizado a Oxidos y Sulfuros de
+> cualquier Caso oficial, con cargador SELECT-only, nacimiento en la ventana,
+> infactibilidad explicada y encadenamiento, esta en
+> [METODO_MADURAS_NUEVAS.md](METODO_MADURAS_NUEVAS.md). Lo que sigue describe el
+> ensayo original; los parrafos sobre "solo Caso 10009", "No se altera Oxidos" y
+> la pila que nace a mitad de ventana quedaron superados. El paquete congelado
+> del Caso 10009 se conserva como fixture de regresion.
+
 Contrato aplicado el 3 de noviembre de 2026 al repositorio activo
 DashReportabilidadSIIR. Es un cambio de metodologia y presentacion de curvas.
 
