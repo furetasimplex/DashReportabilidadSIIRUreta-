@@ -82,6 +82,11 @@ def layout():
                     {'label': 'Menores de 30 días: ensayo neto local', 'value': 'net_trial'},
                     {'label': 'Método anterior (guarda en SQL al calcular)', 'value': 'legacy'}]),
             ], id=_id('sulfuros-wrap'), style={'display': 'none'}),
+            html.Label('Método de reconstitución de módulos', htmlFor=_id('metodo-recon'),
+                       className='reportes-recon-label', style={'marginTop': '10px'}),
+            dcc.Dropdown(id=_id('metodo-recon'), value='volumen', clearable=False, options=[
+                {'label': 'Reparto por volumen (vigente)', 'value': 'volumen'},
+                {'label': 'Densidad recalibrada (en validación)', 'value': 'recalibrada'}]),
             html.P('El reporte de curvas exporta las pilas individuales; las sumas de curvas '
                    '(pilas virtuales) se exportan desde Curvas y reconciliación.',
                    className='reportes-recon-note'),
@@ -99,15 +104,15 @@ def _caso(cases, case_id):
     return next((c for c in (cases or []) if c.get('id') == case_id), None)
 
 
-def _resultado_reconstitucion(case, loader=None):
-    """Carga la reconstitución del Caso una vez por worker y run oficial."""
+def _resultado_reconstitucion(case, loader=None, metodo=None):
+    """Carga la reconstitución del Caso una vez por worker, run y método."""
     from reconstitucion import panel as recon_panel
-    key = (case['id'], case.get('run_id'))
+    key = (case['id'], case.get('run_id'), metodo)
     with _lock:
         cached = _recon_cache.get(key)
     if cached is not None:
         return cached
-    res = recon_panel.cargar_resultado_caso(case, loader)
+    res = recon_panel.cargar_resultado_caso(case, loader, metodo)
     with _lock:
         if len(_recon_cache) >= MAX_CACHE:
             _recon_cache.pop(next(iter(_recon_cache)))
@@ -135,7 +140,7 @@ def _texto(component):
 
 def generar_paquete(case, seleccion, modo_curvas='ultima', sulfide_policy='net_trial',
                     curvas_report=None, recon_loader=None, quality_loader=None,
-                    extra_loader=None, curvas_audit=None):
+                    extra_loader=None, curvas_audit=None, recon_metodo=None):
     """Genera los informes pedidos. Devuelve ``(archivos, filas_estado)``.
 
     ``archivos`` es una lista ``(nombre, bytes)``; ``filas_estado`` una lista
@@ -170,7 +175,7 @@ def generar_paquete(case, seleccion, modo_curvas='ultima', sulfide_policy='net_t
         from reconstitucion import engine as recon_engine
         res, error = None, None
         try:
-            res = _resultado_reconstitucion(case, recon_loader)
+            res = _resultado_reconstitucion(case, recon_loader, recon_metodo)
             if not res.get('fuente_modelo'):
                 error = ('El Caso no tiene masa reconciliada del modelo de flujos; '
                          'el informe de módulos no está disponible.')
@@ -207,6 +212,7 @@ def empaquetar(case, archivos, filas, ahora=None):
         f"Run oficial: {case.get('run_id')}",
         f'Ventana: {inicio:%d-%m-%Y} a {fin:%d-%m-%Y}',
         f'Generado: {ahora:%d-%m-%Y %H:%M}',
+        f"Reconstitución: {'densidad recalibrada (en validación)' if case.get('_recon_metodo') == 'recalibrada' else 'reparto por volumen (vigente)'}",
         '',
     ] + [f"[{'OK' if ok else 'NO GENERADO'}] {informe}: {mensaje}" for informe, ok, mensaje in filas]
     buffer = BytesIO()
@@ -265,11 +271,11 @@ def register_callbacks(app, case_loader=None, **report_kwargs):
         Input(_id('generar'), 'n_clicks'),
         State(_id('caso'), 'value'), State(_id('casos'), 'data'),
         State(_id('seleccion'), 'value'), State(_id('modo-curvas'), 'value'),
-        State(_id('sulfuros'), 'value'),
+        State(_id('sulfuros'), 'value'), State(_id('metodo-recon'), 'value'),
         prevent_initial_call=True,
         running=[(Output(_id('generar'), 'disabled'), True, False),
                  (Output(_id('generar'), 'children'), 'Generando reportes…', 'Generar reportes')])
-    def generar(n, case_id, cases, seleccion, modo, sulfide_policy):
+    def generar(n, case_id, cases, seleccion, modo, sulfide_policy, metodo_recon='volumen'):
         if not n:
             return no_update, no_update
         case = _caso(cases, case_id)
@@ -277,10 +283,13 @@ def register_callbacks(app, case_loader=None, **report_kwargs):
             return None, html.P('Selecciona un Caso oficial.', className='reportes-recon-note')
         if not seleccion:
             return None, html.P('Selecciona al menos un informe.', className='reportes-recon-note')
-        archivos, filas = generar_paquete(case, seleccion, modo, sulfide_policy, **report_kwargs)
+        metodo = metodo_recon if metodo_recon in ('volumen', 'recalibrada') else 'volumen'
+        archivos, filas = generar_paquete(case, seleccion, modo, sulfide_policy,
+                                          recon_metodo=None if metodo == 'volumen' else metodo,
+                                          **report_kwargs)
         if not archivos:
             return None, _estado(filas)
-        nombre, data = empaquetar(case, archivos, filas)
+        nombre, data = empaquetar(dict(case, _recon_metodo=metodo), archivos, filas)
         mime = ZIP_MIME if nombre.endswith('.zip') else (
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         return ({'content': base64.b64encode(data).decode('ascii'), 'filename': nombre,

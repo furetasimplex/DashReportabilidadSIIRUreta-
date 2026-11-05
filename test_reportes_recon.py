@@ -127,11 +127,11 @@ def test_callback_generar_entrega_zip_y_estado(recon_export):
                            recon_loader=recon_loader(), **recon_export)
     fn = next(v['callback'].__wrapped__ for k, v in app.callback_map.items()
               if 'reportes-recon-download.data' in k)
-    download, estado = fn(1, CASE['id'], [CASE], ['curvas', 'recon-1'], 'ultima', 'net_trial')
+    download, estado = fn(1, CASE['id'], [CASE], ['curvas', 'recon-1'], 'ultima', 'net_trial', 'volumen')
     assert download['type'] == 'application/zip' and download['base64']
     assert zipfile.ZipFile(BytesIO(base64.b64decode(download['content']))).testzip() is None
     assert 'Listo' in json.dumps(estado, cls=PlotlyJSONEncoder)
-    assert fn(1, 999, [CASE], ['curvas'], 'ultima', 'net_trial')[0] is None
+    assert fn(1, 999, [CASE], ['curvas'], 'ultima', 'net_trial', 'volumen')[0] is None
 
 
 def test_catalogo_solo_runs_oficiales():
@@ -236,3 +236,14 @@ def test_paquete_agrega_auditoria_del_ensayo(recon_export):
     assert [n for n, _ in archivos] == ['Reporte_Recuperaciones_Caso10013.xlsx',
                                         'Auditoria_Ensayo_Neto_Local_Caso10013.xlsx']
     assert all(ok for _, ok, _ in filas)
+
+
+def test_metodo_recalibrado_se_pide_solo_si_se_elige(recon_export):
+    calls = []
+    tab.generar_paquete(CASE, ['recon-2'], recon_loader=recon_loader(calls), **recon_export)
+    tab.generar_paquete(CASE, ['recon-2'], recon_loader=recon_loader(calls),
+                        recon_metodo='recalibrada', **recon_export)
+    assert 'metodo' not in calls[0] and calls[1]['metodo'] == 'recalibrada'
+    nombre, data = tab.empaquetar(dict(CASE, _recon_metodo='recalibrada'),
+                                  [('a.xlsx', b'1'), ('b.xlsx', b'2')], [])
+    assert 'densidad recalibrada' in zipfile.ZipFile(BytesIO(data)).read('LEEME.txt').decode()
