@@ -204,3 +204,35 @@ def test_reconciliar_ahora_usa_calculo_de_curvas(saved_runs, monkeypatch):
                         lambda *a: (dashboard.dash.no_update, True, html.Div('Ancla incompleta')))
     status, download = dashboard.generate_case_report(case['id'], reconciliar=True)
     assert download is None and 'Ancla incompleta' in str(status)
+
+
+def test_reporte_oficial_usa_recuperacion_directa_del_ensayo(saved_runs, monkeypatch):
+    """Hito 4: con el método maduras/nuevas, el libro oficial toma la
+    recuperación directa en vez de reconstruirla desde Q/Cu."""
+    case, _old, _new = saved_runs
+    start, end = pd.Timestamp('2026-08-01'), pd.Timestamp('2026-08-03')
+    token = dashboard._save_recon_raw({'piles': [], 'local_direct_recovery': True}, case, start, end)
+    series = {('SULFUROS', 1): pd.Series([1.0, 2.0], index=pd.to_datetime(['2026-08-01', '2026-08-02']))}
+    import curvas_recon.maduras_nuevas as mn
+    monkeypatch.setattr(mn, 'direct_recovery_series', lambda res: series)
+    seen = {}
+    def construir(runs, end=None, direct_recovery=None, **kw):
+        seen['direct'] = direct_recovery
+        return report_doc()
+    monkeypatch.setattr(report, 'construir_doc', construir)
+    data = dict(caso_id=case['id'], caso_run_id=case['run_id'], raw_token=token,
+                week_start=start.isoformat(), week_end=end.isoformat(), local_direct_recovery=True)
+    status, download = dashboard.generate_week_report(1, data, case['id'])
+    assert download is not None, str(status)
+    assert seen['direct'] is series
+    assert 'ensayo neto local' in str(status)
+    assert load_workbook(BytesIO(base64.b64decode(download['content']))).sheetnames[0] == 'Oxido'
+
+
+def test_paquete_agrega_auditoria_del_ensayo(recon_export):
+    archivos, filas = tab.generar_paquete(
+        CASE, ['curvas'], curvas_report=fake_curvas,
+        curvas_audit=lambda cid: (f'Auditoria_Ensayo_Neto_Local_Caso{cid}.xlsx', b'audit'))
+    assert [n for n, _ in archivos] == ['Reporte_Recuperaciones_Caso10013.xlsx',
+                                        'Auditoria_Ensayo_Neto_Local_Caso10013.xlsx']
+    assert all(ok for _, ok, _ in filas)

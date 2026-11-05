@@ -3718,13 +3718,16 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
         return html.Div(
             'La identidad de la corrida cambió; vuelve a ejecutar la reconciliación.',
             style={'color': '#B45309'}), None
+    direct_recovery = None
     if res.get('local_direct_recovery'):
-        from .sulfide_presentation import trial_workbook
-        if groups:
-            return html.Div('Exporta el ensayo sin grupos: este formato conserva las pilas individuales.'), None
-        workbook = trial_workbook(res, caso)
-        return (html.Div('Ensayo local exportado con recuperacion directa y fuentes; sin validacion hidraulica.'),
-                dcc.send_bytes(workbook, f'Ensayo_Neto_Local_Caso{caso["id"]}.xlsx'))
+        # Método maduras fijas / nuevas móviles: el libro oficial usa la
+        # recuperación directa del ensayo en vez de reconstruirla desde Q/Cu.
+        from .maduras_nuevas import direct_recovery_series
+        try:
+            direct_recovery = direct_recovery_series(res)
+        except Exception as exc:
+            return html.Div(f'No se pudo leer la recuperación del ensayo neto local: {exc}',
+                            style={'color': '#B45309'}), None
     tmp_path = None
     try:
         from . import report_metodo
@@ -3732,7 +3735,8 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
             ws=ws, we=we, caso=caso,
             pads={label: {'res': res} for label in ('OXIDOS', 'SULFUROS')},
         )}
-        doc = report_metodo.construir_doc(runs, end=JOINT_DATA_CUTOFF)
+        doc = report_metodo.construir_doc(runs, end=JOINT_DATA_CUTOFF,
+                                          direct_recovery=direct_recovery)
         n_pilas = sum(len(v['pilas']) for v in doc['pads'].values())
         if not n_pilas:
             return html.Div('La reconciliación no dejó ninguna pila con curva.',
@@ -3762,8 +3766,26 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
                    else 'sin comparación planta')
     return html.Div(
         f'Reporte generado ({n_pilas} pilas, {len(groups or [])} pilas virtuales, '
-        f'curva hasta {JOINT_DATA_CUTOFF.date()}, {comparacion}).',
+        f'curva hasta {JOINT_DATA_CUTOFF.date()}, {comparacion}'
+        + (', recuperación del ensayo neto local: maduras fijas, nuevas ajustadas' if direct_recovery else '')
+        + ').',
         style={'color': '#2E9E5B'}), download
+
+def trial_audit_for_case(caso_id):
+    """Libro de auditoría del ensayo neto local de la última corrida del Caso.
+
+    Devuelve ``(nombre, bytes)`` o None si la corrida no usa recuperación
+    directa. Acompaña al reporte oficial, que solo trae sus 15 hojas."""
+    data = latest_recon_store(caso_id)
+    if not data or not data.get('local_direct_recovery'):
+        return None
+    raw, _path = _load_recon_raw(data['raw_token'], caso_id)
+    if not raw:
+        return None
+    from .sulfide_presentation import trial_workbook
+    return (f'Auditoria_Ensayo_Neto_Local_Caso{caso_id}.xlsx',
+            trial_workbook(raw['res'], raw['caso']))
+
 
 def latest_recon_store(caso_id):
     """Store mínimo de la corrida más reciente del Caso guardada en este host.

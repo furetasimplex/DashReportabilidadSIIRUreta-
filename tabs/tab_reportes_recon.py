@@ -135,7 +135,7 @@ def _texto(component):
 
 def generar_paquete(case, seleccion, modo_curvas='ultima', sulfide_policy='net_trial',
                     curvas_report=None, recon_loader=None, quality_loader=None,
-                    extra_loader=None):
+                    extra_loader=None, curvas_audit=None):
     """Genera los informes pedidos. Devuelve ``(archivos, filas_estado)``.
 
     ``archivos`` es una lista ``(nombre, bytes)``; ``filas_estado`` una lista
@@ -146,12 +146,20 @@ def generar_paquete(case, seleccion, modo_curvas='ultima', sulfide_policy='net_t
         try:
             if curvas_report is None:
                 from curvas_recon.pad_dashboard import generate_case_report as curvas_report
+                if curvas_audit is None:
+                    from curvas_recon.pad_dashboard import trial_audit_for_case as curvas_audit
             estado, download = curvas_report(case['id'], reconciliar=modo_curvas == 'calcular',
                                              sulfide_policy=sulfide_policy)
             data = _download_bytes(download)
             if data:
                 archivos.append((download['filename'], data))
             filas.append((labels['curvas'], bool(data), _texto(estado)))
+            if data and curvas_audit is not None:
+                audit = curvas_audit(case['id'])
+                if audit:
+                    archivos.append(audit)
+                    filas.append(('Auditoría del ensayo neto local (curvas)', True,
+                                  'Fuentes, λ y cierre del método maduras fijas / nuevas móviles.'))
         except Exception:
             filas.append((labels['curvas'], False,
                           'No se pudo generar el reporte de curvas. Revisa la conexión SIIR y reintenta.'))

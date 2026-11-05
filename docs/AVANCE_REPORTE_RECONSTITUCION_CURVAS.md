@@ -43,7 +43,7 @@ recalibrada y humedad resuelta desde DB.
 | 1d | Comparador de formato contra el oficial | ✅ 5-nov |
 | 2a | Reconstitución: recalibración de densidad + asignación secuencial | ✅ 5-nov (opt-in «en validación») |
 | 2b | Reconstitución: informe con fracción de traspaso y Cu fino | ✅ 5-nov |
-| 4 | Integración: reporte consume recuperación directa del método | pendiente |
+| 4 | Integración: reporte consume recuperación directa del método | ✅ 5-nov |
 | 5 | Unificación: reportes nuevos (formato oficial, reconstitución recalibrada) en el visor `dash-lixiviacion-curvas`, pestaña Reportes | pendiente |
 
 ## Parte 2 — entrega (5-nov)
@@ -104,6 +104,15 @@ recalibrada y humedad resuelta desde DB.
 - A confirmar en servidor: F77/F51 en `recon_resultado_flujo` del modelo 125.
 - Generación: ~13 s con 60 pilas × 1200 días (antes ~2 s) por las fórmulas.
 
+## Hito 4 — integración (5-nov)
+
+- Con «Ensayo neto local», el botón de reporte (Curvas y reconciliación y la
+  sección Reportes de reconciliación) genera el **libro con formato oficial**
+  usando `direct_recovery_series(res)`: maduras con recuperación observada,
+  nuevas ajustadas. Antes descargaba un libro de ensayo aparte.
+- La sección Reportes agrega al ZIP `Auditoria_Ensayo_Neto_Local_Caso<id>.xlsx`
+  (fuentes, λ y cierre) cuando la corrida usa el método.
+
 ## Pendientes conocidos
 
 - Prototipo `auditorias/integracion_mr_dashboard_20261104/` no disponible en
@@ -118,3 +127,4 @@ recalibrada y humedad resuelta desde DB.
 - 5-nov: se agrega hito 5 (reportes en el visor de lixiviación, unificación).
 - 5-nov: parte 3 entregada y revisada.
 - 5-nov: parte 1 entregada y revisada (comparador 0 ERROR).
+- 5-nov: hito 4 integrado (reporte oficial con recuperación directa).
