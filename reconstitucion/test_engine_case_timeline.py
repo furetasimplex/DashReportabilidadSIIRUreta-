@@ -18,7 +18,7 @@ except ImportError:
     from .test_module_timeline_intraturno import make_inputs, make_intraday
 
 
-def test_single_pad_case_uses_intraday_and_preserves_case_run_and_TMS():
+def test_single_pad_case_uses_intraday_and_preserves_case_run_and_TMS(legacy_timeline):
     day, ap, _, profile = make_inputs(two_modules=False)
     profile["humedad"] = 0.
     profile["fuente"] = "TEST"

@@ -1,0 +1,129 @@
+{
+  "source": "Control Sulfuro Camp 11(5).xlsm",
+  "sha256": "eade3eb771755fbcbe9b02a3bded2e6ae1cb0c03c5bf31dc51c44c2da2cdb60e",
+  "read_method": "ZIP/XML solo lectura; no macros, no recalculo, no guardado",
+  "source_sheets": {
+    "allocation": "Caract_P27c11",
+    "pivot_source": "Apilado",
+    "pivot_cache_wet": "pivotCacheDefinition3 => worksheetSource Apilado!A2:C65536",
+    "pivot_cache_dry": "pivotCacheDefinition4 => worksheetSource Apilado!J2:L1048576"
+  },
+  "target": "M134",
+  "turnos": [
+    {
+      "column": "D",
+      "date": "2026-08-31",
+      "turno": 4,
+      "apilado_row": 398,
+      "tmh_pivot_raw": 34878.82782031411,
+      "tms_pivot_raw": 33707.4928203141,
+      "tmh_m134": 16312.635167992976,
+      "tms_m134": 15764.808256694869
+    },
+    {
+      "column": "E",
+      "date": "2026-08-31",
+      "turno": 3,
+      "apilado_row": 398,
+      "tmh_pivot_raw": 39018.3421796859,
+      "tms_pivot_raw": 37706.69117968589,
+      "tmh_m134": 39018.3421796859,
+      "tms_m134": 37706.69117968589
+    },
+    {
+      "column": "F",
+      "date": "2026-09-01",
+      "turno": 4,
+      "apilado_row": 399,
+      "tmh_pivot_raw": 3132.1879999999965,
+      "tms_pivot_raw": 3024.607999999996,
+      "tmh_m134": 3132.1879999999965,
+      "tms_m134": 3024.607999999996
+    },
+    {
+      "column": "G",
+      "date": "2026-09-03",
+      "turno": 3,
+      "apilado_row": 401,
+      "tmh_pivot_raw": 10071.067139711213,
+      "tms_pivot_raw": 9733.142284100742,
+      "tmh_m134": 10071.067139711213,
+      "tms_m134": 9733.142284100742
+    },
+    {
+      "column": "H",
+      "date": "2026-09-04",
+      "turno": 4,
+      "apilado_row": 402,
+      "tmh_pivot_raw": 34265.704909223365,
+      "tms_pivot_raw": 33119.632749380464,
+      "tmh_m134": 34265.704909223365,
+      "tms_m134": 33119.632749380464
+    },
+    {
+      "column": "I",
+      "date": "2026-09-04",
+      "turno": 3,
+      "apilado_row": 402,
+      "tmh_pivot_raw": 44616.658489481415,
+      "tms_pivot_raw": 43124.52738716705,
+      "tmh_m134": 44616.658489481415,
+      "tms_m134": 43124.52738716705
+    },
+    {
+      "column": "J",
+      "date": "2026-09-05",
+      "turno": 4,
+      "apilado_row": 403,
+      "tmh_pivot_raw": 29462.36200117068,
+      "tms_pivot_raw": 28477.87300117068,
+      "tmh_m134": 25556.92796311875,
+      "tms_m134": 24702.939594756324
+    }
+  ],
+  "opening_carry": {
+    "tmh": 18566.192652321133,
+    "tms": 17942.684563619234,
+    "refs": [
+      "Caract_P27c11!I135",
+      "Caract_P27c11!I136"
+    ]
+  },
+  "target_mass": {
+    "tmh": 172973.52384921358,
+    "tmh_ref": "'Volumen-Ton 140'!D67",
+    "tms": 167176.34945178535,
+    "tms_ref": "Caract_P27c11!Q199",
+    "volume_m3": 97987.034,
+    "density_ratio_cached": 1.7652695136094596
+  },
+  "closing_fraction": {
+    "cell": "Caract_P27c11!S198",
+    "value": 0.8674432810954956,
+    "formula": "constant cached value; no formula found in S198"
+  },
+  "expected_allocations": {
+    "tmh": 172973.52384921358,
+    "tmh_ref": "Caract_P27c11!Q198 = SUM(D198:P198)",
+    "tms": 167176.34945178535,
+    "tms_ref": "Caract_P27c11!Q199 = SUM(D199:P199)"
+  },
+  "precise_formulas": {
+    "D198": "+IFERROR(GETPIVOTDATA(CONCATENATE(\"Sum of \",D196),Apilado!$E$1,\"Fecha\",D195),0)-I135",
+    "D199": "+IFERROR(GETPIVOTDATA(CONCATENATE(\"Sum of \",D196),Apilado!$O$2,\"Fecha\",D195),0)-I136",
+    "J198": "+IFERROR(GETPIVOTDATA(CONCATENATE(\"Sum of \",J196),Apilado!$E$1,\"Fecha\",J195),0)*S198",
+    "J199": "+IFERROR(GETPIVOTDATA(CONCATENATE(\"Sum of \",J196),Apilado!$O$2,\"Fecha\",J195),0)*S198",
+    "R198": "+'Volumen-Ton 140'!D67"
+  },
+  "pivot_source_cell_refs": {
+    "wet_date": "Apilado!A{row}",
+    "wet_turn4": "Apilado!B{row}",
+    "wet_turn3": "Apilado!C{row}",
+    "dry_date": "Apilado!J{row}",
+    "dry_turn4": "Apilado!K{row}",
+    "dry_turn3": "Apilado!L{row}",
+    "row_formula": "Apilado row number for Excel serial date is cache/source row (as listed per turn); header row2 labels B=4,C=3,K=4,L=3"
+  },
+  "independence": "tmh_pivot_raw/tms_pivot_raw read directly from Apilado sheet source cells and independent of S198/expected assignments; the prior fixture values for raw pivots had been partly inverted from expected assignments and are replaced by these direct values.",
+  "limitation": "This segment contains 7 allocated turns D:J, from Aug 31 through Sep 5. 6?7 Sep source rows exist in Apilado, but Caract_P27c11 rows 195/196 have no date/turn values in K:P and thus do not assign them to M134."
+}

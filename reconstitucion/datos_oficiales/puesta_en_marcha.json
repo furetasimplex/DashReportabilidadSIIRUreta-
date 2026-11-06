@@ -1,0 +1,4 @@
+{
+  "fecha": "2026-10-01",
+  "nota": "Inicio del metodo digital: desde esta fecha (el 1 de octubre ya es digital) solo vale Datos_conciliados_of_ver. Antes, los libros Excel eran la fuente oficial. Un Caso con fecha_fin anterior a esta fecha usa el regimen previo (ver y, donde falte, libro; la tabla cierra con la fuente, sin escalar al flujo). La fecha puede cambiar hasta que exista puesta en marcha oficial."
+}

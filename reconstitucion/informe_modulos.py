@@ -765,6 +765,14 @@ def preparar_modulos_desde_resultado(res, pad, calidad, fecha_min=None,
     ap["TMH_asignada"] = (pd.to_numeric(ap.TMH_dia, errors="coerce")
         * pd.to_numeric(ap.vol_diario, errors="coerce")
         / vol_den.where(vol_den.gt(0)))
+    if {"TMH_turno1", "TMH_turno2"}.issubset(st.columns):
+        # Reparto secuencial: la TMH del modulo es la asignada por turno (misma base
+        # que su TMS), no la TMH diaria prorrateada por volumen.
+        own = st.groupby(daykeys, as_index=False).agg(
+            _tmh=("TMH_turno1", "sum"), _tmh2=("TMH_turno2", "sum"))
+        own["TMH_secuencial"] = own._tmh + own._tmh2
+        ap = ap.merge(own[daykeys + ["TMH_secuencial"]], on=daykeys, how="left", validate="one_to_one")
+        ap["TMH_asignada"] = ap.TMH_secuencial
     sums = st.groupby(daykeys, as_index=False).agg(
         masa_dia=("masa_total", lambda s: s.sum(min_count=1)),
         masa_turno1=("masa_turno1", lambda s: s.sum(min_count=1)),

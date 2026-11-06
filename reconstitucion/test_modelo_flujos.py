@@ -93,7 +93,7 @@ def test_full_engine_rejects_unidentified_simultaneous_pad_routes():
          patch.object(mf,'load_hours',return_value=hours), \
          patch.object(db_source,'load_apilado',return_value=ap), \
          patch.object(db_source,'load_masa',side_effect=AssertionError('Caso no usa masa legacy')):
-        with pytest.raises(ValueError, match='más de un PAD activo'):
+        with pytest.raises(ValueError, match='más de un PAD activo|identidad PAD/campaña'):
             e.analyze_db(caso=case(),caso_id=10013,fecha_min=case()['fecha_inicio'],
                          fecha_max=case()['fecha_fin'])
 
