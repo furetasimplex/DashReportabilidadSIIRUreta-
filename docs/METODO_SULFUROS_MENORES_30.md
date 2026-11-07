@@ -28,12 +28,20 @@ baseline oficial del dia anterior y cierre del mes previo.
 
 - Edad: dias calendario transcurridos desde el primer riego real de la campana
   hasta el cierre del Caso; una clasificacion por pila para toda la ventana.
-- Menor de 30: ajustar el caudal del perfil modelado guardado por un factor
+- Pila nueva (edad de 30 dias o menos, incluido exactamente 30): ajustar el caudal del perfil modelado guardado por un factor
   comun lambda, manteniendo riego y concentraciones observadas; se exige
   cobertura completa y se comprueba el cierre del Cu neto de la ventana.
-- Mayor de 30: recuperacion observada exacta, sin redistribuirle residuos.
-- Exactamente 30: conservar la recuperacion oficial, pendiente de definicion.
-- Historia anterior a la ventana: sin modificaciones; incluye el mes anterior.
+- Mayor de 30 (madura): recuperacion observada exacta, sin redistribuirle residuos.
+- Exactamente 30 dias es pila nueva (decision del usuario; coincide con `MAX_YOUNG_AGE_DAYS = 30` y con
+  `test_exactly_30_days_is_adjustable`).
+- Historia anterior a la ventana: sin modificaciones en meses calendario anteriores al mes de fecha_fin del Caso
+  (dias cerrados). Un Caso que empieza a mitad de mes puede ajustar, solo en pilas nuevas, los dias del mismo mes
+  previos a su ventana (vida abierta desde max(primer riego, primer dia del mes)); las maduras solo la ventana.
+  Esos dias son de un Caso anterior: `closed_days_check` (`curvas_recon/reconciliacion_pad.py`) lo lista en
+  `casos_invalidados` (recalcular) y sus sucesores en `sucesores_afectados`. Datos de esos dias: riego, Cu de riego
+  y Cu de drenaje medidos (`build_sulfide_rows(open_from=...)`) y el perfil de drenaje guardado si existe, si no el
+  plano marcado como modelado; si faltan se rechaza con error, no se inventan. El cierre es un parametro explicito
+  (por defecto primer dia del mes de fecha_fin, declarado en la salida).
 - No se inventa caudal de drenaje de maduras a partir de su recuperacion.
   Los caudales desconocidos y agregados incompletos se conservan como nulos.
 - El techo Qd <= Qr es una restriccion de este escenario, no una ley hidraulica

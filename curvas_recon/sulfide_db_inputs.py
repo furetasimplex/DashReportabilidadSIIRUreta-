@@ -70,15 +70,22 @@ def _daily(frame, ts, column):
 
 
 def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irrigation,
-                       saved_profile=None):
+                       saved_profile=None, open_from=None):
     """Filas canonicas por pila y dia (cierre del mes anterior, dia previo y
     toda la ventana) para las pilas de Sulfuros que riegan en la ventana.
 
     `material`: riego, cu_riego y drena_cu de la ventana SIN relleno.
     `saved_profile`: {(pila, 'YYYY-MM-DD'): q_pls_m3h} guardado para el Caso.
+    `open_from` (fecha ISO, opcional): primer dia abierto. Para las pilas NUEVAS agrega filas con caudal y Cu medidos de
+    los dias del mismo mes previos a la ventana (desde max(primer riego, open_from)); son de un Caso anterior y las
+    marca `previo_a_ventana`. Nunca antes del primer dia del mes del Caso y sin ellas no se inventa: si la serie de
+    riego no cubre esos dias o falta Cu medido, SulfideInputError. Sin `open_from` el resultado es el de siempre.
     Devuelve (filas, fuente_del_perfil).
     """
     start, end = _as_day(week_start), _as_day(week_end)
+    open_day = _as_day(open_from) if open_from is not None else None
+    if open_day is not None and open_day < end.replace(day=1):
+        raise SulfideInputError('open_from no puede ser anterior al primer dia del mes del Caso: los meses anteriores estan cerrados')
     month_end = end.replace(day=1) - timedelta(days=1)
     previous = start - timedelta(days=1)
     riego = material.get('riego')
@@ -104,21 +111,29 @@ def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irriga
             raise SulfideInputError(f'{pile}: sin Cu apilado de la campana')
         cycle_start, measured, campaign = _current_campaign(curves_by_pile.get(pile) or {}, end)
         young = (end - birth).days <= MAX_YOUNG_AGE_DAYS
-        for day in dict.fromkeys([month_end, previous, *window]):   # ventana desde el dia 1: coinciden
+        pre = []                                        # dias abiertos del mismo mes previos a la ventana (solo nuevas)
+        if open_day is not None and young:
+            first_open = max(birth, open_day)
+            pre = [first_open + timedelta(days=i) for i in range(max(0, (start - first_open).days))]
+            if pre and (riego.index.min() > pd.Timestamp(pre[0]) or riego.index.max() < pd.Timestamp(start)):
+                raise SulfideInputError(f'{pile}: la serie de riego no cubre los dias previos abiertos desde {pre[0].isoformat()}; no se inventan')
+            q_pre = riego[by_name[pile]].reindex(pd.DatetimeIndex([pd.Timestamp(d) for d in pre]))
+        pre_set = set(pre)
+        for day in dict.fromkeys([month_end, *pre, previous, *window]):   # ventana desde el dia 1: coinciden
             pct = measured.get(day)
             if pct is None and young and (cycle_start is None or day < cycle_start):
                 pct = 0.0 if day < start else None      # campana aun sin recuperacion
             # Obligatorio: base (dias previos) y cierre de las maduras. Un dia
             # intermedio sin lectura queda como hueco.
-            if pct is None and (day < start or (not young and day == end)):
+            if pct is None and ((day < start and day not in pre_set) or (not young and day == end)):
                 missing.setdefault(day, []).append(pile)
                 last_reading[pile] = max(measured, default=None)
             row = dict(pad='SULFUROS', pile=pile, campaign=max(campaign, 1), date=day.isoformat(),
                        first_irrigation=birth.isoformat(), cu_apilado_t=cu_tf,
                        official_pct=pct, observed_pct=pct, observation_source=CURVE_SOURCE)
-            if day >= start:
+            if day >= start or day in pre_set:
                 ts = pd.Timestamp(day)
-                q = q_series.get(ts)
+                q = q_series.get(ts) if day >= start else q_pre.get(ts)
                 row['q_riego_m3h'] = 0.0 if q is None or q != q else float(q)
                 row['cu_riego_gL'] = _daily(material.get('cu_riego'), ts, None)
                 row['cu_drenaje_gL'] = _daily(material.get('drena_cu'), ts, by_name[pile])
@@ -126,6 +141,8 @@ def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irriga
                     for field in ('cu_riego_gL', 'cu_drenaje_gL'):
                         if row[field] is None:
                             raise SulfideInputError(f'{pile}: sin {field} medido el {day.isoformat()}')
+                if day in pre_set:
+                    row['previo_a_ventana'] = True
             rows.append(row)
     if missing:
         details = []
@@ -145,17 +162,19 @@ def build_sulfide_rows(week_start, week_end, material, curves, wip, first_irriga
 def _attach_profile(rows, start, end, saved):
     """Perfil guardado solo si cubre todos los dias con riego de todas las
     jovenes; si no, plano para todas (no se mezclan formas entre pilas)."""
-    young = [r for r in rows if r['date'] >= start.isoformat()
+    young = [r for r in rows if 'q_riego_m3h' in r
              and (end - _as_day(r['first_irrigation'])).days <= MAX_YOUNG_AGE_DAYS]
-    needed = [r for r in young if r['q_riego_m3h'] > 0]
+    # la fuente del perfil la decide la ventana; los dias previos usan el guardado si existe, si no el plano (marcado)
+    needed = [r for r in young if r['q_riego_m3h'] > 0 and not r.get('previo_a_ventana')]
     use_saved = bool(needed) and all((saved.get((r['pile'], r['date'])) or 0) > 0 for r in needed)
     source = SAVED_PROFILE_SOURCE if use_saved else FLAT_PROFILE_SOURCE
     for r in young:
+        has_saved = (saved.get((r['pile'], r['date'])) or 0) > 0
         if r['q_riego_m3h'] == 0:
             r['profile_q_drenaje_m3h'] = 0.0
         else:
-            r['profile_q_drenaje_m3h'] = float(saved[(r['pile'], r['date'])]) if use_saved else r['q_riego_m3h']
-        r['drainage_profile_source'] = source
+            r['profile_q_drenaje_m3h'] = float(saved[(r['pile'], r['date'])]) if (use_saved or (r.get('previo_a_ventana') and has_saved)) else r['q_riego_m3h']
+        r['drainage_profile_source'] = source if not r.get('previo_a_ventana') else (SAVED_PROFILE_SOURCE if has_saved else FLAT_PROFILE_SOURCE)
     return rows, source
 
 
