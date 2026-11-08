@@ -277,15 +277,15 @@ def test_exactly_30_days_is_a_new_pile_and_31_is_mature():
     assert por['P25']['nueva'] is True and por['P24']['nueva'] is False
 
 
-def test_default_band_is_one_percent_provisional_and_closes_the_10009_like_ratio_that_the_strict_band_cannot():
+def test_default_band_is_a_tenth_of_a_percent_and_a_wider_band_closes_the_10009_like_ratio_the_default_cannot():
     import inspect
     from curvas_recon.reconciliacion_pad import BAND_DEFAULT
     sig = inspect.signature(reconcile_pad).parameters
-    assert BAND_DEFAULT == 0.01 and sig['tolerance'].default == 0.01 and sig['net_tolerance'].default == 0.01
+    assert BAND_DEFAULT == 0.001 and sig['tolerance'].default == 0.001 and sig['net_tolerance'].default == 0.001
     priors, nets, _, _ = setup_case()
-    goal, net_goal = goal_with_pls_ratio(priors, 1.0103)                          # drenaje/riego global 1,0103 como 10009
-    assert reconcile_pad(priors, nets, goal, net_goal, tolerance=0.001, net_tolerance=0.001)['status'] == 'infactible'
-    out = reconcile_pad(priors, nets, goal, net_goal)                              # banda por defecto
+    goal, net_goal = goal_with_pls_ratio(priors, 1.0103)                          # drenaje/riego global 1,0103 como el run 10093
+    assert reconcile_pad(priors, nets, goal, net_goal)['status'] == 'infactible'    # banda por defecto
+    out = reconcile_pad(priors, nets, goal, net_goal, tolerance=0.01, net_tolerance=0.01)
     assert out['status'] == 'ok' and all(abs(v) <= 0.01 + 1e-7 for v in out['diferencia'].values())      # holgura numerica del optimizador (~1e-9)
     assert all(p['drenaje_riego'] <= 1 + 1e-7 for p in out['por_pila'])           # el tope de drenaje sigue en 1
     for p in out['por_pila']:

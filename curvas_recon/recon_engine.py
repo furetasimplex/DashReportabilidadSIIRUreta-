@@ -2834,6 +2834,8 @@ def merge_flowsheet_res(parts):
     out['local_direct_recovery'] = any(p.get('local_direct_recovery') for p in parts)
     out['recovery_rows'] = [x for p in parts for x in (p.get('recovery_rows') or [])]
     out['sulfide_audit'] = next((p['sulfide_audit'] for p in parts if p.get('sulfide_audit')), None)
+    out['metodo_sulfuros'] = next((p['metodo_sulfuros'] for p in parts if p.get('metodo_sulfuros')), None)
+    out['mensajes_pad'] = [m for p in parts for m in (p.get('mensajes_pad') or [])]
     net_by_label = {}
     for p in parts:
         net_by_label.update(p.get('net_cu_by_label') or {})
@@ -2871,6 +2873,8 @@ def _sulfide_match_warning(match):
                  f"(los flujos globales no cuadran exactamente con F29)" if match.get('con_masas') else '')
         return [f"Sulfuros: pilas nuevas ajustadas a los flujos globales (riego x{match['beta']:.3f}, "
                 f"Cu riego x{match['alpha_riego']:.3f}, Cu PLS x{match['alpha_pls']:.3f}){extra}."]
+    if status == 'maduras_fijas':
+        return []                                   # los avisos de este metodo salen de `mensajes_pad`
     if status == 'no_aplicado':
         return [f"Sulfuros: no se igualaron las masas y concentraciones de los flujos globales "
                 f"({match.get('motivo')}); se conservan los valores medidos."]
@@ -2954,6 +2958,13 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
                                        concentration_targets=conc_targets,
                                        max_concentration_change=SULFIDE_CONC_MAX_CHANGE,
                                        concentration_tolerance=SULFIDE_CONC_TOLERANCE)
+    # Metodo de Sulfuros: 'reparto' (por defecto del motor: sin cambios) o 'maduras_fijas' (ver metodo_maduras_fijas).
+    metodo = material.get('sulfide_metodo') or 'reparto'
+    mensajes_pad = []
+    if metodo == 'maduras_fijas':
+        from .metodo_maduras_fijas import aplicar_maduras_fijas
+        result, audit, mensajes_pad = aplicar_maduras_fijas(result, audit, inputs['rows'], ws, we, conc_targets, anchor['net_cu_target_t'],
+                                                            banda=material.get('sulfide_banda'))
     def _json_safe(value):
         if isinstance(value, dict):
             return {('/'.join(map(str, key)) if isinstance(key, tuple) else str(key)): _json_safe(item)
@@ -3022,7 +3033,7 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
                net_cu_by_label={'SULFUROS': {'target_t': anchor['net_cu_target_t'],
                     'daily_t': audit['curve_net_t'], 'residual_t': audit['net_residual_t']}},
                q_pls_recon_raw=None, fdrena_flow_raw=None, fdrena_flow_max=None,
-               fdrena_flow_clipped=False)
+               fdrena_flow_clipped=False, metodo_sulfuros=metodo, mensajes_pad=mensajes_pad)
     return out
 
 

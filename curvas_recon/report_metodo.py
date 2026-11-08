@@ -1054,7 +1054,7 @@ def notas(doc):
     ]
 
 
-def escribir_libro(doc, out_path, groups=None):
+def escribir_libro(doc, out_path, groups=None, meta=None):
     """Rec Ox, Rec Sulfuro, las dos hojas de gráficos y Prod diaria por pad.
 
     Las hojas Resumen, Comparacion planta y Metodo se sacaron del libro. Sus
@@ -1073,5 +1073,10 @@ def escribir_libro(doc, out_path, groups=None):
         _escribir_prod(w, doc)
         _escribir_dump(w, doc)
         _escribir_rl(w, doc)
+        if meta:                                    # hoja con el metodo usado (identifica el resultado exportado)
+            hoja = w.book.create_sheet('Método usado')
+            for k, v in meta.items():
+                hoja.append([k, v])
+            hoja.column_dimensions['A'].width = 34; hoja.column_dimensions['B'].width = 60
 
     return out_path

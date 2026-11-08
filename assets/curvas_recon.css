@@ -202,3 +202,13 @@
   .curvas-recon-shell .siir-card { padding: 10px 7px; border-radius: 7px; }
   .curvas-recon-shell .pad-legend { gap: 6px 11px; }
 }
+.curvas-recon-shell .warning-level { flex: 0 0 auto; padding: 1px 7px; border-radius: 999px; font-size: .64rem; font-weight: 750; letter-spacing: .04em; color: #fff; background: #64748B; }
+.curvas-recon-shell .warning-level-error { background: #B91C1C; }
+.curvas-recon-shell .warning-level-advertencia { background: #E86D1F; }
+.curvas-recon-shell .warning-level-informacion { background: #64748B; }
+.curvas-recon-shell .warning-error { color: #7F1D1D; }
+.curvas-recon-shell .warning-informacion { color: #475569; }
+.curvas-recon-shell .warning-body { display: grid; gap: 2px; }
+.curvas-recon-shell .warning-title { font-weight: 700; }
+.curvas-recon-shell .warning-action { font-weight: 600; }
+.curvas-recon-shell .warning-detail { font-size: .72rem; color: #64748B; }

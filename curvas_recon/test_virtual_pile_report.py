@@ -131,7 +131,7 @@ def test_download_callback_passes_local_groups_without_weakening_case_gates():
     assert [arg.arg for arg in callback.args.args][-1] == 'groups'
     callback_text = ast.get_source_segment(source, callback)
     assert "State('curvas-grupos-store', 'data')" in source
-    assert 'escribir_libro(doc, tmp_path, groups=groups)' in callback_text
+    assert 'escribir_libro(doc, tmp_path, groups=groups, meta=meta_libro)' in callback_text
     assert "data.get('caso_run_id') != selected_case.get('run_id')" in callback_text
     assert "caso.get('run_id') != data.get('caso_run_id')" in callback_text
     assert 'ws != selected_ws or we != selected_we' in callback_text

@@ -51,10 +51,16 @@ from .curve_aggregation import (
 )
 from .db_pipeline import (
     connect, get_material_id, load_pila_daily_history, load_pila_history, load_week_totals, save_run,
-    load_casos, load_caso_anchor,
+    load_casos, load_caso_anchor, load_solver_run_meta,
     caso_anchor_completo, diagnose_caso_anchor, HIDRO_SCHEMA,
 )
 from .history_recovery import HistoryReader, calendar_rows
+from .metodo_maduras_fijas import (METODO_REPARTO, METODO_MADURAS_FIJAS, METODO_DEFAULT, ETIQUETAS as METODO_ETIQUETAS,
+                                   MetodoInfactible, etiqueta as metodo_etiqueta)
+
+# Selector de metodo (Sulfuros): el primero es el valor por defecto de la pantalla.
+METODO_OPTIONS = [dict(label=METODO_ETIQUETAS[METODO_MADURAS_FIJAS], value=METODO_MADURAS_FIJAS),
+                  dict(label=METODO_ETIQUETAS[METODO_REPARTO], value=METODO_REPARTO)]
 from .rl_series import visible_xaxis_range
 
 # Todo lo que se lee de la DB pasa por un cache local en disco (`local_cache.py`).
@@ -1060,40 +1066,75 @@ def _build_status_grid(res_s: dict, res_o: dict, n_days: int, selected_pila=None
                      group_scheme])
 
 
+def _solver_run_or_none(run_id):
+    """Estado del run del solver para los avisos; opcional (None si la BD no lo entrega)."""
+    try:
+        return load_solver_run_meta(run_id)
+    except Exception:
+        return None
+
+
+def _render_mensaje(tag, m):
+    """Un mensaje de `mensajes_pad` como item de la lista de avisos (nivel, titulo, texto, que hacer, detalle plegado)."""
+    from .mensajes_pad import ERROR, ADVERTENCIA
+    etiqueta = {'error': 'ERROR', 'advertencia': 'ADVERTENCIA'}.get(m['nivel'], 'INFORMACIÓN')
+    cuerpo = [html.Span(m['titulo'], className='warning-title'), html.Span(' ' + m['texto'])]
+    if m.get('accion'):
+        cuerpo.append(html.Span(' Qué hacer: ' + m['accion'], className='warning-action'))
+    if m.get('detalle') and m['detalle'] != m['texto']:
+        cuerpo.append(html.Details([html.Summary('Detalle técnico'), html.Span(str(m['detalle']))], className='warning-detail'))
+    ambito = m.get('ambito')
+    return html.Div(
+        [html.Span(tag, className='warning-tag'),
+         html.Span(etiqueta, className=f"warning-level warning-level-{m['nivel']}"),
+         html.Div(cuerpo, className='warning-body')],
+        className=f"warning-item warning-{m['nivel']}", title=ambito if ambito else None)
+
+
 def _build_warnings(data: dict):
-    """Avisos del run, con el pad que los origina como etiqueta.
+    """Avisos del run para el operador, con el pad que los origina como etiqueta y su nivel.
 
     El motor ya rutea: `data['warnings']` trae SOLO los globales (tope de
     Fdrena del ancla, balance incerrable, caso sin run oficializado) y cada
     material trae los suyos. Antes las tres listas eran la misma lista unida,
     asi que el dedupe vaciaba las dos ramas de pad y todo salia [GLOBAL].
-    El texto del motor ya empieza con 'LABEL: ' / 'LABEL/Pxx', que aqui
-    duplicaria la etiqueta, asi que se recorta el prefijo redundante."""
+    Los textos del motor se reescriben con `mensajes_pad.traducir_aviso_motor`
+    (el motor no cambia); lo que no se reconoce se muestra tal cual como
+    advertencia. Si `data` trae `solver_run` (estado del run) o `mensajes_pad`
+    (mensajes ya armados de la reconciliacion del pad) tambien se muestran."""
+    from . import mensajes_pad as MP
     joint_w = list(data.get('warnings', []))
+    msgs = []
     balance = data.get('balance_inventario') or {}
     volumen = float(balance.get('volumen_m3') or 0.)
     cobre = float(balance.get('cobre_t') or 0.)
     if abs(volumen) > 1e-6 or abs(cobre) > 1e-6:
-        joint_w.insert(0,
-            f'Balance pendiente de inventario: {volumen:+,.2f} m³ de solución '
-            f'y {cobre:+,.3f} t Cu. Positivo: aporte requerido; negativo: '
+        msgs.append(('GLOBAL', MP.mensaje(
+            MP.ADVERTENCIA, 'Balance pendiente de inventario',
+            f'{volumen:+,.2f} m³ de solución y {cobre:+,.3f} t Cu. Positivo: aporte requerido; negativo: '
             f'retención requerida. Disponibilidad física sin verificar. '
-            f'Este término no se atribuye a la recuperación de las pilas.')
+            f'Este término no se atribuye a la recuperación de las pilas.',
+            'Tratarlo como diferencia de balance por explicar.', None, None)))
+    if data.get('metodo_etiqueta'):
+        aplicado = data.get('metodo_aplicado')
+        txt = f"Se usó el método «{data['metodo_etiqueta']}»."
+        if data.get('metodo') == 'maduras_fijas' and aplicado and 'no aplica' in str(aplicado):
+            txt += ' Este método solo aplica a Sulfuros con pilas nuevas; en este Caso se usó el cálculo habitual.'
+        msgs.append(('MÉTODO', MP.mensaje(MP.INFORMACION, 'Método de reconciliación', txt, None, None, None)))
+    if data.get('solver_run'):
+        msgs += [('SOLVER', m) for m in MP.mensajes_run_solver(data['solver_run'], caso=data.get('caso_id'))]
+    msgs += [('PAD', m) for m in (data.get('mensajes_pad') or [])]
     joint_set = set(joint_w)
-    msgs = [('GLOBAL', w) for w in joint_w]
+    msgs += [('GLOBAL', MP.traducir_aviso_motor(w)) for w in joint_w]
     for label in ('SULFUROS', 'OXIDOS'):
         for w in data.get(label, {}).get('warnings', []):
             if w in joint_set:
                 continue
-            if w.startswith(label + ': '):
-                w = w[len(label) + 2:]
-            msgs.append((label, w))
+            msgs.append((label, MP.traducir_aviso_motor(w)))
     if not msgs:
         return None
-    return html.Div(
-        [html.Div([html.Span(tag, className='warning-tag'), html.Span(w)], className='warning-item')
-         for tag, w in msgs],
-        className='warning-list')
+    msgs.sort(key=lambda tm: MP.NIVELES.index(tm[1]['nivel']))
+    return html.Div([_render_mensaje(tag, m) for tag, m in msgs], className='warning-list')
 
 
 _PAD_TO_LABEL = {'rox': 'OXIDOS', 'rsu': 'SULFUROS'}
@@ -2478,6 +2519,11 @@ def _build_content_layout():
             dcc.Dropdown(id='curvas-recon-caso', options=CASO_OPTIONS, value=DEFAULT_CASO_ID,
                           clearable=False, className='case-dropdown'),
         ], xs=12, lg=5, className='control-field'),
+        dbc.Col([
+            html.Label('Método de reconciliación', htmlFor='curvas-recon-metodo', className='control-label'),
+            dcc.Dropdown(id='curvas-recon-metodo', options=METODO_OPTIONS, value=METODO_DEFAULT,
+                          clearable=False, className='case-dropdown'),
+        ], xs=12, lg=3, className='control-field'),
         # 'Reconciliar' corre el proceso; 'Generar reporte' arma el libro de la
         # semana con lo que quedo en `recon-store` (un solo boton de reporte, ya
         # no dos). Ya no hay 'Dias activos' ni checkbox de 'todas las curvas': se
@@ -2753,13 +2799,15 @@ def render_figure(selected, campana_idx, range_start, range_end):
 
 # ── Callbacks: reconciliacion ────────────────────────────────────────────────────
 
-def _error_modal_body(titulo, detalle, fallas=None):
-    """Contenido del modal de error (sin URLs ni secretos)."""
+def _error_modal_body(titulo, detalle, fallas=None, accion=None):
+    """Contenido del modal de error (sin URLs ni secretos): que paso, detalle y que hacer."""
     items = []
     if fallas:
         items.append(html.Ul([html.Li(f) for f in fallas], className='mb-0 ps-3'))
     elif detalle:
         items.append(html.P(detalle, className='mb-0'))
+    if accion:
+        items.append(html.P('Qué hacer: ' + accion, className='mt-2 mb-0 fw-semibold'))
     return html.Div([
         dbc.Alert(titulo, color='danger', className='mb-3'),
         *items,
@@ -2772,14 +2820,16 @@ def _error_modal_body(titulo, detalle, fallas=None):
     Output('curvas-recon-error-body', 'children'),
     Input('curvas-recon-btn', 'n_clicks'),
     State('curvas-recon-caso', 'value'),
+    State('curvas-recon-metodo', 'value'),
     prevent_initial_call=True,
     running=[
         (Output('curvas-recon-btn', 'disabled'), True, False),
         (Output('curvas-recon-btn', 'children'), 'Calculando…', 'Ejecutar cálculo'),
     ],
 )
-def compute_recon(_n_clicks, caso_id):
+def compute_recon(_n_clicks, caso_id, metodo=None):
     """Reconcile every active pile over the selected official Case window."""
+    metodo = metodo if metodo in METODO_ETIQUETAS else METODO_REPARTO     # sin selector (llamada directa): comportamiento previo
     profile_total_t0 = time.perf_counter()
     perf_trace_id = uuid.uuid4().hex
     record_phase('compute.start', 0.0, trace_id=perf_trace_id)
@@ -2787,7 +2837,9 @@ def compute_recon(_n_clicks, caso_id):
         _refresh_case_catalog()
     except Exception:
         return (dash.no_update, True,
-                _error_modal_body('No se pudo verificar el Caso oficial actual.', None, []))
+                _error_modal_body('No se pudo verificar el Caso oficial actual.',
+                                  'La consulta del Caso oficial no respondió, por lo que no se ejecutó el cálculo.',
+                                  None, 'Verifique la conexión con la base de datos y vuelva a pulsar Ejecutar cálculo.'))
     caso = _caso_by_id(caso_id)
     if caso is None or not caso.get('run_id'):
         return (dash.no_update, True,
@@ -2879,6 +2931,7 @@ def compute_recon(_n_clicks, caso_id):
                 if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
                     raise ValueError('Las fuentes de Sulfuros no corresponden al run oficial seleccionado')
                 materials['SULFUROS']['sulfide_inputs'] = sulfide_inputs
+                materials['SULFUROS']['sulfide_metodo'] = metodo
             else:
                 materials['SULFUROS']['sulfide_policy'] = 'legacy'
             phase_materials = time.perf_counter() - phase_t0
@@ -2903,6 +2956,13 @@ def compute_recon(_n_clicks, caso_id):
             raw_token = _save_recon_raw(joint.get('res'), caso, ws, week_end)
             phase_raw = time.perf_counter() - phase_t0
             record_phase('compute.raw_pickle', phase_raw, trace_id=perf_trace_id)
+        except MetodoInfactible as exc:
+            print(f'[curvas] metodo {metodo} infactible caso=#{caso["id"]}: {exc}')
+            return (dash.no_update, True,
+                    _error_modal_body('El método «%s» no pudo cerrar el pad' % metodo_etiqueta(metodo), None,
+                                      [f"{m['titulo']}: {m['texto']} Qué hacer: {m['accion']}" if m.get('accion') else f"{m['titulo']}: {m['texto']}"
+                                       for m in exc.mensajes],
+                                      'Revise el run del Caso o elija el método «%s».' % METODO_ETIQUETAS[METODO_REPARTO]))
         except Exception as exc:
             record_phase('compute.error', time.perf_counter() - profile_total_t0,
                          trace_id=perf_trace_id, error_type=type(exc).__name__)
@@ -2913,7 +2973,8 @@ def compute_recon(_n_clicks, caso_id):
             return (
                 dash.no_update,
                 True,
-                _error_modal_body('No se pudo ejecutar el cálculo', mensaje),
+                _error_modal_body('No se pudo ejecutar el cálculo', mensaje, None,
+                                  'Revise el mensaje, corrija el dato indicado y vuelva a calcular; si persiste, informe al administrador la hora del intento y el Caso.'),
             )
     finally:
         _progress_end()
@@ -2951,6 +3012,10 @@ def compute_recon(_n_clicks, caso_id):
         warnings=list(joint['warnings']),
         combined=_serialize_weeks(joint['weeks']),
         totals=_clean_nan(joint.get('totals') or {}),
+        metodo=metodo, metodo_etiqueta=metodo_etiqueta(metodo),
+        metodo_aplicado=((joint.get('res') or {}).get('metodo_sulfuros') or 'no aplica (sin pilas nuevas de Sulfuros)'),
+        mensajes_pad=_clean_nan((joint.get('res') or {}).get('mensajes_pad') or []),
+        solver_run=_clean_nan(_solver_run_or_none(caso['run_id'])),
     )
     for label, mat in materials.items():
         sub = joint['materials'][label]
@@ -3613,7 +3678,7 @@ def update_status_badge(data, caso_id):
         return 'Sin resultado usable', {**base_style, 'backgroundColor': '#B91C1C'}
     # `converged` solo indica que existen datos de caudal y pilas activas;
     # no es una medida de calidad ni una validación del ajuste.
-    return 'Cálculo listo', {**base_style, 'backgroundColor': '#13795B'}
+    return ('Cálculo listo' + (f" · {data['metodo_etiqueta']}" if data.get('metodo_etiqueta') else '')), {**base_style, 'backgroundColor': '#13795B'}
 
 
 @_callback(
@@ -3708,19 +3773,25 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
                              style={'color': '#B45309'}), None
         fd, tmp_path = tempfile.mkstemp(suffix='.xlsx')
         os.close(fd)
+        _aud = (res or {}).get('sulfide_audit') or {}
+        meta_libro = {'Método de reconciliación': data.get('metodo_etiqueta') or metodo_etiqueta(None),
+                      'Aplicado en Sulfuros': data.get('metodo_aplicado'),
+                      'Banda de cierre del pad': (f"{100 * _aud['banda']:.3g} %" if _aud.get('banda') is not None else 'no aplica'),
+                      'Caso': caso['id'], 'Run oficial': caso.get('run_id'),
+                      'Estado del run del solver': (data.get('solver_run') or {}).get('estado', 'sin dato')}
         if groups is not None and groups != []:
             from .virtual_pile_report import VirtualGroupError
             try:
-                report_metodo.escribir_libro(doc, tmp_path, groups=groups)
+                report_metodo.escribir_libro(doc, tmp_path, groups=groups, meta=meta_libro)
             except VirtualGroupError as exc:
                 return html.Div(f'No se pudo exportar la pila virtual: {exc}',
                                 style={'color': '#B45309'}), None
         else:
-            report_metodo.escribir_libro(doc, tmp_path)
+            report_metodo.escribir_libro(doc, tmp_path, meta=meta_libro)
         stamp = datetime.now().strftime('%Y%m%d_%H%M')
         download = dcc.send_file(
             tmp_path,
-            filename=f'Reporte_Recuperaciones_Metodo_Reconciliado_Caso{caso["id"]}_{stamp}.xlsx')
+            filename=f'Reporte_Recuperaciones_Metodo_Reconciliado_Caso{caso["id"]}_{data.get("metodo") or "reparto"}_{stamp}.xlsx')
     except Exception:
         return html.Div('No se pudo generar el informe. Revisa los datos fuente y, si existe, el libro de planta.',
                         style={'color': '#DC2626'}), None

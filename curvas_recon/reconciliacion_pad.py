@@ -9,7 +9,7 @@ es K*(F_p - F_r) [t], K = 0.024.
 Restricciones:
   * el Cu neto (recuperacion) de cada pila MADURA queda exacto;
   * masa de riego, masa de PLS y concentracion ponderada de riego y de PLS del pad dentro de una banda
-    relativa `tolerance` (`BAND_DEFAULT` = 1 %, provisional) de los flujos globales;
+    relativa `tolerance` (`BAND_DEFAULT` = 0,1 %) de los flujos globales;
   * el Cu neto del pad dentro de `net_tolerance` de F29 (lo que cierra la pila nueva);
   * drenaje <= tope * riego en cada pila (tope = 1 por defecto; ver `max_drain_ratio`) y valores positivos.
 Entre las soluciones posibles se elige la que menos se aparta de lo medido (minimos cuadrados con
@@ -23,8 +23,12 @@ from scipy.optimize import linprog, minimize
 K_F = 0.024
 DEFAULT_SIGMA = (0.02, 0.05, 0.05, 0.03)      # Q riego, F riego, Q PLS (proxy), F PLS
 # Banda de cierre del pad contra los flujos globales (masas, concentraciones ponderadas y neto F29), relativa.
-# PROVISIONAL: 1 % (antes 0,1 %) por el error de masa del run 10093 de 0,83 %; revisar al actualizar el run.
-BAND_DEFAULT = 0.01
+# 0,1 %: barrido con los globales finales del solver (auditorias/curvas_10009_validado_20261107/final/barrido_banda):
+# la banda minima factible comun es 0,065 % en 10009 y 0,092 % en 10013 (cota por el neto F29 junto con las masas: mas
+# estrecha es infactible, causa `neto_f29`), y en 10009 a 0,065 % la solucion ya sale degenerada (factores 0 a 2, respaldo LP).
+# 0,1 % es el valor simple mas bajo factible en ambos Casos con factores de caudal de las pilas nuevas dentro de +-0,35 de 1.
+# El Cu de riego de las nuevas de 10009 (x0,34) no depende de la banda: viene de la ley de F72 del run. Provisional.
+BAND_DEFAULT = 0.001
 # Rango fisico de los factores de cada pila respecto de lo medido (valor de partida). Provisional, no calibrado con ensayos:
 #  * caudal (riego y PLS) en [0,5; 2]: una pila no duplica ni reduce a la mitad su caudal por una reconciliacion de
 #    balance; el error de medicion de caudal esta en pocos % (las maduras suben ~5 % por el tope de drenaje, la nueva
@@ -258,7 +262,7 @@ def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=BAND_DE
     """Resuelve el ajuste. `piles`: salida de `window_priors`; `mature_nets_t`: {pila madura: Cu neto observado [t]}.
 
     `tolerance` / `net_tolerance`: banda relativa de cierre de masas y concentraciones del pad / del neto F29 contra los
-    globales (1 % por defecto, PROVISIONAL: error de masa del run 10093 de 0,83 %; revisar al actualizar el run).
+    globales (`BAND_DEFAULT` = 0,1 %; ver su comentario).
     `max_drain_ratio`: tope drenaje/riego de cada pila (1 = no se drena mas de lo que se riega); es un supuesto,
     no una ley hidraulica. `measured_drain_ratio` {pila: razon medida} y `measured_slack` (holgura relativa que cubre
     la incertidumbre de esa medida) reemplazan el tope de las pilas con medida; hoy el repo no tiene medicion de caudal

@@ -259,6 +259,33 @@ def load_caso_anchor(run_id, model_code, model_version=None, total_flows=None):
     return out
 
 
+def load_solver_run_meta(run_id):
+    """Estado y avisos del run del solver (solo SELECT sobre `recon_solver_run`; se llama al calcular, nunca al montar).
+
+    Devuelve dict con `estado` y, si el run las trae en `metadata_json`, `closure_kind`, `fuera_tol`, `motivo_reintento`
+    y `razones`; o None si no hay run o la consulta falla (el dato es opcional para la pantalla)."""
+    if run_id is None:
+        return None
+    try:
+        rows = _sql_rows(get_engine(), text(f"SELECT estado, metadata_json FROM {HIDRO_SCHEMA}.recon_solver_run WHERE id = :run"),
+                         {'run': int(run_id)}, etiqueta='recon_run_estado')
+    except Exception:
+        return None
+    if not rows:
+        return None
+    import json as _json
+    try:
+        meta = _json.loads(rows[0][1] or '{}')
+    except Exception:
+        meta = {}
+    fuera = meta.get('fuera_tol')
+    if fuera is None and isinstance(meta.get('fuera_lista'), list):
+        fuera = len(meta['fuera_lista'])
+    return dict(estado=rows[0][0], closure_kind=meta.get('closure_kind'), fuera_tol=fuera,
+                motivo_reintento=meta.get('motivo_reintento'), intentos=meta.get('intentos') or [],
+                razones=meta.get('razones') if isinstance(meta.get('razones'), dict) else None)
+
+
 CASO_ANCHOR_KEYS = (
     'q_riego_medido', 'q_riego_recon', 'q_pls_medido', 'q_pls_recon',
     'fino_riego_medido', 'fino_riego_recon', 'fino_pls_medido',
