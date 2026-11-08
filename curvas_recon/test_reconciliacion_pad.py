@@ -99,7 +99,9 @@ def goal_with_pls_ratio(priors, ratio):
 def test_infeasible_by_water_mass_reports_min_required_vs_max_allowed_pls_and_min_common_cap():
     priors, nets, _, _ = setup_case()
     goal, net_goal = goal_with_pls_ratio(priors, 1.0103)                          # PLS global > riego global, como 10009
-    out = reconcile_pad(priors, nets, goal, net_goal)
+    # banda estricta de 0,1 % explicita: con la banda por defecto (1 %) este mismo objetivo si cierra (ver el test siguiente);
+    # lo que se prueba aqui es el diagnostico de la causa, que necesita un caso infactible
+    out = reconcile_pad(priors, nets, goal, net_goal, tolerance=0.001, net_tolerance=0.001)
     assert out['status'] == 'infactible' and out['causa'] == 'masa_agua'
     d = out['detalle']
     assert d['pls_minimo_exigido_m3'] > d['pls_maximo_permitido_m3'] > 0
@@ -107,15 +109,16 @@ def test_infeasible_by_water_mass_reports_min_required_vs_max_allowed_pls_and_mi
     assert 'PLS minimo exigido' in out['motivo'] and 'PLS maximo permitido' in out['motivo']
     cap = out['tope_comun_minimo_factible']
     assert 1.0 < cap < 1.0103
-    assert reconcile_pad(priors, nets, goal, net_goal, max_drain_ratio=cap * 1.0005)['status'] == 'ok'
-    assert reconcile_pad(priors, nets, goal, net_goal, max_drain_ratio=cap * 0.995)['status'] == 'infactible'
+    assert reconcile_pad(priors, nets, goal, net_goal, max_drain_ratio=cap * 1.0005, tolerance=0.001, net_tolerance=0.001)['status'] == 'ok'
+    assert reconcile_pad(priors, nets, goal, net_goal, max_drain_ratio=cap * 0.995, tolerance=0.001, net_tolerance=0.001)['status'] == 'infactible'
 
 
 def test_infeasible_cause_is_f29_net_when_water_masses_are_fine():
     priors, nets, _, _ = setup_case()
     goal = targets_from(priors)
     q_r, f_r, q_p, f_p = pad_of(priors)
-    out = reconcile_pad(priors, nets, goal, K_F * (f_p - f_r) * 0.99, net_tolerance=0.0005)
+    # banda de masas explicita de 0,1 %: con 1 % las masas absorben el 1 % de diferencia de F29 y el caso deja de ser infactible
+    out = reconcile_pad(priors, nets, goal, K_F * (f_p - f_r) * 0.99, tolerance=0.001, net_tolerance=0.0005)
     assert out['status'] == 'infactible' and out['causa'] == 'neto_f29'
     assert out['desviacion_minima_neto_t'] > 0
 
@@ -272,3 +275,58 @@ def test_exactly_30_days_is_a_new_pile_and_31_is_mature():
             r['first_irrigation'] = '2026-08-07'                                        # 31 dias
     por = closed_days_check(rows, '2026-09-01', '2026-09-07')['por_pila']
     assert por['P25']['nueva'] is True and por['P24']['nueva'] is False
+
+
+def test_default_band_is_one_percent_provisional_and_closes_the_10009_like_ratio_that_the_strict_band_cannot():
+    import inspect
+    from curvas_recon.reconciliacion_pad import BAND_DEFAULT
+    sig = inspect.signature(reconcile_pad).parameters
+    assert BAND_DEFAULT == 0.01 and sig['tolerance'].default == 0.01 and sig['net_tolerance'].default == 0.01
+    priors, nets, _, _ = setup_case()
+    goal, net_goal = goal_with_pls_ratio(priors, 1.0103)                          # drenaje/riego global 1,0103 como 10009
+    assert reconcile_pad(priors, nets, goal, net_goal, tolerance=0.001, net_tolerance=0.001)['status'] == 'infactible'
+    out = reconcile_pad(priors, nets, goal, net_goal)                              # banda por defecto
+    assert out['status'] == 'ok' and all(abs(v) <= 0.01 + 1e-7 for v in out['diferencia'].values())      # holgura numerica del optimizador (~1e-9)
+    assert all(p['drenaje_riego'] <= 1 + 1e-7 for p in out['por_pila'])           # el tope de drenaje sigue en 1
+    for p in out['por_pila']:
+        if not p['young']:
+            assert p['neto_t'] == pytest.approx(nets[p['pile']], abs=1e-6)         # maduras exactas con la banda ancha
+
+
+def test_solver_failure_falls_back_to_a_sane_closest_point_not_to_an_arbitrary_lp_vertex(monkeypatch):
+    # reproduce la degeneracion de 10009 (banda 1 %, techo < 1): si SLSQP no entrega solucion valida, antes se devolvia el vertice
+    # arbitrario del LP de objetivo cero (Q PLS de maduras -100 % a +1300 %, nuevas en 0) con status ok
+    import types
+    from curvas_recon import reconciliacion_pad as RP
+    monkeypatch.setattr(RP, 'minimize', lambda *a, **k: types.SimpleNamespace(x=a[1] * 0.0))
+    priors, nets, _, _ = setup_case()
+    goal, net_goal = goal_with_pls_ratio(priors, 0.99)
+    out = reconcile_pad(priors, nets, goal, net_goal, tolerance=0.01, net_tolerance=0.01, max_drain_ratio=0.99)
+    assert out['status'] == 'ok'
+    for p in out['por_pila']:
+        assert 0.5 <= 1 + p['d_q_riego'] <= 2 and 0.5 <= 1 + p['d_q_pls'] <= 2
+        assert 0 <= 1 + p['d_cu_riego'] <= 3 and 0 <= 1 + p['d_cu_pls'] <= 3
+        assert p['q_pls'] > 0 and p['drenaje_riego'] <= 0.99 + 1e-7
+        if not p['young']:
+            assert p['neto_t'] == pytest.approx(nets[p['pile']], abs=1e-6)
+
+
+def test_factors_outside_the_physical_range_are_rejected_with_a_cause():
+    from curvas_recon import reconciliacion_pad as RP
+    priors, nets, _, _ = setup_case()
+    goal = targets_from(priors, 0.99, 0.99, 1.0, 1.0)
+    q_r, f_r, q_p, f_p = pad_of(priors)
+    net_goal = K_F * (0.99 * f_p - 0.99 * f_r)
+    assert reconcile_pad(priors, nets, goal, net_goal, tolerance=0.001, net_tolerance=0.001)['status'] == 'ok'
+    # rango fisico mas estrecho que lo que exige el cierre (-1 % de caudal): se rechaza con causa clara
+    out = reconcile_pad(priors, nets, goal, net_goal, tolerance=0.001, net_tolerance=0.001, physical_q_range=(0.999, 1.001))
+    assert out['status'] == 'infactible' and out['causa'] == 'limites_fisicos'
+    assert reconcile_pad(priors, nets, goal, net_goal, tolerance=0.001, net_tolerance=0.001, physical_q_range=None, physical_conc_range=None)['status'] == 'ok'
+    # verificacion de la solucion final: negativos, no finitos y fuera de rango
+    sane = dict(pile='P1', q_riego=1.0, cu_riego=1.0, q_pls=1.0, cu_pls=1.0, d_q_riego=0.0, d_cu_riego=0.0, d_q_pls=0.0, d_cu_pls=0.0)
+    chk = lambda **k: RP._plausibility_problems(dict(por_pila=[dict(sane, **k)]), RP.PHYS_Q_RANGE, RP.PHYS_CONC_RANGE)
+    assert chk() == []
+    assert any('negativo' in b for b in chk(q_pls=-1.0))
+    assert any('no finito' in b for b in chk(cu_pls=float('inf')))
+    assert any('fuera de' in b for b in chk(d_q_pls=13.0))                    # Q PLS x14
+    assert any('fuera de' in b for b in chk(d_cu_riego=-3.5))

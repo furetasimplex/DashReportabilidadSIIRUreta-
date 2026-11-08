@@ -9,7 +9,7 @@ es K*(F_p - F_r) [t], K = 0.024.
 Restricciones:
   * el Cu neto (recuperacion) de cada pila MADURA queda exacto;
   * masa de riego, masa de PLS y concentracion ponderada de riego y de PLS del pad dentro de una banda
-    relativa `tolerance` (0,1 % por defecto) de los flujos globales;
+    relativa `tolerance` (`BAND_DEFAULT` = 1 %, provisional) de los flujos globales;
   * el Cu neto del pad dentro de `net_tolerance` de F29 (lo que cierra la pila nueva);
   * drenaje <= tope * riego en cada pila (tope = 1 por defecto; ver `max_drain_ratio`) y valores positivos.
 Entre las soluciones posibles se elige la que menos se aparta de lo medido (minimos cuadrados con
@@ -22,6 +22,18 @@ from scipy.optimize import linprog, minimize
 
 K_F = 0.024
 DEFAULT_SIGMA = (0.02, 0.05, 0.05, 0.03)      # Q riego, F riego, Q PLS (proxy), F PLS
+# Banda de cierre del pad contra los flujos globales (masas, concentraciones ponderadas y neto F29), relativa.
+# PROVISIONAL: 1 % (antes 0,1 %) por el error de masa del run 10093 de 0,83 %; revisar al actualizar el run.
+BAND_DEFAULT = 0.01
+# Rango fisico de los factores de cada pila respecto de lo medido (valor de partida). Provisional, no calibrado con ensayos:
+#  * caudal (riego y PLS) en [0,5; 2]: una pila no duplica ni reduce a la mitad su caudal por una reconciliacion de
+#    balance; el error de medicion de caudal esta en pocos % (las maduras suben ~5 % por el tope de drenaje, la nueva
+#    absorbe el residuo hasta ~x1,6 en 10009).
+#  * concentracion de Cu (riego y PLS) en [0; 3]: el limite inferior 0 admite un riego casi sin Cu (F72 fino reconciliado
+#    cae ~86 % en 10009); el superior 3 evita fino sin respaldo en la medida.
+PHYS_Q_RANGE = (0.5, 2.0)
+PHYS_CONC_RANGE = (0.0, 3.0)
+_PHYS_TOL = 1e-6
 
 
 def window_priors(rows, window_start, young_lambda, mature_ratio=0.95):
@@ -240,20 +252,26 @@ def closed_days_check(rows, window_start, window_end, closed_before=None, casos=
     return out
 
 
-def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=0.001, net_tolerance=0.001,
+def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=BAND_DEFAULT, net_tolerance=BAND_DEFAULT,
                   sigma=DEFAULT_SIGMA, max_drain_ratio=1.0, measured_drain_ratio=None, measured_slack=0.0,
-                  max_change=None, cierre=None):
+                  max_change=None, cierre=None, physical_q_range=PHYS_Q_RANGE, physical_conc_range=PHYS_CONC_RANGE):
     """Resuelve el ajuste. `piles`: salida de `window_priors`; `mature_nets_t`: {pila madura: Cu neto observado [t]}.
 
+    `tolerance` / `net_tolerance`: banda relativa de cierre de masas y concentraciones del pad / del neto F29 contra los
+    globales (1 % por defecto, PROVISIONAL: error de masa del run 10093 de 0,83 %; revisar al actualizar el run).
     `max_drain_ratio`: tope drenaje/riego de cada pila (1 = no se drena mas de lo que se riega); es un supuesto,
     no una ley hidraulica. `measured_drain_ratio` {pila: razon medida} y `measured_slack` (holgura relativa que cubre
     la incertidumbre de esa medida) reemplazan el tope de las pilas con medida; hoy el repo no tiene medicion de caudal
     de PLS por pila, asi que no se usa. `max_change`: cota relativa opcional del movimiento de cada variable respecto del
     valor de partida (None = solo positividad). `cierre`: salida de `closed_days_check`; si trae dias cerrados dentro de la
     ventana el resultado es infactible (`causa`='dias_cerrados_en_ventana') y se anexa `cierre` a la salida.
+    `physical_q_range` / `physical_conc_range`: rango de los factores de caudal y de concentracion de cada pila respecto
+    de lo medido (`PHYS_Q_RANGE`, `PHYS_CONC_RANGE`; None = sin limite). Se imponen como restricciones (si solo ellas
+    impiden cerrar, `causa`='limites_fisicos') y la solucion final se verifica: flujos negativos, concentraciones no
+    finitas o factores fuera de rango la vuelven infactible con `causa`='solucion_no_fisica'.
 
     Devuelve dict con `status` ('ok' | 'infactible'), la solucion por pila, los totales del pad y, si no hay
-    solucion, `causa` (masa_agua | cobre | neto_f29 | limites_movimiento), `motivo`, `detalle`,
+    solucion, `causa` (masa_agua | cobre | neto_f29 | limites_movimiento | limites_fisicos | solucion_no_fisica), `motivo`, `detalle`,
     `tope_comun_minimo_factible` y la menor desviacion del Cu neto respecto de F29 si se puede calcular."""
     if cierre is not None and not cierre['ok']:
         return dict(status='infactible', causa='dias_cerrados_en_ventana', cierre=cierre,
@@ -264,7 +282,16 @@ def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=0.001, 
     x0 = np.array([p['x0'][j] for j in range(4) for p in piles])
     A_eq, b_eq, A_ub, b_ub, net = _constraints(piles, mature_nets_t, targets, tolerance, net_target_t, net_tolerance, caps)
     bounds = _movement_bounds(x0, max_change)
-    feasible = linprog(np.zeros(4 * n), A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+    bounds_free, A_ub_free, b_ub_free = bounds, A_ub, b_ub
+    if physical_q_range is not None or physical_conc_range is not None:
+        bounds, A_ub, b_ub = _physical_limits(piles, x0, bounds, A_ub, b_ub, physical_q_range, physical_conc_range)
+    feasible = _closest_feasible(x0, A_eq, b_eq, A_ub, b_ub, bounds)
+    if not feasible.success and (A_ub is not A_ub_free):
+        if _closest_feasible(x0, A_eq, b_eq, A_ub_free, b_ub_free, bounds_free).success:
+            return dict(status='infactible', causa='limites_fisicos',
+                        motivo=f'el cierre exige factores fuera del rango fisico (caudal {physical_q_range}, concentracion {physical_conc_range} '
+                               f'respecto de lo medido); sin ese rango si cierra', detalle=dict(q=physical_q_range, conc=physical_conc_range))
+        bounds, A_ub, b_ub = bounds_free, A_ub_free, b_ub_free
     if not feasible.success:
         # menor desviacion del neto del pad (mismas demas restricciones): variable extra d >= |net - F29|
         goal_f = net_target_t / K_F
@@ -294,9 +321,76 @@ def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=0.001, 
     if not _satisfies(x, A_eq, b_eq, A_ub, b_ub):                       # SLSQP no llego: se conserva la solucion factible del LP
         x = feasible.x
     out = _summary(piles, x, x0, targets, net_target_t, mature_nets_t, caps, cap_sources)
+    bad = _plausibility_problems(out, physical_q_range, physical_conc_range)
+    if bad:
+        return dict(status='infactible', causa='solucion_no_fisica', motivo='la solucion no es fisica: ' + '; '.join(bad[:4]),
+                    detalle=dict(problemas=bad))
     if cierre is not None:
         out['cierre'] = cierre
     return out
+
+
+def _closest_feasible(x0, A_eq, b_eq, A_ub, b_ub, bounds):
+    """Punto factible lo mas cercano a `x0` (LP de desviacion relativa absoluta minima). Sustituye al LP de objetivo cero,
+    cuyo vertice arbitrario (varios factores en el limite, otros en ~0) degeneraba la solucion cuando SLSQP no llegaba."""
+    m = len(x0)
+    c = np.concatenate([np.zeros(m), 1.0 / np.abs(x0)])
+    I = np.eye(m)
+    A_dev = np.vstack([np.hstack([I, -I]), np.hstack([-I, -I])])
+    b_dev = np.concatenate([x0, -x0])
+    A2 = np.vstack([np.hstack([A_ub, np.zeros((A_ub.shape[0], m))]), A_dev])
+    b2 = np.concatenate([b_ub, b_dev])
+    Ae = np.hstack([A_eq, np.zeros((A_eq.shape[0], m))]) if len(b_eq) else None
+    r = linprog(c, A_ub=A2, b_ub=b2, A_eq=Ae, b_eq=b_eq if len(b_eq) else None, bounds=list(bounds) + [(0, None)] * m, method='highs')
+    if r.success:
+        r.x = r.x[:m]
+    return r
+
+
+def _physical_limits(piles, x0, bounds, A_ub, b_ub, q_range, conc_range):
+    """Agrega el rango fisico: cotas de caudal sobre Q_r y Q_p, y F <= hi * (F0/Q0) * Q (concentracion maxima) por pila."""
+    n = len(piles)
+    bounds = list(bounds)
+    if q_range is not None:
+        for j in (0, 2):
+            for i in range(n):
+                lo, hi = bounds[j * n + i]
+                lo = max(lo, q_range[0] * x0[j * n + i]); hi = q_range[1] * x0[j * n + i] if hi is None else min(hi, q_range[1] * x0[j * n + i])
+                bounds[j * n + i] = (lo, hi)
+    extra, bx = [], []
+    if conc_range is not None:
+        for jq, jf in ((0, 1), (2, 3)):
+            for i in range(n):
+                v = np.zeros(4 * n); v[jf * n + i] = 1.0; v[jq * n + i] = -conc_range[1] * x0[jf * n + i] / x0[jq * n + i]
+                extra.append(v); bx.append(0.0)
+    if extra:
+        A_ub = np.vstack([A_ub, np.array(extra)]); b_ub = np.concatenate([b_ub, bx])
+    return bounds, A_ub, b_ub
+
+
+def _plausibility_problems(out, q_range, conc_range):
+    """Lista de problemas fisicos de una solucion: no finitos, negativos o factores fuera de rango."""
+    bad = []
+    for p in out['por_pila']:
+        vals = {k: p[k] for k in ('q_riego', 'cu_riego', 'q_pls', 'cu_pls')}
+        for k, v in vals.items():
+            if not np.isfinite(v):
+                bad.append(f"{p['pile']}: {k} no finito")
+            elif v < 0:
+                bad.append(f"{p['pile']}: {k} negativo ({v:.4g})")
+        if bad and any(b.startswith(p['pile']) for b in bad):
+            continue
+        if q_range is not None:
+            for k in ('d_q_riego', 'd_q_pls'):
+                f = 1 + p[k]
+                if not (q_range[0] - _PHYS_TOL <= f <= q_range[1] + _PHYS_TOL):
+                    bad.append(f"{p['pile']}: factor {k[2:]} {f:.3g} fuera de {q_range}")
+        if conc_range is not None:
+            for k in ('d_cu_riego', 'd_cu_pls'):
+                f = 1 + p[k]
+                if not (conc_range[0] - _PHYS_TOL <= f <= conc_range[1] + _PHYS_TOL):
+                    bad.append(f"{p['pile']}: factor {k[2:]} {f:.3g} fuera de {conc_range}")
+    return bad
 
 
 def _satisfies(x, A_eq, b_eq, A_ub, b_ub, rel=1e-9):
