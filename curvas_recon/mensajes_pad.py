@@ -268,7 +268,7 @@ def traducir_aviso_motor(texto):
 # ── reconcile_pad ─────────────────────────────────────────────────────────────
 
 def mensajes_reconciliacion_pad(res, *, banda=None, banda_estricta=BANDA_ESTRICTA, umbral_factor=UMBRAL_FACTOR_NUEVA,
-                                recuperaciones=None, umbral_brecha_t=UMBRAL_BRECHA_T_CU, tope_drenaje=None, ambito='Sulfuros'):
+                                recuperaciones=None, umbral_brecha_t=UMBRAL_BRECHA_T_CU, tope_drenaje=None, ambito='Sulfuros', metodo=None):
     """Mensajes de un resultado de `reconcile_pad`.
 
     `banda`: banda relativa usada (si es mayor que `banda_estricta` se avisa como provisional).
@@ -329,6 +329,12 @@ def mensajes_reconciliacion_pad(res, *, banda=None, banda_estricta=BANDA_ESTRICT
                            'Usar la banda estricta cuando el run del solver lo permita.', f'banda={banda}', ambito))
     piles = res.get('por_pila') or []
     mat = [p for p in piles if not p['young']]
+    if metodo == 'reparto' and mat:                     # reparto por aporte: las maduras tambien se ajustan
+        mx = max(mat, key=lambda p: abs(p['d_q_pls']) + abs(p['d_cu_pls']))
+        out.append(mensaje(INFORMACION, 'Las pilas maduras también se ajustan',
+                           f"Con el reparto por aporte ninguna pila queda fija: el mayor cambio de una pila madura es {mx['pile']} "
+                           f"(caudal de PLS ×{_n(1 + mx['d_q_pls'], 2)}, ley de Cu del PLS ×{_n(1 + mx['d_cu_pls'], 2)} respecto de lo medido).",
+                           'Para conservar la recuperación medida de las maduras use «Maduras fijas, nuevas absorben».', None, ambito))
     if tope_drenaje is None:                       # el tope realmente usado por el ajuste
         tope_drenaje = max((p.get('tope_drenaje', 1.0) for p in mat), default=1.0)
     en_tope = [p for p in mat if p['drenaje_riego'] >= tope_drenaje - 1e-6]
@@ -445,10 +451,13 @@ def texto_panel(metodo):
             '(0,95 veces el riego): cerrar el Cu neto no valida el balance de agua. Si el pad no cierra, el cálculo se detiene y explica la causa.',
             comunes]
     return [
-        'Método «Reparto por aporte». El ajuste del run (caudales y Cu fino de riego y de PLS) se reparte entre todas las pilas activas '
-        'del pad en proporción a su aporte de caudal, con límites para no dejar caudales negativos ni drenar más que el techo de drenaje. '
-        'Las pilas nuevas siguen su curva de arranque (rampa). Por eso las pilas maduras también cambian respecto de lo medido en la ventana. '
-        'El mes anterior al Caso no se modifica.',
-        'El drenaje reconciliado es modelado: cerrar el Cu neto no valida el balance de agua. Si una pila no tiene holgura para recibir su '
-        'parte, el residuo se reparte entre las demás o queda como balance pendiente, y el aviso lo indica.',
+        'Método «Reparto por aporte» (Sulfuros). Parte de los mismos objetivos absolutos del run (riego, PLS, finos y cobre neto F29) y de la '
+        'misma base por pila que el otro método. El ajuste entre lo medido y esos objetivos se reparte entre TODAS las pilas activas en '
+        'proporción a su aporte (caudal para el agua, fino para el cobre), con un factor común. Ninguna pila queda fija: las maduras '
+        'también cambian respecto de lo medido. Una pila que alcanza un límite (tope de drenaje o rango físico) se queda en él y las demás '
+        'absorben el resto en la misma proporción. El mes anterior al Caso no se modifica.',
+        f'Cierra contra los flujos globales con una banda de {_pct(RP.BAND_DEFAULT, 1)} (provisional), con el mismo tope de drenaje de '
+        f'{_n(RP.MAX_DRAIN_RATIO_DEFAULT, 2)} veces el riego y el mismo rango físico de caudal y ley que «Maduras fijas». El drenaje de las '
+        'maduras es un proxy (0,95 veces el riego); cerrar el Cu neto no valida el balance de agua. Si el pad no cierra, el cálculo se '
+        'detiene y explica la causa.',
         comunes]

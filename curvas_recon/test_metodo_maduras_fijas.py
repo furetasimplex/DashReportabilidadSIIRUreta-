@@ -92,21 +92,60 @@ def _anchor(targets, net):
                 fino_pls_recon=targets['cu_pls_g_l'] * 24 * targets['q_pls_m3h_sum'] / 1000)
 
 
-def test_engine_reparto_is_identical_to_before_and_maduras_fijas_has_the_same_output_format():
+def test_engine_default_is_unchanged_and_both_methods_have_the_same_output_format():
     _, _, _, targets, net = _setup()
     anchor = _anchor(targets, net)
     base = engine._reconcile_sulfide_local(WS, WE, _material(), anchor)
-    explicit = engine._reconcile_sulfide_local(WS, WE, dict(_material(), sulfide_metodo=METODO_REPARTO), anchor)
+    explicit = engine._reconcile_sulfide_local(WS, WE, dict(_material(), sulfide_metodo='ajuste_local'), anchor)
     for k in ('recovery_rows', 'daily', 'piles', 'sulfide_audit'):
-        assert explicit[k] == base[k]                           # regresion: el metodo 1 no cambia ningun dato
-    assert base['metodo_sulfuros'] == METODO_REPARTO and base['mensajes_pad'] == []
-    m2 = engine._reconcile_sulfide_local(WS, WE, dict(_material(), sulfide_metodo=METODO_MADURAS_FIJAS), anchor)
-    assert set(m2) == set(base) and len(m2['piles']) == len(base['piles']) and len(m2['recovery_rows']) == len(base['recovery_rows'])
-    assert m2['metodo_sulfuros'] == METODO_MADURAS_FIJAS and m2['local_direct_recovery'] and m2['mensajes_pad']
-    json.dumps(m2['mensajes_pad']); json.dumps(m2['sulfide_audit'], allow_nan=False, default=str)
-    # mensajes de cada metodo: avisos de tope/factores/brecha solo en maduras fijas; avisos del motor solo en reparto
-    assert all(m['nivel'] in MP.NIVELES for m in m2['mensajes_pad']) and m2['mensajes_pad']
-    assert not any('maduras fijas' in w.lower() for w in base['warnings'])
+        assert explicit[k] == base[k]                           # regresion: sin metodo el motor no cambia ningun dato
+    assert base['metodo_sulfuros'] == 'ajuste_local' and base['mensajes_pad'] == []
+    for metodo in (METODO_MADURAS_FIJAS, METODO_REPARTO):
+        m = engine._reconcile_sulfide_local(WS, WE, dict(_material(), sulfide_metodo=metodo), anchor)
+        assert set(m) == set(base) and len(m['piles']) == len(base['piles']) and len(m['recovery_rows']) == len(base['recovery_rows'])
+        assert m['metodo_sulfuros'] == metodo and m['local_direct_recovery'] and m['mensajes_pad']
+        json.dumps(m['mensajes_pad']); json.dumps(m['sulfide_audit'], allow_nan=False, default=str)
+        assert all(x['nivel'] in MP.NIVELES for x in m['mensajes_pad'])
+
+
+def _both(band=0.001, **kw):
+    rows, result, audit, targets, net = _setup(**kw)
+    f2 = aplicar_maduras_fijas(result, audit, rows, WS, WE, targets, net, banda=band, fijar_maduras=True)
+    f1 = aplicar_maduras_fijas(result, audit, rows, WS, WE, targets, net, banda=band, fijar_maduras=False)
+    return result, audit, targets, net, f2, f1
+
+
+def test_both_methods_close_against_the_same_absolute_targets_and_keep_closed_days():
+    result, audit, targets, net, (r2, a2, _), (r1, a1, m1) = _both()
+    for a in (a2, a1):
+        d = a['concentration_match']['diferencia']
+        assert all(abs(v) <= 0.001 + 1e-7 for v in d.values())                      # misma banda, mismos objetivos
+        assert a['concentration_match']['objetivo'] == a2['concentration_match']['objetivo']
+        assert a['tope_drenaje'] == 0.99 and all(p['drenaje_riego'] <= 0.99 + 1e-7 for p in a['por_pila'])
+        assert abs(a['curve_net_t'] / net - 1) <= 0.0011
+    old = {(r['pile'], r['date']): r for r in result}
+    for out in (r2, r1):
+        for r in out:
+            if r['date'] < WS:
+                assert r == old[(r['pile'], r['date'])]                              # dias de meses cerrados sin cambio
+    assert a1['metodo'] == METODO_REPARTO and a2['metodo'] == METODO_MADURAS_FIJAS
+    assert any(x['titulo'] == 'Las pilas maduras también se ajustan' for x in m1)
+
+
+def test_method_2_keeps_mature_exact_and_method_1_moves_them_with_a_common_factor_except_where_limits_act():
+    result, audit, targets, net, (r2, a2, _), (r1, a1, _) = _both()
+    old = {(r['pile'], r['date']): r for r in result}
+    mature = {k[1] for k in audit['mature']}
+    new2 = {(r['pile'], r['date']): r for r in r2}; new1 = {(r['pile'], r['date']): r for r in r1}
+    assert all(new2[(p, '2026-09-07')]['reconciled_pct'] == old[(p, '2026-09-07')]['reconciled_pct'] for p in mature)        # metodo 2: exactas
+    assert any(abs(new1[(p, '2026-09-07')]['reconciled_pct'] - old[(p, '2026-09-07')]['reconciled_pct']) > 1e-6 for p in mature)   # metodo 1: se mueven
+    por = {p['pile']: p for p in a1['por_pila']}
+    free = [p for p in por.values() if p['drenaje_riego'] < 0.99 - 1e-6]                 # sin limite de drenaje activo
+    assert len(free) >= 3
+    for g in ('d_q_riego', 'd_q_pls'):
+        vals = [1 + p[g] for p in free]
+        assert max(vals) - min(vals) < 0.02                                              # factor comun (dentro de la tolerancia)
+    assert abs(sum(p['neto_t'] for p in a1['por_pila']) / net - 1) <= 0.0011
 
 
 def test_dashboard_shows_the_method_used_and_exports_it(monkeypatch):
@@ -168,61 +207,10 @@ def _capture_solve(monkeypatch, metodo):
     return seen['materials']['SULFUROS'], loader
 
 
-def test_option_reparto_uses_the_general_engine_for_all_sulfide_piles_even_with_new_piles(monkeypatch):
-    mat, loader = _capture_solve(monkeypatch, METODO_REPARTO)
-    assert mat.get('sulfide_policy') == 'legacy' and 'sulfide_inputs' not in mat and 'sulfide_metodo' not in mat and not loader.called         # sin ajuste local de nuevas: motor general, todas las pilas
-
-
-def test_option_maduras_fijas_and_no_selector_keep_the_local_sulfide_package(monkeypatch):
-    mat, loader = _capture_solve(monkeypatch, METODO_MADURAS_FIJAS)
-    assert mat['sulfide_metodo'] == METODO_MADURAS_FIJAS and 'sulfide_inputs' in mat and loader.called
+def test_both_selector_options_use_the_local_sulfide_package_with_their_own_flag(monkeypatch):
+    for metodo in (METODO_REPARTO, METODO_MADURAS_FIJAS):
+        mat, loader = _capture_solve(monkeypatch, metodo)
+        assert mat['sulfide_metodo'] == metodo and 'sulfide_inputs' in mat and loader.called
     mat, _ = _capture_solve(monkeypatch, None)                                 # llamada directa sin selector: ajuste local de siempre
     assert mat['sulfide_metodo'] == 'ajuste_local' and 'sulfide_inputs' in mat
 
-
-EXCEL_10009 = ROOT / 'auditorias' / 'verificacion_metodo_pad_20261107' / 'datos_caso_10009.xlsx'
-FINAL_10009 = ROOT / 'auditorias' / 'mejora_solver_redondeo_20261107' / 'final' / 'res_despues_10009_b0.0_defaults.csv'
-
-
-@pytest.mark.skipif(not (EXCEL_10009.exists() and FINAL_10009.exists()), reason='Excel del Caso 10009 y resultado final del solver (locales, no versionados)')
-def test_option_reparto_adjusts_mature_piles_proportionally_to_their_flow_contribution():
-    """Con el Excel del Caso (sin SQL): las maduras de Sulfuros SI reciben ajuste, proporcional a su caudal."""
-    import subprocess
-    code = r'''
-import sys, json
-sys.path.insert(0, %r); sys.path.insert(0, %r)
-import pandas as pd
-from curvas_recon import extraccion_caso as EC
-_o = EC.read_workbook
-def rw(path, *a, **k):
-    D = _o(path, *a, **k)
-    v = pd.read_csv(%r).set_index('Codigo')
-    f = D['flows'].copy(); m = f['codigo_flujo'].isin(v.index)
-    f.loc[m, 'masa_reconciliada'] = f.loc[m, 'codigo_flujo'].map(v['Masa recon']); f.loc[m, 'fino_cu_reconciliado'] = f.loc[m, 'codigo_flujo'].map(v['Fino recon Cu'])
-    D['flows'] = f
-    return D
-EC.read_workbook = rw
-import dash_con_excel as X
-D, caso, P = X.install(%r)
-cap = {}
-P._save_recon_raw = lambda res, c, w, e: cap.update(res=res) or 'tok'
-P.compute_recon(1, int(caso['id']), 'reparto')
-d = [x for x in cap['res']['daily'] if x['label'] == 'SULFUROS']
-ratio = {}
-for x in d:
-    if x['dia_ciclo'] > 30 and x['q_riego_medido']:
-        ratio.setdefault(x['parcela'], [0, 0]); ratio[x['parcela']][0] += x['q_riego_final']; ratio[x['parcela']][1] += x['q_riego_medido']
-dq = {p: a / b - 1 for p, (a, b) in ratio.items()}
-dm = {x['parcela']: sum(y['d_riego'] for y in d if y['parcela'] == x['parcela']) for x in d if x['dia_ciclo'] > 30}
-print('RESULT:' + json.dumps(dict(n=len(dq), dq=dq, dm=dm, local=bool(cap['res'].get('local_direct_recovery')))))
-''' % (str(ROOT), str(ROOT / 'scripts'), str(FINAL_10009), str(EXCEL_10009))
-    import json as _j
-    out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, cwd=str(ROOT), env=dict(__import__('os').environ, PYTHONPATH=str(ROOT)))
-    assert 'RESULT:' in out.stdout, out.stderr[-1500:]
-    res = _j.loads(next(l for l in out.stdout.splitlines() if l.startswith('RESULT:'))[7:])
-    assert res['n'] >= 10 and not res['local']                               # motor general, no el ajuste local
-    assert any(abs(v) > 1e-4 for v in res['dq'].values())                    # las maduras SI cambian
-    assert all(abs(v) > 1e-9 for v in res['dm'].values())
-    # proporcional al aporte: mayor caudal => mayor ajuste absoluto (el relativo es casi uniforme)
-    vals = list(res['dq'].values())
-    assert max(vals) - min(vals) < 0.02

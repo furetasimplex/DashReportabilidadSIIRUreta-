@@ -45,8 +45,11 @@ def _day(d):
     return pd.Timestamp(d).date().isoformat()
 
 
-def aplicar_maduras_fijas(result, audit, rows, ws, we, conc_targets, net_target_t, banda=None, tope_drenaje=None):
-    """Reemplaza el ajuste de `reconcile_sulfides` por el de maduras fijas. Devuelve `(result2, audit2, mensajes)`.
+def aplicar_maduras_fijas(result, audit, rows, ws, we, conc_targets, net_target_t, banda=None, tope_drenaje=None, fijar_maduras=True):
+    """Reemplaza el ajuste de `reconcile_sulfides` por el del pad. Devuelve `(result2, audit2, mensajes)`.
+
+    `fijar_maduras=True`: «Maduras fijas, nuevas absorben». `False`: «Reparto por aporte»: mismos objetivos del run, banda, tope y rangos
+    fisicos, pero el ajuste se reparte entre TODAS las pilas por su aporte (factor comun) y las maduras no quedan fijas.
 
     `result`/`audit`: salida de `reconcile_sulfides` (no se modifican). `conc_targets`: dict con
     `q_riego_m3h_sum`, `q_pls_m3h_sum`, `cu_riego_g_l`, `cu_pls_g_l`. Si el pad no cierra se levanta `MetodoInfactible`."""
@@ -77,13 +80,14 @@ def aplicar_maduras_fijas(result, audit, rows, ws, we, conc_targets, net_target_
     priors = RP.window_priors(rows, s, lam)
     cierre = RP.closed_days_check(rows, s, e)
     res = RP.reconcile_pad(priors, nets, conc_targets, net_target_t, tolerance=banda, net_tolerance=banda,
-                           max_drain_ratio=tope_drenaje, cierre=cierre)
+                           max_drain_ratio=tope_drenaje, cierre=cierre, fijar_maduras=fijar_maduras)
     if res['status'] != 'ok':
         raise MetodoInfactible(MP.mensajes_reconciliacion_pad(res, banda=banda))
-    daily = RP.expand_to_days(rows, s, res, nets_day, lam)
+    daily = RP.expand_to_days(rows, s, res, nets_day, lam, fixed_mature=fijar_maduras)
     out = deepcopy(result)
     index = {(r['pile'], _day(r['date'])): i for i, r in enumerate(out)}
     young_piles = {p['pile'] for p in res['por_pila'] if p['young']}
+    adjusted = {p['pile'] for p in res['por_pila']} if not fijar_maduras else young_piles      # reparto: tambien las maduras
     by_pile_day = {}
     for d in daily:
         by_pile_day[(d['pile'], d['date'])] = d
@@ -92,7 +96,7 @@ def aplicar_maduras_fijas(result, audit, rows, ws, we, conc_targets, net_target_
         row['cu_riego_recon_gL'] = d['cu_riego']
         row['cu_drenaje_recon_gL'] = d['cu_pls']
         row['fitted_q_drenaje_m3h'] = d['q_pls']
-    for pile in young_piles:
+    for pile in adjusted:
         pct = by[(pile, prev)]['official_pct'] or 0.0
         cu_tf = by[(pile, prev)]['cu_apilado_t']
         for day in days:
@@ -108,10 +112,12 @@ def aplicar_maduras_fijas(result, audit, rows, ws, we, conc_targets, net_target_
     audit2 = dict(audit)
     audit2.update(
         curve_net_t=curve_net, delivered_net_t=curve_net, net_residual_t=float(net_target_t) - curve_net, water_by_young={},
-        concentration_match=dict(status='maduras_fijas', motivo=None, banda=banda, diferencia=res['diferencia'], pad=res['pad'], objetivo=res['objetivo']),
-        method='maduras fijas, nuevas absorben', metodo=METODO_MADURAS_FIJAS, banda=banda, tope_drenaje=tope_drenaje, cierre=cierre,
+        concentration_match=dict(status=('maduras_fijas' if fijar_maduras else 'reparto_aporte'), motivo=None, banda=banda, diferencia=res['diferencia'], pad=res['pad'], objetivo=res['objetivo']),
+        method=('maduras fijas, nuevas absorben' if fijar_maduras else 'reparto por aporte entre todas las pilas'),
+        metodo=(METODO_MADURAS_FIJAS if fijar_maduras else METODO_REPARTO), banda=banda, tope_drenaje=tope_drenaje, cierre=cierre,
         por_pila=[{k: (float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else v) for k, v in p.items()} for p in res['por_pila']],
-        water_qualification='Metodo maduras fijas: el drenaje de las maduras es un proxy (0,95 x riego) ajustado al neto observado; no es balance de agua medido.')
+        water_qualification=('Metodo maduras fijas: el drenaje de las maduras es un proxy (0,95 x riego) ajustado al neto observado; no es balance de agua medido.'
+                             if fijar_maduras else 'Reparto por aporte: el drenaje de las maduras es un proxy (0,95 x riego) escalado como el de las demas pilas; no es balance de agua medido.'))
     recup = {}
     for pile in young_piles:
         end_row = by[(pile, e)]
@@ -119,5 +125,5 @@ def aplicar_maduras_fijas(result, audit, rows, ws, we, conc_targets, net_target_
         if off is not None:
             recup[pile] = dict(metodo_pct=out[index[(pile, e)]]['reconciled_pct'], oficial_pct=off, cu_apilado_t=by[(pile, prev)]['cu_apilado_t'])
     audit2['recuperaciones_nuevas'] = recup
-    msgs = MP.mensajes_reconciliacion_pad(res, banda=banda, recuperaciones=recup, tope_drenaje=tope_drenaje)
+    msgs = MP.mensajes_reconciliacion_pad(res, banda=banda, recuperaciones=recup, tope_drenaje=tope_drenaje, metodo=(METODO_MADURAS_FIJAS if fijar_maduras else METODO_REPARTO))
     return out, audit2, msgs

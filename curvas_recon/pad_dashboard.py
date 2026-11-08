@@ -1126,8 +1126,8 @@ def _build_warnings(data: dict):
     if data.get('metodo_etiqueta'):
         aplicado = data.get('metodo_aplicado')
         txt = f"Se usó el método «{data['metodo_etiqueta']}»."
-        if data.get('metodo') == 'maduras_fijas' and aplicado and 'no aplica' in str(aplicado):
-            txt += ' Este método solo aplica a Sulfuros con pilas nuevas; en este Caso se usó el cálculo habitual.'
+        if data.get('metodo') in ('maduras_fijas', 'reparto') and aplicado and 'no aplica' in str(aplicado):
+            txt += ' Este método solo aplica a Sulfuros con pilas nuevas; en este Caso se usó el cálculo habitual (motor general).'
         msgs.append(('MÉTODO', MP.mensaje(MP.INFORMACION, 'Método de reconciliación', txt, None, None, None)))
     if data.get('solver_run'):
         msgs += [('SOLVER', m) for m in MP.mensajes_run_solver(data['solver_run'], caso=data.get('caso_id'))]
@@ -2889,9 +2889,9 @@ def compute_recon(_n_clicks, caso_id, metodo=None):
             # Con curvas nuevas (30 dias o menos desde el primer riego) se
             # ajustan solo ellas; sin curvas nuevas el respaldo es la
             # distribucion del ajuste entre todas las curvas.
-            # 'Reparto por aporte' reparte el ajuste del run entre TODAS las pilas del pad con el motor general
-            # (`recon_engine`, paso 4 `_distribute_bounded`), tambien en Sulfuros: no usa el ajuste local de nuevas.
-            sulfide_young = pilas_jovenes('SULFUROS', ws, week_end) if metodo != METODO_REPARTO else {}
+            # Ambos metodos del selector usan el paquete local de Sulfuros (flujos absolutos del run, misma base por pila) y cierran contra
+            # los mismos objetivos; solo difieren en quien absorbe el ajuste (ver `metodo_maduras_fijas`).
+            sulfide_young = pilas_jovenes('SULFUROS', ws, week_end)
             if sulfide_young:
                 method = tag = 'Sulfuros: ajuste de curvas de hasta 30 días'
 
@@ -3023,8 +3023,7 @@ def compute_recon(_n_clicks, caso_id, metodo=None):
         totals=_clean_nan(joint.get('totals') or {}),
         metodo=metodo, metodo_etiqueta=metodo_etiqueta(metodo),
         metodo_aplicado=((joint.get('res') or {}).get('metodo_sulfuros')
-                         or ('reparto por aporte entre todas las pilas (motor general)' if metodo == METODO_REPARTO
-                             else 'no aplica (sin pilas nuevas de Sulfuros)')),
+                         or 'no aplica (sin pilas nuevas de Sulfuros)'),
         mensajes_pad=_clean_nan((joint.get('res') or {}).get('mensajes_pad') or []),
         solver_run=_clean_nan(_solver_run_or_none(caso['run_id'])),
     )

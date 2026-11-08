@@ -124,7 +124,7 @@ def test_panel_text_depends_on_the_method_and_quotes_the_real_parameters():
     assert 'conservan lo medido' in fijas and 'absorben el' in fijas and 'meses anteriores' in fijas and 'cinética temprana' in fijas
     assert f"{MP._pct(RP.BAND_DEFAULT, 1)}" in fijas and MP._n(RP.MAX_DRAIN_RATIO_DEFAULT, 2) in fijas and '0,99' in fijas
     assert '±30 %' not in fijas and '±30 %' not in reparto
-    assert 'en proporción a su aporte' in reparto and 'todas las pilas activas' in reparto and 'maduras también cambian' in reparto
+    assert 'en proporción a su aporte' in reparto and 'TODAS las pilas activas' in reparto and 'maduras también cambian' in reparto and 'mismos objetivos absolutos' in reparto
 
 
 def test_cap_message_shows_the_real_drain_cap():

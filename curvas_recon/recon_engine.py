@@ -2958,13 +2958,14 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
                                        concentration_targets=conc_targets,
                                        max_concentration_change=SULFIDE_CONC_MAX_CHANGE,
                                        concentration_tolerance=SULFIDE_CONC_TOLERANCE)
-    # Metodo de Sulfuros: 'reparto' (por defecto del motor: sin cambios) o 'maduras_fijas' (ver metodo_maduras_fijas).
-    metodo = material.get('sulfide_metodo') or 'reparto'
+    # Metodo de Sulfuros: 'ajuste_local' (por defecto del motor: sin cambios), 'maduras_fijas' o 'reparto' (ver metodo_maduras_fijas).
+    metodo = material.get('sulfide_metodo') or 'ajuste_local'
     mensajes_pad = []
-    if metodo == 'maduras_fijas':
+    if metodo in ('maduras_fijas', 'reparto'):
+        # Ambos metodos cierran contra los mismos absolutos del run (banda, tope y rangos fisicos); solo cambia quien absorbe el ajuste.
         from .metodo_maduras_fijas import aplicar_maduras_fijas
         result, audit, mensajes_pad = aplicar_maduras_fijas(result, audit, inputs['rows'], ws, we, conc_targets, anchor['net_cu_target_t'],
-                                                            banda=material.get('sulfide_banda'))
+                                                            banda=material.get('sulfide_banda'), fijar_maduras=(metodo == 'maduras_fijas'))
     def _json_safe(value):
         if isinstance(value, dict):
             return {('/'.join(map(str, key)) if isinstance(key, tuple) else str(key)): _json_safe(item)
@@ -2989,7 +2990,8 @@ def _reconcile_sulfide_local(week_start, week_end, material, anchor):
     for r in result:
         x = dict(r)
         x['reconciled_pct'] = x.get('reconciled_pct', x['official_pct'])
-        x['recovery_source'] = ('observed' if (x['pad'], x['pile'], x['campaign']) in audit['mature'] and ws <= pd.Timestamp(x['date']).normalize() <= we else
+        x['recovery_source'] = ('observed' if (x['pad'], x['pile'], x['campaign']) in audit['mature'] and ws <= pd.Timestamp(x['date']).normalize() <= we and metodo != 'reparto' else
+                                'net_fit' if metodo == 'reparto' and (x['pad'], x['pile'], x['campaign']) in audit['mature'] and ws <= pd.Timestamp(x['date']).normalize() <= we else
                                 'net_fit' if (x['pad'], x['pile'], x['campaign']) in audit['young'] and ws <= pd.Timestamp(x['date']).normalize() <= we else 'official')
         recovery_rows.append(x)
     piles, daily, all_rows = [], [], []

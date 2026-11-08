@@ -100,7 +100,7 @@ def _constraints(piles, mature_nets_t, targets, tolerance, net_target_t, net_tol
     goal_f = net_target_t / K_F
     A_ub.append(net); b_ub.append(goal_f * (1 + net_tolerance))
     A_ub.append(-net); b_ub.append(-goal_f * (1 - net_tolerance))
-    return np.array(A_eq), np.array(b_eq), np.array(A_ub), np.array(b_ub), net
+    return np.array(A_eq, dtype=float).reshape(-1, 4 * n), np.array(b_eq, dtype=float), np.array(A_ub), np.array(b_ub), net
 
 
 def _pile_caps(piles, max_drain_ratio, measured_drain_ratio, measured_slack):
@@ -261,9 +261,15 @@ def closed_days_check(rows, window_start, window_end, closed_before=None, casos=
 
 def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=BAND_DEFAULT, net_tolerance=BAND_DEFAULT,
                   sigma=DEFAULT_SIGMA, max_drain_ratio=MAX_DRAIN_RATIO_DEFAULT, measured_drain_ratio=None, measured_slack=0.0,
-                  max_change=None, cierre=None, physical_q_range=PHYS_Q_RANGE, physical_conc_range=PHYS_CONC_RANGE):
+                  max_change=None, cierre=None, physical_q_range=PHYS_Q_RANGE, physical_conc_range=PHYS_CONC_RANGE, fijar_maduras=True):
     """Resuelve el ajuste. `piles`: salida de `window_priors`; `mature_nets_t`: {pila madura: Cu neto observado [t]}.
 
+    `fijar_maduras`: True (por defecto) = «maduras fijas, nuevas absorben» (la recuperacion de cada madura queda exacta y la nueva
+    absorbe el residuo). False = «reparto por aporte»: MISMOS objetivos, banda, tope y rangos fisicos, pero ninguna pila queda fija; el
+    ajuste (objetivo - base) se reparte entre todas las pilas con un factor comun por variable (riego, fino de riego, PLS, fino de PLS), es
+    decir proporcional al aporte de cada pila (caudal para Q, fino para Cu). Se minimiza la suma de cuadrados de la distancia de cada
+    pila a ese factor comun; una pila que choca con un limite (tope de drenaje, rango fisico) se queda en el limite y las demas
+    absorben el resto en la misma proporcion (se redistribuye por aporte, no por holgura).
     `tolerance` / `net_tolerance`: banda relativa de cierre de masas y concentraciones del pad / del neto F29 contra los
     globales (`BAND_DEFAULT` = 0,1 %; ver su comentario).
     `max_drain_ratio`: tope drenaje/riego de cada pila (0,99 por defecto: se drena como maximo el 99 % de lo regado); es un supuesto,
@@ -285,9 +291,10 @@ def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=BAND_DE
                     motivo=f"la ventana incluye {len(cierre['dias_cerrados_en_ventana'])} dia(s) con riego anteriores al cierre "
                            f"{cierre['cierre_fecha']}; no se mueven dias cerrados")
     n = len(piles)
+    cons_piles = piles if fijar_maduras else [dict(p, young=True) for p in piles]      # sin pilas fijas: no hay restricciones de neto exacto
     caps, cap_sources = _pile_caps(piles, max_drain_ratio, measured_drain_ratio, measured_slack)
     x0 = np.array([p['x0'][j] for j in range(4) for p in piles])
-    A_eq, b_eq, A_ub, b_ub, net = _constraints(piles, mature_nets_t, targets, tolerance, net_target_t, net_tolerance, caps)
+    A_eq, b_eq, A_ub, b_ub, net = _constraints(cons_piles, mature_nets_t, targets, tolerance, net_target_t, net_tolerance, caps)
     bounds = _movement_bounds(x0, max_change)
     bounds_free, A_ub_free, b_ub_free = bounds, A_ub, b_ub
     if physical_q_range is not None or physical_conc_range is not None:
@@ -310,23 +317,28 @@ def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=BAND_DE
         relax = linprog(c, A_ub=A_ub2, b_ub=b_ub2, A_eq=np.hstack([A_eq, np.zeros((len(b_eq), 1))]), b_eq=b_eq,
                         bounds=bounds + [(0, None)], method='highs')
         gap_t = K_F * relax.x[-1] if relax.success else None
-        diag = diagnose_infeasibility(piles, mature_nets_t, targets, net_target_t, tolerance, net_tolerance, caps, x0, max_change)
+        diag = diagnose_infeasibility(cons_piles, mature_nets_t, targets, net_target_t, tolerance, net_tolerance, caps, x0, max_change)
         return dict(status='infactible', desviacion_minima_neto_t=gap_t,
                     desviacion_minima_neto_relativa=(gap_t / net_target_t if gap_t is not None else None), **diag)
-    w = np.concatenate([np.full(n, 1 / sigma[j]) for j in range(4)]) / x0
-    objective = lambda x: float(np.sum((w * (x - x0)) ** 2))
-    gradient = lambda x: 2 * w ** 2 * (x - x0)
-    constraints = [dict(type='eq', fun=lambda x: A_eq @ x - b_eq, jac=lambda x: A_eq),
-                   dict(type='ineq', fun=lambda x: b_ub - A_ub @ x, jac=lambda x: -A_ub)]
-    scale = np.maximum(np.abs(x0), 1.0)
-    solved = minimize(lambda z: objective(z * scale), feasible.x / scale, jac=lambda z: gradient(z * scale) * scale,
-                      bounds=[(lo_ / sc, (hi_ / sc if hi_ is not None else None)) for (lo_, hi_), sc in zip(bounds, scale)],
-                      constraints=[dict(type='eq', fun=lambda z: (A_eq @ (z * scale) - b_eq) / scale.mean(), jac=lambda z: A_eq * scale / scale.mean()),
-                                   dict(type='ineq', fun=lambda z: (b_ub - A_ub @ (z * scale)) / scale.mean(), jac=lambda z: -A_ub * scale / scale.mean())],
-                      method='SLSQP', options=dict(maxiter=1000, ftol=1e-16))
-    x = solved.x * scale
-    if not _satisfies(x, A_eq, b_eq, A_ub, b_ub):                       # SLSQP no llego: se conserva la solucion factible del LP
-        x = feasible.x
+    if fijar_maduras:
+        w = np.concatenate([np.full(n, 1 / sigma[j]) for j in range(4)]) / x0
+        objective = lambda x: float(np.sum((w * (x - x0)) ** 2))
+        gradient = lambda x: 2 * w ** 2 * (x - x0)
+        constraints = [dict(type='eq', fun=lambda x: A_eq @ x - b_eq, jac=lambda x: A_eq),
+                       dict(type='ineq', fun=lambda x: b_ub - A_ub @ x, jac=lambda x: -A_ub)]
+        scale = np.maximum(np.abs(x0), 1.0)
+        solved = minimize(lambda z: objective(z * scale), feasible.x / scale, jac=lambda z: gradient(z * scale) * scale,
+                          bounds=[(lo_ / sc, (hi_ / sc if hi_ is not None else None)) for (lo_, hi_), sc in zip(bounds, scale)],
+                          constraints=[dict(type='eq', fun=lambda z: (A_eq @ (z * scale) - b_eq) / scale.mean(), jac=lambda z: A_eq * scale / scale.mean()),
+                                       dict(type='ineq', fun=lambda z: (b_ub - A_ub @ (z * scale)) / scale.mean(), jac=lambda z: -A_ub * scale / scale.mean())],
+                          method='SLSQP', options=dict(maxiter=1000, ftol=1e-16))
+        x = solved.x * scale
+        if not _satisfies(x, A_eq, b_eq, A_ub, b_ub):                       # SLSQP no llego: se conserva la solucion factible del LP
+            x = feasible.x
+    else:
+        x = _solve_common_factor(x0, feasible.x, A_eq, b_eq, A_ub, b_ub, bounds, n)
+        if not _satisfies(x, A_eq, b_eq, A_ub, b_ub):
+            x = feasible.x
     out = _summary(piles, x, x0, targets, net_target_t, mature_nets_t, caps, cap_sources)
     bad = _plausibility_problems(out, physical_q_range, physical_conc_range)
     if bad:
@@ -400,6 +412,29 @@ def _plausibility_problems(out, q_range, conc_range):
     return bad
 
 
+def _solve_common_factor(x0, start, A_eq, b_eq, A_ub, b_ub, bounds, n):
+    """Reparto por aporte: minimiza sum_g sum_i (x_gi/x0_gi - c_g)^2 con un factor comun c_g por grupo de variables.
+    Trabaja en u = x/x0 (todo ~1). Sin limites activos la solucion es x = c_g * x0 (proporcional al aporte)."""
+    nv = len(x0)
+    group = np.repeat(np.arange(4), n)
+    u0 = start / x0
+    c0 = np.array([u0[group == g].mean() for g in range(4)])
+    y0 = np.concatenate([u0, c0])
+    f = lambda y: float(np.sum((y[:nv] - y[nv:][group]) ** 2))
+    def grad(y):
+        d = y[:nv] - y[nv:][group]
+        g = np.zeros(nv + 4); g[:nv] = 2 * d
+        np.add.at(g, nv + group, -2 * d)
+        return g
+    Aeq_u = np.hstack([A_eq * x0, np.zeros((A_eq.shape[0], 4))]); Aub_u = np.hstack([A_ub * x0, np.zeros((A_ub.shape[0], 4))])
+    cons = [dict(type='ineq', fun=lambda y: b_ub - Aub_u @ y, jac=lambda y: -Aub_u)]
+    if len(b_eq):
+        cons.append(dict(type='eq', fun=lambda y: Aeq_u @ y - b_eq, jac=lambda y: Aeq_u))
+    bnds = [((lo / sc), (hi / sc if hi is not None else None)) for (lo, hi), sc in zip(bounds, x0)] + [(None, None)] * 4
+    r = minimize(f, y0, jac=grad, bounds=bnds, constraints=cons, method='SLSQP', options=dict(maxiter=1000, ftol=1e-16))
+    return r.x[:nv] * x0
+
+
 def _satisfies(x, A_eq, b_eq, A_ub, b_ub, rel=1e-9):
     scale = max(1.0, float(np.abs(x).max()))
     return bool(np.all(np.abs(A_eq @ x - b_eq) <= rel * scale * 1e3) and np.all(A_ub @ x - b_ub <= rel * scale * 1e3))
@@ -427,7 +462,7 @@ def _summary(piles, x, x0, targets, net_target_t, mature_nets_t, caps=None, cap_
 
 
 def expand_to_days(rows, window_start, solution, observed_net_t_by_day, young_lambda, mature_ratio=0.95, closed_before=None,
-                   include_previous_open=False):
+                   include_previous_open=False, fixed_mature=True):
     """Lleva la solucion (totales de la ventana) a cada dia, manteniendo EXACTA la recuperacion diaria de las maduras.
 
     Riego: caudal y Cu de riego se escalan con los factores de la pila. PLS de una madura: el caudal se escala y su
@@ -464,7 +499,7 @@ def expand_to_days(rows, window_start, solution, observed_net_t_by_day, young_la
             cp0 = sum(d['q_riego_m3h'] * d['cu_drenaje_gL'] for d in days) / q0
         a_p, b_p = f['q_pls'] / qp0, f['cu_pls'] / cp0
         rest = None
-        if not young:
+        if not young and fixed_mature:
             nets = observed_net_t_by_day[name]
             used = sum(nets.get(d['date'], 0.0) for d in days)
             rest = sum(nets.values()) - used                             # neto en dias sin riego: se carga al ultimo dia con riego
@@ -475,8 +510,11 @@ def expand_to_days(rows, window_start, solution, observed_net_t_by_day, young_la
                 c_p = b_p * d['cu_drenaje_gL']
             else:
                 q_p = a_p * mature_ratio * d['q_riego_m3h']
-                net = nets.get(d['date'], 0.0) + (rest if k == len(days) - 1 else 0.0)
-                c_p = (net / K_F + q_r * c_r) / q_p
+                if fixed_mature:
+                    net = nets.get(d['date'], 0.0) + (rest if k == len(days) - 1 else 0.0)
+                    c_p = (net / K_F + q_r * c_r) / q_p
+                else:                                                    # reparto por aporte: la madura se escala como cualquier pila
+                    c_p = b_p * d['cu_drenaje_gL']
             out.append(dict(pile=name, date=d['date'], young=young, q_riego=q_r, cu_riego=c_r, q_pls=q_p, cu_pls=c_p,
                             net_t=K_F * (q_p * c_p - q_r * c_r)))
     if include_previous_open:
