@@ -3172,6 +3172,73 @@ def reconcile_week_flowsheet_db(week_start, materials, conn, n_transient=N_TRANS
     )
 
 
+def ley_refino_ponderada_ventana(mat, week_start, week_end):
+    """Ley de refino ponderada por el riego diario de las pilas en la ventana:
+    sum_d sum_pilas q*cu_riego / sum_d sum_pilas q. Misma limpieza que el motor: q<0 o NaN = 0 y cu NaN = CU_RIEGO_FALLBACK.
+    None si no hay riego o serie de ley."""
+    riego, cu = (mat or {}).get('riego'), (mat or {}).get('cu_riego')
+    if riego is None or cu is None or getattr(riego, 'empty', True):
+        return None
+    ws, we = pd.Timestamp(week_start).normalize(), pd.Timestamp(week_end).normalize()
+    r = riego.loc[(riego.index >= ws) & (riego.index <= we)].apply(pd.to_numeric, errors='coerce').fillna(0).clip(lower=0)
+    c = pd.to_numeric(cu.reindex(r.index), errors='coerce').fillna(CU_RIEGO_FALLBACK)
+    qd = r.sum(axis=1)
+    den = float(qd.sum())
+    if den <= 0:
+        return None
+    ley = float((qd * c).sum()) / den
+    return ley if np.isfinite(ley) and ley > 0 else None
+
+
+def factor_ley_riego_mezclada(anchor, mat=None, week_start=None, week_end=None):
+    """Factor k = ley mezclada medida / ley de refino ponderada por las pilas, o None si no aplica.
+
+    El riego de OXIDOS es F70 (refino) + F81 (DPLS, parte del PLS del sump) + F60; la serie diaria `cu_riego` es solo la ley
+    del refino. Ley mezclada medida = sum(fino)/sum(masa) de F70+F60+F81 del run. Se divide entre la ley de refino
+    ponderada por el riego diario de las pilas en la ventana (no entre la ley de F70 del run: difieren por la ponderacion
+    diaria), de modo que sum(q*cu*k) = sum(q) * ley mezclada exacto (t/m3 -> g/L: x1000). Sin F81/F60 (masa 0) devuelve None: la ley de refino
+    queda intacta y no se reajusta la ponderacion. Si no se pasan `mat` y ventana, se usa la ley de F70 del run (aproximacion)."""
+    comp = (anchor or {}).get('riego_comp')
+    ref = (anchor or {}).get('riego_refino')
+    if not comp or ref not in comp:
+        return None
+    try:
+        masa = sum(float(c['masa_medida']) for c in comp.values())
+        fino = sum(float(c['fino_medido']) for c in comp.values())
+        m_ref, f_ref = float(comp[ref]['masa_medida']), float(comp[ref]['fino_medido'])
+    except (TypeError, ValueError):
+        return None
+    if min(masa, fino, m_ref, f_ref) <= 0 or masa - m_ref <= 0:
+        return None
+    if mat is not None and week_start is not None and week_end is not None:
+        ley_ref = ley_refino_ponderada_ventana(mat, week_start, week_end)
+        if ley_ref is None:
+            return None
+    else:
+        ley_ref = 1000.0 * f_ref / m_ref
+    k = 1000.0 * (fino / masa) / ley_ref      # fino [t] / masa [m3] -> g/L, unidad de cu_riego
+    return k if np.isfinite(k) and abs(k - 1.0) > 1e-9 else None
+
+
+def aplicar_ley_riego_mezclada(materials, anchor, week_start, week_end):
+    """Copia de `materials` con la ley de riego de OXIDOS multiplicada por k solo dentro de la ventana (dias cerrados
+    fuera de ella no cambian). Solo OXIDOS: SULFUROS no tiene flujo equivalente al DPLS."""
+    mat = (materials or {}).get('OXIDOS')
+    if mat is None or mat.get('cu_riego') is None:
+        return materials
+    k = factor_ley_riego_mezclada((anchor or {}).get('OXIDOS'), mat, week_start, week_end)
+    if k is None:
+        return materials
+    s = mat['cu_riego'].copy()
+    ws, we = pd.Timestamp(week_start).normalize(), pd.Timestamp(week_end).normalize()
+    m = (s.index >= ws) & (s.index <= we)
+    # dias sin ley en la ventana: el motor usa CU_RIEGO_FALLBACK; se fija aqui para que k tambien lo escale (cierre exacto)
+    s[m] = pd.to_numeric(s[m], errors='coerce').fillna(CU_RIEGO_FALLBACK) * k
+    out = dict(materials)
+    out['OXIDOS'] = dict(mat, cu_riego=s, ley_riego_factor_mezcla=k)
+    return out
+
+
 def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, active_days=N_TRANSIENT_DEFAULT,
                                    force_all_active=False, sigma_rel=SIGMA_REL_DEFAULT,
                                    week_end=None, anchor=None, caso_id=None):
@@ -3181,6 +3248,7 @@ def reconcile_week_flowsheet_dash(week_start, materials, produccion, conn, activ
     planta). `force_all_active=True` fuerza TODAS las pilas activas al pool
     transiente/reconciliado, ignorando el corte TRANS/SS por dia_ciclo."""
     week_start, week_end, n_days = resolve_window(week_start, week_end)
+    materials = aplicar_ley_riego_mezclada(materials, anchor, week_start, week_end)
     solve_started = time.perf_counter()
     res = reconcile_flowsheet(week_start, materials, n_transient=active_days, sigma_rel=sigma_rel,
                                force_all_active=force_all_active, week_end=week_end, anchor=anchor)

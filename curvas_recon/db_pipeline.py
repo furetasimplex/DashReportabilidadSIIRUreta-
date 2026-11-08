@@ -253,6 +253,10 @@ def load_caso_anchor(run_id, model_code, model_version=None, total_flows=None):
             q_pls_medido=_sum(flows['pls'], 0), q_pls_recon=_sum(flows['pls'], 1),
             fino_riego_medido=_sum(flows['riego'], 2), fino_riego_recon=_sum(flows['riego'], 3),
             fino_pls_medido=_sum(flows['pls'], 2), fino_pls_recon=_sum(flows['pls'], 3),
+            # Componentes medidos del riego (masa, fino) por flujo: la ley de riego mezclada (refino + DPLS + F60) los usa.
+            riego_comp={c: dict(masa_medida=by_code[c][0], fino_medido=by_code[c][2])
+                        for c in flows['riego'] if c in by_code},
+            riego_refino=flows['riego'][0],
             **({'net_cu_target_t': by_code[target_flow][3],
                 'net_cu_target_flow': target_flow} if target_flow else {}),
         )
