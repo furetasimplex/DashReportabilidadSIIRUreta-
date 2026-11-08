@@ -132,3 +132,97 @@ def test_dashboard_shows_the_method_used_and_exports_it(monkeypatch):
 def test_solver_run_state_is_optional(monkeypatch):
     monkeypatch.setattr(dashboard, 'load_solver_run_meta', lambda _: (_ for _ in ()).throw(RuntimeError('sin BD')))
     assert dashboard._solver_run_or_none(10009) is None
+
+
+def _capture_solve(monkeypatch, metodo):
+    """compute_recon hasta la llamada al motor, con pilas nuevas en Sulfuros; devuelve los materiales que recibe el motor."""
+    from unittest.mock import Mock
+    case = dict(id=7, run_id=70, nombre='con nuevas', fecha_inicio='2026-09-01', fecha_fin='2026-09-07', modelo_codigo='m', modelo_version='v', total_flujos=1)
+    seen = {}
+
+    def solve(ws, materials, *args, **kwargs):
+        seen['materials'] = materials
+        raise RuntimeError('stop after capture')
+
+    monkeypatch.setattr(dashboard, '_refresh_case_catalog', lambda: None)
+    monkeypatch.setattr(dashboard, '_caso_by_id', lambda _: case)
+    monkeypatch.setattr(dashboard, 'load_caso_anchor', lambda *a: {'SULFUROS': {}})
+    monkeypatch.setattr(dashboard, 'diagnose_caso_anchor', lambda _: [])
+    monkeypatch.setattr(dashboard, 'ensure_full_data', lambda: None)
+    monkeypatch.setattr(dashboard, '_refresh_primary_recovery_curves', lambda: None)
+    monkeypatch.setattr(dashboard, 'WIP_META', {'SULFUROS': {}, 'OXIDOS': {}})
+    monkeypatch.setattr(dashboard, 'REC_META', {'SULFUROS': ({}, {}, {}), 'OXIDOS': ({}, {}, {})})
+    monkeypatch.setattr(dashboard, 'pilas_jovenes', lambda *a, **kw: {'P24': '2026-08-15'})        # HAY pilas nuevas
+    monkeypatch.setattr(dashboard, 'prepare_recon_inputs', lambda *a, **kw: ({'SULFUROS': {'riego': None, 'cu_riego': None, 'drena_cu': None}, 'OXIDOS': {}}, {}))
+    monkeypatch.setattr(dashboard, 'connect', Mock())
+    monkeypatch.setattr(dashboard, 'reconcile_week_flowsheet_dash', solve)
+    import curvas_recon.sulfide_db_inputs as dbi, curvas_recon.sulfide_inputs as si
+    loader = Mock(return_value=dict(source_ids=dict(solver_run_id=70), rows=[], target_period_start='2026-09-01'))
+    monkeypatch.setattr(si, 'load_sulfide_inputs', loader)
+    monkeypatch.setattr(dbi, 'make_source_provider', lambda *a, **k: None)
+    monkeypatch.setattr(dbi, 'load_saved_profile', lambda *a, **k: {})
+    monkeypatch.setattr(dashboard, 'load_cu_riego', lambda *a, **k: None)
+    monkeypatch.setattr(dashboard, 'load_drena_cu', lambda *a, **k: None)
+    monkeypatch.setattr(dashboard, 'DATA_SU', {}); monkeypatch.setattr(dashboard, 'inicio_campana', lambda *a, **k: {})
+    dashboard.compute_recon(1, 7, metodo)
+    return seen['materials']['SULFUROS'], loader
+
+
+def test_option_reparto_uses_the_general_engine_for_all_sulfide_piles_even_with_new_piles(monkeypatch):
+    mat, loader = _capture_solve(monkeypatch, METODO_REPARTO)
+    assert mat.get('sulfide_policy') == 'legacy' and 'sulfide_inputs' not in mat and 'sulfide_metodo' not in mat and not loader.called         # sin ajuste local de nuevas: motor general, todas las pilas
+
+
+def test_option_maduras_fijas_and_no_selector_keep_the_local_sulfide_package(monkeypatch):
+    mat, loader = _capture_solve(monkeypatch, METODO_MADURAS_FIJAS)
+    assert mat['sulfide_metodo'] == METODO_MADURAS_FIJAS and 'sulfide_inputs' in mat and loader.called
+    mat, _ = _capture_solve(monkeypatch, None)                                 # llamada directa sin selector: ajuste local de siempre
+    assert mat['sulfide_metodo'] == 'ajuste_local' and 'sulfide_inputs' in mat
+
+
+EXCEL_10009 = ROOT / 'auditorias' / 'verificacion_metodo_pad_20261107' / 'datos_caso_10009.xlsx'
+FINAL_10009 = ROOT / 'auditorias' / 'mejora_solver_redondeo_20261107' / 'final' / 'res_despues_10009_b0.0_defaults.csv'
+
+
+@pytest.mark.skipif(not (EXCEL_10009.exists() and FINAL_10009.exists()), reason='Excel del Caso 10009 y resultado final del solver (locales, no versionados)')
+def test_option_reparto_adjusts_mature_piles_proportionally_to_their_flow_contribution():
+    """Con el Excel del Caso (sin SQL): las maduras de Sulfuros SI reciben ajuste, proporcional a su caudal."""
+    import subprocess
+    code = r'''
+import sys, json
+sys.path.insert(0, %r); sys.path.insert(0, %r)
+import pandas as pd
+from curvas_recon import extraccion_caso as EC
+_o = EC.read_workbook
+def rw(path, *a, **k):
+    D = _o(path, *a, **k)
+    v = pd.read_csv(%r).set_index('Codigo')
+    f = D['flows'].copy(); m = f['codigo_flujo'].isin(v.index)
+    f.loc[m, 'masa_reconciliada'] = f.loc[m, 'codigo_flujo'].map(v['Masa recon']); f.loc[m, 'fino_cu_reconciliado'] = f.loc[m, 'codigo_flujo'].map(v['Fino recon Cu'])
+    D['flows'] = f
+    return D
+EC.read_workbook = rw
+import dash_con_excel as X
+D, caso, P = X.install(%r)
+cap = {}
+P._save_recon_raw = lambda res, c, w, e: cap.update(res=res) or 'tok'
+P.compute_recon(1, int(caso['id']), 'reparto')
+d = [x for x in cap['res']['daily'] if x['label'] == 'SULFUROS']
+ratio = {}
+for x in d:
+    if x['dia_ciclo'] > 30 and x['q_riego_medido']:
+        ratio.setdefault(x['parcela'], [0, 0]); ratio[x['parcela']][0] += x['q_riego_final']; ratio[x['parcela']][1] += x['q_riego_medido']
+dq = {p: a / b - 1 for p, (a, b) in ratio.items()}
+dm = {x['parcela']: sum(y['d_riego'] for y in d if y['parcela'] == x['parcela']) for x in d if x['dia_ciclo'] > 30}
+print('RESULT:' + json.dumps(dict(n=len(dq), dq=dq, dm=dm, local=bool(cap['res'].get('local_direct_recovery')))))
+''' % (str(ROOT), str(ROOT / 'scripts'), str(FINAL_10009), str(EXCEL_10009))
+    import json as _j
+    out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, cwd=str(ROOT), env=dict(__import__('os').environ, PYTHONPATH=str(ROOT)))
+    assert 'RESULT:' in out.stdout, out.stderr[-1500:]
+    res = _j.loads(next(l for l in out.stdout.splitlines() if l.startswith('RESULT:'))[7:])
+    assert res['n'] >= 10 and not res['local']                               # motor general, no el ajuste local
+    assert any(abs(v) > 1e-4 for v in res['dq'].values())                    # las maduras SI cambian
+    assert all(abs(v) > 1e-9 for v in res['dm'].values())
+    # proporcional al aporte: mayor caudal => mayor ajuste absoluto (el relativo es casi uniforme)
+    vals = list(res['dq'].values())
+    assert max(vals) - min(vals) < 0.02

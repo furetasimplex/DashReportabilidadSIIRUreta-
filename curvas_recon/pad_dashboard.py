@@ -55,7 +55,7 @@ from .db_pipeline import (
     caso_anchor_completo, diagnose_caso_anchor, HIDRO_SCHEMA,
 )
 from .history_recovery import HistoryReader, calendar_rows
-from .metodo_maduras_fijas import (METODO_REPARTO, METODO_MADURAS_FIJAS, METODO_DEFAULT, ETIQUETAS as METODO_ETIQUETAS,
+from .metodo_maduras_fijas import (METODO_LOCAL, METODO_REPARTO, METODO_MADURAS_FIJAS, METODO_DEFAULT, ETIQUETAS as METODO_ETIQUETAS,
                                    MetodoInfactible, etiqueta as metodo_etiqueta)
 
 # Selector de metodo (Sulfuros): el primero es el valor por defecto de la pantalla.
@@ -2835,7 +2835,8 @@ def update_panel_note(metodo):
 )
 def compute_recon(_n_clicks, caso_id, metodo=None):
     """Reconcile every active pile over the selected official Case window."""
-    metodo = metodo if metodo in METODO_ETIQUETAS else METODO_REPARTO     # sin selector (llamada directa): comportamiento previo
+    # Sin metodo (llamada directa, sin selector): ajuste local de pilas nuevas de siempre (`reconcile_sulfides`), no expuesto en el selector.
+    metodo = metodo if metodo in METODO_ETIQUETAS else METODO_LOCAL
     profile_total_t0 = time.perf_counter()
     perf_trace_id = uuid.uuid4().hex
     record_phase('compute.start', 0.0, trace_id=perf_trace_id)
@@ -2888,7 +2889,9 @@ def compute_recon(_n_clicks, caso_id, metodo=None):
             # Con curvas nuevas (30 dias o menos desde el primer riego) se
             # ajustan solo ellas; sin curvas nuevas el respaldo es la
             # distribucion del ajuste entre todas las curvas.
-            sulfide_young = pilas_jovenes('SULFUROS', ws, week_end)
+            # 'Reparto por aporte' reparte el ajuste del run entre TODAS las pilas del pad con el motor general
+            # (`recon_engine`, paso 4 `_distribute_bounded`), tambien en Sulfuros: no usa el ajuste local de nuevas.
+            sulfide_young = pilas_jovenes('SULFUROS', ws, week_end) if metodo != METODO_REPARTO else {}
             if sulfide_young:
                 method = tag = 'Sulfuros: ajuste de curvas de hasta 30 días'
 
@@ -3019,7 +3022,9 @@ def compute_recon(_n_clicks, caso_id, metodo=None):
         combined=_serialize_weeks(joint['weeks']),
         totals=_clean_nan(joint.get('totals') or {}),
         metodo=metodo, metodo_etiqueta=metodo_etiqueta(metodo),
-        metodo_aplicado=((joint.get('res') or {}).get('metodo_sulfuros') or 'no aplica (sin pilas nuevas de Sulfuros)'),
+        metodo_aplicado=((joint.get('res') or {}).get('metodo_sulfuros')
+                         or ('reparto por aporte entre todas las pilas (motor general)' if metodo == METODO_REPARTO
+                             else 'no aplica (sin pilas nuevas de Sulfuros)')),
         mensajes_pad=_clean_nan((joint.get('res') or {}).get('mensajes_pad') or []),
         solver_run=_clean_nan(_solver_run_or_none(caso['run_id'])),
     )

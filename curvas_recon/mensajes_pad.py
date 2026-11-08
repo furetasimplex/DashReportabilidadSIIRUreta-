@@ -445,9 +445,10 @@ def texto_panel(metodo):
             '(0,95 veces el riego): cerrar el Cu neto no valida el balance de agua. Si el pad no cierra, el cálculo se detiene y explica la causa.',
             comunes]
     return [
-        'Método «Reparto por aporte» (Sulfuros). Solo se ajustan las curvas de las pilas con 30 días o menos desde el primer riego; las mayores '
-        'conservan la recuperación medida y el mes anterior no se modifica. El ajuste del run se reparte entre las pilas nuevas en proporción '
-        'a su aporte de caudal. El drenaje ajustado es modelado: cerrar el Cu neto no valida el balance de agua.',
-        'Cuando es posible, las pilas nuevas también igualan la masa de riego y de drenaje y las concentraciones ponderadas de los flujos '
-        'globales, con un cambio máximo de ±30 % en las concentraciones; si no es posible, el aviso indica el motivo y se conserva lo medido.',
+        'Método «Reparto por aporte». El ajuste del run (caudales y Cu fino de riego y de PLS) se reparte entre todas las pilas activas '
+        'del pad en proporción a su aporte de caudal, con límites para no dejar caudales negativos ni drenar más que el techo de drenaje. '
+        'Las pilas nuevas siguen su curva de arranque (rampa). Por eso las pilas maduras también cambian respecto de lo medido en la ventana. '
+        'El mes anterior al Caso no se modifica.',
+        'El drenaje reconciliado es modelado: cerrar el Cu neto no valida el balance de agua. Si una pila no tiene holgura para recibir su '
+        'parte, el residuo se reparte entre las demás o queda como balance pendiente, y el aviso lo indica.',
         comunes]

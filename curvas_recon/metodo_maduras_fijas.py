@@ -23,10 +23,14 @@ METODO_REPARTO = 'reparto'
 METODO_MADURAS_FIJAS = 'maduras_fijas'
 ETIQUETAS = {METODO_REPARTO: 'Reparto por aporte', METODO_MADURAS_FIJAS: 'Maduras fijas, nuevas absorben'}
 METODO_DEFAULT = METODO_MADURAS_FIJAS
+# Uso interno (sin selector): ajuste local de pilas de 30 dias o menos de `sulfide_method.reconcile_sulfides`. Las maduras no se
+# ajustan. No esta expuesto en el selector; solo lo usa una llamada directa a `compute_recon` sin metodo (pruebas y compatibilidad).
+METODO_LOCAL = 'ajuste_local'
+_ETIQUETAS_INTERNAS = {METODO_LOCAL: 'Ajuste local de pilas nuevas (sin selector)'}
 
 
 def etiqueta(metodo):
-    return ETIQUETAS.get(metodo, ETIQUETAS[METODO_DEFAULT])
+    return ETIQUETAS.get(metodo) or _ETIQUETAS_INTERNAS.get(metodo) or ETIQUETAS[METODO_DEFAULT]
 
 
 class MetodoInfactible(ValueError):
