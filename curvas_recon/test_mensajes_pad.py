@@ -113,3 +113,30 @@ def test_dashboard_renders_levels_action_and_collapsed_detail():
     r = json.dumps(dashboard._build_warnings(data), cls=PlotlyJSONEncoder, ensure_ascii=False)
     assert r.index('warning-level-error') < r.index('warning-level-advertencia') < r.index('warning-level-informacion')
     assert 'Qué hacer' in r and 'Detalle técnico' in r and 'warning-detail' in r
+
+
+def test_panel_text_depends_on_the_method_and_quotes_the_real_parameters():
+    from curvas_recon import reconciliacion_pad as RP
+    from curvas_recon.metodo_maduras_fijas import METODO_MADURAS_FIJAS, METODO_REPARTO
+    fijas = ' '.join(MP.texto_panel(METODO_MADURAS_FIJAS))
+    reparto = ' '.join(MP.texto_panel(METODO_REPARTO))
+    assert 'Maduras fijas, nuevas absorben' in fijas and 'Reparto por aporte' in reparto and 'Reparto por aporte' not in fijas
+    assert 'conservan lo medido' in fijas and 'absorben el' in fijas and 'meses anteriores' in fijas and 'cinética temprana' in fijas
+    assert f"{MP._pct(RP.BAND_DEFAULT, 1)}" in fijas and MP._n(RP.MAX_DRAIN_RATIO_DEFAULT, 2) in fijas and '0,99' in fijas
+    assert '±30 %' not in fijas and '±30 %' in reparto                      # el limite de concentracion solo aplica al reparto
+    assert 'proporción a su aporte' in reparto
+
+
+def test_cap_message_shows_the_real_drain_cap():
+    pile = lambda n, **k: dict(dict(pile=n, young=False, drenaje_riego=0.9, tope_drenaje=0.99, d_q_riego=0, d_cu_riego=0, d_q_pls=0, d_cu_pls=0), **k)
+    res = dict(status='ok', por_pila=[pile('P01', drenaje_riego=0.99), pile('P02')])
+    ms = MP.mensajes_reconciliacion_pad(res, banda=0.001)
+    assert ms[0]['titulo'] == 'Pilas maduras en el tope de drenaje' and 'tope de 0,99 veces' in ms[0]['texto'] and '1 de 2' in ms[0]['texto']
+
+
+def test_dashboard_panel_follows_the_selected_method():
+    from curvas_recon import pad_dashboard as dashboard
+    from plotly.utils import PlotlyJSONEncoder
+    txt = lambda m: json.dumps(dashboard.update_panel_note(m), cls=PlotlyJSONEncoder, ensure_ascii=False)
+    assert 'Maduras fijas' in txt('maduras_fijas') and 'cinética temprana' in txt('maduras_fijas')
+    assert 'Reparto por aporte' in txt('reparto') and 'cinética temprana' not in txt('reparto')

@@ -212,3 +212,6 @@
 .curvas-recon-shell .warning-title { font-weight: 700; }
 .curvas-recon-shell .warning-action { font-weight: 600; }
 .curvas-recon-shell .warning-detail { font-size: .72rem; color: #64748B; }
+.curvas-recon-shell #curvas-recon-panel-note { display: block; }
+.curvas-recon-shell #curvas-recon-panel-note .method-note-title { display: block; margin-bottom: 4px; white-space: normal; }
+.curvas-recon-shell #curvas-recon-panel-note .method-note-text { margin: 6px 0 0; }

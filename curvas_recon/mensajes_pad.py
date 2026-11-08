@@ -268,7 +268,7 @@ def traducir_aviso_motor(texto):
 # ── reconcile_pad ─────────────────────────────────────────────────────────────
 
 def mensajes_reconciliacion_pad(res, *, banda=None, banda_estricta=BANDA_ESTRICTA, umbral_factor=UMBRAL_FACTOR_NUEVA,
-                                recuperaciones=None, umbral_brecha_t=UMBRAL_BRECHA_T_CU, tope_drenaje=1.0, ambito='Sulfuros'):
+                                recuperaciones=None, umbral_brecha_t=UMBRAL_BRECHA_T_CU, tope_drenaje=None, ambito='Sulfuros'):
     """Mensajes de un resultado de `reconcile_pad`.
 
     `banda`: banda relativa usada (si es mayor que `banda_estricta` se avisa como provisional).
@@ -329,6 +329,8 @@ def mensajes_reconciliacion_pad(res, *, banda=None, banda_estricta=BANDA_ESTRICT
                            'Usar la banda estricta cuando el run del solver lo permita.', f'banda={banda}', ambito))
     piles = res.get('por_pila') or []
     mat = [p for p in piles if not p['young']]
+    if tope_drenaje is None:                       # el tope realmente usado por el ajuste
+        tope_drenaje = max((p.get('tope_drenaje', 1.0) for p in mat), default=1.0)
     en_tope = [p for p in mat if p['drenaje_riego'] >= tope_drenaje - 1e-6]
     if en_tope:
         out.append(mensaje(ADVERTENCIA, 'Pilas maduras en el tope de drenaje',
@@ -419,3 +421,33 @@ def mensajes_run_solver(meta, *, caso=None):
 def ordenar(mensajes):
     """Errores primero, luego advertencias e informacion."""
     return sorted(mensajes, key=lambda m: NIVELES.index(m['nivel']))
+
+
+def texto_panel(metodo):
+    """Párrafos del panel «Cómo leer este panel» según el método de reconciliación seleccionado (lista de str)."""
+    from . import reconciliacion_pad as RP
+    from .metodo_maduras_fijas import METODO_MADURAS_FIJAS
+    comunes = ('Los deltas de caudal y Cu fino son relativos al medido. Los agregados de Cu fino son proporcionales, no toneladas. '
+               'En las barras de concentración, la media diaria es aritmética sobre los días con dato y no está ponderada por caudal. '
+               '«Cálculo listo» confirma que hay datos y pilas para mostrar; revise los avisos y los gráficos para evaluar el resultado.')
+    if metodo == METODO_MADURAS_FIJAS:
+        return [
+            'Método «Maduras fijas, nuevas absorben» (Sulfuros). Las pilas maduras (más de 30 días desde el primer riego) conservan lo medido '
+            'en la ventana del Caso: su recuperación acumulada y su neto diario no cambian. Las pilas nuevas (30 días o menos) absorben el '
+            'residuo para cerrar el cobre neto del pad (F29) y los flujos globales del run. Los días de meses anteriores al Caso están cerrados '
+            'y no se modifican.',
+            f'El pad cierra contra los flujos globales (riego, PLS y sus finos) con una banda de {_pct(RP.BAND_DEFAULT, 1)} (provisional). '
+            f'Ninguna pila drena más de {_n(RP.MAX_DRAIN_RATIO_DEFAULT, 2)} veces su riego: es un supuesto, no una medición, y puede dejar '
+            f'pilas maduras en ese tope; el aviso lo indica. El caudal y la ley de cada pila se limitan a un rango físico '
+            f'(caudal entre {_n(RP.PHYS_Q_RANGE[0], 1)} y {_n(RP.PHYS_Q_RANGE[1], 1)} veces lo medido; ley de Cu hasta {_n(RP.PHYS_CONC_RANGE[1], 0)} veces).',
+            f'Atención con las pilas nuevas: como absorben el residuo, un ajuste de caudal o de ley que se aparte más de ±{_pct(UMBRAL_FACTOR_NUEVA, 0)} '
+            'de lo medido se avisa, porque su cinética temprana puede estar mal representada. El drenaje de las maduras es un proxy '
+            '(0,95 veces el riego): cerrar el Cu neto no valida el balance de agua. Si el pad no cierra, el cálculo se detiene y explica la causa.',
+            comunes]
+    return [
+        'Método «Reparto por aporte» (Sulfuros). Solo se ajustan las curvas de las pilas con 30 días o menos desde el primer riego; las mayores '
+        'conservan la recuperación medida y el mes anterior no se modifica. El ajuste del run se reparte entre las pilas nuevas en proporción '
+        'a su aporte de caudal. El drenaje ajustado es modelado: cerrar el Cu neto no valida el balance de agua.',
+        'Cuando es posible, las pilas nuevas también igualan la masa de riego y de drenaje y las concentraciones ponderadas de los flujos '
+        'globales, con un cambio máximo de ±30 % en las concentraciones; si no es posible, el aviso indica el motivo y se conserva lo medido.',
+        comunes]

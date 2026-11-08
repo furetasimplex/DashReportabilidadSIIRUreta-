@@ -1074,6 +1074,14 @@ def _solver_run_or_none(run_id):
         return None
 
 
+def _panel_note(metodo):
+    """Contenido de «Cómo leer este panel» para el método seleccionado."""
+    from .mensajes_pad import texto_panel
+    parrafos = texto_panel(metodo)
+    return ([html.Span('Cómo leer este panel · ' + metodo_etiqueta(metodo), className='method-note-title')]
+            + [html.P(t, className='method-note-text') for t in parrafos])
+
+
 def _render_mensaje(tag, m):
     """Un mensaje de `mensajes_pad` como item de la lista de avisos (nivel, titulo, texto, que hacer, detalle plegado)."""
     from .mensajes_pad import ERROR, ADVERTENCIA
@@ -2577,17 +2585,7 @@ def _build_content_layout():
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle('Consideraciones')),
             dbc.ModalBody([
-                html.Div([
-                    html.Span('Cómo leer este panel', className='method-note-title'),
-                    html.P('Sulfuros: solo se ajustan las curvas de pilas con 30 días o menos desde el primer riego; '
-                           'las mayores conservan la recuperación medida y el mes anterior no se modifica. '
-                           'El drenaje ajustado es modelado: cerrar el Cu neto no valida el balance de agua. '
-                           'Si es posible, las pilas nuevas (hasta ±30 %) también igualan la masa de riego y de drenaje y las '
-                           'concentraciones ponderadas de los flujos globales; si no, el aviso indica el motivo y se conserva lo medido.',
-                           className='method-note-text'),
-                    html.Span('Los deltas de caudal y Cu fino son relativos al medido. Los agregados de Cu fino son proporcionales, no toneladas. En las barras de concentración, la media diaria es aritmética sobre los días con dato y no está ponderada por caudal. “Cálculo listo” confirma que hay datos y pilas para mostrar; revisa avisos y gráficos para evaluar el resultado.',
-                              className='method-note-text'),
-                ], className='method-note'),
+                html.Div(_panel_note(METODO_DEFAULT), id='curvas-recon-panel-note', className='method-note'),
                 html.H6('Avisos del cálculo', className='mt-3'),
                 html.Div(id='curvas-recon-warnings', children=
                          'Ejecuta el cálculo para consultar sus consideraciones.'),
@@ -2812,6 +2810,14 @@ def _error_modal_body(titulo, detalle, fallas=None, accion=None):
         dbc.Alert(titulo, color='danger', className='mb-3'),
         *items,
     ])
+
+
+@_callback(
+    Output('curvas-recon-panel-note', 'children'),
+    Input('curvas-recon-metodo', 'value'),
+)
+def update_panel_note(metodo):
+    return _panel_note(metodo)
 
 
 @_callback(

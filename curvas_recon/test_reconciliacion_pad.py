@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from curvas_recon.reconciliacion_pad import K_F, reconcile_pad, window_priors
+from curvas_recon.reconciliacion_pad import K_F, MAX_DRAIN_RATIO_DEFAULT, reconcile_pad, window_priors
 from curvas_recon.sulfide_db_inputs import build_sulfide_rows
 from curvas_recon.sulfide_method import reconcile_sulfides
 from curvas_recon.test_sulfide_db_inputs import case10009_series
@@ -105,10 +105,10 @@ def test_infeasible_by_water_mass_reports_min_required_vs_max_allowed_pls_and_mi
     assert out['status'] == 'infactible' and out['causa'] == 'masa_agua'
     d = out['detalle']
     assert d['pls_minimo_exigido_m3'] > d['pls_maximo_permitido_m3'] > 0
-    assert d['pls_maximo_permitido_m3'] == pytest.approx(goal['q_riego_m3h_sum'] * 24 * 1.001, rel=1e-6)   # tope 1 x riego en la banda
+    assert d['pls_maximo_permitido_m3'] == pytest.approx(goal['q_riego_m3h_sum'] * 24 * 1.001 * MAX_DRAIN_RATIO_DEFAULT, rel=1e-6)   # tope x riego en la banda
     assert 'PLS minimo exigido' in out['motivo'] and 'PLS maximo permitido' in out['motivo']
     cap = out['tope_comun_minimo_factible']
-    assert 1.0 < cap < 1.0103
+    assert MAX_DRAIN_RATIO_DEFAULT < cap < 1.0103
     assert reconcile_pad(priors, nets, goal, net_goal, max_drain_ratio=cap * 1.0005, tolerance=0.001, net_tolerance=0.001)['status'] == 'ok'
     assert reconcile_pad(priors, nets, goal, net_goal, max_drain_ratio=cap * 0.995, tolerance=0.001, net_tolerance=0.001)['status'] == 'infactible'
 
@@ -138,17 +138,17 @@ def test_infeasible_cause_is_movement_limits_when_only_the_bounds_block_the_solu
     assert out['status'] == 'infactible' and out['causa'] == 'limites_movimiento'
 
 
-def test_default_cap_is_one_and_measured_ratio_is_used_only_for_piles_that_have_it():
+def test_default_cap_is_099_and_measured_ratio_is_used_only_for_piles_that_have_it():
     priors, nets, _, _ = setup_case()
     base = reconcile_pad(priors, nets, targets_from(priors), K_F * (pad_of(priors)[3] - pad_of(priors)[1]))
-    assert all(p['tope_drenaje'] == 1.0 and p['tope_fuente'] == 'configurado' for p in base['por_pila'])
+    assert all(p['tope_drenaje'] == MAX_DRAIN_RATIO_DEFAULT == 0.99 and p['tope_fuente'] == 'configurado' for p in base['por_pila'])
     pile = next(p['pile'] for p in base['por_pila'] if not p['young'])
     out = reconcile_pad(priors, nets, targets_from(priors), K_F * (pad_of(priors)[3] - pad_of(priors)[1]),
                         measured_drain_ratio={pile: 0.96}, measured_slack=0.02)
     by = {p['pile']: p for p in out['por_pila']}
     assert by[pile]['tope_fuente'] == 'medido' and by[pile]['tope_drenaje'] == pytest.approx(0.96 * 1.02)
     assert by[pile]['drenaje_riego'] <= 0.96 * 1.02 + 1e-9
-    assert all(p['tope_fuente'] == 'respaldo' and p['tope_drenaje'] == 1.0 for k, p in by.items() if k != pile)
+    assert all(p['tope_fuente'] == 'respaldo' and p['tope_drenaje'] == MAX_DRAIN_RATIO_DEFAULT for k, p in by.items() if k != pile)
 
 
 def rows_of_case():
@@ -285,7 +285,7 @@ def test_default_band_is_a_tenth_of_a_percent_and_a_wider_band_closes_the_10009_
     priors, nets, _, _ = setup_case()
     goal, net_goal = goal_with_pls_ratio(priors, 1.0103)                          # drenaje/riego global 1,0103 como el run 10093
     assert reconcile_pad(priors, nets, goal, net_goal)['status'] == 'infactible'    # banda por defecto
-    out = reconcile_pad(priors, nets, goal, net_goal, tolerance=0.01, net_tolerance=0.01)
+    out = reconcile_pad(priors, nets, goal, net_goal, tolerance=0.01, net_tolerance=0.01, max_drain_ratio=1.0)
     assert out['status'] == 'ok' and all(abs(v) <= 0.01 + 1e-7 for v in out['diferencia'].values())      # holgura numerica del optimizador (~1e-9)
     assert all(p['drenaje_riego'] <= 1 + 1e-7 for p in out['por_pila'])           # el tope de drenaje sigue en 1
     for p in out['por_pila']:

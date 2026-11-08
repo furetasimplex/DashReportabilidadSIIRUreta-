@@ -11,7 +11,7 @@ Restricciones:
   * masa de riego, masa de PLS y concentracion ponderada de riego y de PLS del pad dentro de una banda
     relativa `tolerance` (`BAND_DEFAULT` = 0,1 %) de los flujos globales;
   * el Cu neto del pad dentro de `net_tolerance` de F29 (lo que cierra la pila nueva);
-  * drenaje <= tope * riego en cada pila (tope = 1 por defecto; ver `max_drain_ratio`) y valores positivos.
+  * drenaje <= tope * riego en cada pila (tope = `MAX_DRAIN_RATIO_DEFAULT` = 0,99 por defecto; ver `max_drain_ratio`) y valores positivos.
 Entre las soluciones posibles se elige la que menos se aparta de lo medido (minimos cuadrados con
 incertidumbre relativa `sigma` por variable). No hay ajuste de las recuperaciones de las maduras.
 """
@@ -38,6 +38,9 @@ BAND_DEFAULT = 0.001
 PHYS_Q_RANGE = (0.5, 2.0)
 PHYS_CONC_RANGE = (0.0, 3.0)
 _PHYS_TOL = 1e-6
+# Tope drenaje/riego por pila: 0,99, igual que el techo duro del solver de planta (configuracion final del solver).
+# Es un supuesto, no una ley hidraulica: una pila no entrega como PLS mas del 99 % de lo que recibe como riego.
+MAX_DRAIN_RATIO_DEFAULT = 0.99
 
 
 def window_priors(rows, window_start, young_lambda, mature_ratio=0.95):
@@ -257,13 +260,13 @@ def closed_days_check(rows, window_start, window_end, closed_before=None, casos=
 
 
 def reconcile_pad(piles, mature_nets_t, targets, net_target_t, tolerance=BAND_DEFAULT, net_tolerance=BAND_DEFAULT,
-                  sigma=DEFAULT_SIGMA, max_drain_ratio=1.0, measured_drain_ratio=None, measured_slack=0.0,
+                  sigma=DEFAULT_SIGMA, max_drain_ratio=MAX_DRAIN_RATIO_DEFAULT, measured_drain_ratio=None, measured_slack=0.0,
                   max_change=None, cierre=None, physical_q_range=PHYS_Q_RANGE, physical_conc_range=PHYS_CONC_RANGE):
     """Resuelve el ajuste. `piles`: salida de `window_priors`; `mature_nets_t`: {pila madura: Cu neto observado [t]}.
 
     `tolerance` / `net_tolerance`: banda relativa de cierre de masas y concentraciones del pad / del neto F29 contra los
     globales (`BAND_DEFAULT` = 0,1 %; ver su comentario).
-    `max_drain_ratio`: tope drenaje/riego de cada pila (1 = no se drena mas de lo que se riega); es un supuesto,
+    `max_drain_ratio`: tope drenaje/riego de cada pila (0,99 por defecto: se drena como maximo el 99 % de lo regado); es un supuesto,
     no una ley hidraulica. `measured_drain_ratio` {pila: razon medida} y `measured_slack` (holgura relativa que cubre
     la incertidumbre de esa medida) reemplazan el tope de las pilas con medida; hoy el repo no tiene medicion de caudal
     de PLS por pila, asi que no se usa. `max_change`: cota relativa opcional del movimiento de cada variable respecto del
@@ -413,7 +416,7 @@ def _summary(piles, x, x0, targets, net_target_t, mature_nets_t, caps=None, cap_
             d_q_riego=q_r[i] / p_q_r[i] - 1, d_cu_riego=(f_r[i] / q_r[i]) / (p_f_r[i] / p_q_r[i]) - 1,
             d_q_pls=q_p[i] / p_q_p[i] - 1, d_cu_pls=(f_p[i] / q_p[i]) / (p_f_p[i] / p_q_p[i]) - 1,
             drenaje_riego=q_p[i] / q_r[i], neto_t=K_F * (f_p[i] - f_r[i]),
-            tope_drenaje=(float(caps[i]) if caps is not None else 1.0),
+            tope_drenaje=(float(caps[i]) if caps is not None else MAX_DRAIN_RATIO_DEFAULT),
             tope_fuente=(cap_sources[i] if cap_sources is not None else 'configurado')))
     pad = dict(masa_riego_m3=q_r.sum() * 24, masa_pls_m3=q_p.sum() * 24, cu_riego_g_l=f_r.sum() / q_r.sum(),
                cu_pls_g_l=f_p.sum() / q_p.sum(), neto_t=K_F * (f_p.sum() - f_r.sum()))

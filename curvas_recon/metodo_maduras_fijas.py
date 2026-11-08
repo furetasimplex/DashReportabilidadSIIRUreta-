@@ -41,12 +41,13 @@ def _day(d):
     return pd.Timestamp(d).date().isoformat()
 
 
-def aplicar_maduras_fijas(result, audit, rows, ws, we, conc_targets, net_target_t, banda=None, tope_drenaje=1.0):
+def aplicar_maduras_fijas(result, audit, rows, ws, we, conc_targets, net_target_t, banda=None, tope_drenaje=None):
     """Reemplaza el ajuste de `reconcile_sulfides` por el de maduras fijas. Devuelve `(result2, audit2, mensajes)`.
 
     `result`/`audit`: salida de `reconcile_sulfides` (no se modifican). `conc_targets`: dict con
     `q_riego_m3h_sum`, `q_pls_m3h_sum`, `cu_riego_g_l`, `cu_pls_g_l`. Si el pad no cierra se levanta `MetodoInfactible`."""
     banda = RP.BAND_DEFAULT if banda is None else banda
+    tope_drenaje = RP.MAX_DRAIN_RATIO_DEFAULT if tope_drenaje is None else tope_drenaje
     s, e = _day(ws), _day(we)
     prev = (pd.Timestamp(ws) - pd.Timedelta(days=1)).date().isoformat()
     if any(conc_targets.get(k) is None for k in ('q_riego_m3h_sum', 'q_pls_m3h_sum', 'cu_riego_g_l', 'cu_pls_g_l')):
