@@ -385,3 +385,14 @@ def test_csv_versionado_no_mezcla_campanas_ni_conserva_filas_sin_campana_activa(
     assert set(ox[ox.fecha < pd.Timestamp("2025-10-01")].campana) == {17}
     sul = libros[libros.libro.str.contains("Camp 11")]
     assert sul.fecha.min() >= pd.Timestamp("2025-05-31")             # inicio real de la campana 11
+
+
+def test_acumulado_por_modulo_incluye_dias_previos_y_marca_el_parcial():
+    out = _aplicar()
+    a = out["modulos_acumulado"].set_index("modulo")
+    # El 30-sep (previo a la ventana) pertenece al modulo 1: cruza el borde del Caso.
+    assert a.loc[1, "parcial_ventana"] and a.loc[1, "TMH_previa"] > 0
+    assert not a.loc[2, "parcial_ventana"] and a.loc[2, "TMH_previa"] == 0
+    assert a.TMS_ventana.sum() == pytest.approx(VENTANA_TMS)
+    assert (a.TMH_acumulado - a.TMH_ventana - a.TMH_previa).abs().max() < 1e-9
+    assert a.TMS_previa.sum() == pytest.approx(97.0)

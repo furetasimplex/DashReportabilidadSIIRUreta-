@@ -527,6 +527,22 @@ def _escribir_filas(ws, m, pad=None):
             ws.cell(i, col, _celda(fila[campo]))
 
 
+def _marcar_parciales(ws, m, pad):
+    """Columna 'Parcial' (fuera del area del informe): modulos cuya masa cruza el borde del Caso."""
+    col = 126 if pad == dbs.PAD_OXIDOS else 121
+    if not (m.get("parcial_ventana", pd.Series(False)).any() or m.get("abierto_cierre", pd.Series(False)).any()):
+        return
+    ws.cell(1, col, "Parcial")
+    for i, (_, fila) in enumerate(m.iterrows(), start=FILA_DATOS):
+        motivo = []
+        if bool(fila.get("parcial_ventana", False)) and float(fila.get("TMH_previa") or 0) > 1e-6:
+            motivo.append("inicio anterior al Caso")
+        if bool(fila.get("abierto_cierre", False)):
+            motivo.append("abierto al cierre")
+        if motivo:
+            ws.cell(i, col, "; ".join(motivo))
+
+
 def _escribir_hoja(ws, m):
     """Encabezado completo del informe y nuestras filas debajo, sin plantilla."""
     for col, (titulo, unidad) in enumerate(PLANTILLA, start=1):
@@ -806,6 +822,18 @@ def preparar_modulos_desde_resultado(res, pad, calidad, fecha_min=None,
     # Parcel sizes remain the established report convention by physical pad;
     # campaign identity and module count come from the loaded result.
     base["parcela"] = parcela_de(base.modulo, pad=pad)
+    acum = res.get("modulos_acumulado")
+    if acum is not None and len(acum):
+        a = acum.loc[acum.pad_id.eq(pad), ["campana", "modulo", "TMH_acumulado", "TMS_acumulado",
+                                           "TMH_previa", "TMS_previa", "parcial_ventana", "abierto_cierre"]]
+        base = base.merge(a, on=["campana", "modulo"], how="left", validate="one_to_one")
+        for flag in ("parcial_ventana", "abierto_cierre"):
+            base[flag] = base[flag].fillna(False).astype(bool)
+        # Como el libro: MODULOS trae la masa total del modulo (campana hasta el cierre del Caso);
+        # la masa de la ventana queda en TMH_ventana / TMS_ventana.
+        base["TMH_ventana"], base["TMS_ventana"] = base.TMH, base.TMS
+        base["TMH"] = base.TMH_acumulado.where(base.TMH_acumulado.notna(), base.TMH)
+        base["TMS"] = base.TMS_acumulado.where(base.TMS_acumulado.notna(), base.TMS)
 
     # The custom TMS weights below are per module and per turn. This avoids the
     # previous report's global-turn split, which is not valid for the current
@@ -900,13 +928,37 @@ def preparar_modulos_desde_resultado(res, pad, calidad, fecha_min=None,
     for field in EXTRA_FIELDS:
         if field not in out:
             out[field] = np.nan
+    for field in ("TMH_acumulado", "TMS_acumulado", "TMH_previa", "TMS_previa"):
+        if field not in out:
+            out[field] = np.nan
+    if "parcial_ventana" not in out:
+        out["parcial_ventana"] = False
+    if "abierto_cierre" not in out:
+        out["abierto_cierre"] = False
+    for field in ("TMH_ventana", "TMS_ventana"):
+        if field not in out:
+            out[field] = out[field[:3]]
     detail_fields = [c for c in out.columns if c.startswith(("cobertura_", "fuente_", "alcance_")) or c == "advertencias_fuentes"]
     output_columns = list(dict.fromkeys(
         COLS_INFORME + COLS_CALIDAD + list(EXTRA_COLUMNAS.values()) + detail_fields + [
             "fecha_ini_carguio", "dias", "dias_con_masa", "volumen",
-            "completo", "cobertura_masa_completa", "ultimo_dia_en_caso", "altura_prom", "humedad"]))
+            "completo", "cobertura_masa_completa", "ultimo_dia_en_caso", "altura_prom", "humedad",
+            "TMH_acumulado", "TMS_acumulado", "TMH_previa", "TMS_previa", "parcial_ventana",
+            "abierto_cierre", "TMH_ventana", "TMS_ventana"]))
     return out[output_columns].sort_values(
         ["campana", "modulo"]).reset_index(drop=True)
+
+
+def _separar_abiertos(m):
+    """Como el libro, un modulo abierto al cierre del Caso no se informa: se excluye de MODULOS y
+    de los totales y queda una nota con su masa en curso. Devuelve (filas informadas, notas)."""
+    if "abierto_cierre" not in m or not m["abierto_cierre"].fillna(False).astype(bool).any():
+        return m, []
+    ab = m["abierto_cierre"].fillna(False).astype(bool)
+    notas = [f"M{int(f.modulo)} abierto al cierre del Caso: no se informa "
+             f"(masa en curso {float(f.TMH):,.0f} TMH)".replace(",", ".")
+             for f in m.loc[ab].itertuples()]
+    return m.loc[~ab].reset_index(drop=True), notas
 
 
 def exportar_desde_dataframe(m, destino, pad=PAD, detalle=True,
@@ -915,6 +967,7 @@ def exportar_desde_dataframe(m, destino, pad=PAD, detalle=True,
     pad = int(pad)
     if pad not in dbs.PADS:
         raise ValueError(f"Pad {pad} no tiene plantilla de informe.")
+    m, notas_abiertos = _separar_abiertos(m)
     plantilla = Path(plantilla) if plantilla else PLANTILLAS_XLSX[pad]
     if plantilla.exists():
         wb = openpyxl.load_workbook(plantilla)
@@ -922,6 +975,7 @@ def exportar_desde_dataframe(m, destino, pad=PAD, detalle=True,
         _vaciar_datos(ws)
         reposo_patron = _formula_origen(ws, FILA_DATOS, 116) if pad == dbs.PAD_SULFUROS else None
         _escribir_filas(ws, m, pad)
+        _marcar_parciales(ws, m, pad)
         _escribir_formulas(ws, m, pad, reposo_patron=reposo_patron)
         # The legacy auxiliary sheets contain #REF! formula caches. Keep the
         # intact full-width MODULOS sheet and omit broken auxiliary outputs.
@@ -930,12 +984,17 @@ def exportar_desde_dataframe(m, destino, pad=PAD, detalle=True,
                 del wb[name]
         if detalle:
             _hoja_detalle(wb, m)
+            for nota in notas_abiertos:
+                wb[HOJA_DETALLE].append([])
+                wb[HOJA_DETALLE].append([nota])
         if caso:
             info = wb.create_sheet("CASO")
             info.append(["Campo", "Valor"])
             for key in ("caso_id", "run_id", "modelo_codigo", "fecha_inicio", "fecha_fin"):
                 info.append([key, _celda(caso.get(key, caso.get("id") if key == "caso_id" else None))])
-            info.append(["Alcance", "Masa y calidad de la ventana del Caso; ver completo en DETALLE."])
+            info.append(["Alcance", "MODULOS: TMH/TMS acumuladas del modulo (campana completa hasta el cierre del Caso), como el libro; la calidad es la de la ventana. DETALLE agrega TMH/TMS_ventana y TMH/TMS_previa. Parcial = modulo con masa anterior a la ventana (parcial_ventana) o abierto al cierre del Caso (abierto_cierre)."])
+            for nota in notas_abiertos:
+                info.append(["Modulo abierto", nota])
             info.append(["Sin actividad", "Si MODULOS no tiene filas, el pad no apilo en la ventana."])
             if "advertencias_fuentes" in m:
                 warnings = sorted({str(v) for v in m["advertencias_fuentes"].dropna() if str(v).strip()})
@@ -950,6 +1009,8 @@ def exportar_desde_dataframe(m, destino, pad=PAD, detalle=True,
         _escribir_hoja(writer.book.create_sheet(HOJA, 0), m)
         if detalle:
             m.to_excel(writer, sheet_name=HOJA_DETALLE, index=False)
+            for nota in notas_abiertos:
+                writer.sheets[HOJA_DETALLE].append([]); writer.sheets[HOJA_DETALLE].append([nota])
     return m
 
 

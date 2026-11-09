@@ -202,3 +202,28 @@ def test_r1_no_tiene_umbrales_de_abandono():
     fijo, _, log = chain_targets(_supply([("2026-09-01", 190), ("2026-09-12", 100)]), h, [], "2026-09-12")
     assert log[-1]["density_tmh_per_m3"] == pytest.approx(290 / 145)
     assert fijo[1] == pytest.approx(190.0)
+
+
+def _hist_solape(vol_a_dia, vol_b_dia, est_prev=102000.0):
+    f = lambda d: pd.Timestamp(d)
+    base = dict(pad_id=2, campana_id=13, campana=12, parcela_id=33)
+    rows = [dict(fecha=f("2026-10-03"), modulo_id=68, modulo=4, vol_diario=91532.562, vol_acum_final=91532.562, vol_total_est=est_prev, control_id=1),
+            dict(fecha=f("2026-10-04"), modulo_id=68, modulo=4, vol_diario=vol_a_dia, vol_acum_final=91532.562 + vol_a_dia,
+                 vol_total_est=91532.562 + vol_a_dia, control_id=2),
+            dict(fecha=f("2026-10-04"), modulo_id=69, modulo=5, vol_diario=vol_b_dia, vol_acum_final=vol_b_dia, vol_total_est=130000.0, control_id=3)]
+    return pd.DataFrame([{**base, **r} for r in rows])
+
+
+def test_volumen_solapado_del_cambio_de_modulo_se_quita_del_que_cierra():
+    from reconstitucion.secuencia_campana import corregir_volumen_solapado
+    h, exc = corregir_volumen_solapado(_hist_solape(44141.9, 34560.1))
+    m4 = h[(h.modulo_id == 68) & (h.fecha == "2026-10-04")].iloc[0]
+    assert m4.vol_diario == pytest.approx(9581.8) and m4.vol_acum_final == pytest.approx(101114.4, abs=0.1)
+    assert m4.vol_total_est == pytest.approx(101114.4, abs=0.1)
+    assert len(exc) == 1 and exc[0]["tipo"] == "VOLUMEN_BASE_SOLAPADO" and "44,141.9" in exc[0]["detalle"]
+
+
+def test_volumen_sin_solape_no_se_toca():
+    from reconstitucion.secuencia_campana import corregir_volumen_solapado
+    h, exc = corregir_volumen_solapado(_hist_solape(10467.0, 34560.1))
+    assert exc == [] and h[(h.modulo_id == 68) & (h.fecha == "2026-10-04")].vol_diario.iloc[0] == pytest.approx(10467.0)

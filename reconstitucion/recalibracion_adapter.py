@@ -191,6 +191,50 @@ def _factores_flujo_of(by_pad, alloc, case_start, case_end, tolerancia=None, esc
     return k, flujo.to_dict(), tms_of.to_dict(), avisos, informado
 
 
+def acumulado_modulos(previas, ventana, abiertos=()):
+    """Masa acumulada por modulo: dias anteriores a la ventana del Caso + ventana.
+
+    La previa sale del reparto secuencial de la campana (fuente sin escalar: el flujo solo
+    cierra la ventana). Un modulo con masa previa cruza el borde del Caso: parcial_ventana.
+    ``abiertos``: (pad, campana, modulo) sin cerrar al fin del Caso; se marca aparte en abierto_cierre (parcial_ventana solo marca masa previa).
+    """
+    cols = ["pad_id", "campana", "modulo"]
+    cero = lambda: pd.DataFrame(columns=cols + ["TMH", "TMS"])
+    pre = pd.DataFrame(previas)
+    pre = (pre.groupby(cols, as_index=False).agg(TMH=("tmh_asignada", "sum"), TMS=("tms_asignada", "sum"))
+           if len(pre) else cero())
+    win = pd.DataFrame(ventana)
+    win = (win.groupby(cols, as_index=False).agg(TMH=("tmh_asignada", "sum"), TMS=("tms_asignada", "sum"))
+           if len(win) else cero())
+    m = win.merge(pre, on=cols, how="outer", suffixes=("_ventana", "_previa")).fillna(0.0)
+    out = m.rename(columns={"TMH_ventana": "TMH_ventana", "TMS_ventana": "TMS_ventana"})
+    out["TMH_acumulado"] = out.TMH_ventana + out.TMH_previa
+    out["TMS_acumulado"] = out.TMS_ventana + out.TMS_previa
+    abiertos = {(int(p), int(c), int(m)) for p, c, m in abiertos}
+    out["abierto_cierre"] = [(int(p), int(c), int(m)) in abiertos
+                             for p, c, m in zip(out.pad_id, out.campana, out.modulo)]
+    out["parcial_ventana"] = out.TMH_previa.gt(1e-6)
+    for c in ("pad_id", "campana", "modulo"):
+        out[c] = out[c].astype(int)
+    return out
+
+
+def _modulos_abiertos(h, fin, cierre=0.995):
+    """Ultimo modulo con apilado de cada PAD/campana si al fin del Caso no llego a su volumen estimado."""
+    out = set()
+    d = h.loc[h.fecha.le(fin)].assign(vol_diario=lambda x: pd.to_numeric(x.vol_diario, errors="coerce"))
+    for (pad, _cid, visible), g in d.groupby(["pad_id", "campana_id", "campana"]):
+        act = g.loc[g.vol_diario.gt(0)]
+        if act.empty:
+            continue
+        mid = act.groupby("modulo_id").fecha.min().sort_values().index[-1]
+        ult = g.loc[g.modulo_id.eq(mid)].sort_values("fecha").iloc[-1]
+        acum, est = (pd.to_numeric(ult.get(c), errors="coerce") for c in ("vol_acum_final", "vol_total_est"))
+        if not (np.isfinite(acum) and np.isfinite(est) and est > 0) or acum < cierre * est:
+            out.add((int(pad), int(visible), int(ult.modulo)))
+    return out
+
+
 def _verificar_cadena(template, despacho, objetivo_pad, factor_pad, case_start, case_end, contra="flujo reconciliado"):
     """Conservacion de la rama cadena: por PAD contra el flujo (regimen digital) o contra la fuente
     (regimen previo) y por turno contra la fuente."""
@@ -231,6 +275,10 @@ def apply_recalibrated_distribution(result, history, profile, fixed, caso, *, in
     if h.empty:
         raise RecalibrationError("La DB no devolvió historia de apilado desde nacimiento.")
     h["fecha"] = pd.to_datetime(h.fecha).dt.normalize()
+    excepciones_volumen = []
+    if cadena is not None:
+        from .secuencia_campana import corregir_volumen_solapado
+        h, excepciones_volumen = corregir_volumen_solapado(h)
     required_history = ["fecha", "pad_id", "campana_id", "campana", "parcela_id", "modulo_id", "modulo", "vol_diario", "vol_total_est"]
     missing_history = [col for col in required_history if col not in h]
     if missing_history:
@@ -301,6 +349,8 @@ def apply_recalibrated_distribution(result, history, profile, fixed, caso, *, in
         extra = cadena.get("excepciones_fuente")
         if extra is not None and len(extra):
             excepciones = pd.concat([excepciones, pd.DataFrame(extra)], ignore_index=True)
+        if excepciones_volumen:
+            excepciones = pd.concat([excepciones, pd.DataFrame(excepciones_volumen)], ignore_index=True)
     for pad, campaign_id, visible_campaign in scopes:
         scope = hist_vol.loc[hist_vol.pad_id.eq(pad) & hist_vol.campana_id.eq(campaign_id)
                              & hist_vol.campana.eq(visible_campaign)].copy()
@@ -425,6 +475,7 @@ def apply_recalibrated_distribution(result, history, profile, fixed, caso, *, in
         all_allocations.extend(alloc)
 
     current = [r for r in all_allocations if case_start <= r["fecha"] <= case_end]
+    previas = [r for r in all_allocations if r["fecha"] < case_start] if cadena is not None else []
     if not current and cadena is not None:
         # Con flujo positivo la causa es la ausencia de masa de la fuente en la ventana.
         _factores_flujo_of(by_pad, pd.DataFrame(columns=["pad_id", "fecha", "tmh_of", "tms_of"]),
@@ -593,6 +644,8 @@ def apply_recalibrated_distribution(result, history, profile, fixed, caso, *, in
     out["itinerario"] = timeline
     out["nuevo_itinerario"] = timeline
     out["recalibracion_mr"] = pd.DataFrame(calibrations)
+    if cadena is not None:
+        out["modulos_acumulado"] = acumulado_modulos(previas, alloc, _modulos_abiertos(h, case_end))
     out["excepciones_reparto"] = excepciones
     try:
         from .engine import daily_shift_summary, module_summary, weekly_summary

@@ -42,6 +42,67 @@ TMH_DIA_MAX = 200_000.0
 DESTINO = ["pad_id", "campana_id", "campana"]
 
 
+# Provisionales, no calibrados con ensayos: un acumulado que supera al estimado previo en mas de
+# SOLAPE_MIN_EXCESO y cuyo exceso coincide con el volumen del primer dia del modulo siguiente
+# (tolerancia SOLAPE_TOL) se considera doble conteo de topografia.
+SOLAPE_MIN_EXCESO, SOLAPE_TOL = 0.25, 0.10
+
+
+def corregir_volumen_solapado(history):
+    """Quita del modulo que cierra el volumen del primer dia del modulo siguiente.
+
+    En el dia de cambio la base puede registrar en el modulo que cierra todo el avance de la
+    topografia del dia, incluido el volumen que ya es del modulo que arranca (caso M4 de la
+    campana 12: 44.142 m3 el 4-oct, de los cuales 34.560 m3 son del M5). Senal medida en la base,
+    sin datos externos: el acumulado final del modulo supera a su estimado anterior en mas de 25 %
+    y ese exceso coincide (+-10 %) con el volumen del primer dia del siguiente.
+
+    Devuelve (history corregido, excepciones) con una excepcion visible por correccion: volumen
+    de la base y volumen usado.
+    """
+    h = pd.DataFrame(history).copy()
+    if h.empty:
+        return h, []
+    h["fecha"] = pd.to_datetime(h.fecha).dt.normalize()
+    for col in ("vol_diario", "vol_acum_final", "vol_total_est"):
+        if col in h:
+            h[col] = pd.to_numeric(h[col], errors="coerce")
+    if not {"vol_acum_final", "vol_total_est"}.issubset(h.columns):
+        return h, []
+    excepciones = []
+    for _, g in h.groupby(DESTINO):
+        activos = g.loc[g.vol_diario.gt(0)]
+        inicio = activos.groupby("modulo_id").fecha.min().sort_values()
+        ids = list(inicio.index)
+        for a, b in zip(ids, ids[1:]):
+            d0 = inicio[b]
+            fila = g.loc[g.modulo_id.eq(a) & g.fecha.eq(d0)]
+            previo = g.loc[g.modulo_id.eq(a) & g.fecha.lt(d0)].sort_values(["fecha", "control_id"] if "control_id" in g else "fecha")
+            vb = g.loc[g.modulo_id.eq(b) & g.fecha.eq(d0), "vol_diario"].sum()
+            if fila.empty or previo.empty or not vb > 0 or not fila.vol_diario.iloc[0] > vb:
+                continue
+            est, acum = float(previo.vol_total_est.iloc[-1]), float(fila.vol_acum_final.iloc[-1])
+            if not (np.isfinite(est) and est > 0 and np.isfinite(acum)):
+                continue
+            exceso = acum - est
+            if exceso < SOLAPE_MIN_EXCESO * est or abs(exceso - vb) > SOLAPE_TOL * vb:
+                continue
+            idx = g.index[g.modulo_id.eq(a) & g.fecha.ge(d0)]
+            dia = g.index[g.modulo_id.eq(a) & g.fecha.eq(d0)]
+            base_dia = float(h.loc[dia, "vol_diario"].sum())
+            cerrado = (h.loc[idx, "vol_total_est"] - h.loc[idx, "vol_acum_final"]).abs() <= 1e-3 * acum
+            h.loc[dia, "vol_diario"] -= vb
+            h.loc[idx, "vol_acum_final"] -= vb
+            h.loc[cerrado[cerrado].index, "vol_total_est"] -= vb
+            modulo = int(g.loc[g.modulo_id.eq(a), "modulo"].iloc[0])
+            siguiente = int(g.loc[g.modulo_id.eq(b), "modulo"].iloc[0])
+            excepciones.append(dict(
+                fecha=d0, tipo="VOLUMEN_BASE_SOLAPADO", tmh=0.0, tms=0.0,
+                detalle=f"M{modulo}: la base trae {base_dia:,.1f} m3 el dia (acumulado {acum:,.1f}), que incluye "
+                        f"{vb:,.1f} m3 del M{siguiente}; se usa {base_dia - vb:,.1f} m3 (acumulado {acum - vb:,.1f})."))
+    return h, excepciones
+
+
 def _pad_de_etiqueta(valor):
     texto = str(valor if valor is not None else "").strip().lower()
     for prefijo, pad in PAD_ETIQUETA:
