@@ -140,3 +140,29 @@ def test_dashboard_panel_follows_the_selected_method():
     txt = lambda m: json.dumps(dashboard.update_panel_note(m), cls=PlotlyJSONEncoder, ensure_ascii=False)
     assert 'Maduras fijas' in txt('maduras_fijas') and 'cinética temprana' in txt('maduras_fijas')
     assert 'Reparto por aporte' in txt('reparto') and 'cinética temprana' not in txt('reparto')
+
+
+def _daily_sin_nuevas(label, k=1.0):
+    import pandas as pd
+    return [dict(label=label, date=d, q_riego_final=100.0 * k, q_pls_final=95.0 * k,
+                 fino_riego_final=10.0 * k, fino_pls_final=200.0 * k) for d in pd.date_range('2026-09-01', '2026-09-07')]
+
+
+def test_pad_sin_nuevas_en_sulfuros_avisa_que_el_metodo_no_aplica_y_el_cierre():
+    import pandas as pd
+    ws, we = pd.Timestamp('2026-09-01'), pd.Timestamp('2026-09-07')
+    anchor = dict(q_riego_recon=24 * 100 * 7, q_pls_recon=24 * 95 * 7 * 1.05, fino_riego_recon=.024 * 10 * 7, fino_pls_recon=.024 * 200 * 7)
+    ms = MP.mensajes_sin_nuevas('SULFUROS', 'Reparto por aporte', _daily_sin_nuevas('SULFUROS'), anchor, ws, we, n_nuevas=0)
+    assert len(ms) == 1 and ms[0]['nivel'] == MP.ADVERTENCIA and ms[0]['ambito'] == 'Sulfuros'
+    t = ms[0]['texto']
+    assert 'no hay pilas nuevas' in t and 'Reparto por aporte' in t and 'no aplica' in t and 'motor general' in t
+    assert 'PLS -4,76 %' in t and 'riego +0,00 %' in t and 'Fuera de la banda' in t
+    assert 'tolerancia 0' in ms[0]['accion']
+
+
+def test_pad_con_nuevas_no_genera_el_aviso_y_oxidos_sin_nuevas_es_informativo():
+    import pandas as pd
+    ws, we = pd.Timestamp('2026-09-01'), pd.Timestamp('2026-09-07')
+    assert MP.mensajes_sin_nuevas('SULFUROS', 'x', _daily_sin_nuevas('SULFUROS'), {}, ws, we, n_nuevas=2) == []
+    ox = MP.mensajes_sin_nuevas('OXIDOS', 'x', _daily_sin_nuevas('OXIDOS'), {}, ws, we, n_nuevas=0)
+    assert len(ox) == 1 and ox[0]['nivel'] == MP.INFORMACION and 'sin dato del run' in ox[0]['texto']

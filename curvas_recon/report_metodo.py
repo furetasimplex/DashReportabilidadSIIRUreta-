@@ -131,6 +131,26 @@ def _primary_points_for_campaign(cycles, campaign_start, before):
     return sorted(points.items())
 
 
+# Dias sin riego tras los cuales un riego nuevo ya no es de la campana vigente:
+# la pila se reapilo y el riego (con sus leyes) es de la campana siguiente,
+# aunque modulos_turnos aun no la registre.
+CAMPAIGN_IDLE_GAP_DAYS = 90
+
+
+def _campaign_end_index(q, i0, gap=CAMPAIGN_IDLE_GAP_DAYS):
+    """Primer indice de un riego que arranca tras >= `gap` dias secos desde `i0`.
+
+    Devuelve None si el riego de la campana es continuo. Desde ese indice los
+    caudales y leyes de la columna de la pila pertenecen a otra campana.
+    """
+    wet = np.flatnonzero(np.asarray(q[i0:], dtype=float) > 0)
+    if wet.size < 2:
+        return None
+    gaps = np.diff(wet)
+    over = np.flatnonzero(gaps - 1 >= gap)
+    return int(i0 + wet[over[0] + 1]) if over.size else None
+
+
 def _campaign_cu_daily(pad_id, campaigns, end):
     """Daily Cu fines by campaign, used when measured points predate stack end."""
     if not campaigns:
@@ -504,6 +524,10 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
         primary_points = {}
         for p, v in info.items():
             first_day = first_case_by_pile.get(p, min(pd.Timestamp(runs[c]['ws']) for c in casos))
+            if p not in first_case_by_pile:
+                # Sin actividad en ningun Caso: no hay ajuste del motor que
+                # proteger, asi que las lecturas oficiales anclan hasta el corte.
+                first_day = END + pd.Timedelta(days=1)
             if first_day is not None:
                 primary_points[p] = _primary_points_for_campaign(
                     recovery_cycles.get(v['num']), v['ini'], first_day)
@@ -531,6 +555,12 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
             q = (q_all[p].to_numpy(dtype=float) if p in q_all.columns
                  else np.zeros(len(cal)))
             q = np.where(q > 0, q, 0.0)
+            # riego tras una pausa larga = campana siguiente: no suma a esta
+            end_idx = _campaign_end_index(q, i0)
+            if end_idx is not None:
+                q[end_idx:] = 0.0
+                primary_points[p] = [(d, x) for d, x in primary_points.get(p, [])
+                                     if pos.get(pd.Timestamp(d).normalize(), end_idx) < end_idx]
             cu_r = cur_all.to_numpy(dtype=float)
             cu_p = (cpl_all[p].to_numpy(dtype=float) if p in cpl_all.columns
                     else np.full(len(cal), np.nan))
@@ -544,7 +574,7 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
             # dentro de las ventanas manda el Q y el Cu reconciliados del motor
             e_rec = e_med.copy()
             for (pp, dd), val in rec_ext.items():
-                if pp == p and dd in pos:
+                if pp == p and dd in pos and (end_idx is None or pos[dd] < end_idx):
                     e_rec[pos[dd]] = val
 
             med = np.cumsum(e_med[i0:])
@@ -591,6 +621,8 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                     value = (q_reconciled[(p, day)] if (p, day) in q_reconciled
                              else measured_q.loc[day])
                     value = _valid_flow(value)
+                    if end_idx is not None and pos[day] >= end_idx:
+                        value = 0.0
                     rl_curve.append(value * 24.0 / float(v['tms'])
                                     if value is not None else None)
                     daily_q[day] = value

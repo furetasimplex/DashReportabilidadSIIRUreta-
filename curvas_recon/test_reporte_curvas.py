@@ -61,7 +61,7 @@ def test_descarga_real_sin_libro_planta_y_repetible(export_case):
         assert 'sin comparaci' in str(status)
         assert raw_path.is_file()
         book = load_workbook(BytesIO(base64.b64decode(download['content'])))
-        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros']
+        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros', 'Método usado']
         assert book['Rec Ox']['B12'].value == 4.0
         assert book['Rec Ox']['C12'].value == 2.0
         assert book['Rec Ox']['B7'].value is None
@@ -107,9 +107,9 @@ def test_fallo_envio_limpia_xlsx_sin_consumir_corrida(export_case, monkeypatch):
     data, case = export_case
     written = []
     writer = report.escribir_libro
-    def tracked(doc, path):
+    def tracked(doc, path, **kwargs):
         written.append(Path(path))
-        return writer(doc, path)
+        return writer(doc, path, **kwargs)
     def fail(*args, **kwargs):
         raise OSError('Fallo sintÃ©tico de descarga')
     monkeypatch.setattr(report, 'escribir_libro', tracked)

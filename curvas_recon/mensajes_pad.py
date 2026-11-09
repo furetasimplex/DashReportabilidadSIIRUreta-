@@ -424,6 +424,56 @@ def mensajes_run_solver(meta, *, caso=None):
     return out
 
 
+def mensajes_sin_nuevas(label, metodo_etiqueta, daily, anchor, ws, we, n_nuevas=0, banda=BANDA_ESTRICTA):
+    """Aviso de un pad SIN pilas nuevas (30 dias o menos desde el primer riego) en la ventana.
+
+    Sin nuevas el metodo elegido en el selector no aplica (Sulfuros) o nunca aplica (Oxidos, siempre motor general): el
+    motor general reparte la diferencia frente al run entre todas las pilas. Para que el pad quede en lo medido se fija
+    el pad (tolerancia 0) en el solver de flujos. Solo informa: no cambia el
+    calculo. `daily`: filas diarias del resultado; `anchor`: ancla del Caso para el pad (caudal m3 y fino t Cu del run).
+    Devuelve [] si el pad tiene nuevas. Sulfuros: advertencia; Oxidos: informacion."""
+    import pandas as pd
+    if n_nuevas:
+        return []
+    dias = {d.date() for d in pd.date_range(ws, we)}
+    tot = dict(riego=0., pls=0., fino_riego=0., fino_pls=0.)
+    for d in daily or []:
+        if d.get('label') != label or pd.Timestamp(d['date']).date() not in dias:
+            continue
+        tot['riego'] += 24 * (d.get('q_riego_final') or 0)
+        tot['pls'] += 24 * (d.get('q_pls_final') or 0)
+        tot['fino_riego'] += .024 * (d.get('fino_riego_final') or 0)
+        tot['fino_pls'] += .024 * (d.get('fino_pls_final') or 0)
+    objetivo = dict(riego=(anchor or {}).get('q_riego_recon'), pls=(anchor or {}).get('q_pls_recon'),
+                    fino_riego=(anchor or {}).get('fino_riego_recon'), fino_pls=(anchor or {}).get('fino_pls_recon'))
+    nombres = dict(riego='riego', pls='PLS', fino_riego='fino del riego', fino_pls='fino del PLS')
+    difs, dentro = [], True
+    for k, nom in nombres.items():
+        if objetivo[k]:
+            r = tot[k] / objetivo[k] - 1
+            difs.append(f'{nom} {"+" if r >= 0 else "-"}{_pct(abs(r), 2)}')
+            dentro &= abs(r) <= banda
+    pad = _pad(label)
+    if label == 'SULFUROS':
+        que = (f'El método «{metodo_etiqueta}» no aplica: solo actúa sobre pilas nuevas. El cálculo usó el motor general, que '
+               f'reparte la diferencia frente al run entre todas las pilas activas (también las maduras) y cierra el Cu neto.')
+        nivel, titulo = ADVERTENCIA, 'Sulfuros sin pilas nuevas: el método elegido no aplica'
+    else:
+        que = ('Óxidos usa siempre el motor general, sin método seleccionable: reparte la diferencia frente al run '
+               'entre todas las pilas activas y cierra el Cu neto.')
+        nivel, titulo = INFORMACION, 'Óxidos sin pilas nuevas'
+    cierre = ('Cierre de riego, PLS y finos frente al run (banda de %s): ' % _pct(banda, 1)
+              + (', '.join(difs) if difs else 'sin dato del run') + '.')
+    if difs and dentro:
+        cierre += ' Dentro de la banda.'
+    elif difs:
+        cierre += ' Fuera de la banda: la diferencia queda sin absorber en el cálculo.'
+    texto = f'En {pad} no hay pilas nuevas (30 días o menos desde el primer riego) en la ventana. {que} {cierre}'
+    accion = (f'Fijar el pad {pad} (tolerancia 0) en el solver de flujos para que el desbalance lo absorba el solver '
+              f'y no el cálculo de curvas.')
+    return [mensaje(nivel, titulo, texto, accion, 'sin_pilas_nuevas', pad)]
+
+
 def ordenar(mensajes):
     """Errores primero, luego advertencias e informacion."""
     return sorted(mensajes, key=lambda m: NIVELES.index(m['nivel']))

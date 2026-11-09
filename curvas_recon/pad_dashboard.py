@@ -2959,6 +2959,13 @@ def compute_recon(_n_clicks, caso_id, metodo=None):
                 conn.close()
                 reset_trace_id(trace_token)
             phase_solve_and_persist = time.perf_counter() - phase_t0
+            # Aviso de pad sin pilas nuevas (solo informa; no cambia el calculo).
+            from .mensajes_pad import mensajes_sin_nuevas
+            _res_j = joint.get('res') or {}
+            _res_j['mensajes_pad'] = list(_res_j.get('mensajes_pad') or []) + [
+                m for lab in labels for m in mensajes_sin_nuevas(
+                    lab, metodo_etiqueta(metodo), _res_j.get('daily') or [], anchor.get(lab), ws, week_end,
+                    len(sulfide_young) if lab == 'SULFUROS' else len(pilas_jovenes(lab, ws, week_end)))]
 
             _progress_set('Guardando resultado', 'Corrida lista para la UI...', 92)
             phase_t0 = time.perf_counter()
@@ -2971,7 +2978,9 @@ def compute_recon(_n_clicks, caso_id, metodo=None):
                     _error_modal_body('El método «%s» no pudo cerrar el pad' % metodo_etiqueta(metodo), None,
                                       [f"{m['titulo']}: {m['texto']} Qué hacer: {m['accion']}" if m.get('accion') else f"{m['titulo']}: {m['texto']}"
                                        for m in exc.mensajes],
-                                      'Revise el run del Caso o elija el método «%s».' % METODO_ETIQUETAS[METODO_REPARTO]))
+                                      'Revise el run del Caso. Puede probar el método «%s», pero ambos usan los mismos objetivos, '
+                                      'banda y tope: si la causa es el agua o el Cu del run, tampoco cerrará.'
+                                      % METODO_ETIQUETAS[METODO_REPARTO if metodo == METODO_MADURAS_FIJAS else METODO_MADURAS_FIJAS]))
         except Exception as exc:
             record_phase('compute.error', time.perf_counter() - profile_total_t0,
                          trace_id=perf_trace_id, error_type=type(exc).__name__)
