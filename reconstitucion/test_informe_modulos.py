@@ -200,3 +200,18 @@ def test_control_mineral_usa_entradas_sulfuro_y_formulas_oxido():
             assert all(ws.cell(3,c).data_type == 'f' for c in (57,58,59))
             assert 'AY3' in ws['BE3'].value and 'AZ3' in ws['BE3'].value
         assert ws['BH3'].data_type == 'f'
+
+
+def test_modulo_abierto_al_cierre_no_se_informa_y_deja_nota():
+    m = report.preparar_modulos_desde_resultado(fixture_result(), 2, None)
+    m['abierto_cierre'] = [False, True]
+    m['TMH'] = [1000., 500.]
+    output = BytesIO()
+    report.exportar_desde_dataframe(m, output, pad=2, detalle=True, caso={'id': 1})
+    wb = load_workbook(BytesIO(output.getvalue()))
+    ws = wb['MODULOS']
+    assert ws['C3'].value == int(m.loc[0, 'modulo']) and ws['C4'].value is None
+    notas = [str(c.value) for sh in ('DETALLE', 'CASO') for row in wb[sh] for c in row if c.value]
+    esperado = f"M{int(m.loc[1, 'modulo'])} abierto al cierre del Caso: no se informa (masa en curso 500 TMH)"
+    assert sum(esperado in n for n in notas) == 2
+    assert wb['DETALLE'].max_row >= 4 and m.loc[1, 'modulo'] not in [r[2] for r in wb['DETALLE'].iter_rows(min_row=2, max_row=2, values_only=True)]

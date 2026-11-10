@@ -1,0 +1,138 @@
+{
+  "source": "Control Sulfuro Camp 11(5).xlsm",
+  "sha256": "eade3eb771755fbcbe9b02a3bded2e6ae1cb0c03c5bf31dc51c44c2da2cdb60e",
+  "read_method": "ZIP/XML solo lectura; no macros, no recalculo, no guardado",
+  "source_sheets": {
+    "allocation": "Caract_P27c11",
+    "pivot_source": "Apilado",
+    "pivot_cache_wet": "pivotCacheDefinition3 => worksheetSource Apilado!A2:C65536",
+    "pivot_cache_dry": "pivotCacheDefinition4 => worksheetSource Apilado!J2:L1048576"
+  },
+  "target": "M135",
+  "turnos": [
+    {
+      "column": "D",
+      "date": "2026-09-05",
+      "turno": 4,
+      "apilado_row": 403,
+      "tmh_pivot_raw": 29462.36200117068,
+      "tms_pivot_raw": 28477.87300117068,
+      "tmh_m135": 3905.4340380519316,
+      "tms_m135": 3774.933406414355
+    },
+    {
+      "column": "E",
+      "date": "2026-09-05",
+      "turno": 3,
+      "apilado_row": 403,
+      "tmh_pivot_raw": 37606.33799882932,
+      "tms_pivot_raw": 36348.67499882932,
+      "tmh_m135": 37606.33799882932,
+      "tms_m135": 36348.67499882932
+    },
+    {
+      "column": "F",
+      "date": "2026-09-06",
+      "turno": 4,
+      "apilado_row": 404,
+      "tmh_pivot_raw": 43963.31451635007,
+      "tms_pivot_raw": 42492.85848505814,
+      "tmh_m135": 43963.31451635007,
+      "tms_m135": 42492.85848505814
+    },
+    {
+      "column": "G",
+      "date": "2026-09-06",
+      "turno": 3,
+      "apilado_row": 404,
+      "tmh_pivot_raw": 30657.06971133536,
+      "tms_pivot_raw": 29633.114673113658,
+      "tmh_m135": 30657.06971133536,
+      "tms_m135": 29633.114673113658
+    },
+    {
+      "column": "H",
+      "date": "2026-09-07",
+      "turno": 4,
+      "apilado_row": 405,
+      "tmh_pivot_raw": 8774.318973360801,
+      "tms_pivot_raw": 8479.725852339896,
+      "tmh_m135": 8774.318973360801,
+      "tms_m135": 8479.725852339896
+    },
+    {
+      "column": "I",
+      "date": "2026-09-07",
+      "turno": 3,
+      "apilado_row": 405,
+      "tmh_pivot_raw": 28584.635299999998,
+      "tms_pivot_raw": 27624.467299999997,
+      "tmh_m135": 28584.635299999998,
+      "tms_m135": 27624.467299999997
+    },
+    {
+      "column": "J",
+      "date": "2026-09-08",
+      "turno": 4,
+      "apilado_row": 406,
+      "tmh_pivot_raw": 27013.5452,
+      "tms_pivot_raw": 26109.7082,
+      "tmh_m135": 21642.5912677851,
+      "tms_m135": 20918.459184458952
+    }
+  ],
+  "opening_carry": {
+    "tmh": 25556.92796311875,
+    "tms": 24702.939594756324,
+    "refs": [
+      "Caract_P27c11!J198",
+      "Caract_P27c11!J199"
+    ],
+    "meaning": "Remanente del turno 4 del 05-sep tras cierre M134; restado del pivot bruto para iniciar M135 en D261/D262."
+  },
+  "target_mass": {
+    "tmh": 175133.7018057126,
+    "tmh_ref": "'Volumen-Ton 140'!D68",
+    "tms": 169272.2339002143,
+    "tms_ref": "Caract_P27c11!Q262",
+    "volume_m3": 99210.74399999999,
+    "density_ratio_cached": 1.7652695136094596
+  },
+  "closing_fraction": {
+    "cell": "Caract_P27c11!S261",
+    "value": 0.801175525372549,
+    "formula": "constant cached value; no formula found in S261"
+  },
+  "expected_allocations": {
+    "tmh": 175133.7018057126,
+    "tmh_ref": "Caract_P27c11!Q261 = SUM(D261:P261)",
+    "tms": 169272.2339002143,
+    "tms_ref": "Caract_P27c11!Q262 = SUM(D262:P262)"
+  },
+  "precise_formulas": {
+    "D261": "+IFERROR(GETPIVOTDATA(CONCATENATE(\"Sum of \",D259),Apilado!$E$1,\"Fecha\",D258),0)-J198",
+    "D262": "+IFERROR(GETPIVOTDATA(CONCATENATE(\"Sum of \",D259),Apilado!$O$2,\"Fecha\",D258),0)-J199",
+    "J261": "+IFERROR(GETPIVOTDATA(CONCATENATE(\"Sum of \",J259),Apilado!$E$1,\"Fecha\",J258),0)*S261",
+    "J262": "+IFERROR(GETPIVOTDATA(CONCATENATE(\"Sum of \",J259),Apilado!$O$2,\"Fecha\",J258),0)*S261",
+    "R261": "+'Volumen-Ton 140'!D68"
+  },
+  "pivot_source_cell_refs": {
+    "wet_date": "Apilado!A{row}",
+    "wet_turn4": "Apilado!B{row}",
+    "wet_turn3": "Apilado!C{row}",
+    "dry_date": "Apilado!J{row}",
+    "dry_turn4": "Apilado!K{row}",
+    "dry_turn3": "Apilado!L{row}",
+    "row_formula": "Apilado row number for Excel serial date is cache/source row (as listed per turn); row2 labels B=4,C=3,K=4,L=3"
+  },
+  "independence": "Raw pivot values read directly from Apilado source worksheet cells, independent of S261 and expected allocations.",
+  "period_totals": {
+    "through_2026_09_07_tmh": 153491.11053792748,
+    "through_2026_09_07_tms": 148353.77471575537,
+    "including_2026_09_08_tmh": 175133.7018057126,
+    "including_2026_09_08_tms": 169272.2339002143,
+    "sep08_tmh": 21642.5912677851,
+    "sep08_tms": 20918.459184458952
+  },
+  "limitation": "Seven assigned turns span Sep5?Sep8. Through Sep7 sums are partial M135 since the final allocated turn falls on Sep8."
+}

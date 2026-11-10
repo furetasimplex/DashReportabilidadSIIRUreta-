@@ -42,7 +42,7 @@ from .recon_engine import (
     load_drena_cu, load_produccion, compute_wz_week, material_cutoff,
     reconcile_week_flowsheet_dash, N_TRANSIENT_DEFAULT, clear_curve_cache,
     active_pilas_by_riego, resolve_window, clear_actividad_cache,
-    _fechas_actividad,
+    _fechas_actividad, pilas_jovenes, inicio_campana,
 )
 from .input_preparation import prepare_recon_inputs
 from .perf_trace import record_phase, set_trace_id, reset_trace_id
@@ -51,10 +51,16 @@ from .curve_aggregation import (
 )
 from .db_pipeline import (
     connect, get_material_id, load_pila_daily_history, load_pila_history, load_week_totals, save_run,
-    load_casos, load_caso_anchor,
+    load_casos, load_caso_anchor, load_solver_run_meta,
     caso_anchor_completo, diagnose_caso_anchor, HIDRO_SCHEMA,
 )
 from .history_recovery import HistoryReader, calendar_rows
+from .metodo_maduras_fijas import (METODO_LOCAL, METODO_REPARTO, METODO_MADURAS_FIJAS, METODO_DEFAULT, ETIQUETAS as METODO_ETIQUETAS,
+                                   MetodoInfactible, etiqueta as metodo_etiqueta)
+
+# Selector de metodo (Sulfuros): el primero es el valor por defecto de la pantalla.
+METODO_OPTIONS = [dict(label=METODO_ETIQUETAS[METODO_MADURAS_FIJAS], value=METODO_MADURAS_FIJAS),
+                  dict(label=METODO_ETIQUETAS[METODO_REPARTO], value=METODO_REPARTO)]
 from .rl_series import visible_xaxis_range
 
 # Todo lo que se lee de la DB pasa por un cache local en disco (`local_cache.py`).
@@ -869,7 +875,7 @@ def _build_bar(data: dict, tab_value: str) -> go.Figure:
     if data.get('local_direct_recovery'):
         raw = _get_group_raw(data, data.get('caso_id'))
         if not raw:
-            return empty_figure('El ensayo local ya no esta disponible; vuelve a calcular')
+            return empty_figure('El resultado ya no está disponible; vuelve a calcular')
         from .sulfide_presentation import trial_bars
         return trial_bars(raw['res'], tab_value)
     week_start = data.get('week_start')
@@ -1060,40 +1066,83 @@ def _build_status_grid(res_s: dict, res_o: dict, n_days: int, selected_pila=None
                      group_scheme])
 
 
+def _solver_run_or_none(run_id):
+    """Estado del run del solver para los avisos; opcional (None si la BD no lo entrega)."""
+    try:
+        return load_solver_run_meta(run_id)
+    except Exception:
+        return None
+
+
+def _panel_note(metodo):
+    """Contenido de «Cómo leer este panel» para el método seleccionado."""
+    from .mensajes_pad import texto_panel
+    parrafos = texto_panel(metodo)
+    return ([html.Span('Cómo leer este panel · ' + metodo_etiqueta(metodo), className='method-note-title')]
+            + [html.P(t, className='method-note-text') for t in parrafos])
+
+
+def _render_mensaje(tag, m):
+    """Un mensaje de `mensajes_pad` como item de la lista de avisos (nivel, titulo, texto, que hacer, detalle plegado)."""
+    from .mensajes_pad import ERROR, ADVERTENCIA
+    etiqueta = {'error': 'ERROR', 'advertencia': 'ADVERTENCIA'}.get(m['nivel'], 'INFORMACIÓN')
+    cuerpo = [html.Span(m['titulo'], className='warning-title'), html.Span(' ' + m['texto'])]
+    if m.get('accion'):
+        cuerpo.append(html.Span(' Qué hacer: ' + m['accion'], className='warning-action'))
+    if m.get('detalle') and m['detalle'] != m['texto']:
+        cuerpo.append(html.Details([html.Summary('Detalle técnico'), html.Span(str(m['detalle']))], className='warning-detail'))
+    ambito = m.get('ambito')
+    return html.Div(
+        [html.Span(tag, className='warning-tag'),
+         html.Span(etiqueta, className=f"warning-level warning-level-{m['nivel']}"),
+         html.Div(cuerpo, className='warning-body')],
+        className=f"warning-item warning-{m['nivel']}", title=ambito if ambito else None)
+
+
 def _build_warnings(data: dict):
-    """Avisos del run, con el pad que los origina como etiqueta.
+    """Avisos del run para el operador, con el pad que los origina como etiqueta y su nivel.
 
     El motor ya rutea: `data['warnings']` trae SOLO los globales (tope de
     Fdrena del ancla, balance incerrable, caso sin run oficializado) y cada
     material trae los suyos. Antes las tres listas eran la misma lista unida,
     asi que el dedupe vaciaba las dos ramas de pad y todo salia [GLOBAL].
-    El texto del motor ya empieza con 'LABEL: ' / 'LABEL/Pxx', que aqui
-    duplicaria la etiqueta, asi que se recorta el prefijo redundante."""
+    Los textos del motor se reescriben con `mensajes_pad.traducir_aviso_motor`
+    (el motor no cambia); lo que no se reconoce se muestra tal cual como
+    advertencia. Si `data` trae `solver_run` (estado del run) o `mensajes_pad`
+    (mensajes ya armados de la reconciliacion del pad) tambien se muestran."""
+    from . import mensajes_pad as MP
     joint_w = list(data.get('warnings', []))
+    msgs = []
     balance = data.get('balance_inventario') or {}
     volumen = float(balance.get('volumen_m3') or 0.)
     cobre = float(balance.get('cobre_t') or 0.)
     if abs(volumen) > 1e-6 or abs(cobre) > 1e-6:
-        joint_w.insert(0,
-            f'Balance pendiente de inventario: {volumen:+,.2f} m³ de solución '
-            f'y {cobre:+,.3f} t Cu. Positivo: aporte requerido; negativo: '
+        msgs.append(('GLOBAL', MP.mensaje(
+            MP.ADVERTENCIA, 'Balance pendiente de inventario',
+            f'{volumen:+,.2f} m³ de solución y {cobre:+,.3f} t Cu. Positivo: aporte requerido; negativo: '
             f'retención requerida. Disponibilidad física sin verificar. '
-            f'Este término no se atribuye a la recuperación de las pilas.')
+            f'Este término no se atribuye a la recuperación de las pilas.',
+            'Tratarlo como diferencia de balance por explicar.', None, None)))
+    if data.get('metodo_etiqueta'):
+        aplicado = data.get('metodo_aplicado')
+        txt = f"Se usó el método «{data['metodo_etiqueta']}»."
+        if data.get('metodo') in ('maduras_fijas', 'reparto') and aplicado and 'no aplica' in str(aplicado):
+            txt += ' Este método solo aplica a Sulfuros con pilas nuevas; en este Caso se usó el cálculo habitual (motor general).'
+        msgs.append(('MÉTODO', MP.mensaje(MP.INFORMACION, 'Método de reconciliación', txt, None, None, None)))
+    if data.get('solver_run'):
+        msgs += [('SOLVER', m) for m in MP.mensajes_run_solver(data['solver_run'], caso=data.get('caso_id'))]
+    msgs += [('PAD', m) for m in (data.get('mensajes_pad') or [])]
     joint_set = set(joint_w)
-    msgs = [('GLOBAL', w) for w in joint_w]
+    msgs += [('GLOBAL', MP.traducir_aviso_motor(w)) for w in joint_w]
     for label in ('SULFUROS', 'OXIDOS'):
         for w in data.get(label, {}).get('warnings', []):
             if w in joint_set:
                 continue
-            if w.startswith(label + ': '):
-                w = w[len(label) + 2:]
-            msgs.append((label, w))
+            msgs.append((label, MP.traducir_aviso_motor(w)))
     if not msgs:
         return None
-    return html.Div(
-        [html.Div([html.Span(tag, className='warning-tag'), html.Span(w)], className='warning-item')
-         for tag, w in msgs],
-        className='warning-list')
+    msgs.sort(key=lambda tm: MP.NIVELES.index(tm[1]['nivel']))
+    return html.Div([_render_mensaje(tag, m) for tag, m in msgs], className='warning-list')
 
 
 _PAD_TO_LABEL = {'rox': 'OXIDOS', 'rsu': 'SULFUROS'}
@@ -2478,6 +2527,11 @@ def _build_content_layout():
             dcc.Dropdown(id='curvas-recon-caso', options=CASO_OPTIONS, value=DEFAULT_CASO_ID,
                           clearable=False, className='case-dropdown'),
         ], xs=12, lg=5, className='control-field'),
+        dbc.Col([
+            html.Label('Método de reconciliación', htmlFor='curvas-recon-metodo', className='control-label'),
+            dcc.Dropdown(id='curvas-recon-metodo', options=METODO_OPTIONS, value=METODO_DEFAULT,
+                          clearable=False, className='case-dropdown'),
+        ], xs=12, lg=3, className='control-field'),
         # 'Reconciliar' corre el proceso; 'Generar reporte' arma el libro de la
         # semana con lo que quedo en `recon-store` (un solo boton de reporte, ya
         # no dos). Ya no hay 'Dias activos' ni checkbox de 'todas las curvas': se
@@ -2507,14 +2561,6 @@ def _build_content_layout():
         ),
     ], className='recon-controls')
 
-    recon_controls.children.append(dbc.Col([
-        html.Label('Metodologia Sulfuros', htmlFor='curvas-sulfide-policy', className='control-label'),
-        dcc.Dropdown(id='curvas-sulfide-policy', value='net_trial', clearable=False,
-                     options=[{'label': 'Menores de 30 dias: ensayo neto local', 'value': 'net_trial'},
-                              {'label': 'Metodo anterior (guarda en SQL al calcular)', 'value': 'legacy'}]),
-        html.Small('Ensayo disponible: Caso 10009, 1-7 septiembre de 2026; fuentes congeladas.'),
-    ], xs=12, lg=6, className='control-field'))
-
     recon_pila_tabs = dcc.Tabs(id='curvas-recon-pila-tabs', value='tab-rec', children=[
         dcc.Tab(label='Curvas de Recuperación', value='tab-rec', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
         dcc.Tab(label='Flujos', value='tab-flujo', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
@@ -2539,17 +2585,7 @@ def _build_content_layout():
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle('Consideraciones')),
             dbc.ModalBody([
-                html.Div([
-                    html.Span('Cómo leer este panel', className='method-note-title'),
-                    html.P('Sulfuros: las pilas menores de 30 dias pueden ajustarse dentro de la ventana; '
-                           'se conserva el mes anterior y las mayores usan recuperacion observada. '
-                           'El drenaje ajustado es modelado: cerrar Cu neto no valida el balance de agua. '
-                           'El ensayo queda local y no reemplaza resultados SQL. '
-                           'Caso 10009: fuentes capturadas, run oficial 10082 y perfil de referencia 2348.',
-                           className='method-note-text'),
-                    html.Span('Los deltas de caudal y Cu fino son relativos al medido. Los agregados de Cu fino son proporcionales, no toneladas. En las barras de concentración, la media diaria es aritmética sobre los días con dato y no está ponderada por caudal. “Cálculo listo” confirma que hay datos y pilas para mostrar; revisa avisos y gráficos para evaluar el resultado.',
-                              className='method-note-text'),
-                ], className='method-note'),
+                html.Div(_panel_note(METODO_DEFAULT), id='curvas-recon-panel-note', className='method-note'),
                 html.H6('Avisos del cálculo', className='mt-3'),
                 html.Div(id='curvas-recon-warnings', children=
                          'Ejecuta el cálculo para consultar sus consideraciones.'),
@@ -2761,17 +2797,27 @@ def render_figure(selected, campana_idx, range_start, range_end):
 
 # ── Callbacks: reconciliacion ────────────────────────────────────────────────────
 
-def _error_modal_body(titulo, detalle, fallas=None):
-    """Contenido del modal de error (sin URLs ni secretos)."""
+def _error_modal_body(titulo, detalle, fallas=None, accion=None):
+    """Contenido del modal de error (sin URLs ni secretos): que paso, detalle y que hacer."""
     items = []
     if fallas:
         items.append(html.Ul([html.Li(f) for f in fallas], className='mb-0 ps-3'))
     elif detalle:
         items.append(html.P(detalle, className='mb-0'))
+    if accion:
+        items.append(html.P('Qué hacer: ' + accion, className='mt-2 mb-0 fw-semibold'))
     return html.Div([
         dbc.Alert(titulo, color='danger', className='mb-3'),
         *items,
     ])
+
+
+@_callback(
+    Output('curvas-recon-panel-note', 'children'),
+    Input('curvas-recon-metodo', 'value'),
+)
+def update_panel_note(metodo):
+    return _panel_note(metodo)
 
 
 @_callback(
@@ -2780,15 +2826,17 @@ def _error_modal_body(titulo, detalle, fallas=None):
     Output('curvas-recon-error-body', 'children'),
     Input('curvas-recon-btn', 'n_clicks'),
     State('curvas-recon-caso', 'value'),
-    State('curvas-sulfide-policy', 'value'),
+    State('curvas-recon-metodo', 'value'),
     prevent_initial_call=True,
     running=[
         (Output('curvas-recon-btn', 'disabled'), True, False),
         (Output('curvas-recon-btn', 'children'), 'Calculando…', 'Ejecutar cálculo'),
     ],
 )
-def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
+def compute_recon(_n_clicks, caso_id, metodo=None):
     """Reconcile every active pile over the selected official Case window."""
+    # Sin metodo (llamada directa, sin selector): ajuste local de pilas nuevas de siempre (`reconcile_sulfides`), no expuesto en el selector.
+    metodo = metodo if metodo in METODO_ETIQUETAS else METODO_LOCAL
     profile_total_t0 = time.perf_counter()
     perf_trace_id = uuid.uuid4().hex
     record_phase('compute.start', 0.0, trace_id=perf_trace_id)
@@ -2796,7 +2844,9 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
         _refresh_case_catalog()
     except Exception:
         return (dash.no_update, True,
-                _error_modal_body('No se pudo verificar el Caso oficial actual.', None, []))
+                _error_modal_body('No se pudo verificar el Caso oficial actual.',
+                                  'La consulta del Caso oficial no respondió, por lo que no se ejecutó el cálculo.',
+                                  None, 'Verifique la conexión con la base de datos y vuelva a pulsar Ejecutar cálculo.'))
     caso = _caso_by_id(caso_id)
     if caso is None or not caso.get('run_id'):
         return (dash.no_update, True,
@@ -2804,7 +2854,7 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
 
     _progress_begin(
         'Ejecutando calculo',
-        f'Caso #{caso["id"]} ? {caso["nombre"]}',
+        f'Caso #{caso["id"]} — {caso["nombre"]}',
         3,
     )
     try:
@@ -2818,7 +2868,7 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
 
             _progress_set(
                 'Ancla del caso',
-                f'Run oficial {caso["run_id"]} ? ventana {ws.date()}..{week_end.date()} ({n_days} d)',
+                f'Run oficial {caso["run_id"]} · ventana {ws.date()}..{week_end.date()} ({n_days} d)',
                 15,
             )
             phase_t0 = time.perf_counter()
@@ -2836,14 +2886,14 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
                 )
             phase_anchor = time.perf_counter() - phase_t0
             record_phase('compute.anchor', phase_anchor, trace_id=perf_trace_id)
-            if sulfide_policy not in ('net_trial', 'legacy'):
-                raise ValueError('Selecciona una metodologia valida para Sulfuros')
-            if sulfide_policy == 'net_trial':
-                from .sulfide_inputs import load_sulfide_inputs
-                sulfide_inputs = load_sulfide_inputs(ws, week_end, caso['id'], anchor)
-                if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
-                    raise ValueError('El snapshot de Sulfuros no corresponde al run oficial seleccionado')
-                method = tag = 'Sulfuros: ensayo neto local'
+            # Con curvas nuevas (30 dias o menos desde el primer riego) se
+            # ajustan solo ellas; sin curvas nuevas el respaldo es la
+            # distribucion del ajuste entre todas las curvas.
+            # Ambos metodos del selector usan el paquete local de Sulfuros (flujos absolutos del run, misma base por pila) y cierran contra
+            # los mismos objetivos; solo difieren en quien absorbe el ajuste (ver `metodo_maduras_fijas`).
+            sulfide_young = pilas_jovenes('SULFUROS', ws, week_end)
+            if sulfide_young:
+                method = tag = 'Sulfuros: ajuste de curvas de hasta 30 días'
 
             phase_t0 = time.perf_counter()
             _progress_set('Historico y metadatos', 'Asegurando caches...', 28)
@@ -2872,15 +2922,32 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
                 {'riego': load_riego, 'cu_riego': load_cu_riego, 'drena_cu': load_drena_cu},
                 activity_loader=_fechas_actividad,
             )
-            if sulfide_policy == 'net_trial':
+            if sulfide_young:
+                from .sulfide_db_inputs import load_saved_profile, make_source_provider
+                from .sulfide_inputs import load_sulfide_inputs
+                # Concentraciones medidas tal cual (sin ffill ni respaldo) y el
+                # perfil modelado guardado del Caso, si existe.
+                raw_series = dict(
+                    riego=materials['SULFUROS']['riego'],
+                    cu_riego=load_cu_riego('SULFUROS', ws, week_end, fill=False),
+                    drena_cu=load_drena_cu('SULFUROS', ws, week_end, fill=False))
+                provider = make_source_provider(
+                    raw_series, DATA_SU, WIP_META['SULFUROS'],
+                    inicio_campana('SULFUROS', week_end), caso,
+                    saved_profile=load_saved_profile(caso['id'], ws, week_end))
+                sulfide_inputs = load_sulfide_inputs(
+                    ws, week_end, caso['id'], anchor, source_provider=provider)
+                if sulfide_inputs['source_ids']['solver_run_id'] != caso['run_id']:
+                    raise ValueError('Las fuentes de Sulfuros no corresponden al run oficial seleccionado')
                 materials['SULFUROS']['sulfide_inputs'] = sulfide_inputs
+                materials['SULFUROS']['sulfide_metodo'] = metodo
             else:
                 materials['SULFUROS']['sulfide_policy'] = 'legacy'
             phase_materials = time.perf_counter() - phase_t0
             record_phase('compute.inputs', phase_materials, trace_id=perf_trace_id,
                          activity_dates=len(activity_dates), labels=len(materials))
 
-            _progress_set('Reconciliaci?n Pendiente', 'Resolviendo flowsheet...', 72)
+            _progress_set('Reconciliación pendiente', 'Resolviendo flowsheet…', 72)
             conn = connect()
             phase_t0 = time.perf_counter()
             trace_token = set_trace_id(perf_trace_id)
@@ -2892,23 +2959,40 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
                 conn.close()
                 reset_trace_id(trace_token)
             phase_solve_and_persist = time.perf_counter() - phase_t0
+            # Aviso de pad sin pilas nuevas (solo informa; no cambia el calculo).
+            from .mensajes_pad import mensajes_sin_nuevas
+            _res_j = joint.get('res') or {}
+            _res_j['mensajes_pad'] = list(_res_j.get('mensajes_pad') or []) + [
+                m for lab in labels for m in mensajes_sin_nuevas(
+                    lab, metodo_etiqueta(metodo), _res_j.get('daily') or [], anchor.get(lab), ws, week_end,
+                    len(sulfide_young) if lab == 'SULFUROS' else len(pilas_jovenes(lab, ws, week_end)))]
 
             _progress_set('Guardando resultado', 'Corrida lista para la UI...', 92)
             phase_t0 = time.perf_counter()
             raw_token = _save_recon_raw(joint.get('res'), caso, ws, week_end)
             phase_raw = time.perf_counter() - phase_t0
             record_phase('compute.raw_pickle', phase_raw, trace_id=perf_trace_id)
+        except MetodoInfactible as exc:
+            print(f'[curvas] metodo {metodo} infactible caso=#{caso["id"]}: {exc}')
+            return (dash.no_update, True,
+                    _error_modal_body('El método «%s» no pudo cerrar el pad' % metodo_etiqueta(metodo), None,
+                                      [f"{m['titulo']}: {m['texto']} Qué hacer: {m['accion']}" if m.get('accion') else f"{m['titulo']}: {m['texto']}"
+                                       for m in exc.mensajes],
+                                      'Revise el run del Caso. Puede probar el método «%s», pero ambos usan los mismos objetivos, '
+                                      'banda y tope: si la causa es el agua o el Cu del run, tampoco cerrará.'
+                                      % METODO_ETIQUETAS[METODO_REPARTO if metodo == METODO_MADURAS_FIJAS else METODO_MADURAS_FIJAS]))
         except Exception as exc:
             record_phase('compute.error', time.perf_counter() - profile_total_t0,
                          trace_id=perf_trace_id, error_type=type(exc).__name__)
             print(f'[curvas] error en cálculo caso=#{caso["id"]}: {exc}')
             mensaje = str(exc).strip() or 'Error inesperado durante el cálculo.'
             if 'password' in mensaje.lower() or 'pwd=' in mensaje.lower():
-                mensaje = 'Error de conexi?n o de datos. Revisa el servidor y reintenta.'
+                mensaje = 'Error de conexión o de datos. Revisa el servidor y reintenta.'
             return (
                 dash.no_update,
                 True,
-                _error_modal_body('No se pudo ejecutar el cálculo', mensaje),
+                _error_modal_body('No se pudo ejecutar el cálculo', mensaje, None,
+                                  'Revise el mensaje, corrija el dato indicado y vuelva a calcular; si persiste, informe al administrador la hora del intento y el Caso.'),
             )
     finally:
         _progress_end()
@@ -2934,7 +3018,6 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
         week_start=ws.isoformat(), week_end=week_end.isoformat(), n_days=n_days,
         caso_id=caso['id'], caso_nombre=caso['nombre'], caso_run_id=caso['run_id'],
         raw_token=raw_token, performance_id=perf_trace_id,
-        sulfide_policy=sulfide_policy,
         local_direct_recovery=bool((joint.get('res') or {}).get('local_direct_recovery')),
         sulfide_audit=_clean_nan((joint.get('res') or {}).get('sulfide_audit') or {}),
         balance_inventario=dict(
@@ -2947,6 +3030,11 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
         warnings=list(joint['warnings']),
         combined=_serialize_weeks(joint['weeks']),
         totals=_clean_nan(joint.get('totals') or {}),
+        metodo=metodo, metodo_etiqueta=metodo_etiqueta(metodo),
+        metodo_aplicado=((joint.get('res') or {}).get('metodo_sulfuros')
+                         or 'no aplica (sin pilas nuevas de Sulfuros)'),
+        mensajes_pad=_clean_nan((joint.get('res') or {}).get('mensajes_pad') or []),
+        solver_run=_clean_nan(_solver_run_or_none(caso['run_id'])),
     )
     for label, mat in materials.items():
         sub = joint['materials'][label]
@@ -2969,16 +3057,6 @@ def compute_recon(_n_clicks, caso_id, sulfide_policy='net_trial'):
     record_phase('compute.callback_total', time.perf_counter() - profile_total_t0,
                  trace_id=perf_trace_id, output_piles=len(materials))
     return out, False, dash.no_update
-
-
-@_callback(
-    Output('curvas-recon-store', 'data', allow_duplicate=True),
-    Input('curvas-sulfide-policy', 'value'),
-    prevent_initial_call=True,
-)
-def invalidate_sulfide_policy(_policy):
-    """A method change clears stale results and never triggers calculation."""
-    return None
 
 
 @_callback(
@@ -3158,10 +3236,13 @@ def render_recon_pila_charts(data, selected_pila, caso_id, group_id=None, groups
     if data.get('local_direct_recovery') and selected_pila:
         raw = _get_group_raw(data, caso_id)
         if not raw:
-            return (empty_figure('El ensayo local ya no esta disponible; vuelve a calcular'),) * 3
+            return (empty_figure('El resultado ya no está disponible; vuelve a calcular'),) * 3
         from .sulfide_presentation import solution_figures
         selected_pad, selected_num = selected_pila.split('-P')
-        flow, concentrations = solution_figures(raw['res'], _PAD_TO_LABEL[selected_pad], int(selected_num))
+        # Antes del Caso: una sola serie con el historico oficial guardado; en la ventana: medido y reconciliado.
+        official_rows, _history_error = _load_recovery_history(
+            _PAD_TO_LABEL[selected_pad], int(selected_num), ws, data.get('raw_token'))
+        flow, concentrations = solution_figures(raw['res'], _PAD_TO_LABEL[selected_pad], int(selected_num), official_rows)
         if _PAD_TO_LABEL[selected_pad] == 'SULFUROS':
             from .sulfide_presentation import recovery_figure
             recovery = recovery_figure(raw['res'], 'SULFUROS', int(selected_num), _measured_cycles('SULFUROS', int(selected_num)))
@@ -3608,8 +3689,6 @@ def update_status_badge(data, caso_id):
         return 'Pendiente de cálculo', {**base_style, 'backgroundColor': '#64748B'}
     if data.get('caso_id') is not None and caso_id != data.get('caso_id'):
         return 'Pendiente de cálculo', {**base_style, 'backgroundColor': '#64748B'}
-    if data.get('local_direct_recovery') and data.get('converged'):
-        return 'Ensayo neto local', {**base_style, 'backgroundColor': '#B45309'}
     if not data.get('converged'):
         warnings = data.get('warnings') or []
         sin_datos = any('QRiego_medido o QPLS_medido' in w for w in warnings)
@@ -3618,7 +3697,7 @@ def update_status_badge(data, caso_id):
         return 'Sin resultado usable', {**base_style, 'backgroundColor': '#B91C1C'}
     # `converged` solo indica que existen datos de caudal y pilas activas;
     # no es una medida de calidad ni una validación del ajuste.
-    return 'Cálculo listo', {**base_style, 'backgroundColor': '#13795B'}
+    return ('Cálculo listo' + (f" · {data['metodo_etiqueta']}" if data.get('metodo_etiqueta') else '')), {**base_style, 'backgroundColor': '#13795B'}
 
 
 @_callback(
@@ -3699,13 +3778,6 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
         return html.Div(
             'La identidad de la corrida cambió; vuelve a ejecutar la reconciliación.',
             style={'color': '#B45309'}), None
-    if res.get('local_direct_recovery'):
-        from .sulfide_presentation import trial_workbook
-        if groups:
-            return html.Div('Exporta el ensayo sin grupos: este formato conserva las pilas individuales.'), None
-        workbook = trial_workbook(res, caso)
-        return (html.Div('Ensayo local exportado con recuperacion directa y fuentes; sin validacion hidraulica.'),
-                dcc.send_bytes(workbook, f'Ensayo_Neto_Local_Caso{caso["id"]}.xlsx'))
     tmp_path = None
     try:
         from . import report_metodo
@@ -3720,19 +3792,25 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
                              style={'color': '#B45309'}), None
         fd, tmp_path = tempfile.mkstemp(suffix='.xlsx')
         os.close(fd)
+        _aud = (res or {}).get('sulfide_audit') or {}
+        meta_libro = {'Método de reconciliación': data.get('metodo_etiqueta') or metodo_etiqueta(None),
+                      'Aplicado en Sulfuros': data.get('metodo_aplicado'),
+                      'Banda de cierre del pad': (f"{100 * _aud['banda']:.3g} %" if _aud.get('banda') is not None else 'no aplica'),
+                      'Caso': caso['id'], 'Run oficial': caso.get('run_id'),
+                      'Estado del run del solver': (data.get('solver_run') or {}).get('estado', 'sin dato')}
         if groups is not None and groups != []:
             from .virtual_pile_report import VirtualGroupError
             try:
-                report_metodo.escribir_libro(doc, tmp_path, groups=groups)
+                report_metodo.escribir_libro(doc, tmp_path, groups=groups, meta=meta_libro)
             except VirtualGroupError as exc:
                 return html.Div(f'No se pudo exportar la pila virtual: {exc}',
                                 style={'color': '#B45309'}), None
         else:
-            report_metodo.escribir_libro(doc, tmp_path)
+            report_metodo.escribir_libro(doc, tmp_path, meta=meta_libro)
         stamp = datetime.now().strftime('%Y%m%d_%H%M')
         download = dcc.send_file(
             tmp_path,
-            filename=f'Reporte_Recuperaciones_Metodo_Reconciliado_Caso{caso["id"]}_{stamp}.xlsx')
+            filename=f'Reporte_Recuperaciones_Metodo_Reconciliado_Caso{caso["id"]}_{data.get("metodo") or "reparto"}_{stamp}.xlsx')
     except Exception:
         return html.Div('No se pudo generar el informe. Revisa los datos fuente y, si existe, el libro de planta.',
                         style={'color': '#DC2626'}), None

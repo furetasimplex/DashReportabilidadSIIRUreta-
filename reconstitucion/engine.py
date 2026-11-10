@@ -493,10 +493,12 @@ def inactive_table(apilado: pd.DataFrame) -> pd.DataFrame:
 
 def analyze_db(fecha_min=None, fecha_max=None, boundary=SHIFT1_FRAC,
                recortar_a_masa=True, boundary_src="masa", sem=SEMANA_DEF,
-               caso_id=None, caso=None, use_intraday=False) -> dict:
+               caso_id=None, caso=None, use_intraday=False, masa_fuente='oficial') -> dict:
     """Fuente SQL Server: volumen de control_apilado_diario y masa por turno de
     Datos_conciliados_of_ver, la tabla versionada que guarda, por dia, la fila
-    que cerro el caso de reconciliacion validado. TMS y TMH salen de la misma
+    que cerro el caso de reconciliacion validado. ``masa_fuente='of'`` (solo
+    testeo explicito) cambia la secuencia de modulos a Datos_conciliados_of.
+    TMS y TMH salen de la misma
     fila y llegan ya reconciliados; 'caso_id' dice de que caso.
 
     Los dias que no pasaron por un caso validado no tienen masa y no se
@@ -517,7 +519,7 @@ def analyze_db(fecha_min=None, fecha_max=None, boundary=SHIFT1_FRAC,
                 pd.Timestamp(fecha_min).normalize() != pd.Timestamp(caso['fecha_inicio']).normalize()
                 or pd.Timestamp(fecha_max).normalize() != pd.Timestamp(caso['fecha_fin']).normalize()):
             raise ValueError('El Caso y la ventana de reconstitución deben coincidir')
-        return _analyze_flow_case(caso, sem, use_intraday)
+        return _analyze_flow_case(caso, sem, use_intraday, masa_fuente)
 
     if caso_id is not None and (fecha_min is None or fecha_max is None):
         raise ValueError("Un Caso requiere su ventana exacta")
@@ -614,7 +616,7 @@ def _optional_intraday(start, end):
     return None, notice
 
 
-def _analyze_flow_case(caso, sem, use_intraday=False):
+def _analyze_flow_case(caso, sem, use_intraday=False, masa_fuente='oficial'):
     """Official model solids, independently conserved for each PAD."""
     from . import db_source as dbs, modelo_flujos as mf
     start, end = (pd.Timestamp(caso[k]).normalize() for k in ('fecha_inicio', 'fecha_fin'))
@@ -696,8 +698,13 @@ def _analyze_flow_case(caso, sem, use_intraday=False):
     # Hours and percentages retain the observed global volume share; mass is
     # conserved separately within each PAD rather than crossing to another PAD.
     st['frac_vol'] = st.vol_diario/st.vol_dia_total
-    from .module_timeline import build_module_timeline
-    timeline = build_module_timeline(ap, st, profile, intraday=intraday)
+    if caso.get('modelo_codigo') == 'hidrometalurgia_125_v2':
+        # The sequential adapter reconstructs intervals from its wet allocations;
+        # the legacy volume timeline must not overwrite those assignments.
+        timeline = pd.DataFrame()
+    else:
+        from .module_timeline import build_module_timeline
+        timeline = build_module_timeline(ap, st, profile, intraday=intraday)
     for pad, row in balance.set_index('pad_id').iterrows():
         allocated = st.loc[st.pad_id.eq(pad), 'masa_total'].sum()
         if not np.isclose(allocated, row.objetivo_t, rtol=1e-10, atol=1e-6):
@@ -717,6 +724,10 @@ def _analyze_flow_case(caso, sem, use_intraday=False):
         'Totales reconciliados por PAD; distribución diaria y por turno desde el perfil operativo. '
         'Los turnos distribuidos no son mediciones reconciliadas independientes.'))
     res['avisos'] = avisos + v.revisar_resultado(res)
+    if caso.get('modelo_codigo') == 'hidrometalurgia_125_v2':
+        from .recalibracion_runtime import load_runtime_recalibration
+        res['_intraday_profile'] = intraday
+        res = load_runtime_recalibration(res, caso, targets, masa_fuente=masa_fuente)
     return res
 
 

@@ -21,13 +21,19 @@ class SulfideMethodTests(unittest.TestCase):
         self.assertEqual(rows, original)
         self.assertEqual(out[0], original[0])
 
-    def test_boundary_and_no_young(self):
+    def test_exactly_30_days_is_adjustable(self):
         rows = cohort('2026-08-08')
-        for row in rows[1:]: row['official_pct'] = 12
+        out, audit = reconcile_sulfides(rows, '2026-09-01', '2026-09-07', 0)
+        self.assertEqual(len(audit['young']), 1)
+        self.assertEqual(audit['mature'], [])
+        self.assertAlmostEqual(audit['lambda'], 1)
+
+    def test_over_30_days_without_young_requires_closure(self):
+        rows = cohort('2026-08-07')
+        for row in rows[1:]: row['observed_pct'] = 12
         out, audit = reconcile_sulfides(rows, '2026-09-01', '2026-09-07', 2)
         self.assertIsNone(audit['lambda'])
         self.assertEqual(out[-1]['reconciled_pct'], 12)
-        self.assertEqual(len(audit['exact_30_pending']), 1)
         with self.assertRaises(ValueError):
             reconcile_sulfides(rows, '2026-09-01', '2026-09-07', 3)
 

@@ -89,15 +89,15 @@ def _ensure_reconciliation_tables():
             present = conn.execute(text("SELECT OBJECT_ID(:table_name, 'U')"),
                                    {'table_name': f'{SCHEMA}.{table}'}).scalar()
             if present is None:
-                raise RuntimeError(f'Falta la tabla de reconciliaci?n {table}; '
-                                   'instala el esquema antes de habilitar esta secci?n.')
+                raise RuntimeError(f'Falta la tabla de reconciliación {table}; '
+                                   'instala el esquema antes de habilitar esta sección.')
         for column in ('semana_fin', 'caso_id'):
             present = conn.execute(text('SELECT COL_LENGTH(:table_name, :column_name)'),
                                    {'table_name': f'{SCHEMA}.reconciliacion_run',
                                     'column_name': column}).scalar()
             if present is None:
                 raise RuntimeError(f'Falta la columna {column} en reconciliacion_run; '
-                                   'actualiza el esquema antes de ejecutar el c?lculo.')
+                                   'actualiza el esquema antes de ejecutar el cálculo.')
     _TABLAS_LISTAS = True
 
 
@@ -253,10 +253,41 @@ def load_caso_anchor(run_id, model_code, model_version=None, total_flows=None):
             q_pls_medido=_sum(flows['pls'], 0), q_pls_recon=_sum(flows['pls'], 1),
             fino_riego_medido=_sum(flows['riego'], 2), fino_riego_recon=_sum(flows['riego'], 3),
             fino_pls_medido=_sum(flows['pls'], 2), fino_pls_recon=_sum(flows['pls'], 3),
+            # Componentes medidos del riego (masa, fino) por flujo: la ley de riego mezclada (refino + DPLS + F60) los usa.
+            riego_comp={c: dict(masa_medida=by_code[c][0], fino_medido=by_code[c][2])
+                        for c in flows['riego'] if c in by_code},
+            riego_refino=flows['riego'][0],
             **({'net_cu_target_t': by_code[target_flow][3],
                 'net_cu_target_flow': target_flow} if target_flow else {}),
         )
     return out
+
+
+def load_solver_run_meta(run_id):
+    """Estado y avisos del run del solver (solo SELECT sobre `recon_solver_run`; se llama al calcular, nunca al montar).
+
+    Devuelve dict con `estado` y, si el run las trae en `metadata_json`, `closure_kind`, `fuera_tol`, `motivo_reintento`
+    y `razones`; o None si no hay run o la consulta falla (el dato es opcional para la pantalla)."""
+    if run_id is None:
+        return None
+    try:
+        rows = _sql_rows(get_engine(), text(f"SELECT estado, metadata_json FROM {HIDRO_SCHEMA}.recon_solver_run WHERE id = :run"),
+                         {'run': int(run_id)}, etiqueta='recon_run_estado')
+    except Exception:
+        return None
+    if not rows:
+        return None
+    import json as _json
+    try:
+        meta = _json.loads(rows[0][1] or '{}')
+    except Exception:
+        meta = {}
+    fuera = meta.get('fuera_tol')
+    if fuera is None and isinstance(meta.get('fuera_lista'), list):
+        fuera = len(meta['fuera_lista'])
+    return dict(estado=rows[0][0], closure_kind=meta.get('closure_kind'), fuera_tol=fuera,
+                motivo_reintento=meta.get('motivo_reintento'), intentos=meta.get('intentos') or [],
+                razones=meta.get('razones') if isinstance(meta.get('razones'), dict) else None)
 
 
 CASO_ANCHOR_KEYS = (
@@ -267,12 +298,12 @@ CASO_ANCHOR_KEYS = (
 
 
 def caso_anchor_completo(anchor):
-    """True si ambos pads tienen un ancla num?rica utilizable completa."""
+    """True si ambos pads tienen un ancla numérica utilizable completa."""
     return not diagnose_caso_anchor(anchor)
 
 
 def diagnose_caso_anchor(anchor):
-    """Lista fallas del ancla para ambos pads, o lista vac?a si est? completa."""
+    """Lista fallas del ancla para ambos pads, o lista vacía si está completa."""
     denominadores = {
         'q_riego_medido', 'q_pls_medido',
         'fino_riego_medido', 'fino_pls_medido',
@@ -303,7 +334,7 @@ def diagnose_caso_anchor(anchor):
             try:
                 number = float(value)
             except (TypeError, ValueError):
-                fallas.append(f'{label}: {nombre} no num?rico')
+                fallas.append(f'{label}: {nombre} no numérico')
                 continue
             if not math.isfinite(number) or number < 0:
                 fallas.append(f'{label}: {nombre} no finito o negativo')

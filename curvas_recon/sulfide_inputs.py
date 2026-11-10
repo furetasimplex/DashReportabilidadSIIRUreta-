@@ -73,7 +73,7 @@ def _read_fixture(path):
     return payload
 
 
-def _validate_payload(payload, case_id, start, end, target):
+def _validate_payload(payload, case_id, start, end, target, fixed_bundle=True):
     if not isinstance(payload, Mapping) or not isinstance(payload.get('rows'), list):
         raise SulfideInputError('source provider must return a rows list')
     source_ids = payload.get('source_ids')
@@ -88,16 +88,20 @@ def _validate_payload(payload, case_id, start, end, target):
         }
     if not isinstance(source_ids, Mapping):
         raise SulfideInputError('source identities are required')
-    expected_ids = {
-        'case_id': _SUPPORTED_CASE,
-        'solver_run_id': _SUPPORTED_SOLVER_RUN,
-        'allocation_profile_run_id': _SUPPORTED_PROFILE_RUN,
-    }
-    for name, expected in expected_ids.items():
-        if int(source_ids.get(name, -1)) != expected:
-            raise SulfideInputError(f'unsupported or mismatched {name}')
-    if case_id != _SUPPORTED_CASE or start != _SUPPORTED_START or end != _SUPPORTED_END:
-        raise SulfideInputError('no validated source bundle for requested Case/window')
+    fixed_bundle = fixed_bundle or 'allocation_profile_run_id' in source_ids
+    if fixed_bundle:
+        expected_ids = {
+            'case_id': _SUPPORTED_CASE,
+            'solver_run_id': _SUPPORTED_SOLVER_RUN,
+            'allocation_profile_run_id': _SUPPORTED_PROFILE_RUN,
+        }
+        for name, expected in expected_ids.items():
+            if int(source_ids.get(name, -1)) != expected:
+                raise SulfideInputError(f'unsupported or mismatched {name}')
+        if case_id != _SUPPORTED_CASE or start != _SUPPORTED_START or end != _SUPPORTED_END:
+            raise SulfideInputError('no validated source bundle for requested Case/window')
+    elif int(source_ids.get('case_id', -1)) != case_id:
+        raise SulfideInputError('mismatched case_id')
     payload_start = _day(payload.get('target_period_start', start), 'target_period_start')
     if payload_start != start:
         raise SulfideInputError('source target period does not start at Case window')
@@ -122,9 +126,12 @@ def _validate_payload(payload, case_id, start, end, target):
         day = _day(row['date'], 'row date')
         if day > end:
             raise SulfideInputError('source date exceeds Case window')
-        if day >= start:
-            for field in ('q_riego_m3h', 'cu_riego_gL', 'cu_drenaje_gL',
-                          'profile_q_drenaje_m3h', 'drainage_profile_source'):
+        if day >= start and (fixed_bundle or row.get('drainage_profile_source') is not None):
+            fields = ('q_riego_m3h', 'cu_riego_gL', 'cu_drenaje_gL',
+                      'profile_q_drenaje_m3h', 'drainage_profile_source')
+            if row.get('q_riego_m3h') == 0:   # dia sin riego: no hay flujo que ajustar
+                fields = ('q_riego_m3h', 'drainage_profile_source')
+            for field in fields:
                 if field not in row or row[field] is None:
                     raise SulfideInputError(f'missing {field} on Case day')
             if 'not measured' not in str(row['drainage_profile_source']).lower():
@@ -204,4 +211,5 @@ def load_sulfide_inputs(week_start, week_end, caso_id, anchor, *,
     else:
         payload = source_provider(week_start=start, week_end=end,
                                   case_id=case_id, anchor=anchor)
-    return _validate_payload(payload, case_id, start, end, target)
+    return _validate_payload(payload, case_id, start, end, target,
+                             fixed_bundle=source_provider is None)

@@ -61,14 +61,14 @@ def test_descarga_real_sin_libro_planta_y_repetible(export_case):
         assert 'sin comparaci' in str(status)
         assert raw_path.is_file()
         book = load_workbook(BytesIO(base64.b64decode(download['content'])))
-        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros']
+        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros', 'Riego Ox', 'Riego Sulfuro', 'Método usado']
         assert book['Rec Ox']['B12'].value == 4.0
         assert book['Rec Ox']['C12'].value == 2.0
         assert book['Rec Ox']['B7'].value is None
         assert len(book['Curvas Ox']._charts) == 2
         assert len(book['Curvas Sulfuro']._charts) == 2
         with ZipFile(BytesIO(base64.b64decode(download['content']))) as archive:
-            assert len([p for p in archive.namelist() if p.startswith('xl/charts/chart') and p.endswith('.xml')]) == 4
+            assert len([p for p in archive.namelist() if p.startswith('xl/charts/chart') and p.endswith('.xml')]) == 6
 
 
 @pytest.mark.parametrize('change', ['selected', 'store_run', 'raw_run', 'store_window',
@@ -107,9 +107,9 @@ def test_fallo_envio_limpia_xlsx_sin_consumir_corrida(export_case, monkeypatch):
     data, case = export_case
     written = []
     writer = report.escribir_libro
-    def tracked(doc, path):
+    def tracked(doc, path, **kwargs):
         written.append(Path(path))
-        return writer(doc, path)
+        return writer(doc, path, **kwargs)
     def fail(*args, **kwargs):
         raise OSError('Fallo sintÃ©tico de descarga')
     monkeypatch.setattr(report, 'escribir_libro', tracked)
@@ -295,3 +295,40 @@ def test_report_includes_inactive_campaign_history_without_case_adjustment(monke
     assert [book['Rec Ox'].cell(9,c).value for c in range(2,34)]==list(range(1,33))
     assert book['Rec Ox']['C12'].value==pytest.approx(.216)
     assert book['Rec Ox']['D10'].value is None
+
+
+def test_informe_global_toma_el_resultado_del_metodo_de_sulfuros_dentro_de_la_ventana(monkeypatch, tmp_path):
+    days = pd.date_range('2026-08-01', periods=5)
+    apilado = {(pid, 1): dict(camp=17, f0=days[0], f1=days[0], fin=100.0,
+                              tms=1000.0, ley=10.0) for pid in (1, 2)}
+    monkeypatch.setattr(report, 'leer_apilado', lambda **kwargs: apilado)
+    monkeypatch.setattr(report.E, 'load_riego', lambda *args: pd.DataFrame({'P01': 10.0}, index=days))
+    monkeypatch.setattr(report.E, 'load_cu_riego', lambda *args: pd.Series(1.0, index=days))
+    monkeypatch.setattr(report.E, 'load_drena_cu', lambda *args: pd.DataFrame({'P01': 2.0}, index=days))
+    monkeypatch.setattr(report.E, 'FDRENA_MAX', 0.95)
+    rows = [dict(pad='SULFUROS', pile='P01', date='2026-08-01', reconciled_pct=50.0, recovery_source='official'),
+            dict(pad='SULFUROS', pile='P01', date='2026-08-02', reconciled_pct=7.0, recovery_source='observed'),
+            dict(pad='SULFUROS', pile='P01', date='2026-08-03', reconciled_pct=7.5, recovery_source='net_fit'),
+            dict(pad='SULFUROS', pile='P01', date='2026-08-04', reconciled_pct=99.0, recovery_source='official')]
+    res = {'piles': [dict(label='SULFUROS', parcela='P01', daily=[])], 'local_direct_recovery': True,
+           'recovery_rows': rows}
+    runs = {10013: dict(ws=days[1], we=days[2], caso={'run_id': 10104},
+                        pads={label: {'res': res} for label in ('OXIDOS', 'SULFUROS')})}
+    doc = report.construir_doc(runs, end=days[-1], xl=str(tmp_path / 'ausente.xlsx'), verbose=False)
+    sulfuros = doc['pads']['SULFUROS']['pilas'][0]
+    # antes de la ventana y las filas oficiales no cambian; dentro manda el metodo; despues sigue con sus incrementos
+    assert sulfuros['rec'] == pytest.approx([0.216, 7.0, 7.5, 7.5 + 0.216, 7.5 + 0.432])
+    assert sulfuros['pct'] == pytest.approx(7.932)
+    assert doc['pads']['OXIDOS']['pilas'][0]['rec'] == pytest.approx([0.216, 0.432, 0.648, 0.864, 1.08])   # Oxidos no cambia
+
+
+def test_descarga_con_metodo_de_sulfuros_entrega_el_informe_global_de_ambos_pads(export_case, monkeypatch):
+    data, case = export_case
+    raw, _ = dashboard._load_recon_raw(data['raw_token'], case['id'])
+    raw['res'] = {'piles': [], 'local_direct_recovery': True, 'recovery_rows': []}
+    monkeypatch.setattr(dashboard, '_load_recon_raw', lambda *args: (raw, None))
+    status, download = dashboard.generate_week_report(1, data, case['id'])
+    assert 'Reporte generado' in str(status)
+    book = load_workbook(BytesIO(base64.b64decode(download['content'])))
+    assert {'Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro'} <= set(book.sheetnames)
+    assert download['filename'].startswith('Reporte_Recuperaciones_Metodo_Reconciliado_Caso')

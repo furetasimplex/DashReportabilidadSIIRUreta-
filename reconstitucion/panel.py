@@ -163,6 +163,15 @@ def render(res):
         sources = [f"Caso #{source['id']} - run #{source['run_id']} - {flows}: masa reconciliada"]
     return html.Div([
         summary(res),
+        html.P('MODO DE TESTEO, RESULTADO NO OFICIAL: la masa no proviene de la fuente oficial '
+               f"(fuente: {res['masa_fuente']}).", className='reconstitucion-note',
+               style={'color': '#B42318', 'fontWeight': '600'}, id='reconstitucion-aviso-no-oficial')
+        if res.get('masa_fuente', 'oficial') != 'oficial' else None,
+        html.P(f"Régimen previo a la puesta en marcha: la tabla cierra con la fuente de masa, sin escalar al flujo. "
+               f"Pendiente contra el flujo del Caso: {res['balance_flujos'].pendiente_t.sum():+,.0f} t.",
+               className='reconstitucion-note', style={'color': '#B54708', 'fontWeight': '600'},
+               id='reconstitucion-aviso-regimen-previo')
+        if res.get('regimen_masa') == 'previo' and 'pendiente_t' in res.get('balance_flujos', pd.DataFrame()) else None,
         html.P('Fuente de masa: ' + (', '.join(sources) if sources else 'Oficial validada'), className='reconstitucion-note'),
         html.P('Barras azules: horario reconstituido. Lineas punteadas: cortes de medicion y cambios de turno (08:00 y 20:00). Haz click en una barra o fila para ver el detalle del modulo y turno.', className='reconstitucion-note'),
         html.Div(dcc.Graph(id='reconstitucion-gantt', figure=fig_gantt(res), config={'displaylogo': False}, style={'minWidth':'960px'}), style={'overflowX':'auto','maxWidth':'100%'}),
@@ -174,7 +183,7 @@ def render(res):
         html.Div([html.Div([
             html.Button('Cerrar', id='reconstitucion-cerrar', n_clicks=0, className='reconstitucion-button'),
             html.H3('Consideraciones'),
-            html.P('La masa conserva el total reconciliado de cada pad. Un turno conocido en cero conserva cero; dias sin masa no se rellenan. El pendiente global no se atribuye a modulos sin evidencia. Los levantamientos diarios no son horas efectivas. Las horas son estimaciones reconstruidas desde perfil TMH y reparto por fraccion de volumen; la resolucion y el origen usados aparecen en cada intervalo. La hora no es una observacion y el fin no acredita cierre fisico.'),
+            html.P('En el régimen digital la masa conserva el total reconciliado de cada pad; en el previo cierra con la fuente y el pendiente contra el flujo se informa. Un turno conocido en cero conserva cero; dias sin masa no se rellenan. El pendiente global no se atribuye a modulos sin evidencia. Los levantamientos diarios no son horas efectivas. Las horas son estimaciones reconstruidas desde perfil TMH y reparto por fraccion de volumen; la resolucion y el origen usados aparecen en cada intervalo. La hora no es una observacion y el fin no acredita cierre fisico.'),
             html.P((
                 'Fuente: flujos solidos del Caso y su run oficial. La distribucion por dia y turno '
                 'se deriva del perfil operativo de correas y humedad; no es un nuevo pesaje por turno. '

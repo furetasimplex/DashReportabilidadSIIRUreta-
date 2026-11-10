@@ -105,7 +105,7 @@ def test_libro_final_conserva_layout_pad_curvas_prod_y_agrega_rl(tmp_path):
     report.escribir_libro(_doc(), path)
     wb = load_workbook(path, data_only=False)
 
-    assert wb.sheetnames == ["Rec Ox", "Rec Sulfuro", "Curvas Ox", "Curvas Sulfuro", "Prod Oxidos", "Prod Sulfuros", "RL Oxidos", "RL Sulfuros"]
+    assert wb.sheetnames == ["Rec Ox", "Rec Sulfuro", "Curvas Ox", "Curvas Sulfuro", "Prod Oxidos", "Prod Sulfuros", "RL Oxidos", "RL Sulfuros", "Riego Ox", "Riego Sulfuro"]
     ox, su = wb["Rec Ox"], wb["Rec Sulfuro"]
     # La hoja de óxidos conserva su fila 9 con números de pila y curva desde 10.
     assert ox["A1"].value == "Campana"
@@ -128,8 +128,8 @@ def test_libro_final_conserva_layout_pad_curvas_prod_y_agrega_rl(tmp_path):
         chart_sheet = wb[name]
         assert len(chart_sheet._charts) == 2
         recovery = chart_sheet._charts[0].series[0]
-        assert _series_formula(recovery, "val") == val_range
-        assert _series_formula(recovery, "cat") == cat_range
+        assert _series_formula(recovery, "yVal") == val_range
+        assert _series_formula(recovery, "xVal") == cat_range
 
     prod_ox, prod_su = wb["Prod Oxidos"], wb["Prod Sulfuros"]
     assert prod_ox["A1"].value == "Cu neto diario [t Cu/dia]"

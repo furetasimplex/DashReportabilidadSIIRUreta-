@@ -15,7 +15,7 @@ def setup_case():
     return day,ap,profile,hours,target,case
 
 @pytest.mark.parametrize('missing',['error','empty','none'])
-def test_optional_10s_failure_keeps_case_mass_and_declares_ab_fallback(missing):
+def test_optional_10s_failure_keeps_case_mass_and_declares_ab_fallback(missing, legacy_timeline):
     day,ap,profile,hours,target,case=setup_case()
     loader=dict(side_effect=RuntimeError('SECRET_CONNECTION_DETAILS')) if missing=='error' else dict(return_value=pd.DataFrame() if missing=='empty' else None)
     with patch.object(modelo_flujos,'load_targets',return_value=target), \
