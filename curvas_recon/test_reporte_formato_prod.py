@@ -128,8 +128,8 @@ def test_libro_final_conserva_layout_pad_curvas_prod_y_agrega_rl(tmp_path):
         chart_sheet = wb[name]
         assert len(chart_sheet._charts) == 2
         recovery = chart_sheet._charts[0].series[0]
-        assert _series_formula(recovery, "val") == val_range
-        assert _series_formula(recovery, "cat") == cat_range
+        assert _series_formula(recovery, "yVal") == val_range
+        assert _series_formula(recovery, "xVal") == cat_range
 
     prod_ox, prod_su = wb["Prod Oxidos"], wb["Prod Sulfuros"]
     assert prod_ox["A1"].value == "Cu neto diario [t Cu/dia]"

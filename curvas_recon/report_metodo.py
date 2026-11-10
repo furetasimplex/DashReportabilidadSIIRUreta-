@@ -23,7 +23,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from openpyxl.chart import LineChart, Reference, Series
+from openpyxl.chart import LineChart, Reference, ScatterChart, Series
 from openpyxl.chart.marker import Marker
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -339,7 +339,9 @@ def leer_dump(asof):
     Source flows are stored in m3/h and converted to daily volume with x24;
     copper grades in ``conc_cu`` are g/L. The DUMP feed stream is kept distinct
     from refino: Aporte is net Cu at DPLS minus Cu entering with feed, in t/day.
-    Missing source values remain blank.
+    Missing source values remain blank. A day is invalid (Aporte blank, with an
+    Observacion) when a flow is zero/missing (sensor out) or the feed grade is
+    >= the DPLS grade; no flow is invented or interpolated.
     """
     desde = pd.Timestamp(year=pd.Timestamp(asof).year, month=1, day=1)
     hasta = pd.Timestamp(asof).normalize() + pd.Timedelta(days=1)
@@ -370,13 +372,24 @@ def leer_dump(asof):
     for day, q_in_h, q_out_h, cu_in, cu_out in rows:
         q_in = float(q_in_h) * 24.0 if q_in_h is not None else None
         q_out = float(q_out_h) * 24.0 if q_out_h is not None else None
-        aporte = None
-        if all(v is not None for v in (q_in, q_out, cu_in, cu_out)):
+        aporte, obs = None, None
+        if any(v is None for v in (q_in, q_out, cu_in, cu_out)):
+            obs = 'Dato faltante en la fuente'
+        elif q_out <= 0:
+            obs = 'Flujo salida sin medición'
+        elif q_in <= 0:
+            obs = 'Flujo riego sin medición'
+        elif float(cu_in) >= float(cu_out):
+            obs = 'Ley riego fuera de rango'
+        else:
             aporte = (q_out * float(cu_out) - q_in * float(cu_in)) / 1000.0
+            if aporte < 0:
+                obs = 'Aporte negativo con datos válidos'
         result.append(dict(fecha=pd.Timestamp(day), aporte=aporte,
                            flujo_riego=q_in, flujo_salida=q_out,
                            cu_feed=float(cu_in) if cu_in is not None else None,
-                           cu_drenaje=float(cu_out) if cu_out is not None else None))
+                           cu_drenaje=float(cu_out) if cu_out is not None else None,
+                           observacion=obs))
     return result
 
 
@@ -682,6 +695,71 @@ COL_T = 40          # bloque de toneladas, lejos a la derecha de los graficos
 PROD_SHEET = {'OXIDOS': 'Prod Oxidos', 'SULFUROS': 'Prod Sulfuros'}
 
 
+# Agrupacion de graficos como el libro oficial: (titulo, desde, hasta) por numero de parcela.
+GRUPOS_EXT = {
+    'OXIDOS': [('% Extracción Parcelas 1-8 Óxidos', 1, 8),
+               ('% Extracción Parcelas 9-16 Óxidos', 9, 16),
+               ('% Extracción Parcelas 17-24 Óxidos', 17, 24),
+               ('% Extracción Parcelas 25-32 Óxidos', 25, 32)],
+    'SULFUROS': [('% Extracción Parcelas 1-7: Lado Este', 1, 7),
+                 ('% Extracción Parcelas 8-14: Lado Este', 8, 14),
+                 ('% Extracción Parcelas 15-21: Lado Oeste', 15, 21),
+                 ('% Extracción Parcelas 22-28: Lado Oeste', 22, 28)],
+}
+GRUPOS_RL = {
+    'OXIDOS': [('Recuperación vs RL (P1-8 Oxidos)', 1, 8),
+               ('Recuperación vs RL (P9-16 Oxidos)', 9, 16),
+               ('Recuperación vs RL (P17-23 Oxidos)', 17, 23),
+               ('Recuperación vs RL (P24-P32 Oxidos)', 24, 32)],
+    'SULFUROS': [('Recuperación vs RL (P1-7 Sulfuros)', 1, 7),
+                 ('Recuperación vs RL (P8-14 Sulfuros)', 8, 14),
+                 ('Recuperación vs RL (P15-P21)', 15, 21),
+                 ('Recuperación vs RL (P22-28)', 22, 28)],
+}
+
+
+def _agrupar_pilas(piles, grupos):
+    """[(titulo, [indices de pila])] por numero de parcela; omite grupos vacios.
+    Las columnas virtuales (num no entero) van a un ultimo grupo propio."""
+    out = []
+    for titulo, lo, hi in grupos:
+        idx = [j for j, q in enumerate(piles)
+               if isinstance(q['num'], (int, np.integer)) and lo <= int(q['num']) <= hi]
+        if idx:
+            out.append((titulo, idx))
+    virt = [j for j, q in enumerate(piles) if not isinstance(q['num'], (int, np.integer))]
+    if virt:
+        out.append(('Grupos virtuales', virt))
+    return out
+
+
+def _scatter(titulo, xtit, ytit):
+    ch = ScatterChart()
+    ch.title = titulo
+    ch.style = 2
+    ch.scatterStyle = 'lineMarker'
+    ch.x_axis.title = xtit
+    ch.y_axis.title = ytit
+    ch.x_axis.delete = False
+    ch.y_axis.delete = False
+    ch.height, ch.width = 9.5, 16.5
+    ch.legend.position = 'r'
+    return ch
+
+
+def _serie_xy(xref, yref, titulo):
+    s = Series(yref, xref, title=str(titulo))
+    s.marker = Marker(symbol='none')
+    s.smooth = False
+    return s
+
+
+def _colocar_grid(ws, charts, first_row=1, col_a='A', col_b='L', step=20):
+    for k, ch in enumerate(charts):
+        ws.add_chart(ch, f'{col_a if k % 2 == 0 else col_b}{first_row + (k // 2) * step}')
+    return first_row + ((len(charts) + 1) // 2) * step
+
+
 def _escribir_rl(w, doc):
     """Write campaign RL accumulated by cycle day through report cutoff."""
     names = {'OXIDOS': 'RL Oxidos', 'SULFUROS': 'RL Sulfuros'}
@@ -734,6 +812,25 @@ def _escribir_rl(w, doc):
         for col in range(2, max_col + 1):
             ws.column_dimensions[get_column_letter(col)].width = 12
         ws.freeze_panes = 'B2'
+        if HOJA[label] in w.book.sheetnames and n_days:
+            rec_ws = w.book[HOJA[label]]
+            r0 = 10 if label == 'OXIDOS' else 11
+            charts = []
+            for titulo, idx in _agrupar_pilas(piles, GRUPOS_RL[label]):
+                ch = _scatter(titulo, 'RL', 'Recuperación')
+                for j in idx:
+                    q = piles[j]
+                    n = min(len(series[id(q)]), q['n'])
+                    if n < 1:
+                        continue
+                    ch.series.append(_serie_xy(
+                        Reference(ws, min_col=j + 2, min_row=2, max_row=n + 1),
+                        Reference(rec_ws, min_col=j + 2, min_row=r0, max_row=r0 + n - 1),
+                        q['num']))
+                if ch.series:
+                    charts.append(ch)
+            _colocar_grid(ws, charts, 1, get_column_letter(max_col + 2),
+                          get_column_letter(max_col + 12))
 
 
 def _escribir_dump(w, doc):
@@ -744,14 +841,15 @@ def _escribir_dump(w, doc):
     ws = w.book.create_sheet('Dump')
     headers = ['Fecha', 'Aporte', 'Flujo riego dump [m3/dia]',
                'Flujo salida dump [m3/dia]', 'Concentracion riego ',
-               'Concentracion drenaje']
+               'Concentracion drenaje', 'Observación']
     ws.append(headers)
     for row in rows:
         ws.append([row.get('fecha'), row.get('aporte'), row.get('flujo_riego'),
-                   row.get('flujo_salida'), row.get('cu_feed'), row.get('cu_drenaje')])
+                   row.get('flujo_salida'), row.get('cu_feed'), row.get('cu_drenaje'),
+                   row.get('observacion')])
     ws.freeze_panes = 'A2'
     ws.auto_filter.ref = ws.dimensions
-    widths = [14, 13, 25, 27, 22, 24]
+    widths = [14, 13, 25, 27, 22, 24, 38]
     for i, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
     for cell in ws[1]:
@@ -770,7 +868,10 @@ def _escribir_dump(w, doc):
         'Hoja Dump, fuente DB del modelo 125: Aporte = F51−F77 (t Cu/día). '
         'F51 usa flujo_dpls_m3h y dump_dpls_cu; F77 usa flujo_feed_dump_m3h y '
         'dump_feed_cu. Caudales ×24 para m3/día y grados g/L para t Cu. '
-        'flujo_refino_dump_m3h/oxidos_refino_cu se mantiene separado en F74.'
+        'flujo_refino_dump_m3h/oxidos_refino_cu se mantiene separado en F74. '
+        'Un dia queda sin Aporte (celda vacia, con motivo en Observacion) si algun '
+        'caudal es 0 o falta (sensor sin medicion) o si la ley de riego es >= la '
+        'del DPLS; los valores crudos se muestran y no se interpolan caudales.'
     )
 
 
@@ -917,11 +1018,44 @@ def _escribir_prod(w, doc):
                 previous = float(cumulative)
 
         final_col = len(pilas) + 1
+        n_p = len(pilas)
+        tot_col = final_col + 2          # columna vacia y luego 'Total Prod'
+        ws.cell(4, tot_col, 'Total Prod')
+        monthly = {}
+        for day, row in row_by_date.items():
+            vals = [ws.cell(row, c).value for c in range(2, final_col + 1)]
+            if any(v is not None for v in vals):
+                ws.cell(row, tot_col, sum(v for v in vals if v is not None))
+            key = day.strftime('%Y-%m')
+            acc = monthly.setdefault(key, [None] * n_p)
+            for k, v in enumerate(vals):
+                if v is not None:
+                    acc[k] = (acc[k] or 0.0) + v
+        m0 = tot_col + 2                 # bloque mensual, tras una columna vacia
+        ws.cell(3, m0, 'Producción mensual [t Cu]')
+        ws.cell(3, m0).font = Font(name='Arial', size=10, bold=True)
+        ws.cell(4, m0, 'Mes')
+        for k, q in enumerate(pilas):
+            ws.cell(4, m0 + 1 + k, q['num'])
+        ws.cell(4, m0 + 1 + n_p, 'Total')
+        for r, key in enumerate(sorted(monthly), start=5):
+            ws.cell(r, m0, key)
+            acc = monthly[key]
+            for k, v in enumerate(acc):
+                if v is not None:
+                    ws.cell(r, m0 + 1 + k, v)
+            if any(v is not None for v in acc):
+                ws.cell(r, m0 + 1 + n_p, sum(v for v in acc if v is not None))
+            for c in range(m0 + 1, m0 + 2 + n_p):
+                ws.cell(r, c).number_format = '0.00'
+                ws.cell(r, c).font = Font(name='Arial', size=10)
+            ws.cell(r, m0).font = Font(name='Arial', size=10)
         header_fill = PatternFill('solid', fgColor='FFFFC000')
         base_font = Font(name='Arial', size=10)
         for cell in ws[4]:
-            if cell.column <= final_col:
-                cell.alignment = Alignment(horizontal='center')
+            cell.alignment = Alignment(horizontal='center')
+            if cell.column in (tot_col, m0) or cell.column > m0:
+                cell.font = Font(name='Arial', size=10, bold=True)
         for row in range(5, 5 + len(dates)):
             for col in range(1, final_col + 1):
                 ws.cell(row, col).fill = header_fill
@@ -929,7 +1063,13 @@ def _escribir_prod(w, doc):
             ws.cell(row, 1).number_format = 'dd-mm-yyyy'
             for col in range(2, final_col + 1):
                 ws.cell(row, col).number_format = '0.00'
+            ws.cell(row, tot_col).number_format = '0.00'
+            ws.cell(row, tot_col).font = Font(name='Arial', size=10, bold=True)
         for col in range(2, final_col + 1):
+            ws.column_dimensions[get_column_letter(col)].width = 11
+        ws.column_dimensions[get_column_letter(tot_col)].width = 12
+        ws.column_dimensions[get_column_letter(m0)].width = 26
+        for col in range(m0 + 1, m0 + 2 + n_p):
             ws.column_dimensions[get_column_letter(col)].width = 11
 
 def hoja_resumen(doc):
@@ -977,7 +1117,7 @@ def graficos(w, doc, label):
     """Una hoja por pad con la curva en % y la curva en toneladas."""
     P = recovery_columns(doc, label, ORDEN[label])
     ws = w.book.create_sheet(CHART[label])
-    for row in range(1, 75):
+    for row in range(1, 90):
         ws.row_dimensions[row].height = 15
     if not any(q['n'] for q in P):
         ws['A1'] = 'Sin pilas con datos para este pad.'
@@ -999,28 +1139,34 @@ def graficos(w, doc, label):
     for i in range(nmax):
         ws.cell(row=2 + i, column=COL_T, value=i + 1)
 
-    def linea(titulo, ytit, hoja, c_ini, f_ini, f_fin, c_cat):
-        ch = LineChart()
-        ch.title = titulo
-        ch.y_axis.title = ytit
-        ch.x_axis.title = 'dia de ciclo'
-        ch.height, ch.width = 15.5, 33
-        ch.style = 2
-        for j in range(n):
-            s = Series(Reference(hoja, min_col=c_ini + j,
-                                 min_row=f_ini, max_row=f_fin),
-                       title=P[j]['p'])
-            s.marker = Marker(symbol='none')
-            s.smooth = False
-            ch.series.append(s)
-        ch.set_categories(Reference(hoja, min_col=c_cat,
-                                    min_row=f_ini, max_row=f_fin))
-        return ch
-
-    ws.add_chart(linea('%s - recuperacion acumulada' % label.title(),
-                       '% del Apilado tmf', src, 2, r0, r1, 1), 'A1')
-    ws.add_chart(linea('%s - Cu fino acumulado' % label.title(),
-                       't Cu', ws, COL_T + 1, 2, 1 + nmax, COL_T), 'A38')
+    ext = _agrupar_pilas(P, GRUPOS_EXT[label])
+    charts = []
+    for titulo, idx in ext:
+        ch = _scatter(titulo, 'Día de ciclo', '% Extracción Cu')
+        for j in idx:
+            if not P[j]['n']:
+                continue
+            nj = P[j]['n']
+            ch.series.append(_serie_xy(
+                Reference(src, min_col=1, min_row=r0, max_row=r0 + nj - 1),
+                Reference(src, min_col=2 + j, min_row=r0, max_row=r0 + nj - 1),
+                P[j]['p']))
+        if ch.series:
+            charts.append(ch)
+    for titulo, idx in ext:
+        sufijo = titulo.replace('% Extracción ', '')
+        ch = _scatter('Cu fino acumulado - ' + sufijo, 'Día de ciclo', 't Cu')
+        for j in idx:
+            if not P[j]['n']:
+                continue
+            nj = P[j]['n']
+            ch.series.append(_serie_xy(
+                Reference(ws, min_col=COL_T, min_row=2, max_row=1 + nj),
+                Reference(ws, min_col=COL_T + 1 + j, min_row=2, max_row=1 + nj),
+                P[j]['p']))
+        if ch.series:
+            charts.append(ch)
+    _colocar_grid(ws, charts, 1, 'A', 'L', 20)
     ws.column_dimensions[get_column_letter(COL_T)].width = 6
 
 
