@@ -48,22 +48,55 @@ def test_prod_total_y_mensual_coinciden_con_diario(tmp_path):
     assert sum(tot) == pytest.approx(sum(ws.cell(r, t).value for r in range(5, 9)))
 
 
+def _t(c):
+    return ''.join(r.t for p in c.title.tx.rich.p for r in p.r)
+
+
 def test_graficos_agrupados_como_oficial(tmp_path):
     doc = _doc('OXIDOS', [1, 8, 9, 30])
     path = tmp_path / 'g.xlsx'
     report.escribir_libro(doc, path)
     wb = load_workbook(path)
     ch = wb['Curvas Ox']._charts
+    # por grupo: % recuperacion; luego los 3 de toneladas. La tasa de riego va en la hoja RL
     assert [c.series.__len__() for c in ch] == [2, 1, 1, 2, 1, 1]
-    assert wb['RL Oxidos']._charts.__len__() == 3
-    titulos = [''.join(r.t for p in c.title.tx.rich.p for r in p.r) for c in ch[:3]]
-    assert titulos[0] == '% Extracción Parcelas 1-8 Óxidos'
+    assert wb['RL Oxidos']._charts.__len__() == 6
+    titulos = [_t(c) for c in ch]
+    assert titulos[0] == '% Recuperación Parcelas 1-8 Óxidos'
+    assert not any(t.startswith('Tasa de riego') for t in titulos)
     anchors = [(c.anchor._from.col, c.anchor._from.row) for c in ch]
     assert len(set(anchors)) == len(anchors)
-    rl = wb['RL Oxidos']._charts
-    assert [''.join(r.t for p in c.title.tx.rich.p for r in p.r) for c in rl] == [
+    rl = [c for c in wb['RL Oxidos']._charts if not _t(c).startswith('Tasa de riego')]
+    assert [_t(c) for c in rl] == [
         'Recuperación vs RL (P1-8 Oxidos)', 'Recuperación vs RL (P9-16 Oxidos)',
         'Recuperación vs RL (P24-P32 Oxidos)']
+
+
+def test_riego_charts_pareados_y_hoja(tmp_path):
+    doc = _doc('OXIDOS', [1, 8, 9, 30])
+    for q in doc['pads']['OXIDOS']['pilas']:
+        q['q_riego_curve'] = [10.0 + q['num'] + i for i in range(q['n'])]
+    path = tmp_path / 'r.xlsx'
+    report.escribir_libro(doc, path)
+    wb = load_workbook(path)
+    ch = wb['Curvas Ox']._charts
+    rl = wb['RL Oxidos']._charts
+    ext = [c for c in ch if _t(c).startswith('% Recuperación')]
+    rie = [c for c in rl if _t(c).startswith('Tasa de riego')]
+    assert len(ext) == len(rie) == 3
+    fila_rl = max(c.anchor._from.row for c in rl if not _t(c).startswith('Tasa de riego'))
+    for e, r in zip(ext, rie):
+        assert _t(r) == _t(e).replace('% Recuperación', 'Tasa de riego')
+        assert (e.x_axis.scaling.min, e.x_axis.scaling.max) == (r.x_axis.scaling.min, r.x_axis.scaling.max)
+        assert r.x_axis.scaling.max is not None
+        assert [s.tx.v for s in e.series] == [s.tx.v for s in r.series]   # mismo orden => mismos colores
+        assert r.anchor._from.row > fila_rl                               # debajo de los graficos RL
+        assert 'm3/h' in ''.join(x.t for p in r.y_axis.title.tx.rich.p for x in p.r)
+    ws = wb['Riego Ox']
+    assert wb.sheetnames.index('Riego Ox') == wb.sheetnames.index('RL Sulfuros') + 1
+    assert [c.value for c in ws[1]][:2] == ['Dia de ciclo', 1]
+    assert ws.cell(2, 1).value == 1 and ws.cell(2, 2).value == pytest.approx(11.0)
+    assert ws.cell(5, 2).value == pytest.approx(14.0) and ws.cell(6, 2).value is None
 
 
 def test_graficos_sulfuros_grupos(tmp_path):
@@ -72,7 +105,7 @@ def test_graficos_sulfuros_grupos(tmp_path):
     report.escribir_libro(doc, path)
     wb = load_workbook(path)
     assert len(wb['Curvas Sulfuro']._charts) == 6
-    assert len(wb['RL Sulfuros']._charts) == 3
+    assert len(wb['RL Sulfuros']._charts) == 6
 
 
 def _dump(rows):

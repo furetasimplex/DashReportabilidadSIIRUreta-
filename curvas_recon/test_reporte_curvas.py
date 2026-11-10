@@ -61,14 +61,14 @@ def test_descarga_real_sin_libro_planta_y_repetible(export_case):
         assert 'sin comparaci' in str(status)
         assert raw_path.is_file()
         book = load_workbook(BytesIO(base64.b64decode(download['content'])))
-        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros', 'Método usado']
+        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros', 'Riego Ox', 'Riego Sulfuro', 'Método usado']
         assert book['Rec Ox']['B12'].value == 4.0
         assert book['Rec Ox']['C12'].value == 2.0
         assert book['Rec Ox']['B7'].value is None
         assert len(book['Curvas Ox']._charts) == 2
         assert len(book['Curvas Sulfuro']._charts) == 2
         with ZipFile(BytesIO(base64.b64decode(download['content']))) as archive:
-            assert len([p for p in archive.namelist() if p.startswith('xl/charts/chart') and p.endswith('.xml')]) == 4
+            assert len([p for p in archive.namelist() if p.startswith('xl/charts/chart') and p.endswith('.xml')]) == 6
 
 
 @pytest.mark.parametrize('change', ['selected', 'store_run', 'raw_run', 'store_window',

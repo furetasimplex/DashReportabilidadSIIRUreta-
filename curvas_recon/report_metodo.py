@@ -27,6 +27,7 @@ from openpyxl.chart import LineChart, Reference, ScatterChart, Series
 from openpyxl.chart.marker import Marker
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles.cell_style import StyleArray
 
 from . import recon_engine as E
 from .rl_series import cumulative_campaign_rl
@@ -49,6 +50,27 @@ ORDEN = {'OXIDOS': list(range(1, 33)),
 HOJA = {'OXIDOS': 'Rec Ox', 'SULFUROS': 'Rec Sulfuro'}
 HDR = ['campana', 'ciclos', 'rec_max', 'aporte', 'apilado', 'rec_termino',
        'recuperable', 'wip']
+
+# --- Estilos con cache: openpyxl re-hashea cada Font/Fill al asignarlos celda a
+# celda (cientos de miles de veces). Se resuelve la asignacion real una vez por
+# (estilo previo, atributo, valor) y se reutiliza el StyleArray resultante.
+_F_N = Font(name='Arial', size=10)
+_F_B = Font(name='Arial', size=10, bold=True)
+_FILL_Y = PatternFill('solid', fgColor='FFFF00')
+_FILL_O = PatternFill('solid', fgColor='FFFFC000')
+_AL_C = Alignment(horizontal='center')
+_STYLE_CACHE = {}
+
+
+def _sty(cell, attr, val, key=None):
+    cache = _STYLE_CACHE.setdefault(id(cell.parent.parent), {})
+    k = (tuple(cell._style) if cell._style else (), attr, val if key is None else key)
+    hit = cache.get(k)
+    if hit is None:
+        setattr(cell, attr, val)
+        cache[k] = tuple(cell._style)
+    else:
+        cell._style = StyleArray(hit)
 
 
 def net_recovery_increment(q_m3h, cu_drena_gl, cu_riego_gl,
@@ -118,16 +140,21 @@ def _primary_points_for_campaign(cycles, campaign_start, before):
     lo, hi = pd.Timestamp(campaign_start).normalize(), pd.Timestamp(before).normalize()
     points = {}
     for cycle in cycles or []:
-        for day, pct in zip(cycle.get('dates') or [], cycle.get('values') or []):
-            day = pd.Timestamp(day).normalize()
-            if not lo <= day < hi:
-                continue
+        dates = cycle.get('dates') or []
+        if not len(dates):
+            continue
+        days = pd.DatetimeIndex(dates).normalize()   # una conversion vectorizada por ciclo
+        keep = np.flatnonzero((days >= lo) & (days < hi))
+        values = cycle.get('values') or []
+        for k in keep:
+            if k >= len(values):
+                break
             try:
-                value = float(pct)
+                value = float(values[k])
             except (TypeError, ValueError):
                 continue
             if np.isfinite(value) and 0 <= value <= 200:
-                points[day] = value
+                points[days[k]] = value
     return sorted(points.items())
 
 
@@ -625,6 +652,7 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
 
             rl_curve = []
             rl_accum_curve = []
+            q_riego_curve = []
             if v['tms'] and v['tms'] > 0:
                 measured_q = (riego[p].reindex(cal) if p in riego.columns
                               else pd.Series(np.nan, index=cal))
@@ -639,6 +667,7 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                     rl_curve.append(value * 24.0 / float(v['tms'])
                                     if value is not None else None)
                     daily_q[day] = value
+                    q_riego_curve.append(value)
                 accumulated = cumulative_campaign_rl(
                     {p: daily_q}, {p: v['tms']}, {p: v['f0']})
                 rl_accum_curve = [accumulated.get(day) for day in rl_dates]
@@ -656,6 +685,8 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
                           for value in rl_curve],
                 rl_accum_curve=[round(float(value), 8) if value is not None else None
                                 for value in rl_accum_curve],
+                q_riego_curve=[round(float(value), 6) if value is not None else None
+                               for value in q_riego_curve],
                 dias_riego=int(rie.sum()), dias_ley=int(cov.sum()),
                 t_med=round(float(med[-1]), 3), t_rec=round(float(rec[-1]), 3),
                 pct=round(float(rec[-1]) / v['fin'] * 100, 3) if v['fin'] else None,
@@ -693,18 +724,22 @@ FILAS = ['Campana', 'Ciclos', 'Recuperacion max.', 'Aporte Parcelas',
 CHART = {'OXIDOS': 'Curvas Ox', 'SULFUROS': 'Curvas Sulfuro'}
 COL_T = 40          # bloque de toneladas, lejos a la derecha de los graficos
 PROD_SHEET = {'OXIDOS': 'Prod Oxidos', 'SULFUROS': 'Prod Sulfuros'}
+RIEGO_SHEET = {'OXIDOS': 'Riego Ox', 'SULFUROS': 'Riego Sulfuro'}
+# No hay area de pila en la DB ni en el libro oficial: el riego se informa como
+# caudal medio diario por pila [m3/h] (load_riego), no como tasa L/h/m2.
+RIEGO_EJE_Y = 'Caudal de riego [m3/h]'
 
 
 # Agrupacion de graficos como el libro oficial: (titulo, desde, hasta) por numero de parcela.
 GRUPOS_EXT = {
-    'OXIDOS': [('% Extracción Parcelas 1-8 Óxidos', 1, 8),
-               ('% Extracción Parcelas 9-16 Óxidos', 9, 16),
-               ('% Extracción Parcelas 17-24 Óxidos', 17, 24),
-               ('% Extracción Parcelas 25-32 Óxidos', 25, 32)],
-    'SULFUROS': [('% Extracción Parcelas 1-7: Lado Este', 1, 7),
-                 ('% Extracción Parcelas 8-14: Lado Este', 8, 14),
-                 ('% Extracción Parcelas 15-21: Lado Oeste', 15, 21),
-                 ('% Extracción Parcelas 22-28: Lado Oeste', 22, 28)],
+    'OXIDOS': [('% Recuperación Parcelas 1-8 Óxidos', 1, 8),
+               ('% Recuperación Parcelas 9-16 Óxidos', 9, 16),
+               ('% Recuperación Parcelas 17-24 Óxidos', 17, 24),
+               ('% Recuperación Parcelas 25-32 Óxidos', 25, 32)],
+    'SULFUROS': [('% Recuperación Parcelas 1-7: Lado Este', 1, 7),
+                 ('% Recuperación Parcelas 8-14: Lado Este', 8, 14),
+                 ('% Recuperación Parcelas 15-21: Lado Oeste', 15, 21),
+                 ('% Recuperación Parcelas 22-28: Lado Oeste', 22, 28)],
 }
 GRUPOS_RL = {
     'OXIDOS': [('Recuperación vs RL (P1-8 Oxidos)', 1, 8),
@@ -805,13 +840,14 @@ def _escribir_rl(w, doc):
         for row in ws.iter_rows(min_row=1, max_row=max(1, n_days + 1),
                                 min_col=1, max_col=max_col):
             for cell in row:
-                cell.font = Font(name='Arial', size=10, bold=(cell.row == 1))
+                _sty(cell, 'font', _F_B if cell.row == 1 else _F_N, cell.row == 1)
                 if cell.row > 1 and cell.column > 1:
-                    cell.number_format = '0.0000'
+                    _sty(cell, 'number_format', '0.0000')
         ws.column_dimensions['A'].width = 12
         for col in range(2, max_col + 1):
             ws.column_dimensions[get_column_letter(col)].width = 12
         ws.freeze_panes = 'B2'
+        fila = 1
         if HOJA[label] in w.book.sheetnames and n_days:
             rec_ws = w.book[HOJA[label]]
             r0 = 10 if label == 'OXIDOS' else 11
@@ -829,8 +865,47 @@ def _escribir_rl(w, doc):
                         q['num']))
                 if ch.series:
                     charts.append(ch)
-            _colocar_grid(ws, charts, 1, get_column_letter(max_col + 2),
-                          get_column_letter(max_col + 12))
+            fila = _colocar_grid(ws, charts, 1, get_column_letter(max_col + 2),
+                                 get_column_letter(max_col + 12))
+        riego = _RIEGO_CHARTS.get(id(w.book), {}).get(label) or []   # tasa de riego bajo los graficos RL
+        _colocar_grid(ws, riego, fila, get_column_letter(max_col + 2),
+                      get_column_letter(max_col + 12))
+
+
+def _q_riego_pila(q):
+    """Caudal de riego diario [m3/h] por dia de ciclo de una pila (None sin dato)."""
+    vals = q.get('q_riego_curve')
+    if vals is not None:
+        return list(vals)
+    rl, tms = q.get('rl_curve'), q.get('tms')
+    if rl and tms:                      # documentos antiguos: m3/t/dia * t / 24 h
+        return [v * tms / 24.0 if v is not None else None for v in rl]
+    return [None] * len(rl or [])
+
+
+def _escribir_riego(ws, doc, label):
+    """Hoja de riego diario por pila y dia de ciclo (mismo formato que RL)."""
+    piles = recovery_columns(doc, label, ORDEN[label])
+    series = [_q_riego_pila(q) for q in piles]
+    n_days = max((min(len(v), q['n']) for v, q in zip(series, piles)), default=0)
+    ws.cell(1, 1, 'Dia de ciclo')
+    for col, q in enumerate(piles, start=2):
+        ws.cell(1, col, q['num'])
+    for i in range(n_days):
+        ws.cell(i + 2, 1, i + 1)
+        for col, v in enumerate(series, start=2):
+            if i < len(v) and v[i] is not None:
+                ws.cell(i + 2, col, v[i])
+    for row in ws.iter_rows(min_row=1, max_row=n_days + 1, min_col=1, max_col=len(piles) + 1):
+        for cell in row:
+            _sty(cell, 'font', _F_B if cell.row == 1 else _F_N, cell.row == 1)
+            if cell.row > 1 and cell.column > 1:
+                _sty(cell, 'number_format', '0.00')
+    for col in range(1, len(piles) + 2):
+        ws.column_dimensions[get_column_letter(col)].width = 12
+    ws.freeze_panes = 'B2'
+    ws.cell(n_days + 3, 1, f'{RIEGO_EJE_Y}: caudal medio diario por pila; sin area de pila no hay tasa L/h/m2.')
+    return n_days
 
 
 def _escribir_dump(w, doc):
@@ -853,17 +928,17 @@ def _escribir_dump(w, doc):
     for i, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
     for cell in ws[1]:
-        cell.font = Font(name='Arial', size=10, bold=True)
-        cell.fill = PatternFill('solid', fgColor='FFFFC000')
+        _sty(cell, 'font', _F_B, 'B')
+        _sty(cell, 'fill', _FILL_O, 'O')
     for row in ws.iter_rows(min_row=2):
         for cell in row:
-            cell.font = Font(name='Arial', size=10)
-        row[0].number_format = 'dd-mm-yyyy'
-        row[1].number_format = '#,##0.00'
+            _sty(cell, 'font', _F_N, 'N')
+        _sty(row[0], 'number_format', 'dd-mm-yyyy')
+        _sty(row[1], 'number_format', '#,##0.00')
         for col in (3, 4):
-            row[col - 1].number_format = '#,##0.00'
+            _sty(row[col - 1], 'number_format', '#,##0.00')
         for col in (5, 6):
-            row[col - 1].number_format = '0.000'
+            _sty(row[col - 1], 'number_format', '0.000')
     w.book.properties.description = (
         'Hoja Dump, fuente DB del modelo 125: Aporte = F51−F77 (t Cu/día). '
         'F51 usa flujo_dpls_m3h y dump_dpls_cu; F77 usa flujo_feed_dump_m3h y '
@@ -955,20 +1030,20 @@ def _escribir_hoja_pad(ws, doc, label):
     for row in ws.iter_rows(min_row=1, max_row=max_row, min_col=1,
                             max_col=max(1, len(pilas) + 1)):
         for cell in row:
-            cell.font = Font(name='Arial', size=10)
+            _sty(cell, 'font', _F_N, 'N')
     for col in range(2, len(pilas) + 2):
         ws.column_dimensions[get_column_letter(col)].width = 24 if pilas[col-2].get('virtual') else 11
-        ws.cell(1, col).font = Font(name='Arial', size=10, bold=True)
+        _sty(ws.cell(1, col), 'font', _F_B, 'B')
         for row in (1, 2):
-            ws.cell(row, col).number_format = '0'
+            _sty(ws.cell(row, col), 'number_format', '0')
         for row in range(3, 9):
-            ws.cell(row, col).number_format = '#,##0.0'
-        ws.cell(6, col).fill = PatternFill('solid', fgColor='FFFF00')
+            _sty(ws.cell(row, col), 'number_format', '#,##0.0')
+        _sty(ws.cell(6, col), 'fill', _FILL_Y, 'Y')
         id_row = 9 if label == 'OXIDOS' else 10
-        ws.cell(id_row, col).fill = PatternFill('solid', fgColor='FFFF00')
-        ws.cell(id_row, col).font = Font(name='Arial', size=10, bold=True)
+        _sty(ws.cell(id_row, col), 'fill', _FILL_Y, 'Y')
+        _sty(ws.cell(id_row, col), 'font', _F_B, 'B')
         for row in range(curve_row, max_row + 1):
-            ws.cell(row, col).number_format = '0.00'
+            _sty(ws.cell(row, col), 'number_format', '0.00')
 
 
 def _escribir_prod(w, doc):
@@ -991,10 +1066,10 @@ def _escribir_prod(w, doc):
         ws['A2'] = ' | '.join(case_labels) if case_labels else f'Corte {doc["end"]}'
         ws['A3'] = title
         ws['A4'] = 'Parcela'
-        ws['A1'].font = Font(name='Arial', size=10, bold=True)
-        ws['A3'].font = Font(name='Arial', size=10, bold=True)
+        ws['A1'].font = _F_B
+        ws['A3'].font = _F_B
         ws['A3'].alignment = Alignment(horizontal='center')
-        ws['A4'].font = Font(name='Arial', size=10)
+        ws['A4'].font = _F_N
         ws.column_dimensions['A'].width = 46
 
         all_dates = set()
@@ -1033,7 +1108,7 @@ def _escribir_prod(w, doc):
                     acc[k] = (acc[k] or 0.0) + v
         m0 = tot_col + 2                 # bloque mensual, tras una columna vacia
         ws.cell(3, m0, 'Producción mensual [t Cu]')
-        ws.cell(3, m0).font = Font(name='Arial', size=10, bold=True)
+        ws.cell(3, m0).font = _F_B
         ws.cell(4, m0, 'Mes')
         for k, q in enumerate(pilas):
             ws.cell(4, m0 + 1 + k, q['num'])
@@ -1047,24 +1122,22 @@ def _escribir_prod(w, doc):
             if any(v is not None for v in acc):
                 ws.cell(r, m0 + 1 + n_p, sum(v for v in acc if v is not None))
             for c in range(m0 + 1, m0 + 2 + n_p):
-                ws.cell(r, c).number_format = '0.00'
-                ws.cell(r, c).font = Font(name='Arial', size=10)
-            ws.cell(r, m0).font = Font(name='Arial', size=10)
-        header_fill = PatternFill('solid', fgColor='FFFFC000')
-        base_font = Font(name='Arial', size=10)
+                _sty(ws.cell(r, c), 'number_format', '0.00')
+                _sty(ws.cell(r, c), 'font', _F_N, 'N')
+            _sty(ws.cell(r, m0), 'font', _F_N, 'N')
         for cell in ws[4]:
-            cell.alignment = Alignment(horizontal='center')
+            _sty(cell, 'alignment', _AL_C, 'C')
             if cell.column in (tot_col, m0) or cell.column > m0:
-                cell.font = Font(name='Arial', size=10, bold=True)
+                _sty(cell, 'font', _F_B, 'B')
         for row in range(5, 5 + len(dates)):
             for col in range(1, final_col + 1):
-                ws.cell(row, col).fill = header_fill
-                ws.cell(row, col).font = base_font
-            ws.cell(row, 1).number_format = 'dd-mm-yyyy'
+                _sty(ws.cell(row, col), 'fill', _FILL_O, 'O')
+                _sty(ws.cell(row, col), 'font', _F_N, 'N')
+            _sty(ws.cell(row, 1), 'number_format', 'dd-mm-yyyy')
             for col in range(2, final_col + 1):
-                ws.cell(row, col).number_format = '0.00'
-            ws.cell(row, tot_col).number_format = '0.00'
-            ws.cell(row, tot_col).font = Font(name='Arial', size=10, bold=True)
+                _sty(ws.cell(row, col), 'number_format', '0.00')
+            _sty(ws.cell(row, tot_col), 'number_format', '0.00')
+            _sty(ws.cell(row, tot_col), 'font', _F_B, 'B')
         for col in range(2, final_col + 1):
             ws.column_dimensions[get_column_letter(col)].width = 11
         ws.column_dimensions[get_column_letter(tot_col)].width = 12
@@ -1113,7 +1186,10 @@ def hoja_comparacion(doc):
     return pd.DataFrame(r)
 
 
-def graficos(w, doc, label):
+_RIEGO_CHARTS = {}   # id(libro) -> {pad: [graficos de tasa de riego]}; se limpia en escribir_libro
+
+
+def graficos(w, doc, label, riego_ws=None):
     """Una hoja por pad con la curva en % y la curva en toneladas."""
     P = recovery_columns(doc, label, ORDEN[label])
     ws = w.book.create_sheet(CHART[label])
@@ -1141,8 +1217,9 @@ def graficos(w, doc, label):
 
     ext = _agrupar_pilas(P, GRUPOS_EXT[label])
     charts = []
+    ext_info = []
     for titulo, idx in ext:
-        ch = _scatter(titulo, 'Día de ciclo', '% Extracción Cu')
+        ch = _scatter(titulo, 'Día de ciclo', '% Recuperación Cu')
         for j in idx:
             if not P[j]['n']:
                 continue
@@ -1153,8 +1230,9 @@ def graficos(w, doc, label):
                 P[j]['p']))
         if ch.series:
             charts.append(ch)
+            ext_info.append((titulo, idx, ch))
     for titulo, idx in ext:
-        sufijo = titulo.replace('% Extracción ', '')
+        sufijo = titulo.replace('% Recuperación ', '')
         ch = _scatter('Cu fino acumulado - ' + sufijo, 'Día de ciclo', 't Cu')
         for j in idx:
             if not P[j]['n']:
@@ -1166,7 +1244,30 @@ def graficos(w, doc, label):
                 P[j]['p']))
         if ch.series:
             charts.append(ch)
-    _colocar_grid(ws, charts, 1, 'A', 'L', 20)
+    if riego_ws is None:
+        _colocar_grid(ws, charts, 1, 'A', 'L', 20)
+    else:
+        n_ext = len(ext_info)
+        riego = []
+        for titulo, idx, ch_ext in ext_info:
+            xmax = max((P[j]['n'] for j in idx if P[j]['n']), default=1)
+            ch_r = _scatter('Tasa de riego ' + titulo.replace('% Recuperación ', ''),
+                            'Día de ciclo', RIEGO_EJE_Y)
+            for j in idx:
+                if not P[j]['n']:
+                    continue
+                nj = P[j]['n']
+                ch_r.series.append(_serie_xy(
+                    Reference(riego_ws, min_col=1, min_row=2, max_row=1 + nj),
+                    Reference(riego_ws, min_col=2 + j, min_row=2, max_row=1 + nj),
+                    P[j]['p']))
+            for c in (ch_ext, ch_r):          # mismo eje X en ambos paneles
+                c.x_axis.scaling.min = 0
+                c.x_axis.scaling.max = xmax
+            riego.append(ch_r)
+        # los graficos de riego van en la hoja RL del pad (los coloca _escribir_rl)
+        _RIEGO_CHARTS.setdefault(id(w.book), {})[label] = riego
+        _colocar_grid(ws, charts, 1, 'A', 'L', 20)
     ws.column_dimensions[get_column_letter(COL_T)].width = 6
 
 
@@ -1242,19 +1343,33 @@ def escribir_libro(doc, out_path, groups=None, meta=None):
     """
     doc = with_group_columns(doc, groups)
     pads = ['OXIDOS', 'SULFUROS']
-    with pd.ExcelWriter(out_path, engine='openpyxl', datetime_format='dd-mm-yyyy') as w:
-        for lab in pads:
-            ws = w.book.create_sheet(HOJA[lab])
-            _escribir_hoja_pad(ws, doc, lab)
-        for lab in pads:
-            graficos(w, doc, lab)
-        _escribir_prod(w, doc)
-        _escribir_dump(w, doc)
-        _escribir_rl(w, doc)
-        if meta:                                    # hoja con el metodo usado (identifica el resultado exportado)
-            hoja = w.book.create_sheet('Método usado')
-            for k, v in meta.items():
-                hoja.append([k, v])
-            hoja.column_dimensions['A'].width = 34; hoja.column_dimensions['B'].width = 60
+    try:
+        with pd.ExcelWriter(out_path, engine='openpyxl', datetime_format='dd-mm-yyyy') as w:
+            for lab in pads:
+                ws = w.book.create_sheet(HOJA[lab])
+                _escribir_hoja_pad(ws, doc, lab)
+            riego_ws = {lab: w.book.create_sheet(RIEGO_SHEET[lab]) for lab in pads}
+            for lab in pads:
+                _escribir_riego(riego_ws[lab], doc, lab)
+            for lab in pads:
+                graficos(w, doc, lab, riego_ws[lab])
+            _escribir_prod(w, doc)
+            _escribir_dump(w, doc)
+            _escribir_rl(w, doc)
+            if meta:                                    # hoja con el metodo usado (identifica el resultado exportado)
+                hoja = w.book.create_sheet('Método usado')
+                for k, v in meta.items():
+                    hoja.append([k, v])
+                hoja.column_dimensions['A'].width = 34; hoja.column_dimensions['B'].width = 60
+            book = w.book                     # las hojas de riego van tras RL Sulfuros
+            for lab in pads:
+                sh = riego_ws[lab]
+                book._sheets.remove(sh)
+            at = book.sheetnames.index('RL Sulfuros') + 1 if 'RL Sulfuros' in book.sheetnames else len(book._sheets)
+            for k, lab in enumerate(pads):
+                book._sheets.insert(at + k, riego_ws[lab])
+    finally:
+        _STYLE_CACHE.clear()
+        _RIEGO_CHARTS.clear()
 
     return out_path
