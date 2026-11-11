@@ -509,6 +509,74 @@ def _insert_rows_batched(conn, table, columns, rows, parameter_limit=2000):
     return statements
 
 
+
+def _razon(num, den):
+    try:
+        if num is None or den is None or float(den) == 0:
+            return None
+        return float(num) / float(den)
+    except (TypeError, ValueError):
+        return None
+
+
+def guardar_dump_reconciliado(caso_id, run_id, ws, we, model_code):
+    """Escribe en dump_diario la serie Dump reconciliada de un Caso (fuente
+    'reconciliacion'): serie base diaria (oficial u operacional) escalada con
+    los factores de ventana F77 (riego) y F51 (DPLS) y repartiendo el aporte
+    reconciliado F42. Reemplaza lo anterior del Caso en una sola transaccion.
+    Devuelve las filas escritas (0 si el modelo no es hidrometalurgia_125_v2)."""
+    if str(model_code) != 'hidrometalurgia_125_v2':
+        return 0
+    ws, we = pd.Timestamp(ws).normalize(), pd.Timestamp(we).normalize()
+    from . import report_metodo  # import tardio: evita ciclo con db_pipeline
+    base = [r for r in report_metodo.leer_dump(we)
+            if ws <= pd.Timestamp(r['fecha']) <= we]
+    engine = get_engine()
+    with engine.begin() as conn:
+        res = conn.execute(text(f"""
+            SELECT codigo_flujo, masa_medida, masa_reconciliada,
+                   fino_cu_medido, fino_cu_reconciliado
+            FROM {HIDRO_SCHEMA}.recon_resultado_flujo
+            WHERE run_id = :run AND codigo_flujo IN ('F77', 'F51', 'F42')
+        """), {'run': int(run_id)}).fetchall()
+        f = {r[0]: tuple(float(v) if v is not None else None for v in r[1:])
+             for r in res}
+
+        def factores(code):
+            mm, mr, fm, fr = f.get(code, (None,) * 4)
+            q = _razon(mr, mm)
+            ley_r, ley_m = _razon(fr, mr), _razon(fm, mm)
+            return q, _razon(ley_r, ley_m)
+
+        q_riego, cu_riego_f = factores('F77')
+        q_sal, cu_dren_f = factores('F51')
+        fino_42 = f.get('F42', (None,) * 4)[3]
+        suma_ap = sum(float(r['aporte']) for r in base if r.get('aporte') is not None)
+        f_ap = _razon(fino_42, suma_ap) if suma_ap > 0 else None
+
+        def esc(v, k):
+            return None if v is None or k is None else float(v) * k
+
+        obs = f'Reconciliado Caso {int(caso_id)} run {int(run_id)}'
+        filas = [dict(
+            fecha=pd.Timestamp(r['fecha']).date(), caso=int(caso_id), run=int(run_id),
+            ap=esc(r.get('aporte'), f_ap), qi=esc(r.get('flujo_riego'), q_riego),
+            qo=esc(r.get('flujo_salida'), q_sal), ci=esc(r.get('cu_feed'), cu_riego_f),
+            co=esc(r.get('cu_drenaje'), cu_dren_f), obs=obs) for r in base]
+        conn.execute(text(f"DELETE FROM {SCHEMA}.dump_diario "
+                          "WHERE fuente = 'reconciliacion' AND caso_id = :caso"),
+                     {'caso': int(caso_id)})
+        insert = text(f"""
+            INSERT INTO {SCHEMA}.dump_diario (fecha, fuente, caso_id, solver_run_id,
+                aporte_t, flujo_riego_m3d, flujo_salida_m3d, cu_riego_gl,
+                cu_drenaje_gl, observacion)
+            VALUES (:fecha, 'reconciliacion', :caso, :run, :ap, :qi, :qo, :ci, :co, :obs)
+        """)
+        for fila in filas:
+            conn.execute(insert, fila)
+    return len(filas)
+
+
 def save_run(conn, week_start, method, active_days, sigma_rel, r_global, converged,
              week_row, detalle_rows, daily_rows, warnings=None,
              semana_fin=None, caso_id=None):

@@ -264,16 +264,14 @@ def test_reconstructed_reads_top_level_case_daily_rows_and_keeps_missing_rows_ga
                                            pd.Timestamp('2026-10-02'),
                                            data={'raw_token': 'x', 'caso_id': 10013,
                                                  'caso_run_id': 10145}, caso_id=10013)
-    assert len(fig.data) == 3
     assert [trace.name for trace in fig.data] == [
-        'Recuperación medida', 'Curva reconciliada histórica', 'Recuperación reconciliada']
-    assert list(fig.data[0].x) == [pd.Timestamp('2026-10-01'), pd.Timestamp('2026-10-02')]
-    assert list(fig.data[2].x) == [pd.Timestamp('2026-10-01'), pd.Timestamp('2026-10-02')]
+        'Curva reconciliada histórica', 'Recuperación reconciliada']   # una sola recuperacion del Caso
+    assert list(fig.data[1].x) == [pd.Timestamp('2026-10-01'), pd.Timestamp('2026-10-02')]
     assert fig.layout.title.text.endswith('medido / reconciliado')
     assert 'reconstruido' not in fig.to_json().lower()
     assert 'proxy' not in fig.to_json().lower()
-    assert fig.data[2].y[0] == pytest.approx(40.732)
-    assert fig.data[2].y[1] == pytest.approx(40.732)
+    assert fig.data[1].y[0] == pytest.approx(40.732)
+    assert fig.data[1].y[1] == pytest.approx(40.732)
 
     # A stale raw run is rejected and the operational measured series remains.
     stale = {**raw, 'caso': {'id': 10013, 'run_id': 99999}}

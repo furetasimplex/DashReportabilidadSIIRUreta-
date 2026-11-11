@@ -2267,6 +2267,8 @@ def _build_combined_recovery_chart(group, data, caso_id):
                           '<br>Cu apilado: %{customdata[1]:.2f} t<extra></extra>'))
     if not rendered:
         return fig, 'No hay fechas comunes con datos completos para las pilas seleccionadas.'
+    if any(t.name == 'Recuperación reconciliada' for t in fig.data):   # una sola recuperacion del Caso
+        fig.data = tuple(t for t in fig.data if t.name != 'Recuperación medida')
     initial_members = [member.get('initial_recovery_pct') for member in members]
     initial_recovery = None
     if all(value is not None for value in initial_members):
@@ -2340,7 +2342,7 @@ def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=No
     if any(value is not None and np.isfinite(value) for value in measured_case):
         fig.add_trace(go.Scatter(
             x=case_dates, y=measured_case, mode='lines', name='Recuperación medida',
-            line=dict(color='#9CA3AF', width=1.8), connectgaps=False,
+            line=dict(color='#9CA3AF', width=1.8), connectgaps=False, meta='medida_ventana',
             hovertemplate='%{x|%d/%m/%Y}<br>%{y:.2f}%<extra>Recuperación medida</extra>'))
     if rs['xs']:
         case_start = pd.Timestamp(week_start).normalize()
@@ -2399,6 +2401,10 @@ def _build_recovery_chart(selected_pila, week_start=None, week_end=None, data=No
             fig.add_annotation(x=0.5, y=1.0, xref='paper', yref='paper', yanchor='bottom',
                                showarrow=False, font=dict(color='#B45309', size=11),
                                text='La serie supera 100 % segun Cu neto acumulado y CuTf de campana')
+    # Una sola recuperacion del Caso en la ventana: la serie del Caso reemplaza la medida superpuesta.
+    if any(t.name in ('Recuperación reconciliada', 'Recuperación medida') and t.meta != 'medida_ventana'
+           for t in fig.data):
+        fig.data = tuple(t for t in fig.data if t.meta != 'medida_ventana')
     campaign_start = pd.Timestamp((globals().get('WIP_META', {}).get(label, {}).get(f'P{num:02d}') or {}).get('ini_aporte'))
     initial_points = [(pd.Timestamp(day).normalize(), float(value))
                       for cycle in measured
@@ -2959,6 +2965,13 @@ def compute_recon(_n_clicks, caso_id, metodo=None):
                 conn.close()
                 reset_trace_id(trace_token)
             phase_solve_and_persist = time.perf_counter() - phase_t0
+            try:
+                from .db_pipeline import guardar_dump_reconciliado
+                guardar_dump_reconciliado(caso['id'], caso['run_id'], ws, week_end,
+                                          caso['modelo_codigo'])
+            except Exception as exc:
+                print(f'[WARN] dump_diario no se actualizo para el Caso {caso["id"]}: '
+                      f'{type(exc).__name__}')
             # Aviso de pad sin pilas nuevas (solo informa; no cambia el calculo).
             from .mensajes_pad import mensajes_sin_nuevas
             _res_j = joint.get('res') or {}
@@ -3785,7 +3798,8 @@ def generate_week_report(_n_clicks, data, selected_case_id, groups=None):
             ws=ws, we=we, caso=caso,
             pads={label: {'res': res} for label in ('OXIDOS', 'SULFUROS')},
         )}
-        doc = report_metodo.construir_doc(runs, end=JOINT_DATA_CUTOFF)
+        # el reporte termina en el fin de la ventana del Caso: sin datos posteriores
+        doc = report_metodo.construir_doc(runs, end=we)
         n_pilas = sum(len(v['pilas']) for v in doc['pads'].values())
         if not n_pilas:
             return html.Div('La reconciliación no dejó ninguna pila con curva.',

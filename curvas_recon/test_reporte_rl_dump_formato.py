@@ -26,7 +26,8 @@ def test_dump_query_is_select_and_uses_feed_dpls_sources(monkeypatch):
     rows = report.leer_dump(pd.Timestamp('2026-04-02'))
     assert rows == [dict(fecha=pd.Timestamp('2026-04-01'), aporte=3.24,
                          flujo_riego=2400.0, flujo_salida=1920.0,
-                         cu_feed=0.25, cu_drenaje=2.0, observacion=None)]
+                         cu_feed=0.25, cu_drenaje=2.0, observacion=None,
+                         fuente='operacional')]
     sql = fake.query.upper()
     assert 'SELECT' in sql and 'FLUJO_FEED_DUMP_M3H' in sql and 'DUMP_FEED_CU' in sql
     assert not any(word in sql for word in ('INSERT', 'UPDATE', 'DELETE', 'EXEC '))
@@ -57,7 +58,7 @@ def test_writer_keeps_official_rl_matrix_and_dump_shape():
     assert tuple(check['Dump'].values)[0] == (
         'Fecha', 'Aporte', 'Flujo riego dump [m3/dia]',
         'Flujo salida dump [m3/dia]', 'Concentracion riego ',
-        'Concentracion drenaje', 'Observación')
+        'Concentracion drenaje', 'Observación', 'Fuente')
     assert tuple(check['RL Oxidos'].values)[0][:3] == ('Parcela', 1, 2)
     assert tuple(check['RL Oxidos'].values)[1][:3] == (1, 0.1, 0.3)
     assert tuple(check['RL Oxidos'].values)[2][:3] == (2, pytest.approx(0.3), pytest.approx(0.7))

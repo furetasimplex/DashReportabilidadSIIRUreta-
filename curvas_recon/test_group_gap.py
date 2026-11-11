@@ -123,7 +123,7 @@ def test_group_chart_joins_adjacent_samples_without_extra_or_dotted_trace():
     fig, warning = build_group_chart(
         [date(2026, 9, 29), date(2026, 9, 30)], [51.0, 51.5])
     assert warning == ''
-    assert len(fig.data) == 3
+    assert [t.name for t in fig.data] == ['Curva reconciliada histórica', 'Recuperación reconciliada']   # una sola recuperacion del Caso
     history = next(t for t in fig.data if t.name == 'Curva reconciliada histórica')
     assert list(history.x) == list(pd.date_range('2026-09-29', '2026-10-01'))
     assert list(history.y) == [51.0, 51.5, 52.0]

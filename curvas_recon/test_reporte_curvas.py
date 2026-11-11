@@ -30,7 +30,7 @@ def no_sql(monkeypatch):
         raise AssertionError('SQL prohibido')
     monkeypatch.setattr(Engine, 'connect', forbidden)
     monkeypatch.setattr(report, '_campaign_recovery_points', lambda label: {})
-    monkeypatch.setattr(report, 'leer_dump', lambda asof: [])
+    monkeypatch.setattr(report, 'leer_dump', lambda *a, **k: [])
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ def test_descarga_real_sin_libro_planta_y_repetible(export_case):
         assert 'sin comparaci' in str(status)
         assert raw_path.is_file()
         book = load_workbook(BytesIO(base64.b64decode(download['content'])))
-        assert book.sheetnames == ['Rec Ox', 'Rec Sulfuro', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros', 'Riego Ox', 'Riego Sulfuro', 'Método usado']
+        assert book.sheetnames == ['Rec Ox', 'Rec Ox 2', 'Rec Sulfuro', 'Rec Sulfuro 2', 'Curvas Ox', 'Curvas Sulfuro', 'Prod Oxidos', 'Prod Sulfuros', 'RL Oxidos', 'RL Sulfuros', 'Riego Ox', 'Riego Sulfuro', 'Método usado']
         assert book['Rec Ox']['B12'].value == 4.0
         assert book['Rec Ox']['C12'].value == 2.0
         assert book['Rec Ox']['B7'].value is None

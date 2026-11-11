@@ -360,7 +360,7 @@ def leer_apilado(asof=None):
     return out
 
 
-def leer_dump(asof):
+def leer_dump(asof, caso_ids=None):
     """Daily DUMP inputs from the operational tables (SELECT only).
 
     Source flows are stored in m3/h and converted to daily volume with x24;
@@ -373,6 +373,7 @@ def leer_dump(asof):
     desde = pd.Timestamp(year=pd.Timestamp(asof).year, month=1, day=1)
     hasta = pd.Timestamp(asof).normalize() + pd.Timedelta(days=1)
     with connect() as cn:
+        tabla = _leer_dump_diario(cn, desde, hasta, caso_ids)
         rows = cn.execute(text(f'''
             WITH flow_daily AS (
                 SELECT CAST(fecha_registro AS DATE) AS fecha,
@@ -416,8 +417,80 @@ def leer_dump(asof):
                            flujo_riego=q_in, flujo_salida=q_out,
                            cu_feed=float(cu_in) if cu_in is not None else None,
                            cu_drenaje=float(cu_out) if cu_out is not None else None,
-                           observacion=obs))
-    return result
+                           observacion=obs, fuente='operacional'))
+    por_fecha = {r['fecha']: r for r in result}
+    por_fecha.update(tabla)
+    return [por_fecha[f] for f in sorted(por_fecha) if f < hasta]
+
+
+def _leer_dump_diario(cn, desde, hasta, caso_ids=None):
+    """Filas de dump_diario por fecha: reconciliacion (caso mayor) > oficial.
+
+    SELECT solamente; si la tabla no existe o la consulta falla devuelve {}.
+    """
+    ids = {int(c) for c in (caso_ids or [])}
+    try:
+        rows = cn.execute(text(f'''
+            SELECT fecha, fuente, caso_id, aporte_t, flujo_riego_m3d,
+                   flujo_salida_m3d, cu_riego_gl, cu_drenaje_gl, observacion
+            FROM {SCHEMA}.dump_diario
+            WHERE fecha >= :desde AND fecha < :hasta
+        '''), {'desde': desde, 'hasta': hasta}).fetchall()
+        elegido = {}
+        for day, fuente, caso, ap, qi, qo, ci, co, obs in rows:
+            fecha = pd.Timestamp(day)
+            if fuente == 'reconciliacion':
+                if caso is None or int(caso) not in ids:
+                    continue
+                rango = (2, int(caso))
+                etiqueta = f'reconciliacion Caso {int(caso)}'
+            elif fuente == 'oficial':
+                rango, etiqueta = (1, 0), 'oficial'
+            else:
+                continue
+            if fecha in elegido and elegido[fecha][0] >= rango:
+                continue
+            num = lambda v: float(v) if v is not None else None
+            elegido[fecha] = (rango, dict(
+                fecha=fecha, aporte=num(ap), flujo_riego=num(qi),
+                flujo_salida=num(qo), cu_feed=num(ci), cu_drenaje=num(co),
+                observacion=obs, fuente=etiqueta))
+        return {f: v[1] for f, v in elegido.items()}
+    except Exception:
+        return {}
+
+
+def leer_produccion_oficial_db(hasta):
+    """Produccion diaria oficial por pila (t Cu), leida de la DB (SELECT only).
+
+    Misma formula que `sp_refrescar_produccion_diaria`: Cu recuperado =
+    Recuperacion_parcela (%) x fino_apilado_cu / 100 por campana, y la produccion
+    del dia es la diferencia con el dia anterior de la misma campana (el primer
+    dia de la campana entrega su acumulado). Devuelve
+    {'OXIDOS'|'SULFUROS': {num_parcela: {fecha: t}}} hasta `hasta` (excluida).
+    """
+    q = text(f'''
+        SELECT r.PAD, r.Parcela, r.Campana, CAST(r.Fecha_drenaje AS DATE) AS fecha,
+               r.Recuperacion_parcela * a.fino_apilado_cu / 100.0 AS cu_rec
+        FROM {SCHEMA}.Recuperaciones_pad r
+        JOIN {SCHEMA}.res_parcelas_apilado a
+          ON a.PAD = r.PAD AND a.Parcela = r.Parcela AND a.Campana = r.Campana
+        WHERE r.Fecha_drenaje < :hasta
+    ''')
+    with connect() as cn:
+        rows = cn.execute(q, {'hasta': pd.Timestamp(hasta)}).fetchall()
+    df = pd.DataFrame(rows, columns=['pad', 'parcela', 'campana', 'fecha', 'cu_rec'])
+    if df.empty:
+        return {}
+    df['fecha'] = pd.to_datetime(df['fecha'])
+    df = df.sort_values(['pad', 'parcela', 'campana', 'fecha'])
+    df['prod'] = df.groupby(['pad', 'parcela', 'campana'])['cu_rec'].diff()
+    df['prod'] = df['prod'].fillna(df['cu_rec'])
+    out = {}
+    for (pad, num, fecha), v in df.groupby(['pad', 'parcela', 'fecha'])['prod'].sum().items():
+        if pd.notna(v):
+            out.setdefault(str(pad).upper(), {}).setdefault(int(num), {})[fecha] = float(v)
+    return out
 
 
 def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
@@ -448,7 +521,7 @@ def construir_doc(runs, end=None, corte_planta=CORTE_PLANTA, xl=XL_PLANTA,
             d += pd.Timedelta(days=1)
 
     doc = dict(end=str(END.date()), corte_planta=str(pd.Timestamp(corte_planta).date()),
-               dump=leer_dump(END),
+               dump=leer_dump(END, caso_ids=casos),
                casos=[dict(id=c, desde=str(runs[c]['ws'].date()),
                            hasta=str(runs[c]['we'].date()),
                            run=runs[c]['caso']['run_id']) for c in casos],
@@ -909,22 +982,22 @@ def _escribir_riego(ws, doc, label):
 
 
 def _escribir_dump(w, doc):
-    """Write only source-backed DUMP daily rows in the official six-column shape."""
+    """Write source-backed DUMP daily rows (eight columns, last one the source)."""
     rows = doc.get('dump') or []
     if not rows:
         return
     ws = w.book.create_sheet('Dump')
     headers = ['Fecha', 'Aporte', 'Flujo riego dump [m3/dia]',
                'Flujo salida dump [m3/dia]', 'Concentracion riego ',
-               'Concentracion drenaje', 'Observación']
+               'Concentracion drenaje', 'Observación', 'Fuente']
     ws.append(headers)
     for row in rows:
         ws.append([row.get('fecha'), row.get('aporte'), row.get('flujo_riego'),
                    row.get('flujo_salida'), row.get('cu_feed'), row.get('cu_drenaje'),
-                   row.get('observacion')])
+                   row.get('observacion'), row.get('fuente')])
     ws.freeze_panes = 'A2'
     ws.auto_filter.ref = ws.dimensions
-    widths = [14, 13, 25, 27, 22, 24, 38]
+    widths = [14, 13, 25, 27, 22, 24, 38, 26]
     for i, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
     for cell in ws[1]:
@@ -1145,6 +1218,46 @@ def _escribir_prod(w, doc):
         for col in range(m0 + 1, m0 + 2 + n_p):
             ws.column_dimensions[get_column_letter(col)].width = 11
 
+REC2_SHEET = {'OXIDOS': 'Rec Ox 2', 'SULFUROS': 'Rec Sulfuro 2'}
+
+
+def _escribir_rec2(ws, doc, label):
+    """Hoja 'Rec ... 2' del reporte oficial: % de recuperacion acumulada por fecha
+    calendario (filas) y parcela (columnas), con el Cu apilado de cada parcela."""
+    pilas = physical_columns(doc, label, ORDEN[label])
+    ws['A1'] = '% Recuperación Cu acumulada por fecha'
+    ws['A1'].font = _F_B
+    ws['A2'] = f'Corte {doc["end"]}'
+    ws['A3'] = 'Cu apilado [t]'
+    ws['A4'] = 'Parcela'
+    ws.column_dimensions['A'].width = 16
+    series, dates = [], set()
+    for q in pilas:
+        start = pd.Timestamp(q.get('ini') or doc['pads'][label].get('desde'))
+        curve = q.get('rec_curve') or []          # t Cu acumuladas
+        fin = q.get('apilado')
+        days = [start + pd.Timedelta(days=i) for i in range(len(curve))]
+        series.append({d: (v / fin * 100 if v is not None and fin else None)
+                       for d, v in zip(days, curve)})
+        dates.update(days)
+    for col, q in enumerate(pilas, start=2):
+        ws.cell(3, col, q.get('apilado'))
+        _sty(ws.cell(3, col), 'number_format', '#,##0.0')
+        ws.cell(4, col, q['num'])
+        _sty(ws.cell(4, col), 'font', _F_B, 'B')
+        _sty(ws.cell(4, col), 'alignment', _AL_C, 'C')
+        ws.column_dimensions[get_column_letter(col)].width = 10
+    for row, day in enumerate(sorted(dates), start=5):
+        ws.cell(row, 1, day.to_pydatetime())
+        _sty(ws.cell(row, 1), 'number_format', 'dd-mm-yyyy')
+        for col, s in enumerate(series, start=2):
+            v = s.get(day)
+            if v is not None and np.isfinite(v):
+                c = ws.cell(row, col, float(v))
+                _sty(c, 'number_format', '0.00')
+    ws.freeze_panes = 'B5'
+
+
 def hoja_resumen(doc):
     r = []
     for lab in ('OXIDOS', 'SULFUROS'):
@@ -1348,6 +1461,7 @@ def escribir_libro(doc, out_path, groups=None, meta=None):
             for lab in pads:
                 ws = w.book.create_sheet(HOJA[lab])
                 _escribir_hoja_pad(ws, doc, lab)
+                _escribir_rec2(w.book.create_sheet(REC2_SHEET[lab]), doc, lab)
             riego_ws = {lab: w.book.create_sheet(RIEGO_SHEET[lab]) for lab in pads}
             for lab in pads:
                 _escribir_riego(riego_ws[lab], doc, lab)
